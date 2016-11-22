@@ -1,0 +1,214 @@
+                  PEST RUN MANAGEMENT RECORD: CASE keps_calib
+
+ SLAVE DETAILS:-
+
+ Slave Name                  PSLAVE Working Directory
+ ----------                  ------------------------
+ "cpu1"                      .\
+ "cpu2"                      cpu2\
+ "cpu3"                      cpu3\
+ "cpu4"                      cpu4\
+
+
+ Attempting to communicate with slaves ....
+
+ - slave "cpu1" has been detected.
+ - slave "cpu2" has been detected.
+ - slave "cpu3" has been detected.
+ - slave "cpu4" has been detected.
+
+
+ SLAVE MODEL INPUT AND OUTPUT FILES:-
+
+ Slave "cpu1" ----->
+
+     Model input files on slave "cpu1":-
+         kepsilon_PEST.par
+
+     Model output files on slave "cpu1":-
+         ModelObs.dat
+
+     Model command line for slave "cpu1":-
+         model.bat
+
+
+ Slave "cpu2" ----->
+
+     Model input files on slave "cpu2":-
+         cpu2\kepsilon_PEST.par
+
+     Model output files on slave "cpu2":-
+         cpu2\ModelObs.dat
+
+     Model command line for slave "cpu2":-
+         model.bat
+
+
+ Slave "cpu3" ----->
+
+     Model input files on slave "cpu3":-
+         cpu3\kepsilon_PEST.par
+
+     Model output files on slave "cpu3":-
+         cpu3\ModelObs.dat
+
+     Model command line for slave "cpu3":-
+         model.bat
+
+
+ Slave "cpu4" ----->
+
+     Model input files on slave "cpu4":-
+         cpu4\kepsilon_PEST.par
+
+     Model output files on slave "cpu4":-
+         cpu4\ModelObs.dat
+
+     Model command line for slave "cpu4":-
+         model.bat
+
+
+ AVERAGE WAIT INTERVAL         : 50 hundredths of a second.
+ PARALLELISE LAMBDA SEARCH     : no
+ REPEAT TROUBLESOME MODEL RUNS : yes
+ SLOW RUN DECLARATION FACTOR   : 1.5000
+
+ RUNNING MODEL FOR FIRST TIME  -----> 
+
+ Running model 1 time....
+   12:58:45.16:- slave "cpu1" commencing model run.
+   13:22:13.54:- slave "cpu1" finished execution; reading results.
+
+
+ OPTIMISATION ITERATION NO.  1 ----->
+
+ Calculating Jacobian matrix: running model 3 times .....
+   13:22:15.09:- slave "cpu1" commencing model run.
+   13:22:15.58:- slave "cpu2" commencing model run.
+   13:22:16.08:- slave "cpu3" commencing model run.
+   13:45:53.23:- slave "cpu1" finished execution; reading results.
+   13:45:55.76:- slave "cpu2" finished execution; reading results.
+   13:45:58.28:- slave "cpu3" finished execution; reading results.
+
+ Testing parameter upgrades .....
+   13:45:59.77:- slave "cpu4" commencing model run.
+   14:09:50.72:- slave "cpu4" finished execution; reading results.
+   14:09:52.23:- slave "cpu1" commencing model run.
+   14:34:45.78:- slave "cpu1" finished execution; reading results.
+
+
+ OPTIMISATION ITERATION NO.  2 ----->
+
+ Calculating Jacobian matrix: running model 3 times .....
+   14:34:47.33:- slave "cpu2" commencing model run.
+   14:34:47.83:- slave "cpu3" commencing model run.
+   14:34:48.33:- slave "cpu4" commencing model run.
+   15:00:12.40:- slave "cpu2" finished execution; reading results.
+   15:00:14.93:- slave "cpu4" finished execution; reading results.
+   15:00:17.95:- slave "cpu3" finished execution; reading results.
+
+ Testing parameter upgrades .....
+   15:00:19.48:- slave "cpu1" commencing model run.
+   15:24:32.94:- slave "cpu1" finished execution; reading results.
+   15:24:34.44:- slave "cpu1" commencing model run.
+   15:48:33.07:- slave "cpu1" finished execution; reading results.
+   15:48:34.57:- slave "cpu1" commencing model run.
+   16:12:35.41:- slave "cpu1" finished execution; reading results.
+
+
+ OPTIMISATION ITERATION NO.  3 ----->
+
+ Calculating Jacobian matrix: running model 6 times .....
+   16:12:36.94:- slave "cpu1" commencing model run.
+   16:12:37.44:- slave "cpu2" commencing model run.
+   16:12:37.94:- slave "cpu4" commencing model run.
+   16:12:38.44:- slave "cpu3" commencing model run.
+   16:36:53.14:- slave "cpu3" finished execution; reading results.
+   16:36:54.64:- slave "cpu3" commencing model run.
+   16:36:56.14:- slave "cpu1" finished execution; reading results.
+   16:36:57.64:- slave "cpu1" commencing model run.
+   16:36:59.15:- slave "cpu2" finished execution; reading results.
+   16:37: 2.37:- slave "cpu4" finished execution; reading results.
+   17:01: 0.92:- slave "cpu1" finished execution; reading results.
+   17:01: 3.44:- slave "cpu3" finished execution; reading results.
+
+ Testing parameter upgrades .....
+   17:01: 4.96:- slave "cpu1" commencing model run.
+   17:25:12.87:- slave "cpu1" finished execution; reading results.
+   17:25:14.39:- slave "cpu1" commencing model run.
+   17:48:53.40:- slave "cpu1" finished execution; reading results.
+
+
+ OPTIMISATION ITERATION NO.  4 ----->
+
+ Calculating Jacobian matrix: running model 6 times .....
+   17:48:54.93:- slave "cpu1" commencing model run.
+   17:48:55.43:- slave "cpu3" commencing model run.
+   17:48:55.93:- slave "cpu2" commencing model run.
+   17:48:56.43:- slave "cpu4" commencing model run.
+   18:13:20.24:- slave "cpu1" finished execution; reading results.
+   18:13:21.74:- slave "cpu1" commencing model run.
+   18:13:23.77:- slave "cpu4" finished execution; reading results.
+   18:13:26.46:- slave "cpu4" commencing model run.
+   18:13:27.96:- slave "cpu3" finished execution; reading results.
+   18:13:32.21:- slave "cpu2" finished execution; reading results.
+   18:37:24.96:- slave "cpu1" finished execution; reading results.
+   18:37:27.45:- slave "cpu4" finished execution; reading results.
+
+ Testing parameter upgrades .....
+   18:37:28.95:- slave "cpu4" commencing model run.
+   19:01:22.81:- slave "cpu4" finished execution; reading results.
+   19:01:24.32:- slave "cpu4" commencing model run.
+   19:25:18.79:- slave "cpu4" finished execution; reading results.
+
+
+ OPTIMISATION ITERATION NO.  5 ----->
+
+ Calculating Jacobian matrix: running model 6 times .....
+   19:25:20.32:- slave "cpu4" commencing model run.
+   19:25:20.82:- slave "cpu1" commencing model run.
+   19:25:21.32:- slave "cpu3" commencing model run.
+   19:25:21.82:- slave "cpu2" commencing model run.
+   19:49:37.82:- slave "cpu1" finished execution; reading results.
+   19:49:39.33:- slave "cpu1" commencing model run.
+   19:49:40.83:- slave "cpu2" finished execution; reading results.
+   19:49:42.33:- slave "cpu2" commencing model run.
+   19:49:43.83:- slave "cpu3" finished execution; reading results.
+   19:49:46.34:- slave "cpu4" finished execution; reading results.
+   20:13:48.74:- slave "cpu1" finished execution; reading results.
+   20:13:51.24:- slave "cpu2" finished execution; reading results.
+
+ Testing parameter upgrades .....
+   20:13:52.73:- slave "cpu1" commencing model run.
+   20:37:57.73:- slave "cpu1" finished execution; reading results.
+   20:37:59.23:- slave "cpu1" commencing model run.
+   21:01:53.71:- slave "cpu1" finished execution; reading results.
+   21:01:55.21:- slave "cpu1" commencing model run.
+   21:25:58.75:- slave "cpu1" finished execution; reading results.
+
+
+ OPTIMISATION ITERATION NO.  6 ----->
+
+ Calculating Jacobian matrix: running model 6 times .....
+   21:26: 0.28:- slave "cpu1" commencing model run.
+   21:26: 0.78:- slave "cpu2" commencing model run.
+   21:26: 1.28:- slave "cpu3" commencing model run.
+   21:26: 1.78:- slave "cpu4" commencing model run.
+   21:50:15.38:- slave "cpu4" finished execution; reading results.
+   21:50:16.89:- slave "cpu4" commencing model run.
+   21:50:21.41:- slave "cpu1" finished execution; reading results.
+   21:50:22.90:- slave "cpu1" commencing model run.
+   21:50:24.40:- slave "cpu2" finished execution; reading results.
+   21:50:26.91:- slave "cpu3" finished execution; reading results.
+   22:14:13.87:- slave "cpu4" finished execution; reading results.
+   22:14:27.40:- slave "cpu1" finished execution; reading results.
+
+ Testing parameter upgrades .....
+   22:14:28.90:- slave "cpu4" commencing model run.
+   22:38:24.02:- slave "cpu4" finished execution; reading results.
+   22:38:25.52:- slave "cpu4" commencing model run.
+   23:02:18.60:- slave "cpu4" finished execution; reading results.
+
+ RUNNING MODEL ONE LAST TIME WITH BEST PARAMETERS  -----> 
+   23:02:20.10:- slave "cpu4" commencing model run.
+   23:26:14.52:- slave "cpu4" finished execution; reading results.

@@ -1,0 +1,55 @@
+                     PARAMETER SENSITIVITIES: CASE keps_calib
+
+
+ OPTIMISATION ITERATION NO.  1 ----->
+ Parameter name    Group          Current value    Sensitivity
+   alpha           fit             1.000000E-02      3.88731    
+   p1              fit              1.10000         0.287971    
+   p2              fit             0.900000         7.117375E-02
+
+
+ OPTIMISATION ITERATION NO.  2 ----->
+ Parameter name    Group          Current value    Sensitivity
+   alpha           fit             6.046831E-03      5.13809    
+   p1              fit              1.03438         0.304170    
+   p2              fit             0.922716         6.450249E-02
+
+
+ OPTIMISATION ITERATION NO.  3 ----->
+ Parameter name    Group          Current value    Sensitivity
+   alpha           fit             5.510747E-03      5.37402    
+   p1              fit              1.02756         0.300870    
+   p2              fit             0.938806         6.047611E-02
+
+
+ OPTIMISATION ITERATION NO.  4 ----->
+ Parameter name    Group          Current value    Sensitivity
+   alpha           fit             4.810649E-03      6.81009    
+   p1              fit              1.09244         0.275420    
+   p2              fit              1.25000         6.346389E-02
+
+
+ OPTIMISATION ITERATION NO.  5 ----->
+ Parameter name    Group          Current value    Sensitivity
+   alpha           fit             4.677417E-03      7.13335    
+   p1              fit              1.09322         0.281236    
+   p2              fit              1.23198         6.211168E-02
+
+
+ OPTIMISATION ITERATION NO.  6 ----->
+ Parameter name    Group          Current value    Sensitivity
+   alpha           fit             4.915673E-03      6.11393    
+   p1              fit              1.09494         0.277785    
+   p2              fit              1.25000         5.980637E-02
+
+
+
+                        COMPLETION OF OPTIMISATION PROCESS
+
+ Composite sensitivities for all observations/prior info ----->
+
+ Number of observations with non-zero weight =   521
+ Parameter name    Group          Current value    Sensitivity
+   alpha           fit             4.890634E-03      6.11393    
+   p1              fit              1.09494         0.277785    
+   p2              fit              1.25000         5.980637E-02

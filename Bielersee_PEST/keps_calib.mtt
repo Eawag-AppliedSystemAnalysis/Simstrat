@@ -1,0 +1,46 @@
+ PARAMETER STATISTICAL MATRICES: CASE keps_calib
+
+ OPTIMISATION ITERATION NUMBER  6
+
+
+ Parameter standard deviations ----->
+
+ Adjustable        Group           Current          Standard
+ parameter                         value            deviation
+ alpha             fit             4.915673E-03     4.918289E-04
+ p1                fit              1.09494         2.541779E-02
+ p2                fit              1.25000         0.114212    
+
+ Note that if a parameter is log-transformed, the standard deviation in the 
+ above table refers to the log of the parameter. Note also that the objective
+ function used in the calculation of the covariance matrix (and eigenvalues
+ of the covariance matrix) was calculated at the end of the previous iteration.
+
+
+ Parameter covariance matrix ----->
+
+                 alpha          p1           p2     
+ alpha          2.4190E-07  -3.4308E-06  -6.1451E-06
+ p1            -3.4308E-06   6.4606E-04   2.6301E-03
+ p2            -6.1451E-06   2.6301E-03   1.3044E-02
+
+
+ Parameter correlation coefficient matrix ----->
+
+                 alpha          p1           p2     
+ alpha           1.000      -0.2744      -0.1094    
+ p1            -0.2744        1.000       0.9060    
+ p2            -0.1094       0.9060        1.000    
+
+
+ Normalized eigenvectors of covariance matrix ----->
+
+               Vector_1     Vector_2     Vector_3   
+ alpha         -0.9998      -1.9248E-02  -4.9382E-04
+ p1            -1.8961E-02   0.9798       0.1993    
+ p2             3.3520E-03  -0.1993       0.9799    
+
+
+ Eigenvalues ----->
+
+                1.9744E-07   1.1126E-04   1.3579E-02

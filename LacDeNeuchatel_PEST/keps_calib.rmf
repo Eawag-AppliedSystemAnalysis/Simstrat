@@ -1,0 +1,15 @@
+prf
+4 1 0.5 0
+'cpu1' .\
+'cpu2' cpu2\
+'cpu3' cpu3\
+'cpu4' cpu4\
+600 600 600 600
+kepsilon_PEST.par
+ModelObs.dat
+cpu2\kepsilon_PEST.par
+cpu2\ModelObs.dat
+cpu3\kepsilon_PEST.par
+cpu3\ModelObs.dat
+cpu4\kepsilon_PEST.par
+cpu4\ModelObs.dat
