@@ -11,12 +11,15 @@ Zurichsee\Qin_Qfix.dat
 Zurichsee\Qout.dat
 Zurichsee\Tin_Qfix.dat
 Zurichsee\Sin_Qfix.dat
+\
+\
 *** Model setup *******************************************
 300          Timestep dt [s]
 28125        Start time [d]
 31125        End time [d] (max here: 40178)
 *** Model, conditions and output selection ****************
 1            Turbulence model (1:k-epsilon, 2:MY)
+0            Biogeochemistry model (0/default:off, 1:on)
 2            Stability function (1:constant, 2:quasi-equilibrium)
 1            Flux condition (0:Dirichlet condition, 1:no-flux)
 3            Forcing (1:Wind+Temp+SolRad, 2:(1)+Vap, 3:(2)+Cloud, 4:Wind+HeatFlux+SolRad)
