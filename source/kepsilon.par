@@ -38,3 +38,6 @@ Path to input salinity file
 1.00         p2	[-]			Fit parameter for convective and latent heat fluxes
 10           Averaging data (not implemented, set to 10)
 1            Enable salinity transport (0:off, 1/default:on)
+0.00         beta [-]		Fraction of short-wave radiation directly absorbed as heat
+0.20         albsw [-]		Albedo for reflection of short-wave radiation
+1.4744       f_wind	[-]		Fraction of forcing wind to wind at 10m (W10/Wf)

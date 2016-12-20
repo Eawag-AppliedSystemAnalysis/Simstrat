@@ -37,13 +37,13 @@
 
       double precision M(0:mxl),meanint(0:mxl)
 	  integer i
+      
 !     +---------------------------------------------------------------+
 !     |  Constant specification                                       |
 !     +---------------------------------------------------------------+
 
       call Initialization
 	  call Form
-
   
 !      write(6,*)
 !      write(6,*) " ------------------------ "
@@ -60,12 +60,11 @@
 !     +---------------------------------------------------------------+
 
       subroutine keps_simulation(M)
-	  
+      
       implicit none
 
       include 'const_parameter.i'
-
-
+      
       double precision Sini(0:mxl),Tini(0:mxl),uini(0:mxl),vini(0:mxl)
       double precision kini(0:mxl),epsini(0:mxl),Lini(0:mxl)
       double precision numini(0:mxl),nuhini(0:mxl) 
@@ -88,21 +87,20 @@
       common /ini_values4/ numini,nuhini
       common /ini_values5/ dragini,txini,tyini,E_Seicheini,datumini
 
-
       common /morph_variables1/ h,Az,dAdz
       common /morph_varaibles2/ zu,zk,z_zero
       common /morph_variables3/ volume
-      common /form_variables  / form_1,form_2
-      common /form_variablesk/form_k1,form_k2,form_beps
-      common /form_variables3/meanint
+      common /form_variables/ form_1,form_2
+      common /form_variablesk/ form_k1,form_k2,form_beps
+      common /form_variables3/ meanint
 
-      common /savet1  /   write_tout
-      common /savet2  /   tout_ctr1
-      common /savet3  /   tout_ctr2
+      common /savet1/ write_tout
+      common /savet2/ tout_ctr1
+      common /savet3/ tout_ctr2
 
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !    LOCAL VARIABLES
-     
+
       integer step,itera,i,std
 
       double precision P(0:mxl),B(0:mxl),NN(0:mxl)
@@ -113,7 +111,7 @@
       double precision cmue1(0:mxl),cmue2(0:mxl)
       double precision k(0:mxl),ko(0:mxl)
       double precision eps(0:mxl),L(0:mxl)
-      double precision num(0:mxl),nuh(0:mxl) 
+      double precision num(0:mxl),nuh(0:mxl)
       double precision ga1(0:mxl),u10,v10
       double precision E_Seiche, P_Seiche(0:mxl)
       
@@ -125,6 +123,7 @@
 
       double precision M(0:mxl)
 
+      integer iav
       double precision uav(0:mxl),vav(0:mxl)
       double precision Tav(0:mxl),Sav(0:mxl)
       double precision kav(0:mxl)
@@ -133,17 +132,13 @@
       double precision Bav(0:mxl),Pav(0:mxl),NNav(0:mxl)
       double precision P_Seicheav(0:mxl),E_Seicheav
 
-
-      integer iav
-
-
       integer date_time (8)
       character (len = 12) real_clock (3)
 
 !     +---------------------------------------------------------------+
 !     |  Constant specification                                       |
 !     +---------------------------------------------------------------+
-
+      
       iav=0
 !    Set initial values (calculated in Initialization)
       do i=0,xl
@@ -173,15 +168,14 @@
              if (tout_ctr2(0).eq.0) then           ! first output = initial time
 
 	        if (disp_simulation .eq. 1)  write(6,990) datum,T(xl),T(xl-5)
-                call write_out (datum,u,v,T,S,k,eps,num,nuh,
-     &                        B,P,NN,P_Seiche,E_Seiche,zu,zk,M)
+                call write_out (datum,u,v,T,S,k,eps,num,nuh,B,P,NN,P_Seiche,E_Seiche,zu,zk,M)
 
                 itera=0
                 step=1
              end if
       end if
 
-	  call write_out_new (datum,std, u,v,T,S,k,eps,nuh,					! Write initial conditions
+	  call write_out_new (datum,std, u,v,T,S,k,eps,nuh,&					! Write initial conditions
      &                        B,P,NN,P_Seiche,E_Seiche,zu,zk,M,Qvert)	! preliminary version!!!
 	  
 900   std=std+1
@@ -207,24 +201,18 @@
 		 end if
          u_taub=sqrt(drag*(u(1)*u(1)+v(1)*v(1)))
 
-         call StabilityFunctions(u,v,k,eps,T,S,meanint,NN,
-     &                       cmue1,cmue2)
+         call StabilityFunctions(u,v,k,eps,T,S,meanint,NN,cmue1,cmue2)
          call Coriolis(u,v)
-         call uvEquation(u,v,num,h,Az,drag,tx,ty,dAdz,
-     &                   form_1,form_2)
+         call uvEquation(u,v,num,h,Az,drag,tx,ty,dAdz,form_1,form_2)
 
-         call Temperature(nuh,datum,I_0,h,Az,T,heat,SST,ga1,
-     &                    dAdz,form_1,form_2)
+         call Temperature(nuh,datum,I_0,h,Az,T,heat,SST,ga1,dAdz,form_1,form_2)
 
          call Salinity(S,h,Az,nuh,form_1,form_2)
 
          call Production(u,v,NN,meanint,num,nuh,P,B)
-         call Seiche(E_Seiche,P_Seiche,u10,v10,u,v,Az,dAdz,
-     &                NN,h,tx,ty,gamma)
-         call TKE(num,P,B,eps,L,h,Az,u_taus,u_taub,k,ko,
-     &                P_Seiche,form_k1,form_k2)
-         call Dissipation(cmue1,cmue2,P,B,k,ko,h,Az,eps,L,num,nuh,NN,
-     &                u_taus,u_taub,P_Seiche,form_k1,form_k2,form_beps)
+         call Seiche(E_Seiche,P_Seiche,u10,v10,u,v,Az,dAdz,NN,h,tx,ty,gamma)
+         call TKE(num,P,B,eps,L,h,Az,u_taus,u_taub,k,ko,P_Seiche,form_k1,form_k2)
+         call Dissipation(cmue1,cmue2,P,B,k,ko,h,Az,eps,L,num,nuh,NN,u_taus,u_taub,P_Seiche,form_k1,form_k2,form_beps)
 	     !call date_and_time (real_clock (1), real_clock (2), real_clock (3), date_time)
          !write(*,*) real_clock(2)
 
@@ -233,9 +221,9 @@
 !
         if (igoal.lt.0) then
 		   iav=iav+1
-                 call  avstate(iav,u,v,T,S,k,eps,num,nuh,
-     &                        B,P,NN,P_Seiche,E_Seiche,
-     &                        uav,vav,Tav,Sav,kav,epsav,numav,nuhav,
+                 call  avstate(iav,u,v,T,S,k,eps,num,nuh,&
+     &                        B,P,NN,P_Seiche,E_Seiche,&
+     &                        uav,vav,Tav,Sav,kav,epsav,numav,nuhav,&
      &                        Bav,Pav,NNav,P_Seicheav,E_Seicheav)
          end if
 !
@@ -246,21 +234,21 @@
            itera=0
 	   
            if (igoal.lt.0) then
-                  call  prep_outav(iav,   
-     &                        uav,vav,Tav,Sav,kav,epsav,numav,nuhav,
+                  call  prep_outav(iav,&
+     &                        uav,vav,Tav,Sav,kav,epsav,numav,nuhav,&
      &                        Bav,Pav,NNav,P_Seicheav,E_Seicheav)
-                  call write_out_new (datum,std,uav,vav,Tav,Sav,kav,epsav,
-     &                        nuhav,Bav,Pav,NNav,P_Seicheav,
+                  call write_out_new (datum,std,uav,vav,Tav,Sav,kav,epsav,&
+     &                        nuhav,Bav,Pav,NNav,P_Seicheav,&
      &                        E_Seicheav,zu,zk,M,Qvert)
 
-	      if (disp_simulation .eq. 1) write(6,991) datum,T(xl),T(xl-5),
+	      if (disp_simulation .eq. 1) write(6,991) datum,T(xl),T(xl-5),&
      &                                   Tav(xl),Tav(xl-5)
               iav=0
 
 	   else
 	      if (disp_simulation .eq. 1) write(6,990) datum,T(xl),T(xl-1),zk(xl)
 
-              call write_out_new (datum,std, u,v,T,S,k,eps,nuh,
+              call write_out_new (datum,std, u,v,T,S,k,eps,nuh,&
      &                        B,P,NN,P_Seiche,E_Seiche,zu,zk,M,Qvert)
            end if
         end if
@@ -269,7 +257,7 @@
   	if (disp_simulation .eq. 2)  then
                  write(6,990) datum,T(xl),T(xl-1)
         elseif (disp_simulation .eq. 3) then
-              write(6,999) datum,T(xl),T(xl-2),u(xl),u(xl-2),
+              write(6,999) datum,T(xl),T(xl-2),u(xl),u(xl-2),&
      &                           eps(xl),eps(xl-1),num(xl),num(xl-2)
         end if
  
@@ -325,7 +313,7 @@
       end
 
 !     ###############################################################
-      subroutine uvEquation(u,v,num,h,Az,drag,tx,ty,dAdz,
+      subroutine uvEquation(u,v,num,h,Az,drag,tx,ty,dAdz,&
      &                   form_1,form_2)
 !     ###############################################################
 
@@ -365,9 +353,9 @@
          au(i)=dt*num(i-1)*form_1(i)
          bu(i)=1.-au(i)-cu(i)
 		 if (pgrad == 1) then
-		    du(i) = u(i)  - 3.14*31.4*intu/xl*dt/86400*1000*9.81*depth/length/length
+		    du(i) = u(i)  - 3.1416*31.4*intu/xl*dt/86400*1000*9.81*depth/length/length
          elseif (pgrad == 2) then
-            du(i) = u(i) - drag*u(i)*sqrt(u(i)*u(i)+v(i)*v(i))
+            du(i) = u(i) - drag*u(i)*sqrt(u(i)*u(i)+v(i)*v(i))&
      &           *dAdz(i)/Az(i)*dt
          else
             du(i) = u(i)
@@ -389,9 +377,9 @@
 !     +-------------------------------------------------------------+
       do i=2,xl-1
 		 if (pgrad == 1) then
-		    du(i) = v(i)  - 3.14*31.4*intv/xl*dt/86400*1000*9.81*depth/length/length
+		    du(i) = v(i)  - 3.1416*31.4*intv/xl*dt/86400*1000*9.81*depth/length/length
          elseif (pgrad.eq.2) then
-            du(i) = v(i) - drag*v(i)*sqrt(u(i)*u(i)+v(i)*v(i))
+            du(i) = v(i) - drag*v(i)*sqrt(u(i)*u(i)+v(i)*v(i))&
      &           *dAdz(i)/Az(i)*dt
          else
             du(i) = v(i)
@@ -417,7 +405,7 @@
 !     +----------------------------------------------------------------+
 !     | Global variables                                               |
 !     +----------------------------------------------------------------+
-      double precision au(0:xl),bu(0:xl),cu(0:xl),du(0:xl),
+      double precision au(0:xl),bu(0:xl),cu(0:xl),du(0:xl),&
      &                 value(0:xl)
       integer fi,lt
 
@@ -477,7 +465,7 @@
 
        if  (salctr.eq.0) then 				! salinity is zero everywhere
         do i=1,xl-1
-           a(i)= -68.0+T(i)*(18.2091+T(i)*(-0.30866+T(i)*
+           a(i)= -68.0+T(i)*(18.2091+T(i)*(-0.30866+T(i)*&
      &                  (5.3445e-3+T(i)*(-6.0721e-5+T(i)*(3.1441e-7)))))
 !  	if (press.ne.0) then   ! ignore this pressure thing for alpha in first approximation
 !		a(i)= a(i) + 0.3682 +T(i)*(-1.520e-2 +T(i)*(1.91e-4))).*p(i)
@@ -490,7 +478,7 @@
 	if (delsal.eq.0) then			! salinity gradient is zero everywhere
 
             do i=1,xl-1
-	      a(i)= -68.0+T(i)*(18.2091+T(i)*(-0.30866+T(i)*(5.3445e-3+T(i)*
+	      a(i)= -68.0+T(i)*(18.2091+T(i)*(-0.30866+T(i)*(5.3445e-3+T(i)*&
      &		  (-6.0721e-5+T(i)*(3.1441e-7)))))
 	      a(i)= a(i) + (4.599 + T(i)*(-0.1999 +T(i)*(2.79e-3)))*S(i)
 !             if (press.ne.0) then   ! ignore this pressure thing for alpha in first approximation
@@ -517,8 +505,8 @@
 !		rho = 1000.0*rho0t./(1.0 - p./kbar);
 !          else	
              do i=0,xl
-		rho0t(i)=(0.9998395+T(i)*(6.7914e-5 +T(i)*(-9.0894e-6+T(i)*
-     &		(1.0171e-7+T(i)*
+		rho0t(i)=(0.9998395+T(i)*(6.7914e-5 +T(i)*(-9.0894e-6+T(i)*&
+     &		(1.0171e-7+T(i)*&
      &           (-1.2846e-9 +T(i)*(1.1592e-11 +T(i)*(-5.0125e-14)))))))
 		rho0st(i) = ((8.181e-4 +T(i)*(-3.85e-6 +T(i)*(4.96e-8)))*S(i))
 
@@ -546,7 +534,7 @@
 
 
 !     ###############################################################
-      subroutine Temperature(nuh,datum,I_0,h,Az,T,heat,SST,ga1,
+      subroutine Temperature(nuh,datum,I_0,h,Az,T,heat,SST,ga1,&
      &                dAdz,form_1,form_2)
 !     ###############################################################
 
@@ -559,7 +547,7 @@
 !     | Global variables                                               |
 !     +----------------------------------------------------------------+
 
-      double precision nuh(0:xl),datum,I_0,
+      double precision nuh(0:xl),datum,I_0,&
      &     h(0:xl),Az(0:xl),T(0:xl),heat,SST, ga1(0:xl),dAdz(0:xl)
       double precision form_1(0:xl),form_2(0:xl)
 
@@ -593,7 +581,7 @@
 
       au(xl)=dt*nuh(xl-1)*form_1(xl)
       bu(xl)=1.-au(xl)
-      du(xl)=T(xl)+(rad(xl)-rad(xl-1))/h(xl)*dt
+      du(xl)=T(xl)+(rad(xl)-rad(xl-1))/h(xl)*dt&
      &         +heat/rho_0/cp*dt/h(xl)
 
       if (NBC .eq. 1) then
@@ -602,7 +590,6 @@
          cu(xl)=0
          du(xl)=SST
       end if
-
 
       if (fgeo.ne.0) then
          do i=1,xl
@@ -647,7 +634,7 @@
 !         du(1)=S(1)+dt/SalRel
 	   du(1)=S(1)
 
-         au(xl)=-4.*dt*nuh(xl-1)*Az(xl-1)/(h(xl)+h(xl-1))
+         au(xl)=-4.*dt*nuh(xl-1)*Az(xl-1)/(h(xl)+h(xl-1))&
      &        /h(xl)/(Az(xl)+Az(xl-1))
 !         bu(xl)=1.+dt/SalRel-au(xl)
 !         du(xl)=S(xl)+dt/SalRel
@@ -727,7 +714,7 @@
 
 
 !     ###############################################################
-      subroutine StabilityFunctions(u,v,k,eps,T,S,meanint,NN,
+      subroutine StabilityFunctions(u,v,k,eps,T,S,meanint,NN,&
      &                       cmue1,cmue2)
 !     ###############################################################
  
@@ -770,7 +757,7 @@
 
 
 !     ###############################################################
-      subroutine Seiche(E_Seiche,P_Seiche,u10,v10,u,v,Az,dAdz,
+      subroutine Seiche(E_Seiche,P_Seiche,u10,v10,u,v,Az,dAdz,&
      &                 NN,h,tx,ty,gamma)
 !     ###############################################################
 
@@ -831,8 +818,8 @@
 
          E_Seiche = E_Seiche + (PW - PS)*dt 
 
-!        must limit so that E_seiche does not become negative
-         if (E_seiche .lt. 0) then
+!        must limit so that E_Seiche does not become negative
+         if (E_Seiche .lt. 0) then
             PS = (PS*dt+E_Seiche)/dt
             E_Seiche=0
          end if
@@ -865,7 +852,7 @@
 !     +----------------------------------------------------------------+
 !     | Global variables                                               |
 !     +----------------------------------------------------------------+
-      double precision u(0:xl),v(0:xl),meanint(0:xl),num(0:xl),
+      double precision u(0:xl),v(0:xl),meanint(0:xl),num(0:xl),&
      &     nuh(0:xl),P(0:xl),B(0:xl),NN(0:xl)
 
 !     +----------------------------------------------------------------+
@@ -894,7 +881,7 @@
 
 
 !     ###############################################################
-      subroutine TKE(num,P,B,eps,L,h,Az,u_taus,u_taub,k,ko,P_Seiche,
+      subroutine TKE(num,P,B,eps,L,h,Az,u_taus,u_taub,k,ko,P_Seiche,&
      &               form_k1,form_k2)
 !     ###############################################################
  
@@ -905,7 +892,7 @@
 !     +----------------------------------------------------------------+
 !     | Global variables                                               |
 !     +----------------------------------------------------------------+
-      double precision num(0:xl),P(0:xl),B(0:xl),k(0:xl),eps(0:xl),
+      double precision num(0:xl),P(0:xl),B(0:xl),k(0:xl),eps(0:xl),&
      &        h(0:xl),Az(0:xl),ko(0:xl),P_Seiche(0:xl),L(0:xl)
       double precision u_taus,u_taub
       double precision form_k1(0:xl),form_k2(0:xl)
@@ -913,7 +900,7 @@
 !     +----------------------------------------------------------------+
 !     | Local variables                                                |
 !     +----------------------------------------------------------------+
-      double precision avh(0:mxl),au(0:mxl),bu(0:mxl),cu(0:mxl),
+      double precision avh(0:mxl),au(0:mxl),bu(0:mxl),cu(0:mxl),&
      &     du(0:mxl)
       double precision pminus(0:mxl),pplus(0:mxl),Prod,Buoy,Diss                
       integer i
@@ -980,7 +967,7 @@
  
 
 !     ###############################################################
-      subroutine Dissipation(cmue1,cmue2,P,B,k,ko,h,Az,eps,L,num,nuh,
+      subroutine Dissipation(cmue1,cmue2,P,B,k,ko,h,Az,eps,L,num,nuh,&
      &           NN,u_taus,u_taub,P_Seiche,form_k1,form_k2,form_beps)
 !     ###############################################################
  
@@ -991,7 +978,7 @@
 !     +----------------------------------------------------------------+
 !     | Global variables                                               |
 !     +----------------------------------------------------------------+ 
-      double precision cmue1(0:xl),P(0:xl),B(0:xl),k(0:xl),
+      double precision cmue1(0:xl),P(0:xl),B(0:xl),k(0:xl),&
      &                 eps(0:xl),h(0:xl),Az(0:xl)
       double precision num(0:xl),nuh(0:xl),cmue2(0:xl),ko(0:xl)
       double precision L(0:xl),NN(0:xl),P_Seiche(0:xl)
@@ -1014,12 +1001,12 @@
       end do
 
       if ((fluxcond .eq. 1) .and. (Mod .eq. 1)) then
-         flux(0)    = avh(1 )*(cde*((ko(1   ))**1.5)
+         flux(0)    = avh(1 )*(cde*((ko(1   ))**1.5)&
      &                /(kappa*(K_s+0.5*h(1 )))**2.)
-         flux(xl) = avh(xl)*(cde*((ko(xl-1))**1.5)
+         flux(xl) = avh(xl)*(cde*((ko(xl-1))**1.5)&
      &                /(kappa*(z0 +0.5*h(xl)))**2.)
          do i=1,xl-1
-           flux(i) = num(i)/sig_e*(cde*((ko(i))**1.5)       
+           flux(i) = num(i)/sig_e*(cde*((ko(i))**1.5)&       
      &                /(kappa*(z0 +0.25*(h(i)+h(i+1))))**2.)
          end do
 
@@ -1066,15 +1053,15 @@
             du(i)=du(i)+flux(i)*dt*form_beps(i)      ! form_beps = 1/A * dA/dz             
          end do                                      ! (at epsilon posions)
          if (Az(0) .ne. 0) then                      ! Flux from bottom only!
-            du(1)=du(1)+flux(0)*dt/
+            du(1)=du(1)+flux(0)*dt* &
      &           (Az(0)+Az(1))/(Az(1)*(h(1)+h(2)))
          end if
-         du(xl-1)=du(xl-1)+flux(xl)*dt/
+         du(xl-1)=du(xl-1)+flux(xl)*dt* &
      &        (Az(xl)+Az(xl-1))/(Az(xl-1)*(h(xl)+h(xl-1)))
          call Tridiagonal(1,xl-1,au,bu,cu,du,eps)
-         eps(0) = eps(1)    + (cde*((ko(1   ))**1.5) ! Define eps at boundaries
+         eps(0) = eps(1)    + (cde*((ko(1   ))**1.5)&! Define eps at boundaries
      &                /(kappa*(K_s+1.0*h(1 )))**2.)*h(1)
-         eps(xl)= eps(xl-1) + (cde*((ko(xl-1))**1.5)
+         eps(xl)= eps(xl-1) + (cde*((ko(xl-1))**1.5)&
      &                /(kappa*(z0 +1.0*h(xl)))**2.)*h(xl)
       else
          cu(0)=0
@@ -1146,13 +1133,13 @@
 	     dt1 = (depth - zk(xl))/dh*dt
          dt2 = dt-dt1
       
-	  else if (((dh+h(xl)) .gt. h(xl-1)/2) .and.	! If top box > 0.5*lower box
+	  else if (((dh+h(xl)) .gt. h(xl-1)/2) .and.&	! If top box > 0.5*lower box
      &			((dh+h(xl)) .lt. 2*h(xl-1))) then	! and top box < 2*lower box
          dt1 = dt							! One normal time step
          dt2 = 0							! second step not necessary	  
 
 
-      else if ((dh+h(xl)) .le. 
+      else if ((dh+h(xl)) .le.& 
      &		h(xl-1)/2) then					! If top box <= 0.5*lower box
 		 dt1 = abs((h(xl)-h(xl-1)/2)/dh*dt)	! Step till top box = lower box / 2
          dt2 = dt-dt1						! Rest
@@ -1222,14 +1209,14 @@
 		 zk(xl) = zk(xl) + dh1			! new surface coordinate of top box
 		 dh2 = 0						! No change in volume
 
-	  else if (((dh+h(xl)) .gt. h(xl-1)/2) .and. 
+	  else if (((dh+h(xl)) .gt. h(xl-1)/2) .and.& 
      &		((dh+h(xl)) .lt. 2*h(xl-1))) then
          h(xl) = h(xl) + dh1			! new magnitude of top box
          zu(xl) = zu(xl) + dh1/2		! new centre coordinate of top box
 		 zk(xl) = zk(xl) + dh1			! new surface coordinate of top box
 		 return
 
-	  else if ((dh+h(xl)) .le.			! If top box <= lower box / 2
+	  else if ((dh+h(xl)) .le.&			! If top box <= lower box / 2
      &			h(xl-1)/2) then	  
 	     zk(xl-1) = zk(xl)
 		 zu(xl-1) = (zk(xl-1)+zk(xl-2))/2
@@ -1351,8 +1338,7 @@
         form_2(i) =-4.*Az(i)/(h(i)+h(i+1))/h(i)/(Az(i)+Az(i-1))
         form_k1(i)=-(Az(i)+Az(i+1))/(h(i)+h(i+1))/h(i+1)/Az(i)
         form_k2(i)=-(Az(i)+Az(i-1))/(h(i)+h(i+1))/h(i)/Az(i)
-        form_beps(i)=( (Az(i)-Az(i-1))/h(i)+(Az(i+1)-Az(i))/h(i+1) )
-     &                            /2/Az(i)
+        form_beps(i)=( (Az(i)-Az(i-1))/h(i)+(Az(i+1)-Az(i))/h(i+1) )/2/Az(i)
       end do 
       form_1(xl) =-4.*Az(xl-1)/(h(xl)+h(xl-1))/h(xl)/(Az(xl)+Az(xl-1)) 
       form_2(xl) =-4.*Az(xl)/(h(xl)+h(xl+1))/h(xl)/(Az(xl)+Az(xl-1))
@@ -1368,9 +1354,9 @@
 
  
 !     ###############################################################
-      subroutine  avstate(iav,u,v,T,S,k,eps,num,nuh,
-     &                        B,P,NN,P_Seiche,E_Seiche,
-     &                        uav,vav,Tav,Sav,kav,epsav,numav,nuhav,
+      subroutine  avstate(iav,u,v,T,S,k,eps,num,nuh,&
+     &                        B,P,NN,P_Seiche,E_Seiche,&
+     &                        uav,vav,Tav,Sav,kav,epsav,numav,nuhav,&
      &                        Bav,Pav,NNav,P_Seicheav,E_Seicheav)
 
 !     ###############################################################
@@ -1556,7 +1542,7 @@
 	  end
    
 !     ###############################################################
-      subroutine write_out (datum,u,v,T,S,k,eps,num,nuh,
+      subroutine write_out (datum,u,v,T,S,k,eps,num,nuh,&
      &                       B,P,NN,P_Seiche,E_Seiche,zu,zk,M)
 !     ###############################################################
       implicit none
@@ -1786,7 +1772,7 @@
 	  end
   
 !     ###############################################################
-      subroutine prep_outav(iav,uav,vav,Tav,Sav,kav,epsav,numav,nuhav,
+      subroutine prep_outav(iav,uav,vav,Tav,Sav,kav,epsav,numav,nuhav,&
      &                     Bav,Pav,NNav,P_Seicheav,E_Seicheav)
 !     ###############################################################
       implicit none
@@ -1889,7 +1875,7 @@
 
 
 !     ###############################################################
-      subroutine write_out_new (datum,std,u,v,T,S,k,eps,nuh,
+      subroutine write_out_new (datum,std,u,v,T,S,k,eps,nuh,&
      &                       B,P,NN,P_Seiche,E_Seiche,zu,zk,M,Qvert)
 !     ###############################################################
       implicit none
@@ -1958,7 +1944,7 @@
 	  call Interp_results(zk,NN,xl,zs,xs,save_vctr)
 	  write(80) (xs(i), i=save_vctr, 0, -1)      
 
-	  write(80) E_Seiche, zk(xl), zu(xl), u(xl), v(xl), T(xl),S(xl), 
+	  write(80) E_Seiche, zk(xl), zu(xl), u(xl), v(xl), T(xl),S(xl), &
      &			k(xl),eps(xl),nuh(xl), B(xl), P(xl),P_Seiche(xl),NN(xl), Qvert(xl)
 
 	  return	 

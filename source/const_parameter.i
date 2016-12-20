@@ -7,7 +7,7 @@
 	  double precision pi,k_min,epsmin,avhmin,g
       double precision sig_e,Prndtl,CD,C10,cde,cmue
       double precision Sl,e1,e2,a1,a2,b1,b2,c1,cl,SalRel
-      double precision alpha_Seiche, CDeff, q_NN, rho_air,sig_k
+      double precision alpha_Seiche, CDeff, q_NN, rho_air,sig_k,beta_Sol,r_s,f_wind
       double precision H_A, H_K, H_V, H_W
       double precision p_radin,p_windfun
       double precision zs(0:1000)	 
@@ -70,12 +70,12 @@
       common /com_cl/     cl
       common /com_b1/     b1
       common /com_heat_budget/ H_A, H_K, H_V, H_W
-      common /filenames/  ParName,InitName,ForcingName,MorphName,AbsorpName,OutName,GridName,
-     &	  zoutName,toutName,QinpName,QoutName,TinpName,SinpName, adv
+      common /filenames/  ParName,InitName,ForcingName,MorphName,AbsorpName, &
+	  OutName,GridName,zoutName,toutName,QinpName,QoutName,TinpName,SinpName, adv
       common /savectr/    xlk,xlu,indexk_save,indexu_save
       common /com_igoal/  igoal,igoal_s
       common /savez/      zs,save_vctr
-      common /heat_fit/   p_radin,p_windfun
+      common /heat_fit/   p_radin,p_windfun,beta_Sol,r_s,f_wind
       common /geo_therm/ fgeo,fgeo_add,fsed,fsed_add
       common /air_p/ air_press
       common /c_ctr/ norm_ctr

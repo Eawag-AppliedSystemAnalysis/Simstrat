@@ -14,7 +14,7 @@
          yi(posk1) = y(0)
          posk1 = posk1+1
       end do 
-      
+	  
       do while (zi(posk2) .ge. z(num_z))
          yi(posk2) = y(num_z)
          posk2 = posk2-1
@@ -24,8 +24,8 @@
          do while (zi(i) .gt. z(posi+1))
             posi = posi + 1
          end do
-            yi(i)=y(posi)+(zi(i)-z(posi))
-     &                              *(y(posi+1)-y(posi))
+            yi(i)=y(posi)+(zi(i)-z(posi))&
+     &                              *(y(posi+1)-y(posi))&
      &                              /(z(posi+1)-z(posi))
       end do
       
@@ -64,8 +64,8 @@
          do while (zi(i) .gt. z(posi+1))
             posi = posi + 1
          end do
-            yi(i)=y(posi)+(zi(i)-z(posi))
-     &                              *(y(posi+1)-y(posi))
+            yi(i)=y(posi)+(zi(i)-z(posi))&
+     &                              *(y(posi+1)-y(posi))&
      &                              /(z(posi+1)-z(posi))
       end do
       
@@ -73,7 +73,7 @@
       end
 
 !     #################################################################
-      subroutine Forcing(datum,T,first,tx,ty,u_taus,I_0,heat
+      subroutine Forcing(datum,T,first,tx,ty,u_taus,I_0,heat&
      &                              ,SST,u10,v10) 
 !     #################################################################
 
@@ -95,63 +95,63 @@
       double precision tau
       double precision tb_s, tb_e
       double precision A_start(7), A_end(7), A_cur(7)
-      double precision r_a, r_s, B0, fu, Vap_wat
-      double precision T_atm, F_glob, Vap_atm, Cloud
+      double precision r_a, B0, fu, Vap_wat, heat0 !,r_s
+      double precision T_atm, F_glob, Vap_atm, Cloud, wind
 
-      static tb_s, tb_e
-      static A_start, A_end, A_cur
+      save tb_s, tb_e										! MS 2014
+      save A_start, A_end, A_cur							! MS 2014
 
       integer eof
-      static eof
+      save eof
 
       if (NBC .eq. 1) then
-         call ReadForcing (20, datum, tb_s, tb_e, 
+         call ReadForcing (20, datum, tb_s, tb_e, &
      &             A_start, A_end, A_cur, 4, eof, first)
-         u10 = A_cur(1)
-         v10 = A_cur(2)
+         u10 = A_cur(1)*f_wind   !MS 2014
+         v10 = A_cur(2)*f_wind   !MS 2014
          SST = A_cur(3)
-         I_0 = A_cur(4)
+         I_0 = A_cur(4)*(1-beta_Sol)*(1-r_s) ! MS, added beta_Sol and r_s
          heat = 0
       else if (NBC .ge. 2) then
 
   
          if (NBC.eq.2) then			! date, U,V,Tatm,Hsol,Vap
-              call ReadForcing (20, datum, tb_s, tb_e, 
+              call ReadForcing (20, datum, tb_s, tb_e, &
      &             A_start, A_end, A_cur, 5, eof, first)
-            u10 = A_cur(1)
-            v10 = A_cur(2)
+            u10 = A_cur(1)*f_wind   !MS 2014
+            v10 = A_cur(2)*f_wind   !MS 2014
             T_atm = A_cur(3)
             F_glob = A_cur(4)
             Vap_atm = A_cur(5)
             Cloud = 0.5             
          else if (NBC.eq.3) then		! date,U10,V10,Tatm,Hsol,Vap,Clouds	
-            call ReadForcing (20, datum, tb_s, tb_e, 
+            call ReadForcing (20, datum, tb_s, tb_e, &
      &             A_start, A_end, A_cur, 6, eof, first)
-            u10 = A_cur(1)
-            v10 = A_cur(2)
+            u10 = A_cur(1)*f_wind   !MS 2014
+            v10 = A_cur(2)*f_wind   !MS 2014
             T_atm = A_cur(3)
             F_glob = A_cur(4)
             Vap_atm = A_cur(5)
             Cloud = A_cur(6)     
 	   else if (NBC.eq.4) then		! date,U10,V10,Hnet,Hsol 
-		  call ReadForcing (20, datum, tb_s, tb_e, 
+		  call ReadForcing (20, datum, tb_s, tb_e, &
      &             A_start, A_end, A_cur, 4, eof, first)
-	      u10 = A_cur(1)
-            v10 = A_cur(2)
-            heat = A_cur(3)
+	        u10 = A_cur(1)*f_wind   !MS 2014
+            v10 = A_cur(2)*f_wind   !MS 2014
+            heat0 = A_cur(3)   !MS 2014
             F_glob = A_cur(4)
          end if
   
          r_a = 0.03            ! Ratio of reflected to total 
                                ! long-wave iradiance
-         r_s = 0.20            ! Fraction of reflected short-wave
-                               ! radiation
+!         r_s = 0.20            ! Fraction of reflected short-wave
+!                               ! radiation, MS, made this a parameter
          B0 = 0.61             ! Bowen constant
 
                                ! Long-wave radiation from sky
                                ! Livingstone and Imboden 1989
-         H_A =   (1+0.17*Cloud*Cloud)
-     &         *  1.24*(Vap_atm/(T_atm+273.15))**(1.0/7.0)
+         H_A =   (1+0.17*Cloud*Cloud)&
+     &         *  1.24*(Vap_atm/(T_atm+273.15))**(1.0/7.0)&
      &         *  5.67e-8*(1-r_a)*(273.15+T_atm)**4
          H_A = H_A*p_radin     ! fitting factor p_radin (e.g. 1.09 for Aegerisee)
 
@@ -166,7 +166,7 @@
                                ! temperature of water (nach Gill 1992) (pressure in milibar)
          Vap_wat =  10**( (0.7859+0.03477*T(xl)) / (1+0.00412*T(xl)) )
          if (air_press.ne.0) then
-           Vap_wat=Vap_wat
+           Vap_wat=Vap_wat&
      &         *(1+1.0e-6*air_press*(4.5+0.00006*T(xl)*T(xl)))
          end if
 
@@ -176,38 +176,49 @@
                                ! Long-wave radiation from water body
          H_W = -0.97*5.67e-8*(T(xl)+273.15)**4
 
-         I_0 = (1-r_s)*F_glob      ! Solar short-wave radiation absorbed
+         I_0 = (1-r_s)*F_glob*(1-beta_Sol)      ! Solar short-wave radiation absorbed
+                                                ! MS, added beta_Sol
                                ! in the water column
 	   if (NBC.ne.4) then
-            heat = H_A + H_W + H_V + H_K
+            heat = H_A + H_W + H_V + H_K + (1-r_s)*F_glob*beta_Sol ! MS, added term with beta_Sol
+	   else
+            heat = heat0 + (1-r_s)*F_glob*beta_Sol ! MS, added term with beta_Sol			
 	   end if
          if ( (T(xl).lt.0).and.(heat.lt.0) )  heat=0	
 
       end if
 
 
-	if (CD .lt. 0.0) then
-		if (abs(u10) .le. 4.7 .and. abs(u10) .gt. 0.5) then
-			C10 = 1.78e-3*(sqrt(u10*u10+v10*v10))**(-1.3561)
-		elseif (abs(u10) .gt. 4.7) then
-			C10 = 2.13e-4
+	if (CD .lt. 0.0) then !modified code below according to Wüest and Lorke (2003)
+	    wind = (sqrt(u10**2+v10**2))
+		if (wind .le. 0.1) then
+		    C10 = 0.06215
+		else if (wind .le. 3.85) then
+			C10 = 0.0044*wind**(-1.15)
 		else
-			C10 = 0.0046
+			C10 = -0.000000712*wind**2+0.00007387*wind+0.0006605
 		end if
+!		if (abs(u10) .le. 4.7 .and. abs(u10) .gt. 0.5) then
+!			C10 = 1.78e-3*(sqrt(u10*u10+v10*v10))**(-1.3561)
+!		elseif (abs(u10) .gt. 4.7) then
+!			C10 = 2.13e-4
+!		else
+!			C10 = 0.0046
+!		end if
 	else
 		C10 = CD
 	end if
 
       tau = (u10**2+v10**2)*rho_air/rho_0*C10
       if (u10 .eq. 0.0) then
-	 tx = 0
+	     tx = 0
          ty = tau
       else if (v10 .eq. 0.0) then
          ty = 0
          tx = tau
       else
-         tx = v10/abs(v10)*tau/sqrt(1+(u10/v10)**2)
-         ty = u10/abs(u10)*tau/sqrt(1+(v10/u10)**2)
+         tx = u10*tau/sqrt(u10**2+v10**2)
+         ty = v10*tau/sqrt(u10**2+v10**2)
       end if
 
       u_taus = sqrt(tau)
@@ -251,9 +262,9 @@
       double precision ga1_e(0:mxl), ga2_e(0:mxl)
       integer first, eof, i,num_z
 
-      static tb_s, tb_e
-      static ga1_s, ga1_e, ga2_s, ga2_e, z_ga1
-      static eof, num_z
+      save tb_s, tb_e										! MS 2014
+      save ga1_s, ga1_e, ga2_s, ga2_e, z_ga1				! MS 2014
+      save eof, num_z										! MS 2014
 
        if (first .eq. 1) then
          eof=0 
@@ -268,11 +279,12 @@
          read(30,*, end=8) tb_s, (ga1_rs(i),i=0,num_z-1)
          read(30,*, end=9) tb_e, (ga1_re(i),i=0,num_z-1)
  9       continue
-         call Interp(z_ga1, ga1_rs, num_z-1, zk, ga1_s, xl)
+		 call Interp(z_ga1, ga1_rs, num_z-1, zk, ga1_s, xl)
+		 
          call Interp(z_ga1, ga1_re, num_z-1, zk, ga1_e, xl)
 
          if(datum .le. tb_s) then          ! if datum before first date
-		  write(6,*) " First datum in Absorption is 
+		  write(6,*) " First datum in Absorption is &
      &		  larger than that required !!"
 
             do i=0, xl
@@ -351,7 +363,7 @@
 
 
 !     ###############################################################
-      subroutine ReadForcing (FileNumber, datum, tb_s, tb_e, 
+      subroutine ReadForcing (FileNumber, datum, tb_s, tb_e, &
      &     A_start, A_end, A_cur, size, eof, first)
 !     ###############################################################
 
@@ -445,27 +457,30 @@
 !     |  Global Declarations                                        |
 !     +---------------------------------------------------------------+
 	  integer first
-	  double precision datum, zu(0:xl), h(0:xl), z_zero, Qvert(0:xl), Q_inp(1:4,0:mxl)
+	  double precision datum, zu(0:xl), h(0:xl), z_zero, Qvert(0:xl), &
+	  Q_inp(1:4,0:mxl)
 
 !     +---------------------------------------------------------------+
 !     |  Local Declarations                                        |
 !     +---------------------------------------------------------------+
-	  integer i, j, num_z(1:4), filenum(1:4)
+	  integer i, j, num_z(1:4), filenum(1:4), iostatus
 	  double precision z_Inp(1:4,0:mxl), dummy
 	  double precision Inp_rs(1:4,0:mxl), Inp_re(1:4,0:mxl)
 	  double precision Q_s(1:4,0:mxl), Q_e(1:4,0:mxl)
 	  double precision Q_rs(1:4,0:mxl), Q_re(1:4,0:mxl)
 	  double precision tb_s(1:4), tb_e(1:4), ratio(1:4)
 
-	  static Q_s, Q_e
-	  static num_z
+	  save Q_s, Q_e										! MS 2014
+	  save num_z										! MS 2014
+	  save tb_s, tb_e									! MS 2014
 
 	  filenum = [41,42,43,44]							
 	  do i=1,4
 		 if (first .eq. 1) then
-		    if (eof(filenum(i)) .eq. .FALSE.) then
-		       read(filenum(i),*)						! Read first row: description of columns			
-			   read(filenum(i),*)num_z(i)				! Read number of input depths (static)
+!		    if (eof(filenum(i)) .eq. .FALSE.) then
+		    read(filenum(i),*, IOSTAT = iostatus)		! Read first row: description of columns			
+			if (iostatus .eq. 0) then					! MS 2014
+			   read(filenum(i),*)num_z(i)				! Read number of input depths (save)
 			   read(filenum(i),*)dummy, (z_Inp(i,j), j=1,num_z(i)) ! Read input depths 
 			   !read(filenum(i),*)dummy, (z_Inp(i,j), j=num_z(i),1,-1) ! Read input depths 
 
@@ -474,25 +489,30 @@
 				  z_Inp(i,j) = z_zero + z_Inp(i,j)
 			   end do
 
-			   if (eof(filenum(i)) .eq. .TRUE.) then	! If empty -> Inp(i,all) = 0
-			      do j=0,xl
+			   read(filenum(i),*,IOSTAT = iostatus) tb_s(i), &
+			   (Inp_rs(i,j),j=1,num_z(i))	
+
+			   if (iostatus .lt. 0) then	! If empty -> Inp(i,all) = 0
+			   do j=0,xl
 				     Q_inp(i,j) = 0
 			      end do
 			   else										! else read start time & inputs
-			      read(filenum(i),*)tb_s(i), (Inp_rs(i,j),j=1,num_z(i))	
 				  !read(filenum(i),*)tb_s(i), (Inp_rs(i,j),j=num_z(i),1,-1)	
-
-				  call integrate(z_Inp(i,1:num_z(i)), Inp_rs(i,1:num_z(i)), 
+				  call integrate(z_Inp(i,1:num_z(i)), & 
+				  Inp_rs(i,1:num_z(i)), &
      &								Q_rs(i, 1:num_z(i)), num_z(i))
-			      if (eof(filenum(i)) .eq. .FALSE.) then		! if eof == FALSE: read end time
-			         read(filenum(i),*)tb_e(i), (Inp_re(i,j),j=1,num_z(i))	
+			         read(filenum(i),*,IOSTAT = iostatus)tb_e(i), &
+					 (Inp_re(i,j),j=1,num_z(i))	
 					 !read(filenum(i),*)tb_e(i), (Inp_re(i,j),j=num_z(i),1,-1)	
-
-					 call integrate(z_Inp(i,1:num_z(i)), Inp_re(i,1:num_z(i)), 
+			         if (iostatus .eq. 0) then		! if eof == FALSE: read end time, modified MS 2014
+					 call integrate(z_Inp(i,1:num_z(i)), &
+					                Inp_re(i,1:num_z(i)),& 
      &								Q_re(i, 1:num_z(i)), num_z(i))		   
-					 call Interp(z_Inp(i,1:num_z(i)), Q_rs(i,1:num_z(i)), 
+					 call Interp(z_Inp(i,1:num_z(i)), &
+					                Q_rs(i,1:num_z(i)), &
      &								num_z(i)-1, zu, Q_s(i,0:xl), xl)
-				     call Interp(z_Inp(i,1:num_z(i)), Q_re(i,1:num_z(i)), 
+				     call Interp(z_Inp(i,1:num_z(i)), &
+					                Q_re(i,1:num_z(i)), &
      &								num_z(i)-1, zu, Q_e(i,0:xl), xl)
 
 			         if(datum .le. tb_s(i)) then				! if datum before first date
@@ -500,34 +520,44 @@
 						   Q_inp(i,j) = Q_s(i,j)
 				        end do
 					 else
-					    do while ( .not. ((datum .ge. tb_s(i)) 	! do until datum between dates
+					    do while ( .not. ((datum .ge. tb_s(i)) & 	! do until datum between dates
      &							.and. (datum .le. tb_e(i))))
 						   tb_s(i) = tb_e(i)					! move one step in time
 						   do j=1, xl
 							  Q_s(i,j) = Q_e(i,j)
                            end do
-						   if (eof(filenum(i)) .ne. .TRUE.) then
-                              read(filenum(i),*) tb_e(i), (Inp_re(i,j),j=1,num_z(i))
+						   
+!						   if (eof(filenum(i)) .ne. .TRUE.) then
+                              read(filenum(i),*,IOSTAT=iostatus) &
+							  tb_e(i), (Inp_re(i,j),j=1,num_z(i))
+
+							  if (iostatus .lt. 0) then			! MS 2014
+							      exit
+							  end if
 							  !read(filenum(i),*) tb_e(i), (Inp_re(i,j),j=num_z(i),1,-1)
-							  call integrate(z_Inp(i,1:num_z(i)), Inp_re(i,1:num_z(i)), 
+							  call integrate(z_Inp(i,1:num_z(i)), &
+							        Inp_re(i,1:num_z(i)), &
      &								Q_re(i, 1:num_z(i)), num_z(i))		   
 
-	 						  call Interp(z_Inp(i,1:num_z(i)), Q_re(i,1:num_z(i)), 
+	 						  call Interp(z_Inp(i,1:num_z(i)), &
+							                Q_re(i,1:num_z(i)), & 
      &										num_z(i)-1, zu, Q_e(i,0:xl), xl)
-						   else							! if eof: exit do while loop
-						      exit
-					       end if
+!						   else							! if eof: exit do while loop
+!						      exit
+!					       end if
 						end do
 
                         ratio(i) = (datum-tb_s(i))/(tb_e(i)-tb_s(i))
                         do j=1, xl
-						   Q_inp(i,j) = Q_s(i,j)+ratio(i)*(Q_e(i,j) - Q_s(i,j))
-                        end do
+						   Q_inp(i,j) = Q_s(i,j)+ratio(i) &
+						   *(Q_e(i,j) - Q_s(i,j))
+                       end do
 			         end if
 
 				  else									! Interpolate Q_rs -> Q_s
-					 call Interp(z_Inp(i,1:num_z(i)), Q_rs(i,1:num_z(i)), num_z(i)-1, zu, 
-     &								Q_s(i,0:xl), xl)
+					 call Interp(z_Inp(i,1:num_z(i)), &
+					      Q_rs(i,1:num_z(i)), &
+					       num_z(i)-1, zu, Q_s(i,0:xl), xl)
 
 					 do j=1,xl							! Q_inp = Q_s
 						Q_inp(i,j) = Q_s(i,j)
@@ -536,22 +566,27 @@
 
 			   end if
 
-			end if								! if (eof(filenum(i)) .eq. .FALSE.) then
+			end if								! if (iostatus .eq. 0) then, MS 2014
 
 		 else									! If not first time:
-		    do while ( .not. ((datum .ge. tb_s(i)) 	! do until datum between dates
+
+		 do while ( .not. ((datum .ge. tb_s(i)) & 	! do until datum between dates
      &							.and. (datum .le. tb_e(i))))
+						   tb_s(i) = tb_e(i)					! move one step in time, added by Martin Schmid, 16.10.2006
 			   do j=1, xl
 				  Q_s(i,j) = Q_e(i,j)
                end do
-			   if (eof(filenum(i)) .ne. .TRUE.) then
-                  read(filenum(i),*) tb_e(i), (Inp_re(i,j),j=1,num_z(i))
+                  read(filenum(i),*,IOSTAT=iostatus) tb_e(i), &
+				           (Inp_re(i,j),j=1,num_z(i))
+			   if (iostatus .eq. 0) then			! MS 2014
 				  !read(filenum(i),*) tb_e(i), (Inp_re(i,j),j=num_z(i),1,-1)
 
-				  call integrate(z_Inp(i,1:num_z(i)), Inp_re(i,1:num_z(i)), 
+				  call integrate(z_Inp(i,1:num_z(i)), & 
+				  Inp_re(i,1:num_z(i)), & 
      &								Q_re(i, 1:num_z(i)), num_z(i))		   
-	 			  call Interp(z_Inp(i,1:num_z(i)), Q_re(i,1:num_z(i)), 
-     &										num_z(i)-1, zu, Q_e(i,0:xl), xl)
+	 			  call Interp(z_Inp(i,1:num_z(i)), &
+				  Q_re(i,1:num_z(i)), & 
+     &			  num_z(i)-1, zu, Q_e(i,0:xl), xl)
 			   else								! if eof: exit do while loop
 			      exit
 			   end if

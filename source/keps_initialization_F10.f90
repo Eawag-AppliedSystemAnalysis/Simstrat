@@ -6,8 +6,6 @@
 
       include 'const_parameter.i'
 
-
-
       double precision Sini(0:mxl),Tini(0:mxl),uini(0:mxl),vini(0:mxl) 
       double precision kini(0:mxl),epsini(0:mxl),Lini(0:mxl)
       double precision numini(0:mxl),nuhini(0:mxl) 
@@ -16,22 +14,18 @@
       double precision h(0:mxl)
       double precision Az(0:mxl),dAdz(0:mxl)
  
-
       common /ini_values1/ Sini,Tini
       common /ini_values2/ uini,vini
       common /ini_values3/ epsini,kini,Lini
       common /ini_values4/ numini,nuhini
       common /ini_values5/ dragini,txini,tyini,E_Seicheini,datumini
 
-
       common /morph_variables1/ h,Az,dAdz
-
 
 !     +-------------------------------------------------------------+
 !     |   Local variables                                           |
 !     +-------------------------------------------------------------+
       integer i
-
 	  
 !     +-------------------------------------------------------------+
 !     |    Calculation                                              |
@@ -69,7 +63,7 @@
 
 	  call check_advection
 
-      open (80, access = 'SEQUENTIAL', status='unknown',
+      open (80, access = 'SEQUENTIAL', status='unknown',&
      &     FORM='unformatted', file=OutName)
 
       datumini = t_start
@@ -83,7 +77,7 @@
                fgeo_add(i)=fgeo/rho_0/cp*dAdz(i)/Az(i) ! calculation per kg 
            end do
            if (Az(0) .ne. 0) then
-              fgeo_add(1) = fgeo_add(1) + 
+              fgeo_add(1) = fgeo_add(1) + &
      &             fgeo/rho_0/cp*2*Az(0)/((Az(0)+Az(1))*h(1))
            end if
       end if
@@ -95,13 +89,13 @@
                fsed_add(i)=fsed*dAdz(i)/Az(i) ! calculation per kg 
            end do
            if (Az(0) .ne. 0) then
-              fsed_add(1) = fsed_add(1) + 
+              fsed_add(1) = fsed_add(1) + &
      &             fsed*2*Az(0)/((Az(0)+Az(1))*h(1))
            end if
       end if
 
 
-!  salinity controle for buoyancy functions
+!  salinity control for buoyancy functions
       if (ModSal.eq.0) then
           do i=0,xl
             if (Sini(i).ne.0) salctr=1
@@ -358,6 +352,9 @@
       read(16,*) p_windfun  
       read(16,*) igoal
 	  read(16,*) ModSal
+      read(16,*) beta_Sol
+      read(16,*) r_s
+	  read(16,*) f_wind
 
       close(16)
 
@@ -408,9 +405,9 @@
       common /morph_varaibles2/ zu,zk,z_zero
 
 
-      double precision z_temp(0:mxl),
-     &                 u_temp(0:mxl),v_temp(0:mxl),
-     &                 T_temp(0:mxl),S_temp(0:mxl),
+      double precision z_temp(0:mxl),&
+     &                 u_temp(0:mxl),v_temp(0:mxl),&
+     &                 T_temp(0:mxl),S_temp(0:mxl),&
      &                 k_temp(0:mxl),eps_temp(0:mxl)
       double precision zini(0:mxl)
 	  double precision zini_depth, zmax
@@ -421,7 +418,7 @@
       ! read(2,*) zini_depth						! Read initial depth
 	  read(2,*)									! Read header of initial u,v, T, etc
       do i=0,mxl								! Read initial u,v,T, etc
-         read(2, *, END=9) zini(i), uini(i), vini(i), Tini(i), 
+         read(2, *, END=9) zini(i), uini(i), vini(i), Tini(i),& 
      &                     Sini(i), kini(i), epsini(i)
       end do
 
@@ -485,8 +482,8 @@
 	  if ((disp_diagnose.eq.1).or.(disp_diagnose.eq.2)) then
 		  write(6,*) " Initial Conditions File : "//InitName
 		  do i=num,0,-1
-		     write(6,'(F8.2,F10.3,F10.3,F10.3,G14.3,G14.3,G14.3)') 
-     &			 depth-z_temp(i),u_temp(i),v_temp(i),
+		     write(6,'(F8.2,F10.3,F10.3,F10.3,G14.3,G14.3,G14.3)') &
+     &			 depth-z_temp(i),u_temp(i),v_temp(i),&
      &                       T_temp(i),k_temp(i),eps_temp(i)
 	          end do
                   write(6,*)
@@ -546,7 +543,7 @@
       write (80) igoal
       write (80) save_vctr
 
-      if (save_vctr.eq.0) then                      ! takes evry nth index for output   
+      if (save_vctr.eq.0) then                      ! takes every nth index for output   
         j=0
         depth_save=int(zs(0))
         do i=xl,0,-depth_save
@@ -645,7 +642,7 @@
               if ( int(tout_ctr1(i)).eq.0 ) then
                  tout_ctr2(i)=(t_out(i)-test(i-1))*86400.0
                  test(i)=test(i-1)+tout_ctr2(i)
-                 write(6,*) " Warning: output delta t is smaller than dt
+                 write(6,*) " Warning: output delta t is smaller than dt &
      &                                  for iteration "
               else
 	         tout_ctr2(i)=((t_out(i)-test(i-1))*86400.0)/int(tout_ctr1(i))
@@ -698,7 +695,7 @@
       include 'const_parameter.i'
 
 	  !integer adv
-	  integer i, j, num_z, filenum(1:4)
+	  integer i, j, num_z, filenum(1:4), iostatus
 	  double precision z_Inp(0:mxl), dummy
 
 	  open (41, status='unknown', file=QinpName)
@@ -712,8 +709,8 @@
 	  do i=1,4
 	     read(filenum(i),*)						! Read first row: description of columns			
 	     read(filenum(i),*)num_z				! Read number of input depths (static)
-	     read(filenum(i),*)dummy, (z_Inp(j), j=1,num_z) ! Read input depths
-		 if (eof(filenum(i)) == .TRUE.) then
+	     read(filenum(i),*, IOSTAT = iostatus)dummy, (z_Inp(j), j=1,num_z) ! Read input depths
+		 if (iostatus .lt. 0) then
 		    adv = adv + 1
 		 end if
 		 close(filenum(i))	  
