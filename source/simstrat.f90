@@ -193,7 +193,7 @@ subroutine simstrat_simulation()
             if (ModInflow==1) then
                 call Lateral_rho(datum,std,zu(0:xl),zk(0:xl),z_zero,h(0:xl),T(0:xl),S(0:xl),rho(0:xl),Qvert(0:xl),Q_inp(1:4,0:xl)) !zk or zu?? (for interpolation)
             else
-                call Lateral(datum,std,zu(0:xl),z_zero,Qvert(0:xl),Q_inp(1:4,0:xl)) !zk or zu?? (for interpolation)
+                call Lateral(datum,std,zk(0:xl),z_zero,Qvert(0:xl),Q_inp(1:4,0:xl)) !zk or zu?? (for interpolation)
             end if
             call Advection(Qvert,Q_inp,U,V,T,S,k,eps,zu(0:xli),zk(0:xli),h(0:xli),Az(0:xli))
         end if

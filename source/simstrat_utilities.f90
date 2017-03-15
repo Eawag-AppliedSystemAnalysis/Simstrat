@@ -373,14 +373,14 @@ end
 !Read and compute inflow/ouflow parameters
 !AG 2014: revision + correction
 !####################################################################
-subroutine Lateral(datum,idx,zu,z_zero,Qvert,Q_inp)
+subroutine Lateral(datum,idx,zk,z_zero,Qvert,Q_inp)
 !####################################################################
 
       implicit none
       include 'common_parameters.i'
 
       ! Global Declarations
-      double precision datum,zu(0:xl),z_zero,Qvert(0:xl),Q_inp(1:4,0:xl)
+      double precision datum,zk(0:xl),z_zero,Qvert(0:xl),Q_inp(1:4,0:xl)
       integer idx
 
       ! Local Declarations
@@ -410,11 +410,11 @@ subroutine Lateral(datum,idx,zu,z_zero,Qvert,Q_inp)
             !Read first values
             read(fnum(i),*,end=9) tb_s(i),(Inp_rs(i,j),j=1,num_z(i))
             call Integrate(z_Inp(i,1:num_z(i)),Inp_rs(i,1:num_z(i)),Q_rs(i,1:num_z(i)),num_z(i))
-            call Interp(z_Inp(i,1:num_z(i)),Q_rs(i,1:num_z(i)),num_z(i)-1,zu,Q_s(i,1:xl),xl-1)
+            call Interp(z_Inp(i,1:num_z(i)),Q_rs(i,1:num_z(i)),num_z(i)-1,zk(1:xl),Q_s(i,1:xl),xl)
 
             read(fnum(i),*,end=7) tb_e(i),(Inp_re(i,j),j=1,num_z(i))
             call Integrate(z_Inp(i,1:num_z(i)),Inp_re(i,1:num_z(i)),Q_re(i,1:num_z(i)),num_z(i))
-            call Interp(z_Inp(i,1:num_z(i)),Q_re(i,1:num_z(i)),num_z(i)-1,zu,Q_e(i,1:xl),xl-1)
+            call Interp(z_Inp(i,1:num_z(i)),Q_re(i,1:num_z(i)),num_z(i)-1,zk(1:xl),Q_e(i,1:xl),xl)
             xlp = xl
          end if
 
@@ -431,7 +431,7 @@ subroutine Lateral(datum,idx,zu,z_zero,Qvert,Q_inp)
                  Q_s(i,1:xl) = Q_e(i,1:xl)
                  read(fnum(i),*,end=7) tb_e(i),(Inp_re(i,j),j=1,num_z(i))
                  call Integrate(z_Inp(i,1:num_z(i)),Inp_re(i,1:num_z(i)),Q_re(i,1:num_z(i)),num_z(i))
-                 call Interp(z_Inp(i,1:num_z(i)),Q_re(i,1:num_z(i)),num_z(i)-1,zu,Q_e(i,1:xl),xl-1)
+                 call Interp(z_Inp(i,1:num_z(i)),Q_re(i,1:num_z(i)),num_z(i)-1,zk(1:xl),Q_e(i,1:xl),xl)
              end do
              !do j=xl+1,mxl !(AG 2014:commented) useful???? (+previously not done at first timestep)
                  !Q_e(i,j) = Q_e(i,xl)
