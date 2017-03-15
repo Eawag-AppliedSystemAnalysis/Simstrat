@@ -13,8 +13,8 @@ TestCase_1\Tinp.dat
 TestCase_1\Sinp.dat
 *** Model setup *******************************************
 300          Timestep dt [s]
-28125        Start time [d]
-28425        End time [d] (max here: 40178)
+35001        Start time [d] (min here: 28125)
+35730        End time [d] (max here: 40178)
 *** Model, conditions and output selection ****************
 1            Turbulence model (1:k-epsilon, 2:MY)
 2            Stability function (1:constant, 2:quasi-equilibrium)
