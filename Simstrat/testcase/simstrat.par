@@ -1,0 +1,63 @@
+{
+  "Input" : {
+    "Initial conditions"  : "Rotsee_Input/rotsee_initialconditions.dat",
+    "Grid"                : "Rotsee_Input/rotsee_grid.dat",
+    "Morphology"          : "Rotsee_Input/rotsee_morphology.dat",
+    "Forcing"             : "Rotsee_Input/rotsee_forcing.dat",
+    "Absorption"          : "Rotsee_Input/rotsee_absorption.dat",
+    "Inflow"              : "Rotsee_Input/Qinp.dat",
+    "Outflow"             : "Rotsee_Input/Qout.dat",
+    "TemperatureInflow"   : "Rotsee_Input/Tinp.dat",
+    "SalinityInflow"      : "Rotsee_Input/Sinp.dat"
+  },
+
+  "Output" : {
+    "path"  : "Rotsee_Output/",
+    "depth" : "Rotsee_Input/Output_depth.dat",
+    "time"  : "Rotsee_Input/Output_time.dat",
+    "WriteOnTheFly" : false,
+    "ThinningInterval" : 96
+  },
+
+  "ModelConfig" : {
+    "MaxNrGridCells"          : 1000,
+    "StencilType"             : "implicit euler",
+    "CoupleAED2"              : false,
+    "UseBufferedForcing"      : false,
+    "TurbulenceModel"         : 1,
+    "StabilityFunction"       : 2,
+    "FluxCondition"           : 1,
+    "Forcing"                 : 3,
+    "UseFilteredWind"         : false,
+    "SeicheNormalization"     : 2,
+    "Wind drag model"         : 3,
+    "InflowPlacement"         : 0,
+    "PressureGradients"       : 0,
+    "EnableSalinityTransport" : 1,
+    "DisplaySimulation"       : 0,
+    "DisplayDiagnose"         : 1,
+    "DataAveraging"           : 10
+  },
+
+  "Simulation" : {
+    "Timestep"  : 300,
+    "Start"     : 16071,
+    "End"       : 16430
+  },
+
+  "Parameter" : {
+    "Lat"       : 47.0,
+    "p_air"     : 990,
+    "a_seiche"  : 0.0011046,
+    "q_NN"      : 1.25,
+    "f_wind"    : 0.20,
+    "C10"       : 0.001,
+    "CD"        : 0.002,
+    "fgeo"      : 0.0,
+    "k_min"     : 1e-15,
+    "p_radin"   : 1.0,
+    "p_windf"   : 3.2,
+    "beta_sol"  : 0.30,
+    "albsw"     : 0.08
+  }
+}
