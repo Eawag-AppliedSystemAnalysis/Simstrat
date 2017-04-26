@@ -20,7 +20,7 @@
   },
 
   "ModelConfig" : {
-    "MaxNrGridCells"          : 1000,
+    "MaxNrGridCells"          : 50,
     "StencilType"             : "implicit euler",
     "CoupleAED2"              : false,
     "UseBufferedForcing"      : false,
