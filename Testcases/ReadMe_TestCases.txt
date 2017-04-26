@@ -31,6 +31,5 @@ Testcase 2: variable water table
 - The simulation lasts for 2 years
 
 End values after 2 years:
-- Lake surface:		136.09864 m (bug in treatment of variable inflow at surface)
-- Surface T:		18.58236 °C
-- Bottom T:			4.59577 °C
+Time [d]	Surface level [m]	Surface T [degC]	bottom T [degC]
+35730.003			135.98511			16.41545			4.59556
