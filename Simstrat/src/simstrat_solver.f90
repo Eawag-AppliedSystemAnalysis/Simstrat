@@ -13,19 +13,19 @@ contains
 
       ! Arguments
       integer, intent(in) :: N !dimension
-      real(RK), dimension(N), intent(in) :: ld, md, ud, rhs !Lower diagonal, main diagonal, upper diagonal, right-hand side
-      real(RK), dimension(N), intent(out) :: solution !solution
-
+      real(RK), dimension(N),   intent(in) :: ud, rhs !Lower diagonal, main diagonal, upper diagonal, right-hand side
+      real(RK), dimension(N-1), intent(in) :: ld, md
+      real(RK), dimension(N),   intent(out) :: solution !solution
 
       ! Local variables
       real(RK), dimension(N) :: ru, qu
       integer :: i
-      
-      ru(N) = ld(N)/md(N)
+
+      ru(N) = ld(N-1)/md(N)
       qu(N) = rhs(N)/md(N)
 
       do i=N-1,2,-1
-          ru(i) = ld(i) / (md(i)-ud(i)*ru(i+1))
+          ru(i) = ld(i-1) / (md(i)-ud(i)*ru(i+1))
           qu(i) = (rhs(i)-ud(i)*qu(i+1)) / (md(i)-ud(i)*ru(i+1))
       end do
 
