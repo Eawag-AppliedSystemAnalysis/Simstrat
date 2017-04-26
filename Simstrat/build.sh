@@ -1,11 +1,8 @@
 #!/bin/bash
-
-#
 #  Simple build script.
 #
 #  Requires: FoBiS and Ford
 #
-
 
 #build using FoBiS:
 
