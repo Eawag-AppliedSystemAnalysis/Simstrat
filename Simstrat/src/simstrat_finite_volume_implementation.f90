@@ -7,10 +7,10 @@ module simstrat_finite_volume_implementation
   private
 
   !##################################################################################
-  !# Implementation of discretization scheme / grid 
+  !# Implementation of discretization scheme / grid
   !##################################################################################
 
-  type, abstract, extends(SimstratDiscretizationScheme), public :: StaggeredFiniteVolumeDiscretization 
+  type, abstract, extends(SimstratDiscretizationScheme), public :: StaggeredFiniteVolumeDiscretization
     private
 
       !definition of the finite volumes
@@ -70,7 +70,7 @@ contains
 
     !local variables
     integer :: nz, nz_faces
-   
+
     nz_faces = size(z_faces)
     nz = nz_faces-1
 
@@ -210,7 +210,7 @@ contains
   end subroutine
 
   !############################################################################
-  !# Create Linear Equation System / Matrix Diagonals 
+  !# Create Linear Equation System / Matrix Diagonals
   !############################################################################
   ! Core routine: construct the basic form of the diagonals that can be evolved to implicit euler or crank-nicolson scheme
   subroutine staggered_finite_volume_discretization_les_core(dt, form_param1, form_param2, volumes, a_faces, nz_centres, nu, fluxes, sources, ld, md, ud, rhs)
@@ -239,10 +239,12 @@ contains
 
     !# upper and lower diagonals are both the same for implicit euler
     !# and crank-nicolson
+    !MP: Todo: Check with NU is correct!
     ld(1:nz_centres) = form_param1(1:nz_centres)*nu2(1:nz_centres)
     ud(1:nz_centres) = form_param2(1:nz_centres)*nu2(1:nz_centres)
     !# right hand side
-    rhs(1:nz_centres) = dt*(sources(1:nz_centres)+Q(1:nz_centres))
+    !MP: Correction: Q should not be multiplied with dt
+    rhs(1:nz_centres) = dt*(sources(1:nz_centres))+Q(1:nz_centres)
 
     return
   end subroutine staggered_finite_volume_discretization_les_core
