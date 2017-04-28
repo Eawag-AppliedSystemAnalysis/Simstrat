@@ -5,11 +5,15 @@
 
 program simstrat_main
   use strat_kinds
-  use strat_simdata, only : Simulation
+  use simstrat_inputfile_module, only : SimstratSimulationFactory
+  use strat_simdata, only : SimulationData
   use strat_windshear, only: WindShearModule
   use, intrinsic :: ieee_arithmetic
 
   implicit none
+
+  type(SimstratSimulationFactory) :: factory
+  class(SimulationData), pointer :: simdata
 
   character(len=100) :: arg
   character(len=:), allocatable :: ParName
@@ -24,21 +28,20 @@ program simstrat_main
   ParName = trim(arg)
   if(ParName=='') ParName='simstrat.par'
 
-  call run_simulation()
+  !initialize model from inputfiles
+  call factory%initialize_model(ParName, simdata)
+ !simdata%model_cfg%max_nr_grid_cells = 2016
+ write(*,*) simdata%model_cfg
+
+!  call run_simulation()
 
 contains
 
   subroutine run_simulation()
 
     class(WindShearModule), allocatable :: uv
-    class(Simulation), allocatable :: sim_data
+    type(SimulationData) :: sim_data
 
-    allocate(sim_data)
-    allocate(sim_data%model)
-
-    sim_data%model%step = 26
-
-    write(*,*) sim_data%model%step
     write(*,*) "Hallo welt"
 
     !forcing%update()
