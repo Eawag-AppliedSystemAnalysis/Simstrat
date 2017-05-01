@@ -1,5 +1,6 @@
 module strat_simdata
   use strat_kinds
+  use strat_grid
   implicit none
   private
 
@@ -18,7 +19,7 @@ module strat_simdata
 
   type, public :: OutputConfig
     character(len=:), allocatable :: PathOut
-    character(len=:), allocatable :: zoutName
+    character(len=:), allocatable   :: zoutName
     logical :: write_on_the_fly
     integer :: thinning_interval
   end type
@@ -104,10 +105,11 @@ module strat_simdata
   type, public :: SimulationData
         type(InputConfig), public   :: input_cfg
         type(OutputConfig), public  :: output_cfg
-        type(SimConfig), public     :: sim_cfg
+        type(SimConfig),   public     :: sim_cfg
         type(ModelConfig), public   :: model_cfg
         type(ModelParam),  public   :: model_param
         type(ModelState),  public   :: model
+        type(StaggeredGrid), public :: grid
 
       contains
         procedure, pass :: init => simulation_data_init

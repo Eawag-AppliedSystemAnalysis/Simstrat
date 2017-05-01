@@ -1,6 +1,7 @@
 module simstrat_inputfile_module
   use strat_kinds
   use strat_simdata
+  use strat_grid
   use utilities
   use json_kinds, only: CK
   use json_module
@@ -19,6 +20,7 @@ module simstrat_inputfile_module
       procedure, pass(self), public :: initialize_model
       procedure, pass(self), public :: read_json_par_file
       procedure, pass(self), public :: read_initial_data
+      procedure, pass(self), public :: read_grid_config
   end type SimstratSimulationFactory
 
 contains
@@ -39,11 +41,75 @@ contains
     !Parse inputfile
     call self%read_json_par_file(fname)
 
+    !Set up grid
+    call self%read_grid_config
+
     !Read initial data
     call self%read_initial_data
 
 
   end subroutine initialize_model
+
+  subroutine read_grid_config(self)
+    implicit none
+    class(SimstratSimulationFactory) :: self
+    type(GridConfig) :: grid_config
+    real(RK), dimension(:) :: z_tmp(0:self%simdata%model_cfg%max_nr_grid_cells)
+    real(RK), dimension(:) :: A_tmp(0:self%simdata%model_cfg%max_nr_grid_cells)
+    integer :: num_read, i, ictr
+    associate(simdata => self%simdata, &
+              nz_max => self%simdata%model_cfg%max_nr_grid_cells)
+
+    grid_config%nz_grid_max = self%simdata%model_cfg%max_nr_grid_cells
+    allocate(grid_config%grid_read(0:nz_max))
+    ! Read grid
+    open(12,status='old',file=simdata%input_cfg%GridName)
+    read(12,*)
+    do ictr=0,nz_max
+        read(12,*,end=69) grid_config%grid_read(ictr)
+    end do
+69  if(ictr==nz_max) write(6,*) 'Only first ',nz_max,' values of file read.'
+    close(12)
+
+    if (ictr==1) then     ! Constant spacing
+        grid_config%nz_grid=int(grid_config%grid_read(0))
+        grid_config%equidistant_grid = .TRUE.
+    else                  ! Variable spacing
+        grid_config%nz_grid = ictr-1
+        grid_config%equidistant_grid = .FALSE.
+      end if
+
+    ! Read Morphology
+    open(11,status='old',file=simdata%input_cfg%MorphName)
+    read(11,*)                            ! Skip header
+    do i=0,nz_max                            ! Read depth and area
+        read(11,*,end=86) z_tmp(i), A_tmp(i)
+    end do
+86  if(i==nz_max) write(6,*) 'Only first ',nz_max,' values of file read.'
+    close(11)
+
+    num_read = i  ! Number of area values
+
+    allocate(grid_config%z_A_read(0:num_read-1), grid_config%A_read(0:num_read-1))
+
+    ! Reverse order of values
+    do i=0,num_read-1
+        grid_config%z_A_read(i) = -z_tmp(num_read-i-1)
+        grid_config%A_read(i) = A_tmp(num_read-i-1)
+    end do
+
+    grid_config%depth = grid_config%z_A_read(0) - grid_config%z_A_read(num_read-1)  ! depth = max - min depth
+    write(*,*) "grid"
+    write(*,*) grid_config%grid_read
+    write(*,*) "z_A"
+    write(*,*) grid_config%z_A_read
+    write(*,*) "A"
+    write(*,*) grid_config%A_read
+    write(*,*) grid_config%equidistant_grid
+    ! initialize Grid of simdata
+    call simdata%grid%init(grid_config)
+  end associate
+  end subroutine
 
   !#######################################################################
   subroutine read_json_par_file(self, ParName)
