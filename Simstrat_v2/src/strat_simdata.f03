@@ -6,7 +6,7 @@ module strat_simdata
 
   ! Common Types
   type, public :: InputConfig
-    character(len=:), allocatable          ::MorphName
+    character(len=:), allocatable          :: MorphName
     character(len=:), allocatable          :: InitName
     character(len=:), allocatable          :: ForcingName
     character(len=:), allocatable          :: AbsorpName

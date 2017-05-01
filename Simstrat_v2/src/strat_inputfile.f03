@@ -112,11 +112,14 @@ contains
             do i=2,grid%nz_grid
                 if(model%S(i)-model%S(i-1)/=0) then
                   model%has_salinity_grad=.true.
+                  exit
                 end if
             end do
         end if
     end if
-
+  model%datum=self%simdata%sim_cfg%start_datum
+  model%std=1
+  model%step=0
   end associate
   end subroutine
 

@@ -1,4 +1,4 @@
-module strat_consts
+  module strat_consts
   use strat_kinds
   implicit none
 
