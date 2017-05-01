@@ -29,10 +29,12 @@ type, public :: StaggeredGrid
   real(RK), dimension(:), allocatable :: AreaFactor_k2
   real(RK), dimension(:), allocatable :: AreaFactor_eps
   integer :: nz_grid
+  integer :: nz_inuse
+  integer :: nz_grid_max
   real(RK) :: z_zero
   real(RK) :: lake_level_old
+  real(RK) :: depth
 
-  type(GridConfig), allocatable :: config
 contains
     procedure, pass :: init => grid_init
     procedure, pass :: memory_init => grid_memory_init
@@ -41,6 +43,9 @@ contains
     procedure, pass :: init_morphology => grid_init_morphology
     procedure, pass :: init_areas => grid_init_areas
     procedure, pass :: update_area_factors => grid_update_area_factors
+    procedure, pass :: update_depth => grid_update_depth
+    procedure, pass :: interpolate_upp => grid_interpolate_upp
+    procedure, pass :: interpolate_cent => grid_interpolate_cent
 end type
 
 
@@ -49,21 +54,22 @@ contains
   subroutine grid_init(self, config)
     implicit none
     class(StaggeredGrid), intent(inout) :: self
-    class(GridConfig), intent(in) :: config
+    class(GridConfig), intent(inout) :: config
 
     ! Assign config
-    self%config = config
+    self%nz_grid = config%nz_grid
+    self%nz_grid_max = config%nz_grid_max
 
     ! Use read config to determine grid size
-    call self%init_morphology()
-    call self%init_grid_points()
+    call self%init_morphology(config)
+    call self%init_grid_points(config)
 
     ! Allocate arrays according to size
     call self%memory_init()
 
     ! Call init functions
     call self%init_z_axes()
-    call self%init_areas()
+    call self%init_areas(config)
     call self%update_area_factors()
   end subroutine grid_init
 
@@ -71,7 +77,7 @@ contains
     implicit none
     class(StaggeredGrid), intent(inout) :: self
 
-    associate(nz_grid => self%config%nz_grid)
+    associate(nz_grid => self%nz_grid)
 
     ! Allocate memory for initialization using nz_grid
     ! h is already allocated by grid point init
@@ -94,38 +100,39 @@ contains
 
   ! Calculates h and definite number of nz_grid
   ! Depending on configuration
-  subroutine grid_init_grid_points(self)
+  subroutine grid_init_grid_points(self, config)
     implicit none
     integer i
     class(StaggeredGrid), intent(inout) :: self
+    class(GridConfig), intent(inout) :: config
 
-    self%nz_grid=int(self%config%nz_grid)
+    self%nz_grid=int(config%nz_grid)
 
-    if (.not. self%config%equidistant_grid) then   ! variable spacing
+    if (.not. config%equidistant_grid) then   ! variable spacing
 
       ! Grid size given through number of grid_read
-      self%nz_grid = self%config%nz_grid
+      self%nz_grid = config%nz_grid
 
       !Include top value if not included
-      if (self%config%grid_read(0)/=0.) then
+      if (config%grid_read(0)/=0.) then
         self%nz_grid=self%nz_grid+1
         do i=self%nz_grid,1,-1
-            self%config%grid_read(i)=self%config%grid_read(i-1)
+            config%grid_read(i)=config%grid_read(i-1)
         end do
-        self%config%grid_read(0)=0.0_RK
+        config%grid_read(0)=0.0_RK
       end if
 
       !If maxdepth grid larger than morphology
-      if (self%config%grid_read(self%nz_grid)>self%config%depth) then
-          do while ((self%config%grid_read(self%nz_grid)>self%config%depth).and.(self%nz_grid>0.))
+      if (config%grid_read(self%nz_grid)>config%depth) then
+          do while ((config%grid_read(self%nz_grid)>config%depth).and.(self%nz_grid>0.))
               self%nz_grid=self%nz_grid-1
           end do
       end if
 
       !Include bottom value if not included
-      if (self%config%grid_read(self%nz_grid)< self%config%depth) then
+      if (config%grid_read(self%nz_grid)< config%depth) then
           self%nz_grid=self%nz_grid+1
-          self%config%grid_read(self%nz_grid)=self%config%depth
+          config%grid_read(self%nz_grid)=config%depth
       end if
     end if
 
@@ -133,13 +140,13 @@ contains
     allocate(self%h(0:self%nz_grid))
     self%h(0) = 0                ! Note that h(0) has no physical meaning but helps with some calculations
 
-    if (self%config%equidistant_grid) then
+    if (config%equidistant_grid) then
       ! Equidistant grid
-      self%h(1:self%nz_grid) = self%config%depth/self%nz_grid
+      self%h(1:self%nz_grid) = config%depth/self%nz_grid
     else
        ! Set up h according to configuraiton
       do i=1,self%nz_grid
-         self%h(1+self%nz_grid-i)=self%config%grid_read(i)-self%config%grid_read(i-1)
+         self%h(1+self%nz_grid-i)=config%grid_read(i)-config%grid_read(i-1)
       end do
     end if
   end subroutine grid_init_grid_points
@@ -162,38 +169,39 @@ contains
          self%z_upp(i)=nint(1e6_RK*self%z_upp(i))/1e6_RK
      end do
      ! needed?
-     self%lake_level_old = self%z_upp(self%nz_grid)
+     self%lake_level_old = self%z_upp(self%nz_inuse)
+     write(*,*) "Warning, nz_inuse not set yet"
   end subroutine grid_init_z_axes
 
 
-  subroutine grid_init_morphology(self)
+  subroutine grid_init_morphology(self, config)
     implicit none
     class(StaggeredGrid), intent(inout) :: self
+    class(GridConfig), intent(inout) :: config
     integer :: num_read
-    associate(cfg => self%config)
 
-    num_read = size(self%config%A_read)
+    num_read = size(config%A_read)
 
-    self%z_zero = cfg%z_A_read(0)
+    self%z_zero = config%z_A_read(0)
     self%lake_level_old =self%z_zero !needed?
-    cfg%z_A_read(0:num_read-1) = self%z_zero - cfg%z_A_read(0:num_read-1)      ! z-coordinate is positive upwards, zero point is at reservoir bottom
+    config%z_A_read(0:num_read-1) = self%z_zero - config%z_A_read(0:num_read-1)      ! z-coordinate is positive upwards, zero point is at reservoir bottom
 
-    end associate
   end subroutine grid_init_morphology
 
-  subroutine grid_init_areas(self)
+  subroutine grid_init_areas(self, config)
     implicit none
     class(StaggeredGrid), intent(inout) :: self
+    class(GridConfig), intent(inout) :: config
+
     integer :: num_read
-    associate(cfg => self%config, nz_grid => self%nz_grid, dAz => self%dAz,  z_upp => self%z_upp,Az => self%Az)
-    num_read = size(self%config%A_read)
+    associate(nz_grid => self%nz_grid, dAz => self%dAz,  z_upp => self%z_upp,Az => self%Az)
+    num_read = size(config%A_read)
 
     ! Interpolate area (A) at all depths (z_upp)
-    call Interp(cfg%z_A_read, cfg%A_read, num_read-1, self%z_upp, Az, nz_grid)
+    call Interp(config%z_A_read, config%A_read, num_read-1, self%z_upp, Az, nz_grid)
 
    ! Compute area derivative (= projected sediment area over layer thickness)
     dAz(1:nz_grid) = (Az(1:nz_grid)-dAz(0:nz_grid-1))/(z_upp(1:nz_grid)-z_upp(0:nz_grid-1))
-
     end associate
   end subroutine
 
@@ -205,7 +213,7 @@ contains
     integer :: i
     associate(Az => self%Az, &
               h => self%h, &
-              nz => self%nz_grid)
+              nz => self%nz_inuse)
 
 
     self%AreaFactor_1(1:nz) = -4*Az(0:nz-1)/(h(1:nz)+h(0:nz-1))/h(1:nz)/(Az(1:nz)+Az(0:nz-1))
@@ -222,5 +230,62 @@ contains
     end do
   end associate
   end subroutine grid_update_area_factors
+
+
+  subroutine grid_update_depth(self, new_depth)
+    implicit none
+    class(StaggeredGrid), intent(inout) :: self
+    real(RK), intent(inout) :: new_depth
+    integer :: i
+    real(RK) ::  zmax
+    associate(nz_grid => self%nz_grid, &
+              nz_inuse => self%nz_inuse, &
+              z_upp => self%z_upp, &
+              z_cent => self%z_cent, &
+              h => self%h, &
+              z_zero => self%z_zero)
+
+    do i=0,nz_grid
+        if (z_upp(i) >= (z_zero-new_depth)) then    ! If above initial water level
+            zmax = z_upp(i)
+            z_upp(i)= z_zero-new_depth
+            z_cent(i)= (z_upp(i)+z_upp(i-1))/2
+            h(i) = z_upp(i) - z_upp(i-1)
+            !Az(i) = Az(i-1) + h(i)/(zmax-z_upp(i-1))*(Az(i)-Az(i-1))
+            nz_inuse = i
+            if (h(nz_inuse)<=0.5*h(nz_inuse-1)) then         ! If top box is too small
+                z_upp(nz_inuse-1) = z_upp(nz_inuse)                ! Combine the two upper boxes
+                z_cent(nz_inuse-1) = (z_upp(nz_inuse-1)+z_upp(nz_inuse-2))/2
+                h(nz_inuse-1)  = h(nz_inuse)+h(nz_inuse-1)
+                nz_inuse = nz_inuse-1                        ! Reduce number of boxes
+            end if
+            exit
+        end if
+    end do
+
+    end associate
+  end subroutine
+
+
+  ! Interpolates values of y on grid z onto array yi and grid z_cent
+  subroutine grid_interpolate_cent(self, z,y,num_z,yi)
+    implicit none
+    class(StaggeredGrid), intent(in) :: self
+    real(RK), dimension(:), intent(in) :: z,y
+    real(RK), dimension(:), intent(out) :: yi
+    integer, intent(in) :: num_z
+
+    call Interp(z, y, num_z, self%z_cent, yi, self%nz_grid-1)
+  end subroutine
+
+  subroutine grid_interpolate_upp(self, z,y,num_z,yi)
+    implicit none
+    class(StaggeredGrid), intent(in) :: self
+    real(RK), dimension(:), intent(in) :: z,y
+    real(RK), dimension(:), intent(out) :: yi
+    integer, intent(in) :: num_z
+
+    call Interp(z, y, num_z, self%z_upp, yi, self%nz_grid)
+  end subroutine
 
 end module strat_grid

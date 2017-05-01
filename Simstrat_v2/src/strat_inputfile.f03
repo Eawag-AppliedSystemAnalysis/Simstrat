@@ -44,6 +44,8 @@ contains
     !Set up grid
     call self%read_grid_config
 
+    call self%simdata%model%init(self%simdata%grid%nz_grid)
+
     !Read initial data
     call self%read_initial_data
 
@@ -99,13 +101,7 @@ contains
     end do
 
     grid_config%depth = grid_config%z_A_read(0) - grid_config%z_A_read(num_read-1)  ! depth = max - min depth
-    write(*,*) "grid"
-    write(*,*) grid_config%grid_read
-    write(*,*) "z_A"
-    write(*,*) grid_config%z_A_read
-    write(*,*) "A"
-    write(*,*) grid_config%A_read
-    write(*,*) grid_config%equidistant_grid
+
     ! initialize Grid of simdata
     call simdata%grid%init(grid_config)
   end associate
@@ -219,7 +215,76 @@ contains
     implicit none
     class(SimstratSimulationFactory) :: self
 
+    ! Local variables
+    integer,parameter :: nz_max =1000
 
+    real(RK) :: z_tmp(0:nz_max), U_tmp(0:nz_max), V_tmp(0:nz_max)
+    real(RK) :: T_tmp(0:nz_max), S_tmp(0:nz_max), k_tmp(0:nz_max), eps_tmp(0:nz_max)
+
+    real(RK) :: z_read(0:nz_max), U_read(0:nz_max), V_read(0:nz_max)
+    real(RK) :: T_read(0:nz_max), S_read(0:nz_max), k_read(0:nz_max), eps_read(0:nz_max)
+
+    real(RK) :: z_ini(0:nz_max)
+    real(RK) :: z_ini_depth, zmax
+
+    integer :: i,num_read
+
+    associate(grid => self%simdata%grid, &
+              model => self%simdata%model, &
+              nz_inuse => self%simdata%grid%nz_inuse)
+
+    ! Read file
+    open(13,status='old',file=self%simdata%input_cfg%InitName)     ! Opens initial conditions file
+    read(13,*)                              ! Skip header
+    do i=0,nz_max                              ! Read initial u,v,T, etc
+        read(13,*,end=9) z_read(i),U_read(i),V_read(i),T_read(i),S_read(i),k_read(i),eps_read(i)
+    end do
+9   num_read = i-1                                ! Number of valuInitNamees
+    if (num_read<0) then
+        write(6,*) 'Error reading initial conditions files (no data found).'
+        stop
+    end if
+    close(13)
+    do i=0,num_read
+        z_read(i) = abs(z_read(i))               ! Make depths positive
+    end do
+    z_ini_depth = z_read(0)                     ! Initial depth (top-most)
+
+    ! update actual filled z in grid
+    call grid%update_depth(z_ini_depth)
+
+    do i=0,num_read
+        z_tmp(num_read-i) = grid%z_zero - z_read(i)
+        U_tmp(num_read-i) = U_read(i)
+        V_tmp(num_read-i) = V_read(i)
+        T_tmp(num_read-i) = T_read(i)
+        S_tmp(num_read-i) = S_read(i)
+        k_tmp(num_read-i) = k_read(i)
+        eps_tmp(num_read-i) = eps_read(i)
+    end do
+
+    if (num_read==0) then
+        write(6,*) 'Only one row! Water column will be initially homogeneous.'
+        model%U(0:nz_inuse) = U_tmp(0)
+        model%V(0:nz_inuse) = V_tmp(0)
+        model%T(0:nz_inuse) = T_tmp(0)
+        model%S(0:nz_inuse) = S_tmp(0)
+        model%k(0:nz_inuse) = k_tmp(0)
+        model%eps = eps_tmp(0)
+    else
+
+        ! interpolate variables UVTS on central grid and store
+        call grid%interpolate_cent(z_tmp, U_tmp, num_read, model%U)
+        call grid%interpolate_cent(z_tmp, V_tmp, num_read, model%V)
+        call grid%interpolate_cent(z_tmp, T_tmp, num_read, model%T)
+        call grid%interpolate_cent(z_tmp, S_tmp, num_read, model%S)
+
+        ! Interpolate k/eps on upper grid and store
+        call grid%interpolate_upp(z_tmp, k_tmp, num_read, model%k)
+        call grid%interpolate_upp(z_tmp, eps_tmp, num_read, model%eps)
+    end if
+
+  end associate
   end subroutine
 
   subroutine check_field(found, field_name, file_name)
