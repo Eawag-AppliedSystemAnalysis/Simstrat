@@ -98,6 +98,11 @@ module strat_simdata
     real(RK), dimension(:), allocatable :: rad  ! Solar radiation (in water)
     real(RK), dimension(:), allocatable :: Q_vert    ! Vertical exchange between boxes
 
+    real(RK)                :: cde,cm0
+    real(RK)                ::  fsed
+    real(RK), dimension(:), allocatable     :: fgeo_add
+    logical :: has_salinity_grad, has_salinity
+
   contains
     procedure, pass :: init => model_state_init
   end type

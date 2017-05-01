@@ -2,6 +2,7 @@ module simstrat_inputfile_module
   use strat_kinds
   use strat_simdata
   use strat_grid
+  use strat_consts
   use utilities
   use json_kinds, only: CK
   use json_module
@@ -21,6 +22,7 @@ module simstrat_inputfile_module
       procedure, pass(self), public :: read_json_par_file
       procedure, pass(self), public :: read_initial_data
       procedure, pass(self), public :: read_grid_config
+      procedure, pass(self), public :: setup_model
   end type SimstratSimulationFactory
 
 contains
@@ -49,8 +51,74 @@ contains
     !Read initial data
     call self%read_initial_data
 
+    ! Update area factors
+    call self%simdata%grid%update_area_factors()
+
+    ! Init rest of model
+    call self%setup_model
+
 
   end subroutine initialize_model
+
+  subroutine setup_model(self)
+    implicit none
+    class(SimstratSimulationFactory) :: self
+    integer :: i
+    associate(simdata => self%simdata, &
+              model_cfg => self%simdata%model_cfg, &
+              model_param => self%simdata%model_param, &
+              model => self%simdata%model, &
+              grid => self%simdata%grid)
+
+    ! Initialize some more values
+    if(model_cfg%stability_func==1) model%cm0=0.5625_RK
+    if(model_cfg%stability_func==2) model%cm0=0.556171_RK
+    model%cde=model%cm0**3
+    sig_e=(kappa/model%cm0)**2/(ce2-ce1)
+
+    model%num(0:grid%nz_grid) = 0.0_RK
+    model%nuh(0:grid%nz_grid)= 0.0_RK
+
+    model%tx=0.0_RK
+    model%ty=0.0_RK
+
+    model%drag=(kappa/log(1.0_RK+30/K_s*grid%h(1)/2))**2
+
+
+    ! Geothermal heat flux
+    if (model_param%fgeo/=0) then
+        model%fgeo_add(1:grid%nz_grid) = model_param%fgeo/rho_0/cp*grid%dAz(1:grid%nz_grid)/grid%Az(1:grid%nz_grid) ! calculation per kg
+        if (grid%Az(0)/=0) then
+            model%fgeo_add(1) = model%fgeo_add(1)+2*model_param%fgeo/rho_0/cp*grid%Az(0)/((grid%Az(0)+grid%Az(1))*grid%h(1))
+        end if
+    end if
+
+    ! Salinity control for buoyancy functions
+    ! if salinity transport is enabled
+    if (model_cfg%salinity_transport) then
+        model%has_salinity=.true.
+        model%has_salinity_grad=.true.
+    else ! else, test for this config
+        model%has_salinity = .false.
+        model%has_salinity_grad = .false.
+        do i=1,grid%nz_grid
+            if(model%S(i)/=0) then
+              model%has_salinity=.true.
+              exit
+            end if
+
+        end do
+        if (model%has_salinity) then
+            do i=2,grid%nz_grid
+                if(model%S(i)-model%S(i-1)/=0) then
+                  model%has_salinity_grad=.true.
+                end if
+            end do
+        end if
+    end if
+
+  end associate
+  end subroutine
 
   subroutine read_grid_config(self)
     implicit none

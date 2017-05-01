@@ -3,7 +3,7 @@ module strat_consts
   implicit none
 
 !   *** General constants ***
-    real(RK), parameter     :: pi = 4.RK*DATAN(1.RK)   ! pi [-]
+    real(RK), parameter     :: pi = 4.0_RK*DATAN(1.0_RK)   ! pi [-]
     real(RK), parameter     :: rho_air = 1.2_RK       ! density of air [kg/m3]
     real(RK), parameter     :: g = 9.81_RK            ! Earth gravitational acceleration [m/s2]
     real(RK), parameter     :: kappa = 0.41_RK        ! Von Karman constant [-]
