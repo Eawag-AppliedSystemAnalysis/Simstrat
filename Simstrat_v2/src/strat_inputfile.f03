@@ -1,4 +1,4 @@
-module simstrat_inputfile_module
+module strat_inputfile
   use strat_kinds
   use strat_simdata
   use strat_grid
@@ -23,6 +23,7 @@ module simstrat_inputfile_module
       procedure, pass(self), public :: read_initial_data
       procedure, pass(self), public :: read_grid_config
       procedure, pass(self), public :: setup_model
+      procedure, pass(self), public :: setup_output_conf
   end type SimstratSimulationFactory
 
 contains
@@ -55,10 +56,84 @@ contains
     call self%simdata%grid%update_area_factors()
 
     ! Init rest of model
-    call self%setup_model
+    call self%setup_model()
+
+    ! Set output configuration
+    call self%setup_output_conf()
 
 
   end subroutine initialize_model
+
+  subroutine setup_output_conf(self)
+    implicit none
+    class(SimstratSimulationFactory) :: self
+
+    type(csv_file) :: f
+    logical :: status_ok
+
+    associate(model => self%simdata%model, &
+              output_cfg => self%simdata%output_cfg)
+
+    ! read output depths
+
+    call check_file_exists(output_cfg%zoutName)
+
+    call f%read(output_cfg%zoutName, header_row=1, status_ok=status_ok)
+    if(.not.status_ok) then
+      call error('Unable to read output depths: '//output_cfg%zoutName)
+      stop
+    end if
+    call f%get(1, output_cfg%zout, status_ok)
+    call f%destroy()
+
+    ! Define variables that should be written
+    allocate(self%simdata%output_cfg%output_vars(0:10))
+
+    self%simdata%output_cfg%output_vars(0)%name = "V"
+    self%simdata%output_cfg%output_vars(0)%values => self%simdata%model%V
+    self%simdata%output_cfg%output_vars(0)%center_grid = .true.
+
+    self%simdata%output_cfg%output_vars(1)%name = "U"
+    self%simdata%output_cfg%output_vars(1)%values => self%simdata%model%U
+    self%simdata%output_cfg%output_vars(1)%center_grid = .true.
+
+    self%simdata%output_cfg%output_vars(2)%name = "T"
+    self%simdata%output_cfg%output_vars(2)%values => self%simdata%model%T
+    self%simdata%output_cfg%output_vars(2)%center_grid = .true.
+
+    self%simdata%output_cfg%output_vars(3)%name = "S"
+    self%simdata%output_cfg%output_vars(3)%values => self%simdata%model%S
+    self%simdata%output_cfg%output_vars(3)%center_grid = .true.
+
+    self%simdata%output_cfg%output_vars(4)%name = "P"
+    self%simdata%output_cfg%output_vars(4)%values => self%simdata%model%P
+    self%simdata%output_cfg%output_vars(4)%center_grid = .false.
+
+    self%simdata%output_cfg%output_vars(5)%name = "num"
+    self%simdata%output_cfg%output_vars(5)%values => self%simdata%model%num
+    self%simdata%output_cfg%output_vars(5)%center_grid = .false.
+
+    self%simdata%output_cfg%output_vars(6)%name = "nuh"
+    self%simdata%output_cfg%output_vars(6)%values => self%simdata%model%nuh
+    self%simdata%output_cfg%output_vars(6)%center_grid = .false.
+
+    self%simdata%output_cfg%output_vars(7)%name = "NN"
+    self%simdata%output_cfg%output_vars(7)%values => self%simdata%model%NN
+    self%simdata%output_cfg%output_vars(7)%center_grid = .false.
+
+    self%simdata%output_cfg%output_vars(8)%name = "k"
+    self%simdata%output_cfg%output_vars(8)%values => self%simdata%model%k
+    self%simdata%output_cfg%output_vars(8)%center_grid = .false.
+
+    self%simdata%output_cfg%output_vars(9)%name = "eps"
+    self%simdata%output_cfg%output_vars(9)%values => self%simdata%model%eps
+    self%simdata%output_cfg%output_vars(9)%center_grid = .false.
+
+    self%simdata%output_cfg%output_vars(10)%name = "B"
+    self%simdata%output_cfg%output_vars(10)%values => self%simdata%model%B
+    self%simdata%output_cfg%output_vars(10)%center_grid = .false.
+    end associate
+  end subroutine
 
   subroutine setup_model(self)
     implicit none
@@ -117,9 +192,11 @@ contains
             end do
         end if
     end if
-  model%datum=self%simdata%sim_cfg%start_datum
-  model%std=1
-  model%step=0
+
+    ! Set up timing
+    model%datum=self%simdata%sim_cfg%start_datum
+    model%std=1
+    model%step=0
   end associate
   end subroutine
 
@@ -345,14 +422,14 @@ contains
     else
 
         ! interpolate variables UVTS on central grid and store
-        call grid%interpolate_cent(z_tmp, U_tmp, num_read, model%U)
-        call grid%interpolate_cent(z_tmp, V_tmp, num_read, model%V)
-        call grid%interpolate_cent(z_tmp, T_tmp, num_read, model%T)
-        call grid%interpolate_cent(z_tmp, S_tmp, num_read, model%S)
+        call grid%interpolate_to_cent(z_tmp, U_tmp, num_read, model%U)
+        call grid%interpolate_to_cent(z_tmp, V_tmp, num_read, model%V)
+        call grid%interpolate_to_cent(z_tmp, T_tmp, num_read, model%T)
+        call grid%interpolate_to_cent(z_tmp, S_tmp, num_read, model%S)
 
         ! Interpolate k/eps on upper grid and store
-        call grid%interpolate_upp(z_tmp, k_tmp, num_read, model%k)
-        call grid%interpolate_upp(z_tmp, eps_tmp, num_read, model%eps)
+        call grid%interpolate_to_upp(z_tmp, k_tmp, num_read, model%k)
+        call grid%interpolate_to_upp(z_tmp, eps_tmp, num_read, model%eps)
     end if
 
   end associate
@@ -371,4 +448,4 @@ contains
   end subroutine check_field
 
 
-end module simstrat_inputfile_module
+end module strat_inputfile

@@ -22,7 +22,10 @@ module strat_kinds
        procedure(generic_statevariable_solve), deferred, nopass :: solve
   end type
 
+
+
 contains
+
   subroutine generic_linsyssolver_solve(ld, md, ud, rhs, x)
         implicit none
 

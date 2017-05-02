@@ -44,8 +44,10 @@ contains
     procedure, pass :: init_areas => grid_init_areas
     procedure, pass :: update_area_factors => grid_update_area_factors
     procedure, pass :: update_depth => grid_update_depth
-    procedure, pass :: interpolate_upp => grid_interpolate_upp
-    procedure, pass :: interpolate_cent => grid_interpolate_cent
+    procedure, pass :: interpolate_to_upp => grid_interpolate_to_upp
+    procedure, pass :: interpolate_to_cent => grid_interpolate_to_cent
+    procedure, pass :: interpolate_from_upp => grid_interpolate_from_upp
+    procedure, pass :: interpolate_from_cent => grid_interpolate_from_cent
 end type
 
 
@@ -268,7 +270,7 @@ contains
 
 
   ! Interpolates values of y on grid z onto array yi and grid z_cent
-  subroutine grid_interpolate_cent(self, z,y,num_z,yi)
+  subroutine grid_interpolate_to_cent(self, z,y,num_z,yi)
     implicit none
     class(StaggeredGrid), intent(in) :: self
     real(RK), dimension(:), intent(in) :: z,y
@@ -278,7 +280,7 @@ contains
     call Interp(z, y, num_z, self%z_cent, yi, self%nz_grid-1)
   end subroutine
 
-  subroutine grid_interpolate_upp(self, z,y,num_z,yi)
+  subroutine grid_interpolate_to_upp(self, z,y,num_z,yi)
     implicit none
     class(StaggeredGrid), intent(in) :: self
     real(RK), dimension(:), intent(in) :: z,y
@@ -286,6 +288,24 @@ contains
     integer, intent(in) :: num_z
 
     call Interp(z, y, num_z, self%z_upp, yi, self%nz_grid)
+  end subroutine
+
+  subroutine grid_interpolate_from_cent(self, z, y, num_z, yi)
+    class(StaggeredGrid), intent(in) :: self
+    real(RK), dimension(:), intent(in) :: z,y
+    real(RK), dimension(:), intent(out) :: yi
+    integer, intent(in) :: num_z
+
+    call Interp_nan(self%z_cent, y, self%nz_grid-1, z, yi, num_z)
+  end subroutine
+
+  subroutine grid_interpolate_from_upp(self, z, y, num_z, yi)
+    class(StaggeredGrid), intent(in) :: self
+    real(RK), dimension(:), intent(in) :: z,y
+    real(RK), dimension(:), intent(out) :: yi
+    integer, intent(in) :: num_z
+
+    call Interp_nan(self%z_upp, y, self%nz_grid, z, yi, num_z)
   end subroutine
 
 end module strat_grid

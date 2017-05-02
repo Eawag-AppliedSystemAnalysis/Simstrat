@@ -140,11 +140,6 @@ contains
                 call self%read(state%datum,A_s,A_e,A_cur,6+nval_offset,state%std)
                 state%u10 = A_cur(1)*param%f_wind      !MS 2014: added f_wind
                 state%v10 = A_cur(2)*param%f_wind      !MS 2014: added f_wind
-                write(*,*) "WIIIND"
-                write(*,*) A_cur
-                write(*,*) param%f_wind
-                write(*,*) state%u10
-                write(*,*) state%v10
                 T_atm = A_cur(3)
                 F_glob = A_cur(4)*(1-param%albsw)
                 Vap_atm = A_cur(5)

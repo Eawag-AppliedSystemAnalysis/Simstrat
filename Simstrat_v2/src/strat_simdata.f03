@@ -17,9 +17,17 @@ module strat_simdata
     character(len=:), allocatable          :: SinpName
   end type
 
+  type, public :: LogVariable
+    character(len=:), allocatable :: name
+    real(RK), dimension(:), pointer :: values
+    logical :: center_grid
+  end type
+
   type, public :: OutputConfig
     character(len=:), allocatable :: PathOut
     character(len=:), allocatable   :: zoutName
+    real(RK), dimension(:), allocatable :: zout
+    class(LogVariable), dimension(:), allocatable :: output_vars
     logical :: write_on_the_fly
     integer :: thinning_interval
   end type

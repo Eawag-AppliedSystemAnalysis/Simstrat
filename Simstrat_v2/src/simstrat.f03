@@ -5,7 +5,8 @@
 
 program simstrat_main
   use strat_kinds
-  use simstrat_inputfile_module, only : SimstratSimulationFactory
+  use strat_inputfile, only : SimstratSimulationFactory
+  use strat_outputfile
   use strat_simdata, only : SimulationData
   use strat_forcing
   use strat_windshear, only: WindShearModule
@@ -16,6 +17,7 @@ program simstrat_main
   type(SimstratSimulationFactory) :: factory
   class(SimulationData), pointer :: simdata
   type(ForcingModule) :: mod_forcing
+  type(SimpleLogger) :: logger
 
   character(len=100) :: arg
   character(len=:), allocatable :: ParName
@@ -33,11 +35,16 @@ program simstrat_main
   !initialize model from inputfiles
   call factory%initialize_model(ParName, simdata)
 
-  !initilaize forcing module
+  !initialize forcing module
   call mod_forcing%init(simdata%model_cfg, simdata%input_cfg%ForcingName)
+
+  ! Setup logger
+  call logger%initialize(simdata%output_cfg, simdata%grid)
 
 
   call run_simulation()
+
+  call logger%close()
 
 contains
 
@@ -48,9 +55,7 @@ contains
     write(*,*) "Hallo welt"
 
     ! Read forcing file
-    call mod_forcing%update(simdata%model, simdata%model_param)
-
-    write(*,*) simdata%model%uv10
+  !  call mod_forcing%update(simdata%model, simdata%model_param)
 
     !stability%update()
     !advection%update()
@@ -70,7 +75,7 @@ contains
     !eps%update_and_solve()
     !dissipation%update()
 
-    !model%log()
+    call logger%log(simdata%model%datum)
 
   end subroutine
 
