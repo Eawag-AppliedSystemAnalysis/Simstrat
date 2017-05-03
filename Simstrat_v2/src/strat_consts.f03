@@ -32,4 +32,14 @@
     real(RK), parameter     :: B0 = 0.61_RK            ! Bowen constant
     real(RK), parameter     :: sig = 5.67e-8_RK        ! Stefan-Boltzmann constant [W/m2/K4]
 
+    !      *** Parameters for MY model  ***
+    real(RK), parameter     :: a1 = 0.92_RK
+    real(RK), parameter     :: a2 = 0.74_RK
+    real(RK), parameter     :: b1 = 16.6_RK
+    real(RK), parameter     :: b2 = 10.1_RK
+    real(RK), parameter     :: c1 = 0.08_RK
+    real(RK), parameter     :: e1 = 1.8_RK
+    real(RK), parameter     :: e2 = 1.33_RK
+    real(RK), parameter     :: sl = 0.2_RK
+
 end module strat_consts

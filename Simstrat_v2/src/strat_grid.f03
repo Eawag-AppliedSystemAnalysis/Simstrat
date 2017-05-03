@@ -31,6 +31,7 @@ type, public :: StaggeredGrid
   integer :: nz_grid
   integer :: nz_inuse
   integer :: nz_grid_max
+  integer :: ubound_u, ubound_c, len_u, len_c
   real(RK) :: z_zero
   real(RK) :: lake_level_old
   real(RK) :: depth
@@ -48,6 +49,7 @@ contains
     procedure, pass :: interpolate_to_cent => grid_interpolate_to_cent
     procedure, pass :: interpolate_from_upp => grid_interpolate_from_upp
     procedure, pass :: interpolate_from_cent => grid_interpolate_from_cent
+    procedure, pass :: update_nz => grid_update_nz
 end type
 
 
@@ -264,7 +266,7 @@ contains
             exit
         end if
     end do
-
+    call self%update_nz()
     end associate
   end subroutine
 
@@ -308,5 +310,16 @@ contains
 
     call Interp(self%z_upp, y, self%nz_grid, z, yi, num_z)
   end subroutine
+
+  subroutine grid_update_nz(self)
+    implicit none
+    class(StaggeredGrid), intent(inout) :: self
+
+    self%ubound_c = self%nz_inuse
+    self%ubound_u = self%nz_inuse + 1
+    self%len_c  = self%nz_inuse
+    self%len_u = self%nz_inuse + 1
+  end subroutine
+
 
 end module strat_grid
