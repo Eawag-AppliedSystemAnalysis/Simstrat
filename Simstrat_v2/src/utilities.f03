@@ -65,13 +65,14 @@ contains
       posk1 = 1
       do while (zi(posk1)<z(1))
          yi(posk1) = 0.0_RK
-         yi(posk1) = -123456.0_RK ! ieee_value(yi(posk1), ieee_quiet_nan)   ! NaN
+         yi(posk1) = ieee_value(yi(posk1), ieee_quiet_nan)   ! NaN
          posk1 = posk1+1
       end do
       posk2 = num_zi
       do while (zi(posk2)>z(num_z))
          yi(posk1) = 0.0_RK
-         yi(posk2) = -123456.0_RK !ieee_value(yi(posk2), ieee_quiet_nan)   ! NaN
+         yi(posk2) = ieee_value(yi(posk2), ieee_quiet_nan)   ! NaN
+         yi(posk2) = z(num_z)
          posk2 = posk2-1
       end do
 

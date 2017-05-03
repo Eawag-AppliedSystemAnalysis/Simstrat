@@ -296,7 +296,8 @@ contains
     real(RK), dimension(:), intent(out) :: yi
     integer, intent(in) :: num_z
 
-    call Interp_nan(self%z_cent, y, self%nz_grid-1, z, yi, num_z)
+    ! TO do: Interp or Interp_NAN for grid boundaries??
+    call Interp(self%z_cent, y, self%nz_grid-1, z, yi, num_z)
   end subroutine
 
   subroutine grid_interpolate_from_upp(self, z, y, num_z, yi)
@@ -305,7 +306,7 @@ contains
     real(RK), dimension(:), intent(out) :: yi
     integer, intent(in) :: num_z
 
-    call Interp_nan(self%z_upp, y, self%nz_grid, z, yi, num_z)
+    call Interp(self%z_upp, y, self%nz_grid, z, yi, num_z)
   end subroutine
 
 end module strat_grid
