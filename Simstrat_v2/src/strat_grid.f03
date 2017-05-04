@@ -46,10 +46,10 @@ contains
     procedure, pass :: init_areas => grid_init_areas
     procedure, pass :: update_area_factors => grid_update_area_factors
     procedure, pass :: update_depth => grid_update_depth
-    procedure, pass :: interpolate_to_upp => grid_interpolate_to_upp
-    procedure, pass :: interpolate_to_cent => grid_interpolate_to_cent
-    procedure, pass :: interpolate_from_upp => grid_interpolate_from_upp
-    procedure, pass :: interpolate_from_cent => grid_interpolate_from_cent
+    procedure, pass :: interpolate_to_face => grid_interpolate_to_face
+    procedure, pass :: interpolate_to_vol => grid_interpolate_to_vol
+    procedure, pass :: interpolate_from_face => grid_interpolate_from_face
+    procedure, pass :: interpolate_from_vol => grid_interpolate_from_vol
     procedure, pass :: update_nz => grid_update_nz
 end type
 
@@ -78,7 +78,7 @@ contains
     call self%update_area_factors()
   end subroutine grid_init
 
-  subroutine grid_memory_init(self)
+subroutine grid_memory_init(self)
     implicit none
     class(StaggeredGrid), intent(inout) :: self
 
@@ -89,7 +89,7 @@ contains
     allocate(self%z_volume(0:nz_grid))         ! Depth axis with center of boxes
     self%z_volume(0) = 0 ! trick for array access - index not in use
 
-    allocate(self%z_face(nz_grid+1))          ! Depth axis with upper border of boxes
+    allocate(self%z_face(nz_grid+1))          ! Depth axis with faceer border of boxes
     allocate(self%Az(nz_grid+1))              ! Az is defined on the faces
     allocate(self%dAz(nz_grid))               ! dAz is the difference between Az and thus defined on the volume
 
@@ -150,8 +150,9 @@ contains
     end if
 
     !Construct H
-    allocate(self%h(0:self%nz_grid))
+    allocate(self%h(0:self%nz_grid+1))
     self%h(0) = 0                ! Note that h(0) has no physical meaning but helps with some calculations
+    self%h(self%nz_grid+1) = 0                ! Note that h(0) has no physical meaning but helps with some calculations
     if (config%equidistant_grid) then
       ! Equidistant grid
       self%h(1:self%nz_grid) = config%depth/self%nz_grid
@@ -183,7 +184,7 @@ contains
      end do
 
      ! needed?
-     self%lake_level_old = self%z_face(self%nz_occupied)
+     !self%lake_level_old = self%z_face(self%nz_occupied)
      write(*,*) "Warning, nz_occupied not set yet"
   end subroutine grid_init_z_axes
 
@@ -231,6 +232,7 @@ contains
               h => self%h, &
               nz => self%nz_occupied)
 
+    !todo: Verify array indexes and boundaries (especially h)
     self%AreaFactor_1(1:nz) = -4*Az(1:nz)/(h(1:nz)+h(0:nz-1))/h(1:nz)/(Az(2:nz+1)+Az(1:nz))
     self%AreaFactor_2(1:nz) = -4*Az(2:nz+1)/(h(1:nz)+h(2:nz+1))/h(1:nz)/(Az(2:nz+1)+Az(1:nz))
     self%AreaFactor_k1(1:nz-1) = -(Az(2:nz)+Az(3:nz+1))/(h(1:nz-1)+h(2:nz))/  h(2:nz)/Az(2:nz)
@@ -261,7 +263,6 @@ contains
 
     do i=1,nz_grid+1
         if (z_face(i) >= (z_zero-new_depth)) then    ! If above initial water level
-            write(*,*) "boO at", i, " b=",(z_zero-new_depth)
             zmax = z_face(i)
 
             ! set top face to new water level
@@ -284,50 +285,48 @@ contains
     end do
 
     call self%update_nz()
-    write(*,*) self%Az
-    write(*,*) self%dAz
     end associate
   end subroutine
 
 
   ! Interpolates values of y on grid z onto array yi and grid z_volume
-  subroutine grid_interpolate_to_cent(self, z,y,num_z,yi)
+  subroutine grid_interpolate_to_vol(self, z,y,num_z,yi)
     implicit none
     class(StaggeredGrid), intent(in) :: self
     real(RK), dimension(:), intent(in) :: z,y
     real(RK), dimension(:), intent(out) :: yi
     integer, intent(in) :: num_z
 
-    call Interp(z, y, num_z, self%z_volume, yi, self%nz_grid-1)
+    call Interp(z, y, num_z, self%z_volume, yi, self%nz_grid)
   end subroutine
 
-  subroutine grid_interpolate_to_upp(self, z,y,num_z,yi)
+  subroutine grid_interpolate_to_face(self, z,y,num_z,yi)
     implicit none
     class(StaggeredGrid), intent(in) :: self
     real(RK), dimension(:), intent(in) :: z,y
     real(RK), dimension(:), intent(out) :: yi
     integer, intent(in) :: num_z
 
-    call Interp(z, y, num_z, self%z_face, yi, self%nz_grid)
+    call Interp(z, y, num_z, self%z_face, yi, self%nz_grid+1)
   end subroutine
 
-  subroutine grid_interpolate_from_cent(self, z, y, num_z, yi)
+  subroutine grid_interpolate_from_vol(self, z, y, num_z, yi)
     class(StaggeredGrid), intent(in) :: self
     real(RK), dimension(:), intent(in) :: z,y
     real(RK), dimension(:), intent(out) :: yi
     integer, intent(in) :: num_z
 
     ! TO do: Interp or Interp_NAN for grid boundaries??
-    call Interp(self%z_volume, y, self%nz_grid-1, z, yi, num_z)
+    call Interp(self%z_volume, y, self%nz_grid, z, yi, num_z)
   end subroutine
 
-  subroutine grid_interpolate_from_upp(self, z, y, num_z, yi)
+  subroutine grid_interpolate_from_face(self, z, y, num_z, yi)
     class(StaggeredGrid), intent(in) :: self
     real(RK), dimension(:), intent(in) :: z,y
     real(RK), dimension(:), intent(out) :: yi
     integer, intent(in) :: num_z
 
-    call Interp(self%z_face, y, self%nz_grid, z, yi, num_z)
+    call Interp(self%z_face, y, self%nz_grid+1, z, yi, num_z)
   end subroutine
 
   subroutine grid_update_nz(self)

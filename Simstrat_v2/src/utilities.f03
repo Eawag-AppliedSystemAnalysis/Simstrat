@@ -212,4 +212,25 @@ contains
     h = -z_zero+z(n:1:-1)
   end function
 
+  subroutine reverse_in_place(in_arr)
+    implicit none
+    real(RK), intent(inout) :: in_arr(:)
+    real(RK) :: temp
+
+    integer :: first, last, i, len
+
+    first = lbound(in_arr, dim=1)
+    last = ubound(in_arr, dim=1)
+    len = size(in_arr)
+
+    ! Works for even and odd sized arrays
+    !(as len/2 is always integer and not rounded, but cutoff)
+    do i=last, first+int(len/2), -1
+      temp = in_arr(i)
+      in_arr(i) = in_arr(len+1-i)
+      in_arr(len+1-i) = temp
+    end do
+
+  end subroutine
+
 end module utilities

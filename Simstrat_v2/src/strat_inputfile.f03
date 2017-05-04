@@ -151,8 +151,8 @@ contains
     model%cde=model%cm0**3
     sig_e=(kappa/model%cm0)**2/(ce2-ce1)
 
-    model%num(0:grid%nz_grid) = 0.0_RK
-    model%nuh(0:grid%nz_grid)= 0.0_RK
+    model%num(1:grid%nz_grid+1) = 0.0_RK
+    model%nuh(1:grid%nz_grid+1)= 0.0_RK
 
     model%tx=0.0_RK
     model%ty=0.0_RK
@@ -161,10 +161,11 @@ contains
 
 
     ! Geothermal heat flux
+    ! Geothermal heat flux
     if (model_param%fgeo/=0) then
-        model%fgeo_add(1:grid%nz_grid) = model_param%fgeo/rho_0/cp*grid%dAz(1:grid%nz_grid)/grid%Az(1:grid%nz_grid) ! calculation per kg
-        if (grid%Az(0)/=0) then
-            model%fgeo_add(1) = model%fgeo_add(1)+2*model_param%fgeo/rho_0/cp*grid%Az(0)/((grid%Az(0)+grid%Az(1))*grid%h(1))
+        model%fgeo_add(1:grid%nz_grid) = model_param%fgeo/rho_0/cp*grid%dAz(1:grid%nz_grid)/grid%Az(2:grid%nz_grid+1) ! calculation per kg
+        if (grid%Az(1)/=0) then
+            model%fgeo_add(1) = model%fgeo_add(1)+2*model_param%fgeo/rho_0/cp*grid%Az(1)/((grid%Az(1)+grid%Az(2))*grid%h(1))
         end if
     end if
 
@@ -220,8 +221,6 @@ contains
     end do
 69  if(ictr==nz_max) write(6,*) 'Only first ',nz_max,' values of file read.'
     close(12)
-    write(*,*) "ICTR",ictr
-
     if (ictr==2) then     ! Constant spacing
         grid_config%nz_grid=int(grid_config%grid_read(1))
         grid_config%equidistant_grid = .TRUE.
@@ -250,10 +249,6 @@ contains
     end do
 
     grid_config%depth = grid_config%z_A_read(1) - grid_config%z_A_read(num_read)  ! depth = max - min depth
-
-    write(*,*) grid_config%A_read
-    write(*,*) grid_config%z_A_read
-    write(*,*) grid_config%depth
 
     ! initialize Grid of simdata
     call simdata%grid%init(grid_config)
@@ -371,13 +366,10 @@ contains
     ! Local variables
     integer,parameter :: nz_max =1000
 
-    real(RK) :: z_tmp(0:nz_max), U_tmp(0:nz_max), V_tmp(0:nz_max)
-    real(RK) :: T_tmp(0:nz_max), S_tmp(0:nz_max), k_tmp(0:nz_max), eps_tmp(0:nz_max)
+    real(RK) :: z_read(nz_max), U_read(nz_max), V_read(nz_max)
+    real(RK) :: T_read(nz_max), S_read(nz_max), k_read(nz_max), eps_read(nz_max)
 
-    real(RK) :: z_read(0:nz_max), U_read(0:nz_max), V_read(0:nz_max)
-    real(RK) :: T_read(0:nz_max), S_read(0:nz_max), k_read(0:nz_max), eps_read(0:nz_max)
-
-    real(RK) :: z_ini(0:nz_max)
+    real(RK) :: z_ini(nz_max)
     real(RK) :: z_ini_depth, zmax
 
     integer :: i,num_read
@@ -389,52 +381,52 @@ contains
     ! Read file
     open(13,status='old',file=self%simdata%input_cfg%InitName)     ! Opens initial conditions file
     read(13,*)                              ! Skip header
-    do i=0,nz_max                              ! Read initial u,v,T, etc
+    do i=1,nz_max                              ! Read initial u,v,T, etc
         read(13,*,end=9) z_read(i),U_read(i),V_read(i),T_read(i),S_read(i),k_read(i),eps_read(i)
     end do
-9   num_read = i-1                                ! Number of valuInitNamees
-    if (num_read<0) then
+9   num_read = i-1                               ! Number of valuInitNamees
+    if (num_read<1) then
         write(6,*) 'Error reading initial conditions files (no data found).'
         stop
     end if
     close(13)
-    do i=0,num_read
+    do i=1,num_read
         z_read(i) = abs(z_read(i))               ! Make depths positive
     end do
-    z_ini_depth = z_read(0)                     ! Initial depth (top-most)
+    z_ini_depth = z_read(1)                     ! Initial depth (top-most)
 
     ! update actual filled z in grid
     call grid%update_depth(z_ini_depth)
 
-    do i=0,num_read
-        z_tmp(num_read-i) = grid%z_zero - z_read(i)
-        U_tmp(num_read-i) = U_read(i)
-        V_tmp(num_read-i) = V_read(i)
-        T_tmp(num_read-i) = T_read(i)
-        S_tmp(num_read-i) = S_read(i)
-        k_tmp(num_read-i) = k_read(i)
-        eps_tmp(num_read-i) = eps_read(i)
-    end do
+    ! reverse arrays
+    call reverse_in_place(z_read(1:num_read))
+    z_read(1:num_read) = grid%z_zero - z_read(1:num_read)
+    call reverse_in_place(U_read(1:num_read))
+    call reverse_in_place(V_read(1:num_read))
+    call reverse_in_place(T_read(1:num_read))
+    call reverse_in_place(S_read(1:num_read))
+    call reverse_in_place(k_read(1:num_read))
+    call reverse_in_place(eps_read(1:num_read))
 
-    if (num_read==0) then
+    if (num_read==1) then
         write(6,*) 'Only one row! Water column will be initially homogeneous.'
-        model%U(0:nz_occupied) = U_tmp(0)
-        model%V(0:nz_occupied) = V_tmp(0)
-        model%T(0:nz_occupied) = T_tmp(0)
-        model%S(0:nz_occupied) = S_tmp(0)
-        model%k(0:nz_occupied) = k_tmp(0)
-        model%eps = eps_tmp(0)
+        model%U = U_read(1)
+        model%V = V_read(1)
+        model%T = T_read(1)
+        model%S = S_read(1)
+        model%k = k_read(1)
+        model%eps = eps_read(1)
     else
 
         ! interpolate variables UVTS on central grid and store
-        call grid%interpolate_to_cent(z_tmp, U_tmp, num_read, model%U)
-        call grid%interpolate_to_cent(z_tmp, V_tmp, num_read, model%V)
-        call grid%interpolate_to_cent(z_tmp, T_tmp, num_read, model%T)
-        call grid%interpolate_to_cent(z_tmp, S_tmp, num_read, model%S)
+        call grid%interpolate_to_vol(z_read, U_read, num_read, model%U)
+        call grid%interpolate_to_vol(z_read, V_read, num_read, model%V)
+        call grid%interpolate_to_vol(z_read, T_read, num_read, model%T)
+        call grid%interpolate_to_vol(z_read, S_read, num_read, model%S)
 
         ! Interpolate k/eps on upper grid and store
-        call grid%interpolate_to_upp(z_tmp, k_tmp, num_read, model%k)
-        call grid%interpolate_to_upp(z_tmp, eps_tmp, num_read, model%eps)
+        call grid%interpolate_to_face(z_read, k_read, num_read, model%k)
+        call grid%interpolate_to_face(z_read, eps_read, num_read, model%eps)
     end if
 
   end associate

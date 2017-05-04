@@ -9,6 +9,7 @@ program simstrat_main
   use strat_outputfile
   use strat_simdata, only : SimulationData
   use strat_forcing
+  use utilities
   !use strat_stability, only : StabilityModule
   use strat_windshear, only: WindShearModule
   use, intrinsic :: ieee_arithmetic
@@ -53,11 +54,7 @@ program simstrat_main
 contains
 
   subroutine run_simulation()
-    write(*,*) "face:"
-    write(*,*) simdata%grid%z_face
-    write(*,*) ""
-    write(*,*) "volume"
-    write(*,*) simdata%grid%z_volume
+
 
     ! Read forcing file
   !  call mod_forcing%update(simdata%model, simdata%model_param)
