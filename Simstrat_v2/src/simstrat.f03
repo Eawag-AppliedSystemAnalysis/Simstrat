@@ -9,7 +9,7 @@ program simstrat_main
   use strat_outputfile
   use strat_simdata, only : SimulationData
   use strat_forcing
-  use strat_stability, only : StabilityModule
+  !use strat_stability, only : StabilityModule
   use strat_windshear, only: WindShearModule
   use, intrinsic :: ieee_arithmetic
 
@@ -18,7 +18,7 @@ program simstrat_main
   type(SimstratSimulationFactory) :: factory
   class(SimulationData), pointer :: simdata
   type(ForcingModule) :: mod_forcing
-  type(StabilityModule) :: mod_stability
+  !type(StabilityModule) :: mod_stability
   type(SimpleLogger) :: logger
 
   character(len=100) :: arg
@@ -38,26 +38,31 @@ program simstrat_main
   call factory%initialize_model(ParName, simdata)
 
   !initialize forcing module
-  call mod_forcing%init(simdata%model_cfg, simdata%input_cfg%ForcingName)
+  !call mod_forcing%init(simdata%model_cfg, simdata%input_cfg%ForcingName)
 
   ! Setup logger
   call logger%initialize(simdata%output_cfg, simdata%grid)
 
   ! initialize simulation modules
-  call mod_stability%init(simdata%grid, simdata%model_cfg, simdata%model_param)
+  !call mod_stability%init(simdata%grid, simdata%model_cfg, simdata%model_param)
 
   call run_simulation()
 
-  call logger%close()
+  !call logger%close()
 
 contains
 
   subroutine run_simulation()
+    write(*,*) "face:"
+    write(*,*) simdata%grid%z_face
+    write(*,*) ""
+    write(*,*) "volume"
+    write(*,*) simdata%grid%z_volume
 
     ! Read forcing file
-    call mod_forcing%update(simdata%model, simdata%model_param)
+  !  call mod_forcing%update(simdata%model, simdata%model_param)
 
-    call mod_stability%update(simdata%model)
+  !  call mod_stability%update(simdata%model)
     !advection%update()
 
     ! Update and solve U and V - terms

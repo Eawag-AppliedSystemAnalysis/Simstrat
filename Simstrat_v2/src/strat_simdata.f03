@@ -170,9 +170,6 @@ module strat_simdata
       allocate(this%absorb(state_size))
       allocate(this%rad(state_size))
       allocate(this%Q_vert(state_size))
-
-      write(*,*) size(this%T)
-
     end subroutine
 
 

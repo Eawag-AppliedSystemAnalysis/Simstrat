@@ -16,8 +16,8 @@ end type
 
 type, public :: StaggeredGrid
   real(RK), dimension(:), allocatable :: h
-  real(RK), dimension(:), allocatable :: z_cent
-  real(RK), dimension(:), allocatable :: z_upp
+  real(RK), dimension(:), allocatable :: z_face
+  real(RK), dimension(:), allocatable :: z_volume
   real(RK), dimension(:), allocatable :: Az
   real(RK), dimension(:), allocatable :: dAz
   real(RK), dimension(:), allocatable :: meanint
@@ -29,9 +29,10 @@ type, public :: StaggeredGrid
   real(RK), dimension(:), allocatable :: AreaFactor_k2
   real(RK), dimension(:), allocatable :: AreaFactor_eps
   integer :: nz_grid
-  integer :: nz_inuse
+  integer :: nz_occupied
   integer :: nz_grid_max
-  integer :: ubound_u, ubound_c, len_u, len_c
+
+  integer :: ubnd_vol, ubnd_fce, l_vol, l_fce
   real(RK) :: z_zero
   real(RK) :: lake_level_old
   real(RK) :: depth
@@ -85,19 +86,21 @@ contains
 
     ! Allocate memory for initialization using nz_grid
     ! h is already allocated by grid point init
-    allocate(self%z_cent(0:nz_grid))         ! Depth axis with center of boxes
-    allocate(self%z_upp(0:nz_grid))          ! Depth axis with upper border of boxes
-    allocate(self%Az(0:nz_grid))             ! Az is defined on z_upp
-    allocate(self%dAz(1:nz_grid))           ! dAz is the difference between Az and thus on z_cent
+    allocate(self%z_volume(0:nz_grid))         ! Depth axis with center of boxes
+    self%z_volume(0) = 0 ! trick for array access - index not in use
+
+    allocate(self%z_face(nz_grid+1))          ! Depth axis with upper border of boxes
+    allocate(self%Az(nz_grid+1))              ! Az is defined on the faces
+    allocate(self%dAz(nz_grid))               ! dAz is the difference between Az and thus defined on the volume
 
     ! Area factors used in calculations
-    allocate(self%AreaFactor_1(1:nz_grid))
-    allocate(self%AreaFactor_2(1:nz_grid))
-    allocate(self%AreaFactor_k1(1:nz_grid))
-    allocate(self%AreaFactor_k2(1:nz_grid))
-    allocate(self%AreaFactor_eps(1:nz_grid))
+    allocate(self%AreaFactor_1(nz_grid))      ! defined on volumes
+    allocate(self%AreaFactor_2(nz_grid))      ! defined on volumes
+    allocate(self%AreaFactor_k1(nz_grid))     ! defined on volumes
+    allocate(self%AreaFactor_k2(nz_grid))     ! defined on volumes
+    allocate(self%AreaFactor_eps(nz_grid))    ! defined on volumes
 
-    allocate(self%meanint(0:nz_grid))        ! Inverse ratio of mean height of two adjacent boxes
+    allocate(self%meanint(nz_grid))        ! Inverse ratio of mean height of two adjacent boxes
 
     end associate
   end subroutine grid_memory_init
@@ -118,32 +121,37 @@ contains
       self%nz_grid = config%nz_grid
 
       !Include top value if not included
-      if (config%grid_read(0)/=0.) then
-        self%nz_grid=self%nz_grid+1
-        do i=self%nz_grid,1,-1
-            config%grid_read(i)=config%grid_read(i-1)
-        end do
-        config%grid_read(0)=0.0_RK
+      if (config%grid_read(1)/=0.) then
+        write(*,*) "Grid invalid - top value not included"
+        !Todo: check indexing of this code
+      !  self%nz_grid=self%nz_grid+1
+      !  do i=self%nz_grid,1,-1
+      !      config%grid_read(i)=config%grid_read(i-1)
+      !  end do
+      !  config%grid_read(1)=0.0_RK
       end if
 
       !If maxdepth grid larger than morphology
       if (config%grid_read(self%nz_grid)>config%depth) then
-          do while ((config%grid_read(self%nz_grid)>config%depth).and.(self%nz_grid>0.))
-              self%nz_grid=self%nz_grid-1
-          end do
+        write(*,*) "Grid invalid - maxdepth of grid larger than morphology"
+        !Todo: check indexing of this code
+          !do while ((config%grid_read(self%nz_grid)>config%depth).and.(self%nz_grid>0.))
+          !    self%nz_grid=self%nz_grid-1
+          !end do
       end if
 
       !Include bottom value if not included
       if (config%grid_read(self%nz_grid)< config%depth) then
-          self%nz_grid=self%nz_grid+1
-          config%grid_read(self%nz_grid)=config%depth
+        write(*,*) "Grid invalid - Bottom value not included"
+        !Todo: check indexing of this code
+          !self%nz_grid=self%nz_grid+1
+          !config%grid_read(self%nz_grid)=config%depth
       end if
     end if
 
     !Construct H
     allocate(self%h(0:self%nz_grid))
     self%h(0) = 0                ! Note that h(0) has no physical meaning but helps with some calculations
-
     if (config%equidistant_grid) then
       ! Equidistant grid
       self%h(1:self%nz_grid) = config%depth/self%nz_grid
@@ -155,26 +163,28 @@ contains
     end if
   end subroutine grid_init_grid_points
 
-  ! Initializes z_cent and z_upp
+  ! Initializes z_volume and z_face
   subroutine grid_init_z_axes(self)
     implicit none
     class(StaggeredGrid), intent(inout) :: self
     integer :: i
 
      !Compute position of layer center and top
-     self%z_cent(0)=0.0_RK
-     self%z_upp(0)=0.0_RK
+     self%z_volume(1)=0.0_RK
+     self%z_face(1)=0.0_RK
      do i=1,self%nz_grid
-         self%z_cent(i)=self%z_cent(i-1)+0.5_RK*(self%h(i-1)+self%h(i))
-         self%z_upp(i)=self%z_upp(i-1)+self%h(i)
+         self%z_volume(i)=self%z_volume(i-1)+0.5_RK*(self%h(i-1)+self%h(i))
+         self%z_volume(i)=nint(1e6_RK*self%z_volume(i))/1e6_RK
      end do
-     do i=1,self%nz_grid
-         self%z_cent(i)=nint(1e6_RK*self%z_cent(i))/1e6_RK
-         self%z_upp(i)=nint(1e6_RK*self%z_upp(i))/1e6_RK
+
+     do i=2, self%nz_grid+1
+        self%z_face(i)=self%z_face(i-1)+self%h(i-1)
+        self%z_face(i)=nint(1e6_RK*self%z_face(i))/1e6_RK
      end do
+
      ! needed?
-     self%lake_level_old = self%z_upp(self%nz_inuse)
-     write(*,*) "Warning, nz_inuse not set yet"
+     self%lake_level_old = self%z_face(self%nz_occupied)
+     write(*,*) "Warning, nz_occupied not set yet"
   end subroutine grid_init_z_axes
 
 
@@ -186,9 +196,10 @@ contains
 
     num_read = size(config%A_read)
 
-    self%z_zero = config%z_A_read(0)
-    self%lake_level_old =self%z_zero !needed?
-    config%z_A_read(0:num_read-1) = self%z_zero - config%z_A_read(0:num_read-1)      ! z-coordinate is positive upwards, zero point is at reservoir bottom
+    self%z_zero = config%z_A_read(1)    ! z_zero is the uppermost depth (might be above zero)
+    self%lake_level_old =self%z_zero    !needed?
+
+    config%z_A_read = self%z_zero - config%z_A_read    ! z-coordinate is positive upwards, zero point is at reservoir bottom
 
   end subroutine grid_init_morphology
 
@@ -198,14 +209,14 @@ contains
     class(GridConfig), intent(inout) :: config
 
     integer :: num_read
-    associate(nz_grid => self%nz_grid, dAz => self%dAz,  z_upp => self%z_upp,Az => self%Az)
+    associate(nz_grid => self%nz_grid, dAz => self%dAz,  z_face => self%z_face,Az => self%Az)
     num_read = size(config%A_read)
 
-    ! Interpolate area (A) at all depths (z_upp)
-    call Interp(config%z_A_read, config%A_read, num_read-1, self%z_upp, Az, nz_grid)
+    ! Interpolate area (A) at all depths (z_face)
+    call Interp(config%z_A_read, config%A_read, num_read-1, self%z_face, Az, nz_grid)
 
    ! Compute area derivative (= projected sediment area over layer thickness)
-    dAz(1:nz_grid) = (Az(1:nz_grid)-dAz(0:nz_grid-1))/(z_upp(1:nz_grid)-z_upp(0:nz_grid-1))
+    dAz(1:nz_grid) = (Az(2:nz_grid+1)-Az(1:nz_grid))/(z_face(2:nz_grid+1)-z_face(1:nz_grid))
     end associate
   end subroutine
 
@@ -217,20 +228,18 @@ contains
     integer :: i
     associate(Az => self%Az, &
               h => self%h, &
-              nz => self%nz_inuse)
+              nz => self%nz_occupied)
 
-
-    self%AreaFactor_1(1:nz) = -4*Az(0:nz-1)/(h(1:nz)+h(0:nz-1))/h(1:nz)/(Az(1:nz)+Az(0:nz-1))
-    self%AreaFactor_2(1:nz) = -4*Az(1:nz)/(h(1:nz)+h(2:nz+1))/h(1:nz)/(Az(1:nz)+Az(0:nz-1))
-    self%AreaFactor_k1(1:nz-1) = -(Az(1:nz-1)+Az(2:nz))/(h(1:nz-1)+h(2:nz))/h(2:nz)/Az(1:nz-1)
-    self%AreaFactor_k2(1:nz-1) = -(Az(1:nz-1)+Az(0:nz-2))/(h(1:nz-1)+h(2:nz))/h(1:nz-1)/Az(1:nz-1)
-    self%AreaFactor_eps(1:nz-1) = 0.5_RK*((Az(1:nz-1)-Az(0:nz-2))/h(1:nz-1)+(Az(2:nz)-Az(1:nz-1))/h(2:nz))/Az(1:nz-1)
-
-    self%meanint(0:nz-1) = 2.0_RK/(h(0:nz-1)+h(1:nz))
+    self%AreaFactor_1(1:nz) = -4*Az(1:nz)/(h(1:nz)+h(0:nz-1))/h(1:nz)/(Az(2:nz+1)+Az(1:nz))
+    self%AreaFactor_2(1:nz) = -4*Az(2:nz+1)/(h(1:nz)+h(2:nz+1))/h(1:nz)/(Az(2:nz+1)+Az(1:nz))
+    self%AreaFactor_k1(1:nz-1) = -(Az(2:nz)+Az(3:nz+1))/(h(1:nz-1)+h(2:nz))/  h(2:nz)/Az(2:nz)
+    self%AreaFactor_k2(1:nz-1) = -(Az(2:nz)+Az(1:nz-1))/(h(1:nz-1)+h(2:nz))/h(1:nz-1)/Az(2:nz)
+    self%AreaFactor_eps(1:nz-1) = 0.5_RK*((Az(2:nz)-Az(1:nz-1))/h(1:nz-1)+(Az(3:nz+1)-Az(2:nz))/h(2:nz))/Az(2:nz)
+    self%meanint(1:nz) = 2.0_RK/(h(1:nz)+h(2:nz+1))
 
     self%volume=0
-    do i=0,nz-1
-       self%volume = self%volume + 0.5_RK*h(i+1)*(Az(i)+Az(i+1))
+    do i=1,nz
+        self%volume = self%volume + 0.5_RK*h(i)*(Az(i)+Az(i+1))
     end do
   end associate
   end subroutine grid_update_area_factors
@@ -243,35 +252,42 @@ contains
     integer :: i
     real(RK) ::  zmax
     associate(nz_grid => self%nz_grid, &
-              nz_inuse => self%nz_inuse, &
-              z_upp => self%z_upp, &
-              z_cent => self%z_cent, &
+              nz_occupied => self%nz_occupied, &
+              z_face => self%z_face, &
+              z_volume => self%z_volume, &
               h => self%h, &
               z_zero => self%z_zero)
 
-    do i=0,nz_grid
-        if (z_upp(i) >= (z_zero-new_depth)) then    ! If above initial water level
-            zmax = z_upp(i)
-            z_upp(i)= z_zero-new_depth
-            z_cent(i)= (z_upp(i)+z_upp(i-1))/2
-            h(i) = z_upp(i) - z_upp(i-1)
-            !Az(i) = Az(i-1) + h(i)/(zmax-z_upp(i-1))*(Az(i)-Az(i-1))
-            nz_inuse = i
-            if (h(nz_inuse)<=0.5*h(nz_inuse-1)) then         ! If top box is too small
-                z_upp(nz_inuse-1) = z_upp(nz_inuse)                ! Combine the two upper boxes
-                z_cent(nz_inuse-1) = (z_upp(nz_inuse-1)+z_upp(nz_inuse-2))/2
-                h(nz_inuse-1)  = h(nz_inuse)+h(nz_inuse-1)
-                nz_inuse = nz_inuse-1                        ! Reduce number of boxes
+    do i=1,nz_grid+1
+        if (z_face(i) >= (z_zero-new_depth)) then    ! If above initial water level
+            write(*,*) "boO at", i, " b=",(z_zero-new_depth)
+            zmax = z_face(i)
+
+            ! set top face to new water level
+            z_face(i)= z_zero-new_depth
+
+            !Adjust new volume center of cell i-1 (belonging to upper face i)
+            z_volume(i-1)= (z_face(i)+z_face(i-1))/2
+            h(i-1) = z_face(i) - z_face(i-1)
+            ! todo: Why is Az not updated?
+            !Az(i) = Az(i-1) + h(i)/(zmax-z_face(i-1))*(Az(i)-Az(i-1))
+            nz_occupied = i-1
+            if (h(nz_occupied)<=0.5*h(nz_occupied-1)) then         ! If top box is too small
+                z_face(nz_occupied) = z_face(nz_occupied+1)                ! Combine the two upper boxes
+                z_volume(nz_occupied-1) = (z_face(nz_occupied)+z_face(nz_occupied-1))/2
+                h(nz_occupied-1)  = h(nz_occupied)+h(nz_occupied-1)
+                nz_occupied = nz_occupied-1                        ! Reduce number of boxes
             end if
             exit
         end if
     end do
+
     call self%update_nz()
     end associate
   end subroutine
 
 
-  ! Interpolates values of y on grid z onto array yi and grid z_cent
+  ! Interpolates values of y on grid z onto array yi and grid z_volume
   subroutine grid_interpolate_to_cent(self, z,y,num_z,yi)
     implicit none
     class(StaggeredGrid), intent(in) :: self
@@ -279,7 +295,7 @@ contains
     real(RK), dimension(:), intent(out) :: yi
     integer, intent(in) :: num_z
 
-    call Interp(z, y, num_z, self%z_cent, yi, self%nz_grid-1)
+    call Interp(z, y, num_z, self%z_volume, yi, self%nz_grid-1)
   end subroutine
 
   subroutine grid_interpolate_to_upp(self, z,y,num_z,yi)
@@ -289,7 +305,7 @@ contains
     real(RK), dimension(:), intent(out) :: yi
     integer, intent(in) :: num_z
 
-    call Interp(z, y, num_z, self%z_upp, yi, self%nz_grid)
+    call Interp(z, y, num_z, self%z_face, yi, self%nz_grid)
   end subroutine
 
   subroutine grid_interpolate_from_cent(self, z, y, num_z, yi)
@@ -299,7 +315,7 @@ contains
     integer, intent(in) :: num_z
 
     ! TO do: Interp or Interp_NAN for grid boundaries??
-    call Interp(self%z_cent, y, self%nz_grid-1, z, yi, num_z)
+    call Interp(self%z_volume, y, self%nz_grid-1, z, yi, num_z)
   end subroutine
 
   subroutine grid_interpolate_from_upp(self, z, y, num_z, yi)
@@ -308,18 +324,31 @@ contains
     real(RK), dimension(:), intent(out) :: yi
     integer, intent(in) :: num_z
 
-    call Interp(self%z_upp, y, self%nz_grid, z, yi, num_z)
+    call Interp(self%z_face, y, self%nz_grid, z, yi, num_z)
   end subroutine
 
   subroutine grid_update_nz(self)
     implicit none
     class(StaggeredGrid), intent(inout) :: self
 
-    self%ubound_c = self%nz_inuse
-    self%ubound_u = self%nz_inuse + 1
-    self%len_c  = self%nz_inuse
-    self%len_u = self%nz_inuse + 1
+    self%ubnd_vol = self%nz_occupied
+    self%ubnd_fce = self%nz_occupied + 1
+    self%l_vol  = self%nz_occupied
+    self%l_fce = self%nz_occupied + 1
   end subroutine
+
+  pure function grid_convert2height_above_sed(z, z_zero) result(h)
+    implicit none
+    real(RK), dimension(:), intent(in) :: z
+    real(RK), intent(in) :: z_zero
+
+    real(RK), dimension(size(z)) :: h
+    integer :: n
+
+    n = size(z)
+    h = -z_zero+z(n:1:-1)
+  end function
+
 
 
 end module strat_grid

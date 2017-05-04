@@ -200,7 +200,7 @@ contains
     v = v_start+t*(v_end-v_start)/(t_end-t_start)
   end function
 
-  pure function convert2hight_above_sed(z, z_zero) result(h)
+  pure function convert2height_above_sed(z, z_zero) result(h)
     implicit none
     real(RK), dimension(:), intent(in) :: z
     real(RK), intent(in) :: z_zero

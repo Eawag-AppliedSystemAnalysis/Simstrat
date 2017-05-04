@@ -87,51 +87,51 @@ contains
     call f%destroy()
 
     ! Define variables that should be written
-    allocate(self%simdata%output_cfg%output_vars(0:10))
+    allocate(self%simdata%output_cfg%output_vars(11))
 
-    self%simdata%output_cfg%output_vars(0)%name = "V"
-    self%simdata%output_cfg%output_vars(0)%values => self%simdata%model%V
-    self%simdata%output_cfg%output_vars(0)%center_grid = .true.
-
-    self%simdata%output_cfg%output_vars(1)%name = "U"
-    self%simdata%output_cfg%output_vars(1)%values => self%simdata%model%U
+    self%simdata%output_cfg%output_vars(1)%name = "V"
+    self%simdata%output_cfg%output_vars(1)%values => self%simdata%model%V
     self%simdata%output_cfg%output_vars(1)%center_grid = .true.
 
-    self%simdata%output_cfg%output_vars(2)%name = "T"
-    self%simdata%output_cfg%output_vars(2)%values => self%simdata%model%T
+    self%simdata%output_cfg%output_vars(2)%name = "U"
+    self%simdata%output_cfg%output_vars(2)%values => self%simdata%model%U
     self%simdata%output_cfg%output_vars(2)%center_grid = .true.
 
-    self%simdata%output_cfg%output_vars(3)%name = "S"
-    self%simdata%output_cfg%output_vars(3)%values => self%simdata%model%S
+    self%simdata%output_cfg%output_vars(3)%name = "T"
+    self%simdata%output_cfg%output_vars(3)%values => self%simdata%model%T
     self%simdata%output_cfg%output_vars(3)%center_grid = .true.
 
-    self%simdata%output_cfg%output_vars(4)%name = "P"
-    self%simdata%output_cfg%output_vars(4)%values => self%simdata%model%P
-    self%simdata%output_cfg%output_vars(4)%center_grid = .false.
+    self%simdata%output_cfg%output_vars(4)%name = "S"
+    self%simdata%output_cfg%output_vars(4)%values => self%simdata%model%S
+    self%simdata%output_cfg%output_vars(4)%center_grid = .true.
 
-    self%simdata%output_cfg%output_vars(5)%name = "num"
-    self%simdata%output_cfg%output_vars(5)%values => self%simdata%model%num
+    self%simdata%output_cfg%output_vars(5)%name = "P"
+    self%simdata%output_cfg%output_vars(5)%values => self%simdata%model%P
     self%simdata%output_cfg%output_vars(5)%center_grid = .false.
 
-    self%simdata%output_cfg%output_vars(6)%name = "nuh"
-    self%simdata%output_cfg%output_vars(6)%values => self%simdata%model%nuh
+    self%simdata%output_cfg%output_vars(6)%name = "num"
+    self%simdata%output_cfg%output_vars(6)%values => self%simdata%model%num
     self%simdata%output_cfg%output_vars(6)%center_grid = .false.
 
-    self%simdata%output_cfg%output_vars(7)%name = "NN"
-    self%simdata%output_cfg%output_vars(7)%values => self%simdata%model%NN
+    self%simdata%output_cfg%output_vars(7)%name = "nuh"
+    self%simdata%output_cfg%output_vars(7)%values => self%simdata%model%nuh
     self%simdata%output_cfg%output_vars(7)%center_grid = .false.
 
-    self%simdata%output_cfg%output_vars(8)%name = "k"
-    self%simdata%output_cfg%output_vars(8)%values => self%simdata%model%k
+    self%simdata%output_cfg%output_vars(8)%name = "NN"
+    self%simdata%output_cfg%output_vars(8)%values => self%simdata%model%NN
     self%simdata%output_cfg%output_vars(8)%center_grid = .false.
 
-    self%simdata%output_cfg%output_vars(9)%name = "eps"
-    self%simdata%output_cfg%output_vars(9)%values => self%simdata%model%eps
+    self%simdata%output_cfg%output_vars(9)%name = "k"
+    self%simdata%output_cfg%output_vars(9)%values => self%simdata%model%k
     self%simdata%output_cfg%output_vars(9)%center_grid = .false.
 
-    self%simdata%output_cfg%output_vars(10)%name = "B"
-    self%simdata%output_cfg%output_vars(10)%values => self%simdata%model%B
+    self%simdata%output_cfg%output_vars(10)%name = "eps"
+    self%simdata%output_cfg%output_vars(10)%values => self%simdata%model%eps
     self%simdata%output_cfg%output_vars(10)%center_grid = .false.
+
+    self%simdata%output_cfg%output_vars(11)%name = "B"
+    self%simdata%output_cfg%output_vars(11)%values => self%simdata%model%B
+    self%simdata%output_cfg%output_vars(11)%center_grid = .false.
     end associate
   end subroutine
 
@@ -204,25 +204,26 @@ contains
     implicit none
     class(SimstratSimulationFactory) :: self
     type(GridConfig) :: grid_config
-    real(RK), dimension(:) :: z_tmp(0:self%simdata%model_cfg%max_nr_grid_cells)
-    real(RK), dimension(:) :: A_tmp(0:self%simdata%model_cfg%max_nr_grid_cells)
+    real(RK), dimension(:) :: z_tmp(self%simdata%model_cfg%max_nr_grid_cells)
+    real(RK), dimension(:) :: A_tmp(self%simdata%model_cfg%max_nr_grid_cells)
     integer :: num_read, i, ictr
     associate(simdata => self%simdata, &
               nz_max => self%simdata%model_cfg%max_nr_grid_cells)
 
     grid_config%nz_grid_max = self%simdata%model_cfg%max_nr_grid_cells
-    allocate(grid_config%grid_read(0:nz_max))
+    allocate(grid_config%grid_read(nz_max))
     ! Read grid
     open(12,status='old',file=simdata%input_cfg%GridName)
     read(12,*)
-    do ictr=0,nz_max
+    do ictr=1,nz_max
         read(12,*,end=69) grid_config%grid_read(ictr)
     end do
 69  if(ictr==nz_max) write(6,*) 'Only first ',nz_max,' values of file read.'
     close(12)
+    write(*,*) "ICTR",ictr
 
-    if (ictr==1) then     ! Constant spacing
-        grid_config%nz_grid=int(grid_config%grid_read(0))
+    if (ictr==2) then     ! Constant spacing
+        grid_config%nz_grid=int(grid_config%grid_read(1))
         grid_config%equidistant_grid = .TRUE.
     else                  ! Variable spacing
         grid_config%nz_grid = ictr-1
@@ -232,23 +233,27 @@ contains
     ! Read Morphology
     open(11,status='old',file=simdata%input_cfg%MorphName)
     read(11,*)                            ! Skip header
-    do i=0,nz_max                            ! Read depth and area
+    do i=1,nz_max                            ! Read depth and area
         read(11,*,end=86) z_tmp(i), A_tmp(i)
     end do
 86  if(i==nz_max) write(6,*) 'Only first ',nz_max,' values of file read.'
     close(11)
 
-    num_read = i  ! Number of area values
+    num_read = i-1  ! Number of area values
 
-    allocate(grid_config%z_A_read(0:num_read-1), grid_config%A_read(0:num_read-1))
+    allocate(grid_config%z_A_read(num_read), grid_config%A_read(num_read))
 
     ! Reverse order of values
-    do i=0,num_read-1
-        grid_config%z_A_read(i) = -z_tmp(num_read-i-1)
-        grid_config%A_read(i) = A_tmp(num_read-i-1)
+    do i=1,num_read
+        grid_config%z_A_read(i) = -z_tmp(num_read-i+1)
+        grid_config%A_read(i) = A_tmp(num_read-i+1)
     end do
 
-    grid_config%depth = grid_config%z_A_read(0) - grid_config%z_A_read(num_read-1)  ! depth = max - min depth
+    grid_config%depth = grid_config%z_A_read(1) - grid_config%z_A_read(num_read)  ! depth = max - min depth
+
+    write(*,*) grid_config%A_read
+    write(*,*) grid_config%z_A_read
+    write(*,*) grid_config%depth
 
     ! initialize Grid of simdata
     call simdata%grid%init(grid_config)
@@ -379,7 +384,7 @@ contains
 
     associate(grid => self%simdata%grid, &
               model => self%simdata%model, &
-              nz_inuse => self%simdata%grid%nz_inuse)
+              nz_occupied => self%simdata%grid%nz_occupied)
 
     ! Read file
     open(13,status='old',file=self%simdata%input_cfg%InitName)     ! Opens initial conditions file
@@ -396,7 +401,7 @@ contains
     do i=0,num_read
         z_read(i) = abs(z_read(i))               ! Make depths positive
     end do
-    z_ini_depth = z_read(0)                     ! Initial depth (top-most)
+    z_ini_depth = z_read(0)+1.4                     ! Initial depth (top-most)
 
     ! update actual filled z in grid
     call grid%update_depth(z_ini_depth)
@@ -413,11 +418,11 @@ contains
 
     if (num_read==0) then
         write(6,*) 'Only one row! Water column will be initially homogeneous.'
-        model%U(0:nz_inuse) = U_tmp(0)
-        model%V(0:nz_inuse) = V_tmp(0)
-        model%T(0:nz_inuse) = T_tmp(0)
-        model%S(0:nz_inuse) = S_tmp(0)
-        model%k(0:nz_inuse) = k_tmp(0)
+        model%U(0:nz_occupied) = U_tmp(0)
+        model%V(0:nz_occupied) = V_tmp(0)
+        model%T(0:nz_occupied) = T_tmp(0)
+        model%S(0:nz_occupied) = S_tmp(0)
+        model%k(0:nz_occupied) = k_tmp(0)
         model%eps = eps_tmp(0)
     else
 
