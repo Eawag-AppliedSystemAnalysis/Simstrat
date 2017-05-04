@@ -11,23 +11,27 @@ type, public :: ForcingModule
   integer :: nz_grid_max
   class(ModelConfig), pointer :: cfg
   class(StaggeredGrid), pointer :: grid
+  class(ModelParam), pointer :: param
   character(len=:), allocatable  :: file
 contains
   procedure, pass :: init => forcing_init
   procedure, pass :: read => forcing_read
   procedure, pass :: update => forcing_update
+  procedure, pass :: update_corriolis => forcing_update_corriolis
 end type
 
 contains
 
-  subroutine forcing_init(self, model_config, forcing_file, grid)
+  subroutine forcing_init(self, model_config, model_param, forcing_file, grid)
     implicit none
     class(ForcingModule) :: self
     class(StaggeredGrid), target :: grid
     class(ModelConfig), target :: model_config
+    class(ModelParam), target :: model_param
     character(len=:), allocatable :: forcing_file
 
     self%cfg => model_config
+    self%param => model_param
     self%grid => grid
     self%file = forcing_file
 
@@ -94,12 +98,11 @@ contains
   !Compute appropriate forcing parameters at given datum
   !AG 2014: revision
   !######################################################################
-  subroutine forcing_update(self, state, param)
+  subroutine forcing_update(self, state)
   !######################################################################
         implicit none
         class(ForcingModule) :: self
         class(ModelState) :: state
-        class(ModelParam) :: param
 
         ! Local iables
         integer :: nval_offset
@@ -109,7 +112,7 @@ contains
         real(RK) :: T_surf, T_atm, F_glob, Vap_atm, Cloud
         real(RK) :: H_A, H_K, H_V, H_W
 
-        associate(cfg => self%cfg)
+        associate(cfg => self%cfg, param => self%param)
 
         !save A_s, A_e
         T_surf = state%T(self%grid%ubnd_vol)
@@ -230,5 +233,25 @@ contains
       end associate
   end subroutine
 
+
+  subroutine forcing_update_corriolis(self, state)
+    implicit none
+    class(ForcingModule) :: self
+    class(ModelState) :: state
+    real(RK) :: cori
+    real(RK), dimension(size(state%U)) :: u_temp
+    associate(grid=>self%grid, dt => state%dt, param=>self%param)
+    ! Calculate coriolis parameter based on latitude
+    cori=2.0_RK*7.292e-5_RK*sin(param%Lat*pi/180.0_RK)
+
+    !Update state based on coriolis parameter
+    u_temp = state%U
+
+    state%U(1:grid%ubnd_vol) =  state%U(1:grid%ubnd_vol)*cos(Cori*dt) + state%V(1:grid%ubnd_vol)*sin(Cori*dt)
+    state%V(1:grid%ubnd_vol) =-u_temp(1:grid%ubnd_vol)*sin(Cori*dt) + state%V(1:grid%ubnd_vol)*cos(Cori*dt)
+
+      return
+    end associate
+  end subroutine
 
 end module strat_forcing

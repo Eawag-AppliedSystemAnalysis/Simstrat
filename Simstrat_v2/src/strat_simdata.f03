@@ -76,7 +76,7 @@ module strat_simdata
   type, public :: ModelState
     ! Iteration variables
     integer :: step,itera,i,j,std
-    real(RK) :: datum
+    real(RK) :: datum, dt
 
     ! Variables located on z_cent grid
     ! Note that for these variables the value at 0 z.b. U(0) is not used

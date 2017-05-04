@@ -39,7 +39,10 @@ program simstrat_main
   call factory%initialize_model(ParName, simdata)
 
   !initialize forcing module
-  call mod_forcing%init(simdata%model_cfg, simdata%input_cfg%ForcingName, simdata%grid)
+  call mod_forcing%init(simdata%model_cfg, &
+                        simdata%model_param, &
+                        simdata%input_cfg%ForcingName, &
+                        simdata%grid)
 
   ! Setup logger
   call logger%initialize(simdata%output_cfg, simdata%grid)
@@ -57,10 +60,12 @@ contains
 
 
     ! Read forcing file
-    call mod_forcing%update(simdata%model, simdata%model_param)
+    call mod_forcing%update(simdata%model)
 
+    ! Update physics
     call mod_stability%update(simdata%model)
     !advection%update()
+    call mod_forcing%update_corriolis(simdata%model)
 
     ! Update and solve U and V - terms
   !  call uv%update()
