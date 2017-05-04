@@ -2,6 +2,7 @@ module strat_forcing
   use strat_kinds
   use strat_simdata
   use strat_consts
+  use strat_grid
   use utilities
   implicit none
   private
@@ -9,6 +10,7 @@ module strat_forcing
 type, public :: ForcingModule
   integer :: nz_grid_max
   class(ModelConfig), pointer :: cfg
+  class(StaggeredGrid), pointer :: grid
   character(len=:), allocatable  :: file
 contains
   procedure, pass :: init => forcing_init
@@ -18,14 +20,17 @@ end type
 
 contains
 
-  subroutine forcing_init(self, model_config, forcing_file)
+  subroutine forcing_init(self, model_config, forcing_file, grid)
     implicit none
     class(ForcingModule) :: self
+    class(StaggeredGrid), target :: grid
     class(ModelConfig), target :: model_config
     character(len=:), allocatable :: forcing_file
 
     self%cfg => model_config
+    self%grid => grid
     self%file = forcing_file
+
   end subroutine
 
   !Read forcing file to get values A_cur at given datum
@@ -107,7 +112,8 @@ contains
         associate(cfg => self%cfg)
 
         !save A_s, A_e
-        T_surf = state%T(0) ! Todo!!!
+        T_surf = state%T(self%grid%ubnd_vol)
+        !Todo: is surface temp the uppermost volume's temp?
 
 
         ! number of values to read, depending on filtered wind

@@ -40,7 +40,7 @@ contains
     implicit none
     class(StabilityModule) :: self
     class(ModelState) :: state
-    real(RK), dimension(self%grid%len_c) :: beta
+    real(RK), dimension(self%grid%l_fce) :: beta
 
     !Do buoyancy update (update NN)
     if(state%has_salinity) then
@@ -61,14 +61,6 @@ contains
     else if(self%model_cfg%stability_func == 2) then
 
       beta = state%NN*(state%k/state%eps)**2
-      write(*,*) ubound(state%NN)
-      write(*,*) ubound(state%k)
-      write(*,*) ubound(state%eps)
-      write(*,*) ubound(state%T)
-      write(*,*) self%grid%len_c
-      write(*,*) self%grid%len_u
-      write(*,*) self%grid%nz_grid
-      write(*,*) self%grid%nz_inuse
       call self%update_cmue_qe(beta, state%cmue1, state%cmue2, state%cde)
     end if
 
@@ -82,13 +74,13 @@ contains
     real(RK), dimension(:), intent(inout) :: NN, rho
 
     ! Local variables
-    real(RK) :: a(self%grid%len_u),buoy(self%grid%len_u)
-    real(RK) :: rho0t(self%grid%len_u),rho0st(self%grid%len_u)
+    real(RK) :: a(self%grid%l_fce),buoy(self%grid%l_fce)
+    real(RK) :: rho0t(self%grid%l_fce),rho0st(self%grid%l_fce)
     integer :: i
 
     associate(grd => self%grid)
 
-    do i=1,grd%ubound_u
+    do i=1,grd%ubnd_fce-1
         rho0t(i)= 0.9998395_RK+T(i)*(6.7914e-5_RK+T(i)*(-9.0894e-6_RK+T(i)*&
             (1.0171e-7_RK+T(i)*(-1.2846e-9_RK+T(i)*(1.1592e-11_RK+T(i)*(-5.0125e-14_RK))))))
         rho0st(i)= (8.181e-4_RK+T(i)*(-3.85e-6_RK+T(i)*(4.96e-8_RK)))*S(i)
@@ -99,9 +91,9 @@ contains
         buoy(i)= -g*(rho(i)-rho_0)/rho_0
     end do
 
-    NN(2:grd%ubound_u-1) = grd%meanint(2:grd%ubound_u-1)*(buoy(2:grd%ubound_u-1)-buoy(1:grd%ubound_u-2))
+    NN(2:grd%ubnd_fce-1) = grd%meanint(2:grd%ubnd_fce-1)*(buoy(2:grd%ubnd_fce-1)-buoy(1:grd%ubnd_fce-2))
     NN(1)= NN(2)
-    NN(grd%ubound_u)= NN(grd%ubound_u-1)
+    NN(grd%ubnd_fce)= NN(grd%ubnd_fce-1)
 
   end associate
   end subroutine
@@ -122,8 +114,8 @@ contains
     ! set boundaries
     cmue1(1) = cmue1(2)
     cmue2(1) = cmue2(2)
-    cmue1(self%grid%ubound_u) = cmue1(self%grid%ubound_u-1)
-    cmue2(self%grid%ubound_u) = cmue2(self%grid%ubound_u-1)
+    cmue1(self%grid%ubnd_fce) = cmue1(self%grid%ubnd_fce-1)
+    cmue2(self%grid%ubnd_fce) = cmue2(self%grid%ubnd_fce-1)
   end subroutine
 
   subroutine stability_module_update_cmue_qe(self, beta,  cmue1, cmue2, cde)
@@ -134,7 +126,7 @@ contains
     real(RK) :: gh,sm,sh
     integer :: i
 
-    do i=2,self%grid%nz_inuse-1
+    do i=2,self%grid%ubnd_fce-1
       gh = -cde**2*0.5_RK*beta(i)
       if(gh> 0.02) gh = gh-(gh-0.02_RK)**2/(gh+0.0233_RK-2*0.02_RK)
       if(gh<-0.28) gh = -0.28_RK
@@ -150,8 +142,8 @@ contains
     ! set boundaries
     cmue1(1) = cmue1(2)
     cmue2(1) = cmue2(2)
-    cmue1(self%grid%ubound_u) = cmue1(self%grid%ubound_u-1)
-    cmue2(self%grid%ubound_u) = cmue2(self%grid%ubound_u-1)
+    cmue1(self%grid%ubnd_fce) = cmue1(self%grid%ubnd_fce-1)
+    cmue2(self%grid%ubnd_fce) = cmue2(self%grid%ubnd_fce-1)
   end subroutine
 
 end module
