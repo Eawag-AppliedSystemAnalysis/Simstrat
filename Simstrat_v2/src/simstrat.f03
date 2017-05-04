@@ -49,7 +49,7 @@ program simstrat_main
 
   call run_simulation()
 
-  !call logger%close()
+  call logger%close()
 
 contains
 

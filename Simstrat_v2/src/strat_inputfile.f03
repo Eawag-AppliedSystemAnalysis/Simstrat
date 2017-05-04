@@ -417,16 +417,15 @@ contains
         model%k = k_read(1)
         model%eps = eps_read(1)
     else
+      ! interpolate variables UVTS on central grid and store
+      call grid%interpolate_to_vol(z_read, U_read, num_read, model%U)
+      call grid%interpolate_to_vol(z_read, V_read, num_read, model%V)
+      call grid%interpolate_to_vol(z_read, T_read, num_read, model%T)
+      call grid%interpolate_to_vol(z_read, S_read, num_read, model%S)
 
-        ! interpolate variables UVTS on central grid and store
-        call grid%interpolate_to_vol(z_read, U_read, num_read, model%U)
-        call grid%interpolate_to_vol(z_read, V_read, num_read, model%V)
-        call grid%interpolate_to_vol(z_read, T_read, num_read, model%T)
-        call grid%interpolate_to_vol(z_read, S_read, num_read, model%S)
-
-        ! Interpolate k/eps on upper grid and store
-        call grid%interpolate_to_face(z_read, k_read, num_read, model%k)
-        call grid%interpolate_to_face(z_read, eps_read, num_read, model%eps)
+      ! Interpolate k/eps on upper grid and store
+      call grid%interpolate_to_face(z_read, k_read, num_read, model%k)
+      call grid%interpolate_to_face(z_read, eps_read, num_read, model%eps)
     end if
 
   end associate
