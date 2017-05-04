@@ -70,9 +70,9 @@ contains
     n_depths = grid%l_fce
     self%n_depths = n_depths
     if(allocated(self%output_files)) deallocate(self%output_files)
-       allocate(self%output_files(0:self%n_vars-1))
+       allocate(self%output_files(self%n_vars))
 
-    do i=0,self%n_vars-1
+    do i=1,self%n_vars
       if(self%config%output_vars(i)%center_grid) then
         call self%output_files(i)%open(config%PathOut//'/'//trim(self%config%output_vars(i)%name)//'_out.dat', n_cols=grid%l_vol+1, status_ok=status_ok)
         call self%output_files(i)%add('')
@@ -101,9 +101,9 @@ contains
     n_depths = size(config%zout)
     self%n_depths = n_depths
     if(allocated(self%output_files)) deallocate(self%output_files)
-       allocate(self%output_files(0:self%n_vars-1))
+       allocate(self%output_files(1:self%n_vars))
 
-    do i=0,self%n_vars-1
+    do i=1,self%n_vars
       call self%output_files(i)%open(config%PathOut//'/'//trim(self%config%output_vars(i)%name)//'_out.dat', n_cols=self%n_depths+1, status_ok=status_ok)
       call self%output_files(i)%add('')
       call self%output_files(i)%add(self%config%zout(self%n_depths:1:-1), real_fmt='(F12.3)')
@@ -189,7 +189,8 @@ contains
       !workaround gfortran bug => cannot pass allocatable array to csv file
       !real(RK), dimension(:), allocatable :: values, values_on_zout,test
       integer :: i
-      do i=0,self%n_vars-1
+      do i=1,self%n_vars
+        write(*,*) self%config%output_vars(i)%name
         call self%output_files(i)%add(datum, real_fmt='(F12.4)')
         call self%output_files(i)%add(self%config%output_vars(i)%values, real_fmt='(ES12.4)')
         call self%output_files(i)%next_row()
@@ -203,7 +204,7 @@ contains
 
     integer :: i
     logical :: status_ok
-    do i=0,self%n_vars-1
+    do i=1,self%n_vars
       call self%output_files(i)%close(status_ok)
     end do
 

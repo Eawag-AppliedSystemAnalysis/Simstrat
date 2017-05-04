@@ -81,6 +81,7 @@ contains
     call f%read(output_cfg%zoutName, header_row=1, status_ok=status_ok)
     if(.not.status_ok) then
       call error('Unable to read output depths: '//output_cfg%zoutName)
+      call f%destroy()
       stop
     end if
     call f%get(1, output_cfg%zout, status_ok)

@@ -170,6 +170,31 @@ module strat_simdata
       allocate(this%absorb(state_size+1))
       allocate(this%rad(state_size+1))
       allocate(this%Q_vert(state_size+1))
+
+      ! init to zero
+      this%U = 0.0_RK
+      this%V = 0.0_RK
+      this%T = 0.0_RK
+      this%S = 0.0_RK
+      this%dS = 0.0_RK
+      this%Q_inp = 0.0_RK
+      this%rho = 0.0_RK
+
+      this%k = 0.0_RK
+      this%ko = 0.0_RK
+      this%eps = 0.0_RK
+      this%num = 0.0_RK
+      this%nuh = 0.0_RK
+      this%P = 0.0_RK
+      this%B = 0.0_RK
+      this%NN = 0.0_RK
+      this%cmue1 = 0.0_RK
+      this%cmue2 = 0.0_RK
+      this%P_Seiche = 0.0_RK
+
+      this%absorb = 0.0_RK
+      this%rad = 0.0_RK
+      this%Q_vert = 0.0_RK
     end subroutine
 
 
