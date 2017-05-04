@@ -213,10 +213,11 @@ contains
     num_read = size(config%A_read)
 
     ! Interpolate area (A) at all depths (z_face)
-    call Interp(config%z_A_read, config%A_read, num_read-1, self%z_face, Az, nz_grid)
+    call Interp(config%z_A_read, config%A_read, num_read, self%z_face, Az, nz_grid+1)
 
-   ! Compute area derivative (= projected sediment area over layer thickness)
+    ! Compute area derivative (= projected sediment area over layer thickness)
     dAz(1:nz_grid) = (Az(2:nz_grid+1)-Az(1:nz_grid))/(z_face(2:nz_grid+1)-z_face(1:nz_grid))
+
     end associate
   end subroutine
 
@@ -283,6 +284,8 @@ contains
     end do
 
     call self%update_nz()
+    write(*,*) self%Az
+    write(*,*) self%dAz
     end associate
   end subroutine
 

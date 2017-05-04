@@ -401,7 +401,7 @@ contains
     do i=0,num_read
         z_read(i) = abs(z_read(i))               ! Make depths positive
     end do
-    z_ini_depth = z_read(0)+1.4                     ! Initial depth (top-most)
+    z_ini_depth = z_read(0)                     ! Initial depth (top-most)
 
     ! update actual filled z in grid
     call grid%update_depth(z_ini_depth)
