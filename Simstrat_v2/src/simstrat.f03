@@ -12,15 +12,22 @@ program simstrat_main
   use utilities
   use strat_stability, only : StabilityModule
   use strat_windshear, only: WindShearModule
+  use strat_statevar
+  use strat_temp
+  use strat_solver
+  use strat_discretization
   use, intrinsic :: ieee_arithmetic
 
   implicit none
 
   type(SimstratSimulationFactory) :: factory
   class(SimulationData), pointer :: simdata
+  type(ThomasAlgSolver) :: solver
+  type(EulerIDiscretization) :: euler_i_disc
   type(ForcingModule) :: mod_forcing
   type(StabilityModule) :: mod_stability
   type(SimpleLogger) :: logger
+  type(TempModelVar) :: mod_temperature
 
   character(len=100) :: arg
   character(len=:), allocatable :: ParName
@@ -38,6 +45,9 @@ program simstrat_main
   !initialize model from inputfiles
   call factory%initialize_model(ParName, simdata)
 
+  ! initialize Discretization
+  call euler_i_disc%init(simdata%grid)
+
   !initialize forcing module
   call mod_forcing%init(simdata%model_cfg, &
                         simdata%model_param, &
@@ -49,6 +59,7 @@ program simstrat_main
 
   ! initialize simulation modules
   call mod_stability%init(simdata%grid, simdata%model_cfg, simdata%model_param)
+  call mod_temperature%init(simdata%grid, solver, euler_i_disc, simdata%model%nuh, simdata%model%T)
 
   call run_simulation()
 
@@ -58,6 +69,10 @@ contains
 
   subroutine run_simulation()
 
+    call logger%log(0.0_RK) ! Write initial conditions
+
+    ! todo: time control!
+    simdata%model%dt = 0.5
 
     ! Read forcing file
     call mod_forcing%update(simdata%model)
@@ -72,15 +87,15 @@ contains
   !  call uv%solve()
 
     ! Update and solve t - terms
-    ! call t%update()
-    ! call t%solve()
-    ! and so on
+    call mod_temperature%update(simdata%model, simdata%model_param)
 
     !s%update_and_solve()
     !turbulence%update()
     !k%update_and_solve()
     !eps%update_and_solve()
     !dissipation%update()
+
+    write(*,*) simdata%model%T
 
     call logger%log(simdata%model%datum)
 

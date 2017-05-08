@@ -182,7 +182,6 @@ contains
                 Vap_wat = Vap_wat*(1+1e-6_RK*param%p_air*(4.5_RK+0.00006_RK*T_surf**2))
                 ! Solar short-wave radiation absorbed
                 state%rad0 = F_glob*(1-param%beta_sol) !MS: added beta_sol
-
                 ! Long-wave radiation from sky (Livingstone & Imboden 1989)
                 ! H_A = 1.24*sig*(1-r_a)*(1+0.17*Cloud**2)*(Vap_atm/(273.15+T_atm))**(1./7)*(273.15+T_atm)**4
                 ! Long-wave radiation according to Dilley and O'Brien

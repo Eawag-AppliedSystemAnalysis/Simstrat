@@ -13,7 +13,7 @@ module strat_solver
 contains
 
   ! Implementation of Thomas algorithm
-  subroutine solve_tridiag_thomas(ld, md, ud, rhs, solution, N)
+  subroutine solve_tridiag_thomas(ld, md, ud, rhs, x)
       implicit none
 
       ! Arguments
@@ -26,19 +26,20 @@ contains
       real(RK), dimension(size(md)) :: ru, qu
       integer :: i
 
-      ru(N) = ld(N-1)/md(N)
+      N = size(md)
+      ru(N) = ud(N)/md(N)
       qu(N) = rhs(N)/md(N)
 
       do i=N-1,2,-1
-          ru(i) = ld(i-1) / (md(i)-ud(i)*ru(i+1))
-          qu(i) = (rhs(i)-ud(i)*qu(i+1)) / (md(i)-ud(i)*ru(i+1))
+          ru(i) = ud(i) / (md(i)-ld(i)*ru(i+1))
+          qu(i) = (rhs(i)-ld(i)*qu(i+1)) / (md(i)-ld(i)*ru(i+1))
       end do
 
-      qu(1) = (rhs(1)-ud(1)*qu(2)) / (md(1)-ud(1)*ru(2))
+      qu(1) = (rhs(1)-ld(1)*qu(2)) / (md(1)-ld(1)*ru(2))
 
-      solution(1) = qu(1)
+      x(1) = qu(1)
       do i=2,N
-          solution(i)=qu(i)-ru(i)*solution(i-1)
+          x(i)=qu(i)-ru(i)*x(i-1)
       end do
 
       return

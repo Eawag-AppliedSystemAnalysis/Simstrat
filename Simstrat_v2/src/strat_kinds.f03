@@ -22,6 +22,7 @@ module strat_kinds
        procedure(generic_statevariable_solve), deferred, nopass :: solve
   end type
 
+    
 
 
 contains
