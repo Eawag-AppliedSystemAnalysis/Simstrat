@@ -90,8 +90,7 @@ contains
     ! todo: time control!
     simdata%model%dS(simdata%grid%ubnd_vol) = 0.1
     simdata%model%dt = 0.5
-    simdata%model%nuh =  0.5
-    simdata%model%num = 0.5
+
     do i=1,50
     ! Read forcing file
     call mod_forcing%update(simdata%model)
@@ -117,7 +116,8 @@ contains
     ! Solve k & eps
     !k%update_and_solve()
     !eps%update_and_solve()
-    !dissipation%update()
+    
+    call mod_turbulence%update_post_eps(simdata%model)
 
     call logger%log(simdata%model%datum)
 
