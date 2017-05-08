@@ -16,6 +16,7 @@ program simstrat_main
   use strat_temp
   use strat_solver
   use strat_discretization
+  use strat_keps
   use strat_turbulence
   use strat_transport
   use, intrinsic :: ieee_arithmetic
@@ -25,12 +26,14 @@ program simstrat_main
   type(SimstratSimulationFactory) :: factory
   class(SimulationData), pointer :: simdata
   type(ThomasAlgSolver) :: solver
-  type(EulerIDiscretization) :: euler_i_disc
+  type(EulerIDiscretizationMFQ) :: euler_i_disc
+  type(EulerIDiscretizationKEPS) :: euler_i_disc_keps
   type(ForcingModule) :: mod_forcing
   type(StabilityModule) :: mod_stability
   type(SimpleLogger) :: logger
   type(TempModelVar) :: mod_temperature
   type(UVModelVar) :: mod_u, mod_v
+  type(KModelVar) :: mod_k
   type(TransportModVar) :: mod_s
   type(TurbulenceModule) :: mod_turbulence
 
@@ -52,6 +55,7 @@ program simstrat_main
 
   ! initialize Discretization
   call euler_i_disc%init(simdata%grid)
+  call euler_i_disc_keps%init(simdata%grid)
 
   !initialize forcing module
   call mod_forcing%init(simdata%model_cfg, &
@@ -76,6 +80,9 @@ program simstrat_main
 
   call mod_s%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%nuh, simdata%model%S)
   call mod_s%assign_external_source(simdata%model%dS)
+
+  call mod_k%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc_keps, simdata%model%avh, simdata%model%K)
+
 
   call run_simulation()
 
@@ -114,9 +121,10 @@ contains
     call mod_turbulence%update(simdata%model, simdata%model_param)
 
     ! Solve k & eps
+    call mod_k%update(simdata%model, simdata%model_param)
     !k%update_and_solve()
     !eps%update_and_solve()
-    
+
     call mod_turbulence%update_post_eps(simdata%model)
 
     call logger%log(simdata%model%datum)

@@ -13,9 +13,14 @@ module strat_discretization
     procedure(generic_create_LES), deferred, pass(self), public ::create_LES
   end type
 
-  type, extends(Discretization), public :: EulerIDiscretization
+  type, extends(Discretization), public :: EulerIDiscretizationMFQ
   contains
-    procedure, pass, public :: create_LES => euleri_create_LES
+    procedure, pass, public :: create_LES => euleri_create_LES_MFQ
+  end type
+
+  type, extends(Discretization), public :: EulerIDiscretizationKEPS
+  contains
+    procedure, pass, public :: create_LES => euleri_create_LES_KEPS
   end type
 
   contains
@@ -34,8 +39,8 @@ module strat_discretization
     end subroutine
 
 
-    subroutine euleri_create_LES(self, var, nu, sources, boundaries,  lower_diag, main_diag, upper_diag,  rhs, dt)
-      class(EulerIDiscretization), intent(inout) :: self
+    subroutine euleri_create_LES_MFQ(self, var, nu, sources, boundaries,  lower_diag, main_diag, upper_diag,  rhs, dt)
+      class(EulerIDiscretizationMFQ), intent(inout) :: self
       real(RK), dimension(:), intent(inout) :: var,  sources, boundaries, lower_diag, upper_diag, main_diag, rhs, nu
       real(RK), intent(inout) :: dt
       integer :: n
@@ -47,6 +52,28 @@ module strat_discretization
       lower_diag(1:n-1) = dt*nu(1:n-1)*self%grid%AreaFactor_2(1:n-1)
       lower_diag(n) = 0.0_RK
       main_diag(1:n) = 1.0_RK - upper_diag(1:n) - lower_diag(1:n) + boundaries(1:n)*dt
+
+      ! Calculate RHS
+      ! A*phi^{n+1} = phi^{n}+dt*S^{n}
+      rhs(1:n) = var(1:n) + dt * sources(1:n)
+    end subroutine
+
+    subroutine euleri_create_LES_KEPS(self, var, nu, sources, boundaries,  lower_diag, main_diag, upper_diag,  rhs, dt)
+      class(EulerIDiscretizationKEPS), intent(inout) :: self
+      real(RK), dimension(:), intent(inout) :: var,  sources, boundaries, lower_diag, upper_diag, main_diag, rhs, nu
+      real(RK), intent(inout) :: dt
+      integer :: n
+      n = size(main_diag)
+
+      ! Build diagonals
+      upper_diag(1) = 0
+      upper_diag(n) = 0
+      lower_diag(1) = 0
+      lower_diag(n) = 0
+      upper_diag(2:n-1) = dt*nu(2:n-1)*self%grid%AreaFactor_k1(2:n-1) !todo:check indices of nu!
+      lower_diag(2:n-1) = dt*nu(3:n)*self%grid%AreaFactor_2(2:n-1)
+      main_diag(1:n) = 1.0_RK - upper_diag(1:n) - lower_diag(1:n) + boundaries(1:n)*dt
+
 
       ! Calculate RHS
       ! A*phi^{n+1} = phi^{n}+dt*S^{n}

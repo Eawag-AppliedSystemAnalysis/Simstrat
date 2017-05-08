@@ -19,6 +19,7 @@ module strat_statevar
     procedure,  pass(self), public :: init => generic_var_init
     procedure(generic_var_calc_terms), deferred, pass(self), public :: calc_terms
     procedure, pass(self), public :: update  => generic_var_update
+    procedure, pass(self), public :: post_solve => generic_var_post_solve
   end type
 
 
@@ -57,7 +58,14 @@ module strat_statevar
       call self%calc_terms(state, param, sources, boundaries)
       call self%disc%create_LES(self%var, self%nu, sources, boundaries, lower_diag, main_diag, upper_diag , rhs, state%dt)
       call self%solver%solve(lower_diag, main_diag, upper_diag, rhs, self%var)
+      call self%post_solve(state,param)
 
+    end subroutine
+
+    subroutine generic_var_post_solve(self, state, param)
+      class(ModelVariable), intent(inout) :: self
+      class(ModelState), intent(inout) :: state
+      class(ModelParam), intent(inout) :: param
     end subroutine
 
 

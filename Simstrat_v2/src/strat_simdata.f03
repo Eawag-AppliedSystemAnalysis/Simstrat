@@ -88,6 +88,7 @@ module strat_simdata
 
     ! Variables located on z_upp grid
     real(RK), dimension(:), allocatable :: k,ko      ! Turbulent kinetic energy (TKE) [J/kg]
+    real(RK), dimension(:), allocatable :: avh
     real(RK), dimension(:), allocatable :: eps       ! TKE dissipation rate [W/kg]
     real(RK), dimension(:), allocatable :: num,nuh   ! Turbulent viscosity (momentum) and diffusivity (temperature)
     real(RK), dimension(:), allocatable :: P,B       ! Shear stress production [W/kg], buoyancy production [W/kg]
@@ -160,6 +161,7 @@ module strat_simdata
       allocate(this%eps(state_size+1))
       allocate(this%num(state_size+1))
       allocate(this%nuh(state_size+1))
+      allocate(this%avh(state_size+1))
       allocate(this%P(state_size+1))
       allocate(this%B(state_size+1))
       allocate(this%NN(state_size+1))
