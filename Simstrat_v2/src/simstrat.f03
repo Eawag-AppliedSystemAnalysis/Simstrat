@@ -111,8 +111,8 @@ contains
     ! Update and solve transportation terms (here: Salinity S only)
     call mod_S%update(simdata%model, simdata%model_param)
 
-    ! update turbulence parameters
-    call mod_turbulence%update(simdata%model)
+    ! update turbulence states
+    call mod_turbulence%update(simdata%model, simdata%model_param)
 
     ! Solve k & eps
     !k%update_and_solve()
