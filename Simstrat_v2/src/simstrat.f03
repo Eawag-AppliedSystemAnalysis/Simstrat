@@ -11,7 +11,7 @@ program simstrat_main
   use strat_forcing
   use utilities
   use strat_stability, only : StabilityModule
-  use strat_windshear, only: WindShearModule
+  use strat_windshear
   use strat_statevar
   use strat_temp
   use strat_solver
@@ -28,6 +28,7 @@ program simstrat_main
   type(StabilityModule) :: mod_stability
   type(SimpleLogger) :: logger
   type(TempModelVar) :: mod_temperature
+  type(UVModelVar) :: mod_u, mod_v
 
   character(len=100) :: arg
   character(len=:), allocatable :: ParName
@@ -59,7 +60,11 @@ program simstrat_main
 
   ! initialize simulation modules
   call mod_stability%init(simdata%grid, simdata%model_cfg, simdata%model_param)
-  call mod_temperature%init(simdata%grid, solver, euler_i_disc, simdata%model%nuh, simdata%model%T)
+  call mod_temperature%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%nuh, simdata%model%T)
+  call mod_u%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%num, simdata%model%U)
+  call mod_u%assign_shear_stress(simdata%model%tx)
+  call mod_v%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%num, simdata%model%V)
+  call mod_v%assign_shear_stress(simdata%model%ty)
 
   call run_simulation()
 
@@ -68,23 +73,26 @@ program simstrat_main
 contains
 
   subroutine run_simulation()
-
+    integer :: i
     call logger%log(0.0_RK) ! Write initial conditions
 
     ! todo: time control!
-    simdata%model%dt = 0.5
 
+    simdata%model%dt = 0.5
+    simdata%model%nuh =  0.5
+    simdata%model%num = 0.5
+    do i=1,50
     ! Read forcing file
     call mod_forcing%update(simdata%model)
 
     ! Update physics
     call mod_stability%update(simdata%model)
     !advection%update()
-    call mod_forcing%update_corriolis(simdata%model)
+    call mod_forcing%update_coriolis(simdata%model)
 
     ! Update and solve U and V - terms
-  !  call uv%update()
-  !  call uv%solve()
+    call mod_u%update(simdata%model, simdata%model_param)
+    call mod_v%update(simdata%model, simdata%model_param)
 
     ! Update and solve t - terms
     call mod_temperature%update(simdata%model, simdata%model_param)
@@ -95,10 +103,10 @@ contains
     !eps%update_and_solve()
     !dissipation%update()
 
-    write(*,*) simdata%model%T
-
     call logger%log(simdata%model%datum)
 
+    simdata%model%datum = simdata%model%datum + simdata%model%dt
+  end do
 
   end subroutine
 

@@ -17,7 +17,7 @@ contains
   procedure, pass :: init => forcing_init
   procedure, pass :: read => forcing_read
   procedure, pass :: update => forcing_update
-  procedure, pass :: update_corriolis => forcing_update_corriolis
+  procedure, pass :: update_coriolis => forcing_update_coriolis
 end type
 
 contains
@@ -233,7 +233,7 @@ contains
   end subroutine
 
 
-  subroutine forcing_update_corriolis(self, state)
+  subroutine forcing_update_coriolis(self, state)
     implicit none
     class(ForcingModule) :: self
     class(ModelState) :: state

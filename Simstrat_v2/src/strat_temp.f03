@@ -14,11 +14,11 @@ contains
 end type
 
 contains
-  subroutine temp_var_calc_terms(self, state, param, sources)
+  subroutine temp_var_calc_terms(self, state, param, sources, boundaries)
     class(TempModelVar), intent(inout) :: self
     class(ModelState), intent(inout) :: state
     class(ModelParam), intent(inout) :: param
-    real(RK),  dimension(:) ::  sources
+    real(RK),  dimension(:) ::  sources, boundaries
     integer :: i
     associate(grid => self%grid, &
               ubnd_fce => self%grid%ubnd_fce, &
@@ -42,6 +42,9 @@ contains
 
     ! Set boundary heat flux at surface (Eq 25, Goudsmit(2002))
     sources(ubnd_vol) = sources(ubnd_vol) + state%heat/rho_0/cp*state%dt/grid%h(ubnd_vol)
+
+    ! no explicit boundary conditions
+    boundaries(1:ubnd_vol) = 0
 
     !todo Forcing mode 1 for temp
     !if (NBC==1) then

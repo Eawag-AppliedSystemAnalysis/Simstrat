@@ -192,7 +192,7 @@ contains
       do i=1,self%n_vars
         write(*,*) self%config%output_vars(i)%name
         call self%output_files(i)%add(datum, real_fmt='(F12.4)')
-        call self%output_files(i)%add(self%config%output_vars(i)%values, real_fmt='(ES12.6)')
+        call self%output_files(i)%add(self%config%output_vars(i)%values, real_fmt='(ES14.6)')
         call self%output_files(i)%next_row()
       end do
 
