@@ -16,6 +16,7 @@ program simstrat_main
   use strat_temp
   use strat_solver
   use strat_discretization
+  use strat_turbulence
   use strat_transport
   use, intrinsic :: ieee_arithmetic
 
@@ -31,6 +32,7 @@ program simstrat_main
   type(TempModelVar) :: mod_temperature
   type(UVModelVar) :: mod_u, mod_v
   type(TransportModVar) :: mod_s
+  type(TurbulenceModule) :: mod_turbulence
 
   character(len=100) :: arg
   character(len=:), allocatable :: ParName
@@ -62,6 +64,8 @@ program simstrat_main
 
   ! initialize simulation modules
   call mod_stability%init(simdata%grid, simdata%model_cfg, simdata%model_param)
+  call mod_turbulence%init(simdata%grid, simdata%model_cfg, simdata%model_param)
+
   call mod_temperature%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%nuh, simdata%model%T)
 
   call mod_u%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%num, simdata%model%U)
@@ -107,7 +111,10 @@ contains
     ! Update and solve transportation terms (here: Salinity S only)
     call mod_S%update(simdata%model, simdata%model_param)
 
-    !turbulence%update()
+    ! update turbulence parameters
+    call mod_turbulence%update(simdata%model)
+
+    ! Solve k & eps
     !k%update_and_solve()
     !eps%update_and_solve()
     !dissipation%update()
