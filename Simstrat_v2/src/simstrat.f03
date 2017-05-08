@@ -16,6 +16,7 @@ program simstrat_main
   use strat_temp
   use strat_solver
   use strat_discretization
+  use strat_transport
   use, intrinsic :: ieee_arithmetic
 
   implicit none
@@ -29,6 +30,7 @@ program simstrat_main
   type(SimpleLogger) :: logger
   type(TempModelVar) :: mod_temperature
   type(UVModelVar) :: mod_u, mod_v
+  type(TransportModVar) :: mod_s
 
   character(len=100) :: arg
   character(len=:), allocatable :: ParName
@@ -61,10 +63,15 @@ program simstrat_main
   ! initialize simulation modules
   call mod_stability%init(simdata%grid, simdata%model_cfg, simdata%model_param)
   call mod_temperature%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%nuh, simdata%model%T)
+
   call mod_u%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%num, simdata%model%U)
   call mod_u%assign_shear_stress(simdata%model%tx)
+
   call mod_v%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%num, simdata%model%V)
   call mod_v%assign_shear_stress(simdata%model%ty)
+
+  call mod_s%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%nuh, simdata%model%S)
+  call mod_s%assign_external_source(simdata%model%dS)
 
   call run_simulation()
 
@@ -77,7 +84,7 @@ contains
     call logger%log(0.0_RK) ! Write initial conditions
 
     ! todo: time control!
-
+    simdata%model%dS(simdata%grid%ubnd_vol) = 0.1
     simdata%model%dt = 0.5
     simdata%model%nuh =  0.5
     simdata%model%num = 0.5
@@ -97,7 +104,9 @@ contains
     ! Update and solve t - terms
     call mod_temperature%update(simdata%model, simdata%model_param)
 
-    !s%update_and_solve()
+    ! Update and solve transportation terms (here: Salinity S only)
+    call mod_S%update(simdata%model, simdata%model_param)
+
     !turbulence%update()
     !k%update_and_solve()
     !eps%update_and_solve()
