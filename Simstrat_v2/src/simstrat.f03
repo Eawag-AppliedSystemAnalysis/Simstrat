@@ -112,6 +112,7 @@ contains
     call mod_v%update(simdata%model, simdata%model_param)
 
     ! Update and solve t - terms
+    write(*,*) "TTTTTTTTTTTTTTTTTT"
     call mod_temperature%update(simdata%model, simdata%model_param)
 
     ! Update and solve transportation terms (here: Salinity S only)

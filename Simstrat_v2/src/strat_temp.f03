@@ -41,7 +41,7 @@ contains
     if(param%fgeo/=0) sources(1:ubnd_vol)=sources(1:ubnd_vol)+state%fgeo_add(1:ubnd_vol)
 
     ! Set boundary heat flux at surface (Eq 25, Goudsmit(2002))
-    sources(ubnd_vol) = sources(ubnd_vol) + state%heat/rho_0/cp*state%dt/grid%h(ubnd_vol)
+    sources(ubnd_vol) = sources(ubnd_vol) + state%heat/rho_0/cp/grid%h(ubnd_vol)
 
     ! no explicit boundary conditions
     boundaries(1:ubnd_vol) = 0
