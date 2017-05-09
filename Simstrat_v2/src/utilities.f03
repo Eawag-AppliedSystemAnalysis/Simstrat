@@ -13,15 +13,14 @@ module utilities
 contains
   !Interpolation of yi on grid zi (based on the given y on grid z)
   !####################################################################
-  pure subroutine Interp(z,y,num_z,zi,yi,num_zi)
+  subroutine Interp(z,y,num_z,zi,yi,num_zi)
   !####################################################################
       implicit none
       real(RK), dimension(:), intent(in) :: z,y,zi
       real(RK), dimension(:), intent(out) :: yi
       integer, intent(in) :: num_z,num_zi
-
       integer :: posk1,posk2,posi,i
-
+      
       !Assign closest value if out of given grid
       posk1 = 1
       do while (zi(posk1)<=z(1))

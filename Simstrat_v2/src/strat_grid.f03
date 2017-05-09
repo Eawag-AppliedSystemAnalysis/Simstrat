@@ -296,8 +296,8 @@ subroutine grid_memory_init(self)
     real(RK), dimension(:), intent(in) :: z,y
     real(RK), dimension(:), intent(out) :: yi
     integer, intent(in) :: num_z
-
-    call Interp(z, y, num_z, self%z_volume, yi, self%nz_grid)
+    real(RK), dimension(size(self%z_volume+2)) :: z_vol_test
+    call Interp(z, y, num_z, self%z_volume(1:self%nz_grid), yi, self%nz_grid)
   end subroutine
 
   subroutine grid_interpolate_to_face(self, z,y,num_z,yi)
@@ -305,8 +305,8 @@ subroutine grid_memory_init(self)
     class(StaggeredGrid), intent(in) :: self
     real(RK), dimension(:), intent(in) :: z,y
     real(RK), dimension(:), intent(out) :: yi
-    integer, intent(in) :: num_z
 
+    integer, intent(in) :: num_z
     call Interp(z, y, num_z, self%z_face, yi, self%nz_grid+1)
   end subroutine
 
@@ -317,7 +317,7 @@ subroutine grid_memory_init(self)
     integer, intent(in) :: num_z
 
     ! TO do: Interp or Interp_NAN for grid boundaries??
-    call Interp(self%z_volume, y, self%nz_grid, z, yi, num_z)
+    call Interp(self%z_volume(1:self%nz_grid), y, self%nz_grid, z, yi, num_z)
   end subroutine
 
   subroutine grid_interpolate_from_face(self, z, y, num_z, yi)

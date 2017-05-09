@@ -57,7 +57,7 @@ contains
 
      ! set surface condition
      sources(ubnd_vol) =  self%stress_t/grid%h(ubnd_vol)
-
+     
     !!!!!!!! Explicit boundary conditions !!!!!
     boundaries(1) = state%drag*uv_norm(1)/grid%h(1)
     boundaries(2:ubnd_vol) = 0

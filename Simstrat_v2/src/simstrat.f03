@@ -115,17 +115,17 @@ contains
     call mod_temperature%update(simdata%model, simdata%model_param)
 
     ! Update and solve transportation terms (here: Salinity S only)
-    call mod_S%update(simdata%model, simdata%model_param)
+  !  call mod_S%update(simdata%model, simdata%model_param)
 
     ! update turbulence states
-    call mod_turbulence%update(simdata%model, simdata%model_param)
+  !  call mod_turbulence%update(simdata%model, simdata%model_param)
 
     ! Solve k & eps
-    call mod_k%update(simdata%model, simdata%model_param)
+  !  call mod_k%update(simdata%model, simdata%model_param)
     !k%update_and_solve()
     !eps%update_and_solve()
 
-    call mod_turbulence%update_post_eps(simdata%model)
+  !  call mod_turbulence%update_post_eps(simdata%model)
 
     call logger%log(simdata%model%datum)
 

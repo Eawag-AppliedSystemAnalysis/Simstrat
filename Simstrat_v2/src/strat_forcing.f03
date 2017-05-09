@@ -170,7 +170,7 @@ contains
                 stop
             end if
             state%uv10 = sqrt(state%u10**2+state%v10**2)  !AG 2014
-
+            write(*,*) "wind=", state%uv10
             if (cfg%forcing_mode/=4) then ! in the water column
 
                 ! Wind function (Livingstone & Imboden 1989)
@@ -227,7 +227,6 @@ contains
 
         state%tx = param%C10*rho_air/rho_0*state%uv10*state%u10
         state%ty = param%C10*rho_air/rho_0*state%uv10*state%v10
-
         return
       end associate
   end subroutine
