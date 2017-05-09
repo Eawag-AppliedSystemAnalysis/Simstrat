@@ -91,10 +91,10 @@ contains
         buoy(i)= -g*(rho(i)-rho_0)/rho_0
     end do
 
-    NN(2:grd%ubnd_fce-1) = grd%meanint(2:grd%ubnd_fce-1)*(buoy(2:grd%ubnd_fce-1)-buoy(1:grd%ubnd_fce-2))
+    NN(2:grd%ubnd_fce-1) = grd%meanint(1:grd%ubnd_vol-1)*(buoy(2:grd%ubnd_fce-1)-buoy(1:grd%ubnd_fce-2))
     NN(1)= NN(2)
     NN(grd%ubnd_fce)= NN(grd%ubnd_fce-1)
-
+    
   end associate
   end subroutine
 
