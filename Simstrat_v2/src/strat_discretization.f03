@@ -56,11 +56,6 @@ module strat_discretization
       ! Calculate RHS
       ! A*phi^{n+1} = phi^{n}+dt*S^{n}
       rhs(1:n) = var(1:n) + dt * sources(1:n)
-
-      write(*,*) "du = ", rhs
-      write(*,*) "au = ", upper_diag
-      write(*,*) "bu = ", main_diag
-      write(*,*) "cu = ", lower_diag
     end subroutine
 
     subroutine euleri_create_LES_KEPS(self, var, nu, sources, boundaries,  lower_diag, main_diag, upper_diag,  rhs, dt)
@@ -76,13 +71,18 @@ module strat_discretization
       lower_diag(1) = 0
       lower_diag(n) = 0
       upper_diag(2:n-1) = dt*nu(1:n-1)*self%grid%AreaFactor_k1(2:n-1) !todo:check indices of nu!
-      lower_diag(2:n-1) = dt*nu(2:n)*self%grid%AreaFactor_2(2:n-1)
+      lower_diag(2:n-1) = dt*nu(2:n)*self%grid%AreaFactor_k2(2:n-1)
       main_diag(1:n) = 1.0_RK - upper_diag(1:n) - lower_diag(1:n) + boundaries(1:n)*dt
 
 
       ! Calculate RHS
       ! A*phi^{n+1} = phi^{n}+dt*S^{n}
       rhs(1:n) = var(1:n) + dt * sources(1:n)
+
+      write(*,*) "du = ", rhs
+      write(*,*) "au = ", upper_diag
+      write(*,*) "bu = ", main_diag
+      write(*,*) "cu = ", lower_diag
     end subroutine
 
 

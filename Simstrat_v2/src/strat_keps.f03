@@ -21,7 +21,7 @@ contains
     class(ModelParam), intent(inout) :: param
     real(RK),  dimension(:) ::  sources, boundaries
     real(RK) :: rhs_0, rhs_ubnd
-    real(RK) :: pminus(self%grid%ubnd_fce), pplus(self%grid%ubnd_fce), Prod, Buoy, Diss
+    real(RK) :: pminus(2:self%grid%ubnd_fce-1), pplus(2:self%grid%ubnd_fce-1), Prod, Buoy, Diss
 
     integer :: i
     associate(grid => self%grid, &
@@ -35,16 +35,21 @@ contains
     state%ko(1:ubnd_fce) = state%k(1:ubnd_fce) ! ko = TKE at old time step
 
     ! indices of avh not clear! do they need to be changed to 3:ubnd_fcd-2 ??
-    state%avh(2:ubnd_fce) = 0.5_RK/sig_k*(state%num(1:ubnd_fce-1)+state%num(2:ubnd_fce)) ! average num for TKE
+    state%avh(2:ubnd_fce-1) = 0.5_RK/sig_k*(state%num(1:ubnd_fce-1)+state%num(2:ubnd_fce)) ! average num for TKE
 
     if (self%cfg%flux_condition==1 .and. self%cfg%turbulence_model == 1) then
-        state%avh(2) = 0.0_RK
-        state%avh(ubnd_fce-1) = 0.0_RK
+        state%avh(1) = 0.0_RK
+        state%avh(ubnd_fce) = 0.0_RK
     else
-        state%avh(2)=2*state%u_taub**4/(state%eps(0)+state%eps(1))        ! = 0 for no shear stress
-        state%avh(ubnd_fce-1)=2*state%u_taus**4/(state%eps(ubnd_fce)+state%eps(ubnd_fce-1))   ! = 0 for no shear stress
+        state%avh(1)=2*state%u_taub**4/(state%eps(0)+state%eps(1))        ! = 0 for no shear stress
+        state%avh(ubnd_fce)=2*state%u_taus**4/(state%eps(ubnd_fce)+state%eps(ubnd_fce-1))   ! = 0 for no shear stress
     end if
 
+    write(*,*) "avh=",state%avh
+    write(*,*) "P=",state%P
+    write(*,*) "P_Seiche=", state%P_Seiche
+    write(*,*) "B=",state%B
+    write(*,*) "eps=",state%eps
     do i=2,ubnd_fce-1
         Prod = state%P(i)+state%P_Seiche(i)                   ! Add seiche energy
         Buoy=state%B(i)
@@ -56,13 +61,16 @@ contains
             pplus(i)=Prod
             pminus(i)=Diss-Buoy
         end if
+        write(*,*) Prod," ",Buoy," ", Diss
     end do
 
+    write(*,*) "pplus=", pplus
+    write(*,*) "pminus=", pminus
     !!!!!!!! Define sources !!!!!!!!
     sources(2:ubnd_fce-1) = pplus(2:ubnd_fce-1)
 
     !!!!!! Define boundary conditions !!!!
-    boundaries(2:ubnd_fce-1) = pminus(2:ubnd_fce-1)/state%eps(2:ubnd_fce-1)
+    boundaries(2:ubnd_fce-1) = pminus(2:ubnd_fce-1)/state%k(2:ubnd_fce-1)
 
     if(self%cfg%flux_condition==1 .and. self%cfg%turbulence_model == 1) then
       ! K(0) and K(ubnd_fce) are assigned in the post processing function
