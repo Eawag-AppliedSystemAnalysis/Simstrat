@@ -14,7 +14,7 @@ module strat_outputfile
     type(csv_file), dimension(:), allocatable :: output_files
     integer, public :: n_depths
     integer, public :: n_vars
-
+    integer, public :: thinning_interval, current_i
      contains
        procedure(generic_log_init), deferred, pass(self), public :: initialize
        procedure(generic_log), deferred, pass(self), public :: log
@@ -84,7 +84,8 @@ contains
       end if
       call self%output_files(i)%next_row()
     end do
-
+    self%thinning_interval = 50
+    self%current_i = 0
 
 
 
@@ -189,8 +190,15 @@ contains
       !workaround gfortran bug => cannot pass allocatable array to csv file
       !real(RK), dimension(:), allocatable :: values, values_on_zout,test
       integer :: i
+
+      if(mod(self%current_i, self%thinning_interval)/=0) then
+        self%current_i = self%current_i + 1
+        return ! dont log
+      else
+        self%current_i = self%current_i + 1
+      end if
+
       do i=1,self%n_vars
-        write(*,*) self%config%output_vars(i)%name
         call self%output_files(i)%add(datum, real_fmt='(F12.4)')
         call self%output_files(i)%add(self%config%output_vars(i)%values, real_fmt='(ES14.6)')
         call self%output_files(i)%next_row()

@@ -34,6 +34,7 @@ program simstrat_main
   type(TempModelVar) :: mod_temperature
   type(UVModelVar) :: mod_u, mod_v
   type(KModelVar) :: mod_k
+  type(EpsModelVar) :: mod_eps
   type(TransportModVar) :: mod_s
   type(TurbulenceModule) :: mod_turbulence
 
@@ -82,6 +83,7 @@ program simstrat_main
   call mod_s%assign_external_source(simdata%model%dS)
 
   call mod_k%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc_keps, simdata%model%avh, simdata%model%K)
+  call mod_eps%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc_keps, simdata%model%avh, simdata%model%eps)
 
 
   call run_simulation()
@@ -95,13 +97,18 @@ contains
     call logger%log(0.0_RK) ! Write initial conditions
 
     ! todo: time control!
-    simdata%model%dS(simdata%grid%ubnd_vol) = 0.1
-    simdata%model%dt = 0.5
+    !simdata%model%dS(20) = 0.01
+    simdata%model%dt = 0.1
 
-    do i=1,50
+    do i=1,10000
+      simdata%model%std  = i
+      if(simdata%model%datum >= simdata%sim_cfg%end_datum) then
+        exit
+      end if
+
+
     ! Read forcing file
     call mod_forcing%update(simdata%model)
-
     ! Update physics
     call mod_stability%update(simdata%model)
     !advection%update()
@@ -115,19 +122,17 @@ contains
     call mod_temperature%update(simdata%model, simdata%model_param)
 
     ! Update and solve transportation terms (here: Salinity S only)
-    !call mod_S%update(simdata%model, simdata%model_param)
+    call mod_S%update(simdata%model, simdata%model_param)
 
     ! update turbulence states
     call mod_turbulence%update(simdata%model, simdata%model_param)
 
     ! Solve k & eps
     call mod_k%update(simdata%model, simdata%model_param)
-
-
-  !  call mod_turbulence%update_post_eps(simdata%model)
+    call mod_eps%update(simdata%model, simdata%model_param)
 
     call logger%log(simdata%model%datum)
-
+      write(*,*) "Date = ",simdata%model%datum
     simdata%model%datum = simdata%model%datum + simdata%model%dt
   end do
 

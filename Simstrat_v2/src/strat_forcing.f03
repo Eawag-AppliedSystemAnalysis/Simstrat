@@ -65,7 +65,9 @@ contains
            !Read first values
            read(20,*,end=9)
            read(20,*,end=9) tb_start, (A_s(i),i=1,nval)
-           if(datum<tb_start) write(6,*) 'Warning: first forcing date after simulation start time.'
+           if(datum<tb_start) then
+             write(6,*) 'Warning: first forcing date after simulation start time. datum=',datum," start=",tb_start
+           end if
            read(20,*,end=7) tb_end, (A_e(i),i=1,nval)
         end if
 
@@ -111,10 +113,10 @@ contains
         real(RK) :: fu, Vap_wat, heat0
         real(RK) :: T_surf, T_atm, F_glob, Vap_atm, Cloud
         real(RK) :: H_A, H_K, H_V, H_W
-
+save A_s, A_e
         associate(cfg => self%cfg, param => self%param)
 
-        !save A_s, A_e
+
         T_surf = state%T(self%grid%ubnd_vol)
         !Todo: is surface temp the uppermost volume's temp?
 
@@ -170,7 +172,7 @@ contains
                 stop
             end if
             state%uv10 = sqrt(state%u10**2+state%v10**2)  !AG 2014
-            write(*,*) "wind=", state%uv10
+
             if (cfg%forcing_mode/=4) then ! in the water column
 
                 ! Wind function (Livingstone & Imboden 1989)
@@ -241,7 +243,7 @@ contains
     associate(grid=>self%grid, dt => state%dt, param=>self%param)
     ! calculate u_taub before changing U resp V
     state%u_taub=sqrt(state%drag*(state%U(1)**2+state%V(1)**2))
-    
+
     ! Calculate coriolis parameter based on latitude
     cori=2.0_RK*7.292e-5_RK*sin(param%Lat*pi/180.0_RK)
 

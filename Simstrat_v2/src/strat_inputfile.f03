@@ -421,8 +421,6 @@ contains
       ! interpolate variables UVTS on central grid and store
       call grid%interpolate_to_vol(z_read, U_read, num_read, model%U)
       call grid%interpolate_to_vol(z_read, V_read, num_read, model%V)
-
-      write(*,*) "######################### TTTT ##################"
       call grid%interpolate_to_vol(z_read, T_read, num_read, model%T)
       call grid%interpolate_to_vol(z_read, S_read, num_read, model%S)
 

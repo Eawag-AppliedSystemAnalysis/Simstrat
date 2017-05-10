@@ -75,7 +75,6 @@ contains
     ! Call init functions
     call self%init_z_axes()
     call self%init_areas(config)
-    call self%update_area_factors()
   end subroutine grid_init
 
 subroutine grid_memory_init(self)
@@ -236,8 +235,11 @@ subroutine grid_memory_init(self)
     self%AreaFactor_1(1:nz) = -4*Az(1:nz)/(h(1:nz)+h(0:nz-1))/h(1:nz)/(Az(2:nz+1)+Az(1:nz))
     self%AreaFactor_2(1:nz) = -4*Az(2:nz+1)/(h(1:nz)+h(2:nz+1))/h(1:nz)/(Az(2:nz+1)+Az(1:nz))
     self%AreaFactor_k1(1:nz-1) = -(Az(2:nz)+Az(3:nz+1))/(h(1:nz-1)+h(2:nz))/  h(2:nz)/Az(2:nz)
+    self%AreaFactor_k1(nz) = 0
     self%AreaFactor_k2(1:nz-1) = -(Az(2:nz)+Az(1:nz-1))/(h(1:nz-1)+h(2:nz))/h(1:nz-1)/Az(2:nz)
+    self%AreaFactor_k2(nz) = 0
     self%AreaFactor_eps(1:nz-1) = 0.5_RK*((Az(2:nz)-Az(1:nz-1))/h(1:nz-1)+(Az(3:nz+1)-Az(2:nz))/h(2:nz))/Az(2:nz)
+    self%AreaFactor_eps(nz) = 0
     self%meanint(1:nz) = 2.0_RK/(h(1:nz)+h(2:nz+1))
 
     self%volume=0
