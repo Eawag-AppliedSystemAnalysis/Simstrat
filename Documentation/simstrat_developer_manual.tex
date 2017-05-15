@@ -113,62 +113,100 @@ Alternatively Intel Fortran Compiler
 
 \section{Download and install SimStrat}
 
+\newpage
 \section{Code Structure}
+The code structure of simstrat has been updated to an object-oriented model. In this chapter, the main architecture is documented and a short description of each used class is given. Additionally, the important classes for solving model variables and for updating the grid are explained in more detail.
+
+\subsection{Overview}
+The following class diagram gives an overview of the coupling of the different classes.
+\begin{figure}[h]
+		\includegraphics[width=0.75\textwidth]{classdiagram.pdf}
+		\caption{Class diagram of Simstrat2.}
+\end{figure}
+The main points of the architecture are:
+\begin{itemize}
+	\item All simulation data is kept inside the SimData class and its various subclasses. Additionally, a grid class containing all information and methods (update/interpolate etc) concerning the grid is kept. This information is all read and set up by the InputFileModule.
+	
+	\item All variables that need to be solved to update $(K,\epsilon,T,S,U,V)$ have a corresponding module that contains the logic to calculate the terms needed for constructing a linear system of equations. All these modules are inherited from an abstract base class "ModelVariable" that provides the logic to combine solver, grid, discretization and variable data. Each inherited subclass only overwrites the needed methods (usually calc\_terms).
+	
+	\item Most other parts of the software, such as output data storage, forcing or (stability-)parameter updates are structured into single classes that have access to the model state and/or grid.
+\end{itemize}
+
+Once the simulation has been set up, only the update methods of each module are called during each iteration:
+\begin{enumerate}
+	\item Update current simulation date
+	\item Read \& update forcing data (ForcingModule update)
+	\item Update stability data $N^{2},cmue$ (StabilityModule update)
+	\item Update $U$ and $V$ (UVModelVar update)
+	\item Update $T$ (TempModelVar update)
+	\item Update $S$ (TranspModelVar update)
+	\item Update turbulence data $P,P_{seiche},\nu_{m},\nu_{h}$ (TurbulenceModule update)
+	\item Update $k$ (KModelVar update)
+	\item Update $eps$ (EpsModelVar update)
+	\item Call logger to log current state
+\end{enumerate}
+
+
+\subsection{Classes}
+
+The following classes/modules/interfaces are of importance:
 
 \begin{description}[style=nextline]
-	\hrule
 	\vspace{1em}
-	\item[simstrat.f90] \noindent Main program. Calls Initialization, Form and simulation 
-	
-	\begin{description}[style=multiline, leftmargin=17em]
-		\item[\textnormal{subroutine} keps\_simulation] Simulation main loop, call to all the functions, coupling with FABM and management of the output
-		\item[\textnormal{subroutine} Tridiagonal] Tridiagonal matrix algorithm (solver)
-		\item[\textnormal{subroutine} Coriolis] Integration of the Coriolis force in the (x,y) velocities
-		\item[\textnormal{subroutine} uvEquation] Solving the advection-diffusion equations for the (x,y) velocities
-		\item[\textnormal{subroutine} Buoyancy] Calculation of the stratification coefficient
-		\item[\textnormal{subroutine} Temperature] Solving the temperature equation (transport, radiation, heat flux)
-		\item[\textnormal{subroutine} TransportEquation] Solving the compound equation (transport, source/sink)
-		\item[\textnormal{subroutine} cmue\_cn \textnormal{and} cmue\_qe] Calculation of model parameters (cmue)
-		\item[\textnormal{subroutine} Seiche] Distributing the wind forcing into seiche energy
-		\item[\textnormal{subroutine} Production] Calculating shear stress and buoyancy energy production
-		\item[\textnormal{subroutine} TKE] Solving the turbulent kinetic energy (k) equation
-		\item[\textnormal{subroutine} Dissipation] Solving the TKE dissipation rate (ε) equation
-		\item[\textnormal{subroutine} Advection] Integration of the inflows and outflows to the model state
-		\item[\textnormal{subroutine} Form] Calculation of the morphologic parameters of the basin
-	\end{description}
-
 	\hrule
-	\item[simstrat\_initialization.f90] \noindent contains subroutines to initialize the model
+	\item[Interfaces] \noindent Interfaces that may have multiple implementations to facilitate different variants
 	
-	
-	\begin{description}[style=multiline, leftmargin=17em]
-		\item[\textnormal{subroutine} Initialization] Model initialization, calls to ParameterList, Morph and InitCond
-		\item[\textnormal{subroutine} ParameterList] Parameter initialization based on simstrat.par
-		\item[\textnormal{subroutine} Morph] Morphology initialization based on the morphology file
-		\item[\textnormal{subroutine} Grid] Vertical grid initialization based on the grid file
-		\item[\textnormal{subroutine} InitCond] Applying the initial conditions based on the initial conditions file
-		\item[\textnormal{subroutine} InitCond\_FABM] Applying the biochemical initial conditions based on the corresponding files
-		\item[\textnormal{subroutine} save\_ini] Preparation of the output grid based on the output depths and output times files
-		\item[\textnormal{subroutine} check\_advection] Disabling of advection if all four inflow/outflow files are empty
-	\end{description}
+\begin{description}[style=multiline, leftmargin=17em]
+		\item[LinSysSolver] Interface for a linear system solver, that solves for $x$ in $Ax=b$, where $A$ is tridiagonal.
+		
+		\item[SimstratOutputLogger] Interface that describes an output module which writes simulation data for further processing (e.g. CSV files or Matlab files etc)
+		
+		\item[ModelVariable] Interface that defines a generic object that manipulates a model variable (e.g. Transport equation, or update of windshear etc). Contains an abstract update method that performs the update process depending on the actual parametrization:
+			\begin{enumerate}
+				\item "Calculate terms": This calls the subroutine to calculate the source terms and boundary conditions. This method is abstract and has to be overwritten by the effective implementation.
+				\item Create linear system of equations: Uses the associated discretization method to create a tridiagonal matrix A and the right hand side.
+				\item Solve: Uses the associated solver to solve the before created linear system
+				\item "Post Solve": Execute a method to manipulate the variable after solving - default implementation is just an empty method but can be overwritten as needed.
+			
+			\end{enumerate}
 
-	\hrule
-	\item[keps\_utilities.f90] \noindent contains subroutines that are used by other subroutines
-	
-	
-	\begin{description}[style=multiline, leftmargin=17em]
-		\item[\textnormal{subroutine} Interp] Linear interpolation (nearest neighbour for values out of range)
-		\item[\textnormal{subroutine} Interp\_nan] Linear interpolation (NaN for values out of range)
-		\item[\textnormal{subroutine} Integrate] Trapezoidal integration
-		\item[\textnormal{subroutine} Forcing] Calculation of all the relevant surface forcing parameters
-		\item[\textnormal{subroutine} ReadForcing] Reading the forcing file to obtain current values
-		\item[\textnormal{subroutine} Absorption] Reading the absorption file to obtain current values
-		\item[\textnormal{subroutine} Lateral] Reading the inflow/outflow files to obtain current values
-		\item[\textnormal{subroutine} Lateral\_FABM] Reading the biochemical inflow/outflow files to obtain current values
-		\item[\textnormal{subroutine} Lateral\_rho] Reading the inflow/outflow files to obtain current values, assuming that inflow placement is gravity-driven (not manual)
-		\item[\textnormal{subroutine} Lateral\_FABM\_rho] Reading the biochemical inflow/outflow files to obtain current values, assuming that inflow placement is gravity-driven (not manual)
-	\end{description}
+
+	\item[Discretization] Defines the interface for discretization classes that, based on input quantities such as fluxes, current states and timestep, construct a linear system of equation.
 \end{description}
+ \hrule
+ 
+ 	\item[DTOs] \noindent Data transfer objects that mainly store data, but do not manipulate them (except e.g. converting data)
+ \begin{description}[style=multiline, leftmargin=17em]
+		\item[InputConfig] Holds file system path of all input files
+		
+		\item[OutputConfig] Holds file system path for all output files and additional information such as logging frequency and similar
+		
+		\item[SimConfig] Stores fixed simulation configuration, such as start/end date and timestep. 
+
+		\item[ModelConfig] Stores fixed model configuration, such as turbulence model selection or forcing mode.
+		
+		\item[ModelParam] Stores fixed model parameters, such as Latitude or $\rho_{air}$
+		
+		\item[ModelState] All model variables (i.e. everything that changes during an iteration)
+\end{description}
+
+ \hrule
+\item[Special classes] \noindent Utility and helper classes  
+ \begin{description}[style=multiline, leftmargin=17em]
+		\item[Inputfile] Module that reads all the input files and populates the aforementioned data transfer objects. Sets up the simulation.
+		
+		\item[Grid] Contains all information and routines concerning the grid. Both grids (centered on face / centered on volume) are stored and updated in this class. Additionally, methods such as interpolating from/to a grid and updating area factors belong to the grid.
+		
+		\item[Forcing] Parses forcing files and updates the current ModelState according to the date.
+
+		\item[Stability] Manipulates the NN and cmue1/2 variables of the ModelState
+		
+		
+		
+\end{description}
+\end{description}
+
+
 
 \section{Input Files}
 During a simulation, the model opens several files for reading and writing. Until it is closed, each open file is associated to a user-defined file ID (unit). Direct output to the screen is associated to unit 6 on most platforms. A list of the used files is given in Table \ref{inputfiles}.
