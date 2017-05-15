@@ -146,7 +146,7 @@ Once the simulation has been set up, only the update methods of each module are 
 	\item Call logger to log current state
 \end{enumerate}
 
-
+\newpage
 \subsection{Classes}
 
 The following classes/modules/interfaces are of importance:
@@ -200,44 +200,39 @@ The following classes/modules/interfaces are of importance:
 		\item[Forcing] Parses forcing files and updates the current ModelState according to the date.
 
 		\item[Stability] Manipulates the NN and cmue1/2 variables of the ModelState
+\end{description}
+
+ \hrule
+\item[Model state variable classes] \noindent Classes that are inherited from ModelVariable
+ \begin{description}[style=multiline, leftmargin=17em]
+		\item[TranspModelVar] Simplest inherited class from ModelVariable.  Contains additional method to assign an external source term. Overwrites calc\_terms and sets source terms to the afore mentioned source terms. This class can be used for all quantities that need to be transported/distributed without special boundary conditions/equations. Examples include salinity $S$ and additional biogeochemical quantities.
 		
+		\item[TempModelVar] Used for $T$ variable. In the calc\_terms function, radiance into each layer is calculated and added as a source term. Additionally, boundary fluxes according to geothermal/boundary heat fluxes are added.
 		
+		\item[UVModelVar] Used for $U$/$V$ variable. Same class can be instantiated twice and assigned to $U$ respectively $V$, as the code is the same. Additional to the variable, a shear stress variable has to be defined using the assign\_shear\_stress method.
 		
+		\item[KModelVar] Used for $K$ variable. Contains calculation for sources/boundary conditions needed to calculate $K$. Contains post\_solve function to adjust first/last element of $K$ after solve
+
+		\item[EpsModelVar] Used for $\epsilon$ variable. Similar to KModelVar.
 \end{description}
 \end{description}
 
 
 
-\section{Input Files}
-During a simulation, the model opens several files for reading and writing. Until it is closed, each open file is associated to a user-defined file ID (unit). Direct output to the screen is associated to unit 6 on most platforms. A list of the used files is given in Table \ref{inputfiles}.
+\subsection{Implementation of an equation}
+In this chapter, the detailed approach how a state variable is solved is explained (mostly for code documentation purposes - for more information about the math/discretization used, see next chapters).
 
-\begin{table}[h!]
-	\caption{Input files used by SimStrat}
-	\label{inputfiles}
-	\begin{tabularx}{\textwidth}{lXXl}\toprule
-		\textbf{File ID} & \textbf{File description} & \textbf{Reference} & \textbf{Use} \\
-		\midrule
-		10 & Parameter & First command argument, or 'kepsilon.par' by default & Read once \\
-		11 & Morphology & Parameter file, line 4 & Read once \\
-		12 & Grid & Parameter file, line 3 & Read once \\
-		13 & Initial conditions & Parameter file, line 2 & Read once \\
-		14 & Biochemical initial conditions (several files) & Path: parameter file, line 14 & Read once \\
-		15 & Output depths & Parameter file, line 8 & Read once \\
-		15 & Output times & Parameter file, line 9 & Read once \\
-		20 & Surface forcing & Parameter file, line 5 & Read continuously \\
-		30 & Light absorption & Parameter file, line 6 & Read continuously \\
-		41 & Water inflow & Parameter file, line 10 & Read continuously \\
-		42 & Water outflow & Parameter file, line 11 & Read continuously \\
-		43 & Temperature input & Parameter file, line 12 & Read continuously \\
-		44 & Salinity input & Parameter file, line 13 & Read continuously \\
-		45-* & Biochemical input (several files) & Path: parameter file, line 14 & Read continuously \\
-		80 & Physical output (binary) & Parameter file, line 7 & Write  continuously \\
-		81-93 & Physical output (text files) & Path: parameter file, line 7 & Write  continuously \\
-		101-* & Biochemical output (text files) & Path: parameter file, line 15 & Write  continuously \\
-		\bottomrule
-	\end{tabularx}\vspace{0.3em}
-	* means the number depends on which biochemical modules are enabled
-\end{table}
+\subsection{Grid}
+
+\subsection{Proposed Coupling to AED2}
+
+\subsubsection{Input files}
+
+\subsubsection{Transport Modelvariable}
+
+\subsubsection{Update}
+
+\subsubsection{Output files}
 
 
 
