@@ -1,0 +1,329 @@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Journal Article
+% LaTeX Template
+% Version 1.3 (9/9/13)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% Original author:
+% Frits Wenneker (http://www.howtotex.com)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%----------------------------------------------------------------------------------------
+%       PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+\documentclass[paper=a4, fontsize=12pt]{article}
+\usepackage[english]{babel} % English language/hyphenation
+\usepackage[protrusion=true,expansion=true]{microtype} 
+%\usepackage[protrusion=true]{microtype} 
+\usepackage{amsmath,amsfonts,amsthm} % Math packages
+\usepackage{mathtools}
+%\usepackage[utf8]{inputenc}
+\usepackage{color}
+\usepackage{blindtext}
+\usepackage{graphicx} 
+\usepackage{subcaption}
+%\usepackage[sc]{mathpazo} % Use the Palatino font
+\usepackage{epstopdf}
+%\usepackage[cm]{sfmath}
+%\usepackage{cmbright}
+%\usepackage[math]{kurier}
+%\usepackage{fourier}
+%\usepackage{pxfonts}
+%\usepackage[math]{iwona}
+\usepackage[charter]{mathdesign}
+\usepackage[T1]{fontenc} % Use 8-bit encoding that has 256 glyphs
+\linespread{1.05} % Line spacing - Palatino needs more space between lines
+%\usepackage{microtype} % Slightly tweak font spacing for aesthetics
+%\usepackage{chemformula}
+\usepackage[hidelinks]{hyperref}
+\usepackage[hmarginratio=1:1,top=32mm,columnsep=20pt]{geometry} % Document margins
+\usepackage{multicol} % Used for the two-column layout of the document
+%\usepackage[hang, small,labelfont=bf,up,textfont=it,up]{caption} % Custom captions under/above floats in tables or figures
+\usepackage{booktabs} % Horizontal rules in tables
+\usepackage{tabularx}
+\usepackage{float} % Required for tables and figures in the multi-column environment - they need to be placed in specific locations with the [H] (e.g. \begin{table}[H])
+\usepackage{hyperref} % For hyperlinks in the PDF
+\usepackage{lettrine} % The lettrine is the first enlarged letter at the beginning of the text
+\usepackage{paralist} % Used for the compactitem environment which makes bullet points with less space between them
+\usepackage{abstract} % Allows abstract customization
+\renewcommand{\abstractnamefont}{\normalfont\bfseries} % Set the "Abstract" text to bold
+\renewcommand{\abstracttextfont}{\normalfont\small\itshape} % Set the abstract itself to small italic text
+\usepackage{titlesec} % Allows customization of titles
+\usepackage{enumitem}
+
+\renewcommand\thesection{\Roman{section}} % Roman numerals for the sections
+\renewcommand\thesubsection{\Roman{subsection}} % Roman numerals for subsections
+
+\titleformat{\section}[block]{\large\bfseries}{\thesection.}{1em}{} % Change the look of the section titles
+\titleformat{\subsection}[block]{\large}{\thesubsection.}{1em}{} % Change the look of the section titles
+\newcommand{\horrule}[1]{\rule{\linewidth}{#1}} % Create horizontal rule command with 1 argument of height
+\usepackage{fancyhdr} % Headers and footers
+\pagestyle{fancy} % All pages have headers and footers
+\fancyhead{} % Blank out the default header
+\fancyfoot{} % Blank out the default footer
+\renewcommand{\headrulewidth}{0pt} % no top rule
+
+\fancyhead[C]{} % Custom header text
+
+\fancyfoot[RO,LE]{\thepage} % Custom footer text
+%----------------------------------------------------------------------------------------
+%       TITLE SECTION
+%----------------------------------------------------------------------------------------
+\title{\vspace{-15mm}\huge SimStrat \\ 1D k-epsilon lake model \\[0.5cm] \textbf{Developer Manual}} % Article title
+\author{
+\large
+{\textsc{}}\\[2mm]
+}
+\date{}
+
+%----------------------------------------------------------------------------------------
+\begin{document}
+
+\begin{titlepage}
+	\maketitle % Insert title
+	\thispagestyle{empty}
+	\tableofcontents
+	\vspace{5cm}
+	\begin{figure}[h]
+		\includegraphics[width=0.3\textwidth]{ealogo05-150.eps}
+	\end{figure}
+
+	\noindent\fontfamily{phv}\selectfont Swiss Federal Institut of Aquatic Science and Technology, December 2016
+\end{titlepage}
+\thispagestyle{fancy} % All pages have headers and footers
+
+\section{Introduction}
+This developer manual is ...
+
+\section{Requirements}
+
+make
+
+Cmake
+
+GNU-Fortran compiler
+
+Alternatively Intel Fortran Compiler
+
+\section{Download and install SimStrat}
+
+\section{Code Structure}
+
+\begin{description}[style=nextline]
+	\hrule
+	\vspace{1em}
+	\item[simstrat.f90] \noindent Main program. Calls Initialization, Form and simulation 
+	
+	\begin{description}[style=multiline, leftmargin=17em]
+		\item[\textnormal{subroutine} keps\_simulation] Simulation main loop, call to all the functions, coupling with FABM and management of the output
+		\item[\textnormal{subroutine} Tridiagonal] Tridiagonal matrix algorithm (solver)
+		\item[\textnormal{subroutine} Coriolis] Integration of the Coriolis force in the (x,y) velocities
+		\item[\textnormal{subroutine} uvEquation] Solving the advection-diffusion equations for the (x,y) velocities
+		\item[\textnormal{subroutine} Buoyancy] Calculation of the stratification coefficient
+		\item[\textnormal{subroutine} Temperature] Solving the temperature equation (transport, radiation, heat flux)
+		\item[\textnormal{subroutine} TransportEquation] Solving the compound equation (transport, source/sink)
+		\item[\textnormal{subroutine} cmue\_cn \textnormal{and} cmue\_qe] Calculation of model parameters (cmue)
+		\item[\textnormal{subroutine} Seiche] Distributing the wind forcing into seiche energy
+		\item[\textnormal{subroutine} Production] Calculating shear stress and buoyancy energy production
+		\item[\textnormal{subroutine} TKE] Solving the turbulent kinetic energy (k) equation
+		\item[\textnormal{subroutine} Dissipation] Solving the TKE dissipation rate (ε) equation
+		\item[\textnormal{subroutine} Advection] Integration of the inflows and outflows to the model state
+		\item[\textnormal{subroutine} Form] Calculation of the morphologic parameters of the basin
+	\end{description}
+
+	\hrule
+	\item[simstrat\_initialization.f90] \noindent contains subroutines to initialize the model
+	
+	
+	\begin{description}[style=multiline, leftmargin=17em]
+		\item[\textnormal{subroutine} Initialization] Model initialization, calls to ParameterList, Morph and InitCond
+		\item[\textnormal{subroutine} ParameterList] Parameter initialization based on simstrat.par
+		\item[\textnormal{subroutine} Morph] Morphology initialization based on the morphology file
+		\item[\textnormal{subroutine} Grid] Vertical grid initialization based on the grid file
+		\item[\textnormal{subroutine} InitCond] Applying the initial conditions based on the initial conditions file
+		\item[\textnormal{subroutine} InitCond\_FABM] Applying the biochemical initial conditions based on the corresponding files
+		\item[\textnormal{subroutine} save\_ini] Preparation of the output grid based on the output depths and output times files
+		\item[\textnormal{subroutine} check\_advection] Disabling of advection if all four inflow/outflow files are empty
+	\end{description}
+
+	\hrule
+	\item[keps\_utilities.f90] \noindent contains subroutines that are used by other subroutines
+	
+	
+	\begin{description}[style=multiline, leftmargin=17em]
+		\item[\textnormal{subroutine} Interp] Linear interpolation (nearest neighbour for values out of range)
+		\item[\textnormal{subroutine} Interp\_nan] Linear interpolation (NaN for values out of range)
+		\item[\textnormal{subroutine} Integrate] Trapezoidal integration
+		\item[\textnormal{subroutine} Forcing] Calculation of all the relevant surface forcing parameters
+		\item[\textnormal{subroutine} ReadForcing] Reading the forcing file to obtain current values
+		\item[\textnormal{subroutine} Absorption] Reading the absorption file to obtain current values
+		\item[\textnormal{subroutine} Lateral] Reading the inflow/outflow files to obtain current values
+		\item[\textnormal{subroutine} Lateral\_FABM] Reading the biochemical inflow/outflow files to obtain current values
+		\item[\textnormal{subroutine} Lateral\_rho] Reading the inflow/outflow files to obtain current values, assuming that inflow placement is gravity-driven (not manual)
+		\item[\textnormal{subroutine} Lateral\_FABM\_rho] Reading the biochemical inflow/outflow files to obtain current values, assuming that inflow placement is gravity-driven (not manual)
+	\end{description}
+\end{description}
+
+\section{Input Files}
+During a simulation, the model opens several files for reading and writing. Until it is closed, each open file is associated to a user-defined file ID (unit). Direct output to the screen is associated to unit 6 on most platforms. A list of the used files is given in Table \ref{inputfiles}.
+
+\begin{table}[h!]
+	\caption{Input files used by SimStrat}
+	\label{inputfiles}
+	\begin{tabularx}{\textwidth}{lXXl}\toprule
+		\textbf{File ID} & \textbf{File description} & \textbf{Reference} & \textbf{Use} \\
+		\midrule
+		10 & Parameter & First command argument, or 'kepsilon.par' by default & Read once \\
+		11 & Morphology & Parameter file, line 4 & Read once \\
+		12 & Grid & Parameter file, line 3 & Read once \\
+		13 & Initial conditions & Parameter file, line 2 & Read once \\
+		14 & Biochemical initial conditions (several files) & Path: parameter file, line 14 & Read once \\
+		15 & Output depths & Parameter file, line 8 & Read once \\
+		15 & Output times & Parameter file, line 9 & Read once \\
+		20 & Surface forcing & Parameter file, line 5 & Read continuously \\
+		30 & Light absorption & Parameter file, line 6 & Read continuously \\
+		41 & Water inflow & Parameter file, line 10 & Read continuously \\
+		42 & Water outflow & Parameter file, line 11 & Read continuously \\
+		43 & Temperature input & Parameter file, line 12 & Read continuously \\
+		44 & Salinity input & Parameter file, line 13 & Read continuously \\
+		45-* & Biochemical input (several files) & Path: parameter file, line 14 & Read continuously \\
+		80 & Physical output (binary) & Parameter file, line 7 & Write  continuously \\
+		81-93 & Physical output (text files) & Path: parameter file, line 7 & Write  continuously \\
+		101-* & Biochemical output (text files) & Path: parameter file, line 15 & Write  continuously \\
+		\bottomrule
+	\end{tabularx}\vspace{0.3em}
+	* means the number depends on which biochemical modules are enabled
+\end{table}
+
+
+
+
+\section{Discretisation Scheme and Numerical Approach}
+\subsection{System of Governing Equations}
+The governing equations are described in Goudsmit et al. 2000
+\begin{align}
+	\frac{\partial T}{\partial t} &= \frac{1}{A}\frac{\partial}{\partial z}\left(A(\nu'_t + \nu')\frac{\partial T}{\partial z}\right)+\frac{1}{\rho_0 c_p}\frac{\partial H_{sol}}{\partial z}+\frac{dA}{dz}\frac{H_{geo}}{A\rho_0 c_p}\\
+	\begin{split}
+		\frac{\partial u}{\partial t} &= \frac{1}{A}\frac{\partial}{\partial z}\left(A(\nu_t + \nu)\frac{\partial u}{\partial z}\right) + fv\\
+		\frac{\partial v}{\partial t} &= \frac{1}{A}\frac{\partial}{\partial z}\left(A(\nu_t + \nu)\frac{\partial v}{\partial z}\right) - fu
+	\end{split}\\
+	\frac{\partial k}{\partial t} &= \frac{1}{A}\frac{\partial}{\partial z}\left(A\nu_k\frac{\partial k}{\partial z}\right) + P + P_{seiche} + B - \epsilon\\
+	\frac{\partial \epsilon}{\partial t} &= \frac{1}{A}\frac{\partial}{\partial z}\left(A\nu_{\epsilon}\frac{\partial \epsilon}{\partial z}\right) + \frac{k}{\epsilon}\left(c_{\epsilon 1}\left(P+P_{seiche}\right)+c_{\epsilon 3}B-c_{\epsilon 2}\epsilon\right)
+\end{align}
+
+\subsection{Numerical Concept}
+In the above system of partial differential equations the temporal change of a quantity formally consists of a diffusive component $D$ and a source/sink component $S$:
+\begin{equation}
+	\frac{\partial\phi}{\partial t} = D(t, \phi) + S(t)
+\end{equation}
+
+\noindent For the numerical integration an implicit Euler method is applied:
+\begin{equation}
+	\frac{\phi^{n+1}-\phi^n}{dt} = D(t^{n+1}, \phi^{n+1}) + S(t^{n}) 
+\end{equation}
+
+\noindent The resulting system of discretized equations can be written as a system of linear equations of the form:
+\begin{equation}
+	R\phi^{n+1}=\phi^n+dt\cdot S^{n}
+\end{equation}
+where $\phi$ represents any of the above quantities ($T$, $u$, $v$, $k$, $\epsilon$), and $R$ is a tridiagonal matrix of the form:
+\begin{equation}
+	R=\begin{bmatrix}
+	bu		&	au		&	0		&	\hdots	&	0  \\
+	cu		&	bu		&	au		&	 		&	\vdots \\
+	0		&	\ddots	&	\ddots	&	\ddots	&	0 \\
+	\vdots	&			&	\ddots	&	\ddots	&	au \\
+	0		&	\hdots	&	0		&	cu		&	bu
+	\end{bmatrix}
+\end{equation}
+where $bu=(1-au-cu)$. This system of linear equations can be solved very efficiently by the tridiagonal matrix algorithm.
+
+\subsection{Discretization Scheme: Finite Volume Approach on a Staggered Grid}
+The discretisation follows a finite volume approach. The water column is divided into $nz$ volumes with height $h_z$, an area $A_z$ at the top and $A_{z-1}$ at the bottom. The volume centres have indices from 1 to nz (bottom to surface). The volume faces have indices from 0 to nz. The mean flow quantities ($T$, $u$, $v$) are placed at the centre of the volumes. Turbulent quantities ($k$, $\epsilon$) are assigned to the volume faces (the interface between two volumes). Within a volume, the diffusion coefficients are assumed to be equal to the diffusion coefficient assigned to the top face of the volume.
+
+\begin{figure}[h!]
+	\centering
+	\def\svgwidth{\textwidth}
+	\input{SimstratDiscretizationScheme_edited.pdf_tex}
+	\caption{Discretisation Scheme}
+\end{figure}
+
+The temporal change of mean flow quantities within each volume results from the in-balance between the fluxes thought the two interfaces and sources/sinks:
+\begin{equation}
+	\left.\frac{\partial\phi}{\partial t}\right|_{z} = \frac{A_{z-1}F_{z-1}-A_zF_z}{V_z}+S_z
+\end{equation}
+where $V_z=h_z\left(A_z+A_{z-1}\right)/2$.
+
+The flux through the upper and lower interface are:
+\begin{align}
+	F_{face,z} &= -\nu\left.\frac{\partial \phi}{\partial z}\right|_{z}^{face} = -\nu_z\frac{\phi_{z+1}-\phi_{z}}{(h_{z+1}+h_{z})/2} \\
+	F_{face,z-1} &= -\nu\left.\frac{\partial \phi}{\partial z}\right|_{z-1}^{face} = -\nu_z\frac{\phi_{z}-\phi_{z-1}}{(h_{z}+h_{z-1})/2}
+\end{align}
+
+\noindent The resulting discretization for mean flow quantities is then:
+\begin{equation}
+	\frac{\phi^{n+1}_z-\phi^n_z}{dt} = \frac{1}{h_z\left(A_z+A_{z-1}\right)/2}
+	\left(A_z\nu^{n}_z\frac{\phi^{n+1}_{z+1}-\phi^{n+1}_{z}}{(h_{z+1}+h_{z})/2}-A_{z-1}\nu^{n}_z\frac{\phi^{n+1}_{z}-\phi^{n+1}_{z-1}}{(h_{z}+h_{z-1})/2}
+	\right)+S^n_z 
+\end{equation}
+
+\noindent This can be rearranged to:
+\begin{align}
+	&dt\cdot form_1\cdot\nu^{n+1}_z\phi^{n+1}_{z-1}\nonumber\\
+	&+(1-dt\cdot form_1\nu^{n}_z-dt\cdot form_2\nu^{n}_z)\phi^{n+1}_z\nonumber\\
+	&+ dt\cdot form_2\cdot\nu^{n+1}_z\phi^{n+1}_{z+1} = \phi^{n}_{z}+dt\cdot S^n_z\\
+	&form_1 = \frac{-4A_{z-1}}{\left(A_z+A_{z-1}\right)\left(h_{z}+h_{z-1}\right)}\\
+	&form_2 = \frac{-4A_{z}}{\left(A_z+A_{z-1}\right)\left(h_{z+1}+h_{z}\right)}
+\end{align}
+
+The temporal change of turbulent quantities mainly follows the same concept except that the control volumes are shifted so that the turbulent quantities are at the center of the control volumes and the mean flow quantities are located at the volume faces. The balance for the turbulent quantities is therefore:
+\begin{equation}
+	\left.\frac{\partial\phi}{\partial t}\right|_{z} =
+	\frac{\left(A_z+A_{z-1}\right)/2\cdot F_{z}-\left(A_{z+1}+A_z\right)/2\cdot F_{z+1}}{V_z}+S_z
+\end{equation}
+where $V_z=A_z\left(h_z+h_{z+1}\right)/2$.
+
+To calculate the flux through the upper and lower interface the turbulent kinetic energy and the dissipation at these interfaces are approximated by averaging the TKE and dissipation at the volume centres:
+\begin{align}
+	\nu_{z,face}&=\left(\nu_{z,centre}+\nu_{z-1,centre}\right)/2 \\
+\end{align}
+
+\noindent The flux through the upper and lower interface are:
+\begin{align}
+F_{z+1} &= -\nu\left.\frac{\partial \phi}{\partial z}\right|_{z+1} = -\nu_{z,face}\frac{\phi_{z+1}-\phi_{z}}{h_{z+1}} \\
+F_{z} &= -\nu\left.\frac{\partial \phi}{\partial z}\right|_{z} = -\nu_{z,face}\frac{\phi_{z}-\phi_{z-1}}{h_{z}}
+\end{align}
+
+\noindent The resulting discretization for turbulent quantities is then:
+\begin{align}
+&\frac{\phi^{n+1}_z-\phi^n_z}{dt} = \nonumber\\
+&\frac{2}{A_z\left(h_z+h_{z+1}\right)}
+\left(\frac{A_{z+1}+A_z}{2}\nu^{n}_{z,face}\frac{\phi^{n+1}_{z+1}-\phi^{n+1}_{z}}{h_{z+1}}
+-\frac{A_{z}+A_{z-1}}{2}\nu^{n}_{z,face}\frac{\phi^{n+1}_{z}-\phi^{n+1}_{z-1}}{h_{z}}
+\right)+S^n_z 
+\end{align}
+
+\noindent This can be rearranged to:
+\begin{align}
+  &\left(dt\cdot form_{k1}\cdot\nu^{n+1}_{z,face}\right)\phi^{n+1}_{z-1}\nonumber\\
+  +&\left(1-dt\cdot form_{k1}\nu^{n}_{z,face}-dt\cdot form_{k2}\nu^{n}_{z,face}\right)\phi^{n+1}_z\nonumber\\
+  +&\left(dt\cdot form_{k2}\cdot\nu^{n+1}_{z,face}\right)\phi^{n+1}_{z+1}\nonumber\\ 
+  =& \phi^{n}_{z}+dt\cdot S^n_z\\
+&form_{k1} = \frac{A_{z}+A_{z-1}}{A_z\left(h_z+h_{z+1}\right)h_z}\\
+&form_{k2} = \frac{A_{z+1}+A_z}{A_z\left(h_z+h_{z+1}\right)h_{z+1}}
+\end{align}
+
+
+\subsection{Boundary Condition at the Sediment and Lake Surface}
+
+The basic discretisation assumes a no-flux boundary at the sediment and lake surface. Concentration dependent fluxes at these interfaces are implemented as an additional component of the main diagonal.
+
+%----------------------------------------------------------------------------------------
+%\end{multicols}
+\end{document}
