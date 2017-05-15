@@ -84,7 +84,7 @@ contains
       end if
       call self%output_files(i)%next_row()
     end do
-    self%thinning_interval = 50
+    self%thinning_interval = 1
     self%current_i = 0
 
 

@@ -61,7 +61,12 @@ contains
     else if(self%model_cfg%stability_func == 2) then
 
       beta = state%NN*(state%k/state%eps)**2
+      !beta = state%NN*exp(2*(log(state%k)-log(state%eps)))
+      beta(1) = 0
+      beta(self%grid%ubnd_fce) = 0
+
       call self%update_cmue_qe(beta, state%cmue1, state%cmue2, state%cde)
+
     end if
 
   end subroutine
@@ -88,13 +93,14 @@ contains
         !if (fc/=0) then
         !    rho(i) = rho0t(i)*(1-fc)+fc*rho(i)
         !end
+
         buoy(i)= -g*(rho(i)-rho_0)/rho_0
     end do
 
     NN(2:grd%ubnd_fce-1) = grd%meanint(1:grd%ubnd_vol-1)*(buoy(2:grd%ubnd_fce-1)-buoy(1:grd%ubnd_fce-2))
     NN(1)= NN(2)
     NN(grd%ubnd_fce)= NN(grd%ubnd_fce-1)
-    
+
   end associate
   end subroutine
 

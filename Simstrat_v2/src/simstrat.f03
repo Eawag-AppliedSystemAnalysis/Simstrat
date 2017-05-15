@@ -100,12 +100,11 @@ contains
     !simdata%model%dS(20) = 0.01
     simdata%model%dt = 0.1
 
-    do i=1,10000
+    do i=1,100
       simdata%model%std  = i
       if(simdata%model%datum >= simdata%sim_cfg%end_datum) then
         exit
       end if
-
 
     ! Read forcing file
     call mod_forcing%update(simdata%model)
@@ -126,14 +125,15 @@ contains
 
     ! update turbulence states
     call mod_turbulence%update(simdata%model, simdata%model_param)
-
+        call logger%log(simdata%model%datum-simdata%model%dt/2.0_RK)
     ! Solve k & eps
     call mod_k%update(simdata%model, simdata%model_param)
     call mod_eps%update(simdata%model, simdata%model_param)
 
     call logger%log(simdata%model%datum)
-      write(*,*) "Date = ",simdata%model%datum
     simdata%model%datum = simdata%model%datum + simdata%model%dt
+
+
   end do
 
   end subroutine

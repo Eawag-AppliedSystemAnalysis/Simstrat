@@ -113,8 +113,7 @@ contains
       ! P is defined on the inner faces
       state%P = 0
       state%P(2:ubnd_fce-1) = (state%U(2:ubnd_vol)-state%U(1:ubnd_vol-1))**2+(state%V(2:ubnd_vol)-state%V(1:ubnd_vol-1))**2
-      state%P(2:ubnd_fce-1) = state%P(2:ubnd_fce-1)*state%num(2:ubnd_fce-1)*grid%meanint(2:ubnd_fce-1)**2
-
+      state%P(2:ubnd_fce-1) = state%P(2:ubnd_fce-1)*state%num(2:ubnd_fce-1)*grid%meanint(1:ubnd_vol-1)**2
       ! Equation 5 (right) of Goudsmit, 2002
       state%B = 0
       state%B(2:ubnd_fce-1) = -state%nuh(2:ubnd_fce-1)*state%NN(2:ubnd_fce-1)
@@ -149,12 +148,15 @@ contains
       !calculate Seiche normalization factor
       f_norm = 0.0_RK
       if (self%model_cfg%seiche_normalization==1) then !max NN
-          f_norm = maxval(state%NN)
+          f_norm = maxval(state%NN(2:ubnd_fce-1))
+
           f_norm = (f_norm**param%q_NN)*grid%Az(ubnd_fce)*rho_0
       else if (self%model_cfg%seiche_normalization==2) then !integral
           do i=2,ubnd_fce-1
-              f_norm = f_norm+distrib(i)*grid%Az(i)*grid%h(i-1) !todo: which h? i or i-1?
+              f_norm = f_norm+distrib(i)*grid%Az(i)*grid%h(i) !todo: which h? i or i-1?
+
           end do
+
           f_norm = f_norm*rho_0
       end if
 
@@ -188,6 +190,7 @@ contains
      ! Update P_Seiche
      ! Equation 24 in Goudsmit, 2002
      do i=2,ubnd_fce-1
+
          state%P_Seiche(i) = 1.0_RK/f_norm*distrib(i)*PS*(1.0_RK-10*sqrt(param%CD))
      end do
      state%P_Seiche(1) = 0.0_RK
