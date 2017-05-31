@@ -76,7 +76,6 @@ contains
     implicit none
     class(SimstratModel), intent(inout) :: model
     real(RK), intent(in) :: datum
-
     select type(discretization => model%discretization)
       class is (StaggeredFiniteVolumeDiscretization)
         call model%forcing%process_forcing_at_date(datum, model) !ok
@@ -101,5 +100,8 @@ contains
         call error('Simulation chain not implemented for this discretization')
         stop
     end select
+    write(*,*) 'do_turbulence done'
+
+
   end subroutine
 end module

@@ -266,8 +266,12 @@ contains
 
     call staggered_finite_volume_discretization_les_core(self%dt, self%form_1, self%form_2, self%volumes, self%a_faces, self%nz_mfq, nu, fluxes, sources, ld, md, ud, rhs)
 
+    write (*,*) md
+    
     md(1:self%nz_mfq) = (1.0_RK - ld(1:self%nz_mfq) - ud(1:self%nz_mfq)) + boundary_cond(1:self%nz_mfq)*self%dt
     rhs(1:self%nz_mfq) = rhs(1:self%nz_mfq) + var(1:self%nz_mfq)
+
+    write (*,*) md
 
     return
   end subroutine les_MFQ_ie

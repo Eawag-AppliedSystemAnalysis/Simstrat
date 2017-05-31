@@ -467,7 +467,7 @@ contains
 
           if ((ModFlux==1).and.(Mod==1)) then
             call solve_tridiag_thomas(ld, md, ud, rhs, eps, nz_tq)
-            call solve_tridiag_thomas(ld(2:nz_tq-1), md(2:nz_tq-1), ud(2:nz_tq-1), rhs(2:nz_tq-1), eps(2:nz_tq-1), nz_tq-2)
+            !call solve_tridiag_thomas(ld(2:nz_tq-1), md(2:nz_tq-1), ud(2:nz_tq-1), rhs(2:nz_tq-1), eps(2:nz_tq-1), nz_tq-2)
             !In the future: find a better solution for this. This should somehow go into the eps_terms
             !its too specific for simstrat_model_modle
             eps(1 )= eps(2   )+(cde*((ko(2   ))**1.5)/(kappa*(K_s+h_centres(1 )))**2)*h_centres(1 )
