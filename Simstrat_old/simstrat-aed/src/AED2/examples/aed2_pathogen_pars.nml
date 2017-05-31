@@ -1,0 +1,87 @@
+!-------------------------------------------------------------------------------
+! aed2_pathogen_pars.nml
+!-------------------------------------------------------------------------------
+!                    p_name : [  string] - pathogen name
+!           coef_grwth_uMAX : [    real] - Max growth rate at 20C
+!           coef_grwth_Tmin : [    real] - Tmin and Tmax, f(T)
+!           coef_grwth_Tmax : [    real] - Tmin and Tmax, f(T)
+!             coef_grwth_T1 : [    real] - coef_grwth_T1  and  coef_grwth_T2
+!             coef_grwth_T2 : [    real] - coef_grwth_T1  and  coef_grwth_T2
+!           coef_grwth_Kdoc : [    real] - Half-saturation for growth, coef_grwth_Kdoc
+!             coef_grwth_ic : [    real] - coef_grwth_ic
+!            coef_mort_kd20 : [    real] - Mortality rate (Dark death rate) @ 20C and 0 psu
+!           coef_mort_theta : [    real] - Temperature multiplier for mortality: coef_mort_theta
+!            coef_mort_c_SM : [    real] - Salinity effect on mortality
+!           coef_mort_alpha : [    real] - Salinity effect on mortality
+!            coef_mort_beta : [    real] - Salinity effect on mortality
+!           coef_mort_c_PHM : [    real] - pH effect on mortality
+!           coef_mort_K_PHM : [    real] - pH effect on mortality
+!         coef_mort_delta_M : [    real] - pH effect on mortality
+!            coef_mort_fdoc : [    real] - Fraction of mortality back to doc
+!         coef_light_kb_vis : [    real] - Light inactivation
+!         coef_light_kb_uva : [    real] - Light inactivation
+!         coef_light_kb_uvb : [    real] - Light inactivation
+!        coef_light_cSb_vis : [    real] - Salinity effect on light inactivation
+!        coef_light_cSb_uva : [    real] - Salinity effect on light inactivation
+!        coef_light_cSb_uvb : [    real] - Salinity effect on light inactivation
+!       coef_light_kDOb_vis : [    real] - DO effect on light
+!       coef_light_kDOb_uva : [    real] - DO effect on light
+!       coef_light_kDOb_uvb : [    real] - DO effect on light
+!       coef_light_cpHb_vis : [    real] - pH effect on light inactivation
+!       coef_light_cpHb_uva : [    real] - pH effect on light inactivation
+!       coef_light_cpHb_uvb : [    real] - pH effect on light inactivation
+!       coef_light_KpHb_vis : [    real] - pH effect on light inactivation
+!       coef_light_KpHb_uva : [    real] - pH effect on light inactivation
+!       coef_light_KpHb_uvb : [    real] - pH effect on light inactivation
+!       coef_light_delb_vis : [    real] - exponent for pH effect on light inactivation
+!       coef_light_delb_uva : [    real] - exponent for pH effect on light inactivation
+!       coef_light_delb_uvb : [    real] - exponent for pH effect on light inactivation
+!            coef_pred_kp20 : [    real] - Loss rate due to predation and temp multiplier
+!         coef_pred_theta_P : [    real] - Loss rate due to predation and temp multiplier
+!              coef_sett_fa : [    real] - Attached fraction in water column
+!          coef_sett_w_path : [    real] - Sedimentation velocity (m/d) at 20C (-ve means down) for NON-ATTACHED orgs
+!       coef_resus_epsilonP : [    real] - Pathogen resuspension rate
+!         coef_resus_tauP_0 : [    real] - Critical shear stress for organism resuspension
+&pathogen_data
+  pd%p_name               =      'crypto',      'ecoli',  'totalcoli'
+  pd%coef_grwth_uMAX      =             0,            3,          2.4
+  pd%coef_grwth_Tmin      =             4,            4,            4
+  pd%coef_grwth_Tmax      =            35,           35,           35
+  pd%coef_grwth_T1        =         0.008,        0.008,        0.008
+  pd%coef_grwth_T2        =           0.1,          0.1,          0.1
+  pd%coef_grwth_Kdoc      =             0,          0.3,          0.3
+  pd%coef_grwth_ic        =        1.0E-9,       1.0E-9,       1.0E-9
+  pd%coef_mort_kd20       =          0.03,         0.48,         0.34
+  pd%coef_mort_theta      =          1.08,         1.08,         1.11
+  pd%coef_mort_c_SM       =             0,      2.0E-10,       2.0E-7
+  pd%coef_mort_alpha      =             0,          6.1,          4.2
+  pd%coef_mort_beta       =             0,         0.25,         0.25
+  pd%coef_mort_c_PHM      =             0,           50,           50
+  pd%coef_mort_K_PHM      =             0,            6,            6
+  pd%coef_mort_delta_M    =             0,            4,            4
+  pd%coef_mort_fdoc       =             0,          0.5,          0.5
+  pd%coef_light_kb_vis    =             0,        0.097,        0.097
+  pd%coef_light_kb_uva    =             0,         1.16,         1.16
+  pd%coef_light_kb_uvb    =             0,         36.4,         36.4
+  pd%coef_light_cSb_vis   =        0.0067,       0.0067,       0.0067
+  pd%coef_light_cSb_uva   =        0.0067,       0.0067,       0.0067
+  pd%coef_light_cSb_uvb   =        0.0067,       0.0067,       0.0067
+  pd%coef_light_kDOb_vis  =           0.5,          0.5,          0.5
+  pd%coef_light_kDOb_uva  =           0.5,          0.5,          0.5
+  pd%coef_light_kDOb_uvb  =           0.5,          0.5,          0.5
+  pd%coef_light_cpHb_vis  =            10,           10,           10
+  pd%coef_light_cpHb_uva  =            10,           10,           10
+  pd%coef_light_cpHb_uvb  =            10,           10,           10
+  pd%coef_light_KpHb_vis  =             5,            5,            5
+  pd%coef_light_KpHb_uva  =             5,            5,            5
+  pd%coef_light_KpHb_uvb  =             5,            5,            5
+  pd%coef_light_delb_vis  =             3,            3,            3
+  pd%coef_light_delb_uva  =             3,            3,            3
+  pd%coef_light_delb_uvb  =             3,            3,            3
+  pd%coef_pred_kp20       =             0,          0.2,          0.2
+  pd%coef_pred_theta_P    =             1,         1.04,         1.04
+  pd%coef_sett_fa         =             0,         0.94,         0.81
+  pd%coef_sett_w_path     =       -2.5E-6,      -5.0E-7,      -5.0E-7
+  pd%coef_resus_epsilonP  =          0.01,         0.01,         0.01
+  pd%coef_resus_tauP_0    =          0.01,         0.01,         0.01
+/

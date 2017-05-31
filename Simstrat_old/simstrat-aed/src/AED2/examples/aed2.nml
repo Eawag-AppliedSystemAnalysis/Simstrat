@@ -1,0 +1,570 @@
+!-------------------------------------------------------------------------------
+! aed2_bio
+! AED2 - Version 1.0.0
+!-------------------------------------------------------------------------------
+!
+! solution_method (1: Euler's Method)
+! link_bottom_drag (T/F: AED2 variables included/excluded in TFV bottom drag)
+! link_surface_drag (T/F: AED2 variables included/excluded in TFV surface drag)
+! link_water_density (T/F: AED2 variables included/excluded in TFV density calculation)
+! link_water_clarity (T/F: AED2 variables included/excluded in TFV light extinction)
+! base_par_extinction (Kw; /m)
+! ext_tss_extinction (T/F: TFV SS concs included/excluded in extinction coefficient calculation)
+!
+&aed2_bio
+   solution_method = 1
+   link_bottom_drag = .false.
+   link_surface_drag = .false.
+   link_water_density = .false.
+   link_water_clarity = .true.
+!  base_par_extinction = 2.5
+   base_par_extinction = 0.2
+   ext_tss_extinction = .false.
+/
+
+!-------------------------------------------------------------------------------
+! aed2_models
+!
+! List here the available AED2 modules to be included in the simulation.
+! It is important they are listed in the correct order so dependecicies can be
+! set during the model set-up phase.
+!
+! For further detail about available AED2 modules visit:
+!     aed.see.uwa.edu.au/research/models/AED
+!
+!-------------------------------------------------------------------------------
+&aed2_models
+    models = 'aed2_sedflux',
+             'aed2_oxygen',
+             'aed2_carbon',
+             'aed2_silica',
+             'aed2_nitrogen',
+             'aed2_phosphorus',
+             'aed2_organic_matter',
+             'aed2_phytoplankton',
+             'aed2_zooplankton',
+             'aed2_pathogens',
+             'aed2_tracer',
+             'aed2_totals'
+/
+
+!-------------------------------------------------------------------------------
+! aed2_sedflux
+!  sediment flux model types :
+!       "Constant" = sedimentation fluxes are constant values.
+!       "Constant2d" = Sedimentation fluxes may be different for
+!                                different benthic cells - provided by driver
+!       "Dynamic" = Sedimentation fluxes may be different for
+!                                different benthic cells at different times
+!                                        - computed by model
+!       "Dynamic2d" = Sedimentation fluxes may be different for
+!                                different benthic cells at different times
+!                                        - computed by model
+!-------------------------------------------------------------------------------
+&aed2_sedflux
+  !sedflux_model = 'Constant'
+   sedflux_model = 'Spatially Variable'
+/
+
+&aed2_sed_constant
+   Fsed_oxy = -50.0
+   Fsed_rsi = -9999
+   Fsed_amm = -9999
+   Fsed_nit = -9999
+   Fsed_frp = -9999
+   Fsed_pon = -9999
+   Fsed_don = -9999
+   Fsed_pop = -9999
+   Fsed_dop = -9999
+   Fsed_poc = -9999
+   Fsed_doc = -9999
+   Fsed_dic = -9999
+/
+&aed2_sed_const2d
+   n_zones = 3
+   Fsed_oxy = -35.0,-50.0,-180.0
+   Fsed_rsi = -1e10,-1e10,-1e10
+   Fsed_amm = -1e10,-1e10,-1e10
+   Fsed_nit = -1e10,-1e10,-1e10
+   Fsed_frp = -1e10,-1e10,-1e10
+   Fsed_pon = -1e10,-1e10,-1e10
+   Fsed_don = -1e10,-1e10,-1e10
+   Fsed_pop = -1e10,-1e10,-1e10
+   Fsed_dop = -1e10,-1e10,-1e10
+   Fsed_poc = -1e10,-1e10,-1e10
+   Fsed_doc = -1e10,-1e10,-1e10
+   Fsed_dic = -1e10,-1e10,-1e10
+/
+
+!-------------------------------------------------------------------------------
+! aed2_oxygen - AED2 oxygen model
+!-------------------------------------------------------------------------------
+! oxy_initial   [float, unit = mmol/m^3]
+!                 initial O2 concentration (can be overwritten by GLM or TFV IC)
+! Fsed_oxy      [float, unit = mmol/m^2/day]
+!                 sediment oxygen demand
+! Ksed_oxy      [float, unit = mmol/m^3]
+!                 half-saturation concentration of oxygen sediment flux
+! theta_sed_oxy [float, unit = - ]
+!                 Arrhenius temperature multiplier for sediment oxygen flux
+!
+! NOTE: Processes such as photosynthesis and bacterial respiration from other
+!       AED2 modules should be configured to use the following names:
+!        OXY_oxy
+!
+! DIAGNOSTICS:
+!        -
+!-------------------------------------------------------------------------------
+&aed2_oxygen
+   oxy_initial = 225.0
+   oxy_min = 0.0
+   oxy_max = 460.0
+   Fsed_oxy = -45.0
+   Ksed_oxy = 100.0
+   theta_sed_oxy = 1.08
+   Fsed_oxy_variable = 'SDF_Fsed_oxy'
+/
+
+!-------------------------------------------------------------------------------
+! aed2_carbon - AED2 carbon model
+!-------------------------------------------------------------------------------
+! dic_initial   [float, unit = mmol/m^3]
+!                 initial DIC concentration (can be overwritten by GLM or TFV IC)
+! Fsed_dic      [float, unit = mmol/m^2/day]
+!                 sediment CO2 flux
+! Ksed_dic      [float, unit = mmol/m^3]
+!                 half-saturation oxygen concentration controlling CO2 flux
+! theta_sed_dic [float, unit = - ]
+!                 Arrhenius temperature multiplier for sediment CO2 flux
+! pH_initial    [float, unit = - ]
+!                 initial water column pH
+! atmco2        [float, unit = ppm]
+!                 atmospheric CO2 concentration
+! ionic         [float, unit = meq]
+!                 average ionic strength of the water column
+!
+! ch4_initial   [float, unit = mmol/m^3]
+!                 initial CH4 concentration (can be overwritten by GLM or TFV IC)
+! Rch4ox        [float, unit = - ]
+!                 maximum reaction rate of CH4 oxidation @ 20C
+! Kch4ox        [float, unit = ppm]
+!                 half-saturation oxygen concentration for CH4 oxidation
+! vTch4ox       [float, unit = meq]
+!                 Arrhenius temperature multiplier for CH4 oxidation
+! Fsed_ch4      [float, unit = mmol/m^2/day]
+!                 sediment CH4 flux
+! Ksed_ch4      [float, unit = mmol/m^3]
+!                 half-saturation oxygen concentration controlling CH4 flux
+! theta_sed_ch4 [float, unit = - ]
+!                 Arrhenius temperature multiplier for sediment CH4 flux
+! methane_reactant_variable
+!                 state variable to be consumed during CH4 oxidation
+!
+! NOTE: Processes such as photosynthesis and bacterial respiration from other
+!       AED2 modules should be configured to use the following names:
+!        CAR_dic
+!        CAR_ch4
+!        CAR_pH
+!
+! DIAGNOSTICS:
+!        -
+!-------------------------------------------------------------------------------
+&aed2_carbon
+   !-- DIC and pH
+   dic_initial = 1600.5
+   Fsed_dic = 3.0
+   Ksed_dic = 20.0
+   theta_sed_dic = 1.08
+   Fsed_dic_variable='Fsed_dic'
+   pH_initial = 7.5
+   atmco2 = 370e-6
+   ionic = 0.1
+   !-- CH4
+   ch4_initial = 27.6
+   Rch4ox = 0.01
+   Kch4ox = 0.5
+   vTch4ox = 1.08
+   Fsed_ch4 = 0.5
+   Ksed_ch4 = 100.0
+   theta_sed_ch4 = 1.08
+   methane_reactant_variable='OXY_oxy'
+   !Fsed_ch4_variable='Fsed_ch4'
+/
+
+!-------------------------------------------------------------------------------
+! aed2_silica
+!-------------------------------------------------------------------------------
+&aed2_silica
+   rsi_initial = 12.5
+   Fsed_rsi = 1.8
+   Ksed_rsi = 50.0
+   theta_sed_rsi = 1.08
+   silica_reactant_variable='oxy'
+   Fsed_rsi_variable = 'SDF_Fsed_rsi'
+/
+
+!-------------------------------------------------------------------------------
+! aed2_nitrogen - AED2 nitrogen model
+!-------------------------------------------------------------------------------
+! amm_initial   [float, unit = mmol/m^3]
+!                 initial NH4 concentration (can be overwritten by GLM or TFV IC)
+! nit_initial   [float, unit = mmol/m^3]
+!                 initial NO3 concentration (can be overwritten by GLM or TFV IC)
+! Rnitrif        [float, unit = /day ]
+!                 maximum reaction rate of nitrification @ 20C
+! Rdenit        [float, unit = /day ]
+!                 maximum reaction rate of denitrification @ 20C
+! Fsed_amm      [float, unit = mmol/m^2/day]
+!                 sediment NH4 flux
+! Fsed_nit      [float, unit = mmol/m^2/day]
+!                 sediment NH4 flux
+! Knitrif        [float, unit = mmol/m^3 ]
+!                 half-saturation oxygen concentration for CH4 oxidation
+! Kdenit        [float, unit = mmol/m^3 ]
+!                 half-saturation oxygen concentration for CH4 oxidation
+! Ksed_amm      [float, unit = mmol/m^3]
+!                 half-saturation oxygen concentration controlling NH4 flux
+! Ksed_nit      [float, unit = mmol/m^3]
+!                 half-saturation oxygen concentration controlling NO3 flux
+! theta_nitrif  [float, unit = - ]
+!                 Arrhenius temperature multiplier for nitrification
+! theta_denit   [float, unit = - ]
+!                 Arrhenius temperature multiplier for denitrification
+! theta_sed_amm [float, unit = - ]
+!                 Arrhenius temperature multiplier for sediment NH4 flux
+! theta_sed_nit [float, unit = - ]
+!                 Arrhenius temperature multiplier for sediment NO3 flux
+! nitrif_reactant_variable
+!                 state variable to be consumed during nitrification
+! denit_product_variable
+!                 state variable to be incremented from denitrification
+!
+! NOTE: Processes such as phytoplankton uptake and zooplankton excretion from
+!       other AED2 modules should be configured to use the following names:
+!        NIT_nit
+!        NIT_amm
+!
+! DIAGNOSTICS:
+!        NIT_denit
+!
+!-------------------------------------------------------------------------------
+&aed2_nitrogen
+   amm_initial = 12.7, !average for 08-Sep-2009
+   nit_initial = 23.5, !average for 08-Sep-2009
+   Rnitrif = 0.1,
+   Rdenit = 0.26, !from WC denit rates
+   Fsed_amm = 3.5, !maximum measured by Keryn #BB
+   Fsed_nit = -4.5, !maximum measured by Keryn
+   Knitrif = 78.1,
+   Kdenit = 2.0,
+   Ksed_amm = 25.0,
+   Ksed_nit = 100.0,
+   theta_nitrif = 1.08,
+   theta_denit = 1.08,
+   theta_sed_amm = 1.08,
+   theta_sed_nit = 1.08,
+   nitrif_reactant_variable='OXY_oxy',
+   denit_product_variable='', !'N20',
+   !Fsed_amm_variable='Fsed_amm'
+   !Fsed_nit_variable='Fsed_nit'
+/
+
+!-------------------------------------------------------------------------------
+! aed2_phosphorus - AED2 phosphorus model
+!-------------------------------------------------------------------------------
+! frp_initial   [float, unit = mmol/m^3]
+!                 initial PO4 concentration (can be overwritten by GLM or TFV IC)
+! Fsed_frp      [float, unit = mmol/m^2/day]
+!                 sediment PO4 flux
+! Ksed_frp      [float, unit = mmol/m^3]
+!                 half-saturation oxygen concentration controlling PO4 flux
+! theta_sed_frp [float, unit = - ]
+!                 Arrhenius temperature multiplier for sediment PO4 flux
+! phosphorus_reactant_variable   [string]
+!                 state variable linked to sediment release
+! simPO4Adsorption               [bool]
+!                 switch to enable PO4 adsorption/desorption model
+! ads_use_external_tss           [bool]
+!                 switch to set external environment variable as substrate
+! po4sorption_target_variable    [string]
+!                 variable PO4 will adsorb onto (if not ads_use_external_tss)
+! PO4AdsorptionModel             [integer]
+!                 sorption algorithm to use
+! Kpo4p         [float, unit = ]
+!                 sorption constant
+! ads_use_pH    [bool]
+!                 switch to enagge pH dependency in sorption algorithm
+! Kadsratio     [float, unit = ]
+!                 sorption constant
+! Qmax          [float, unit = ]
+!                 sorption constant
+! w_po4ads      [float, unit = m/d]
+!                 settling rate of adsorbed PO4
+!
+! NOTE: Processes such as PO4 uptake and bacterial mineralisation from other
+!       AED2 modules should be configured to use the following names:
+!        PHS_frp
+!        PHS_frp_ads
+!
+! DIAGNOSTICS:
+!        -
+!
+!-------------------------------------------------------------------------------
+&aed2_phosphorus
+   frp_initial = 0.29
+   Fsed_frp = 0.01 ! #BB
+   Ksed_frp = 50.0
+   theta_sed_frp = 1.08
+   phosphorus_reactant_variable ='OXY_oxy'
+!  Fsed_frp_variable ='Fsed_frp'
+   simPO4Adsorption = .false.
+   ads_use_external_tss = .true.
+   po4sorption_target_variable =''
+   PO4AdsorptionModel = 1
+   Kpo4p = 0.1
+   ads_use_pH = .false.
+   Kadsratio= 1.0
+   Qmax = 1.0
+   w_po4ads = -1.2   ! doesnt seem to work
+/
+
+!-------------------------------------------------------------------------------
+! aed2_organic_matter - AED2 organic matter model
+!-------------------------------------------------------------------------------
+! pom_initial     [float, unit = mmol/m^3]
+!                   initial PON conc (can be overwritten by GLM or TFV IC)
+! dom_initial     [float, unit = mmol/m^3]
+!                   initial DON conc (can be overwritten by GLM or TFV IC)
+! w_pom           [float, unit = m/day]
+!                   settling rate of detrital N pool
+! Rpom_miner      [float, unit = /day ]
+!                   hydrolysis/breakdown rate of detrital N pool @ 20C
+! Rdom_miner      [float, unit = /day ]
+!                   mineralisation rate of DON pool @ 20C
+! Fsed_pom        [float, unit = mmol/m^2/day]
+!                   sediment PON flux (note this is extra to sedimentation)
+! Fsed_dom        [float, unit = mmol/m^2/day]
+!                   sediment DON flux
+! Kpom_miner      [float, unit = mmol/m^3 ]
+!                   half-saturation oxygen concentration for PON breakdown
+! Kdom_miner      [float, unit = mmol/m^3 ]
+!                   half-saturation oxygen concentration for DON mineralisation
+! Ksed_dom        [float, unit = mmol/m^3]
+!                   half-saturation oxygen concentration controlling DON flux
+! theta_pom_miner [float, unit = - ]
+!                   Arrhenius temperature multiplier for PON breakdown
+! theta_dom_miner [float, unit = - ]
+!                   Arrhenius temperature multiplier for DON mineralisation
+! theta_sed_dom   [float, unit = - ]
+!                   Arrhenius temperature multiplier for sediment DON flux
+! dom_miner_product_variable   [string]
+!                   state variable to be product of DON mineralisation
+! KeDOM           [float, unit = /m /(mmol C/m^3)]
+!                   specific light attenuation coefificent for DOM
+! KePOM           [float, unit = /m /(mmol C/m^3)]
+!                   specific light attenuation coefificent for POM
+! doc_miner_reactant_variable  [string]
+!                   state variable to be linked to rate of DOC mineralisation
+!
+! NOTE: Generic use of POM/DOM in the above descriptions, use C/N/P below
+!
+! NOTE: Processes such as phyto or zoop excretion within any other
+!       AED2 modules should be configured to use the following names:
+!        OGM_doc    OGM_poc
+!        OGM_don    OGM_pon
+!        OGM_dop    OGM_pop
+!
+! DIAGNOSTICS:
+!        -
+!
+!-------------------------------------------------------------------------------
+&aed2_organic_matter
+   !-- ORGANIC NITROGEN
+   pon_initial = 8.3, !average for 08-Sep-2009
+   don_initial = 14.3, !average for 08-Sep-2009
+   w_pon = -0.1,
+   Rpon_miner = 0.005,
+   Rdon_miner = 0.005,
+   Fsed_pon = 0.0,
+   Fsed_don = 0.0,
+   Kpon_miner = 31.25,
+   Kdon_miner = 31.25,
+   Ksed_don = 4.5,
+   theta_pon_miner = 1.08,
+   theta_don_miner = 1.08,
+   theta_sed_don = 1.08,
+   !pon_miner_reactant_variable='oxy',
+   don_miner_product_variable='NIT_amm',
+   !-- ORGANIC PHOSPHORUS
+   pop_initial = 8.3,
+   dop_initial = 4.5,
+   w_pop = -2.0,
+   Rpop_miner = 0.005,
+   Rdop_miner = 0.005,
+   Fsed_pop = 0.0,
+   Fsed_dop = 0.0,
+   Kpop_miner = 31.25,
+   Kdop_miner = 31.25,
+   Ksed_dop = 4.5,
+   theta_pop_miner = 1.08,
+   theta_dop_miner = 1.08,
+   theta_sed_dop = 1.08,
+   !pop_miner_reactant_variable='',
+   dop_miner_product_variable='',
+    !-- ORGANIC CARBON
+   poc_initial = 78.5, !average for 08-Sep-2009
+   doc_initial = 389.9, !average for 08-Sep-2009
+   w_poc = -2.0,
+   Rpoc_miner = 0.005,
+   Rdoc_miner = 0.005,
+   Fsed_poc = 0.0,
+   Fsed_doc = 0.0,
+   Kpoc_miner = 31.25,
+   Kdoc_miner = 31.25,
+   Ksed_doc = 4.5,
+   theta_poc_miner = 1.08,
+   theta_doc_miner = 1.08,
+   theta_sed_doc = 1.08,
+   doc_miner_reactant_variable='',
+   doc_miner_product_variable='',
+!  Fsed_pon_variable='Fsed_pon'
+!  Fsed_don_variable='Fsed_don'
+!  Fsed_pop_variable='Fsed_pop'
+!  Fsed_dop_variable='Fsed_dop'
+!  Fsed_poc_variable='Fsed_poc'
+!  Fsed_doc_variable='Fsed_doc'
+/
+
+!-------------------------------------------------------------------------------
+! aed2_phytoplankton - AED2 phytoplankton model
+!-------------------------------------------------------------------------------
+! num_phytos      [integer]
+!                   number of phytoplankton groups within this module to include
+! num_phytos      [integer]
+!                   list of ID's of groups in aed_phyto_pars.nml (len=num_phyto)
+! X_excretion_target_variable  [string]
+!                   state variable to receive C, N or P from excretion
+! X_mortality_target_variable  [string]
+!                   state variable to receive C, N or P from mortality
+! X_uptake_target_variable  [string]
+!                   state variable to be linked for C,N,P,Si or O2 uptake
+!
+! NOTE: Users must supply a valid "aed_phyto_pars.nml" file
+!
+!
+! NOTE: Processes such as zoop grazing or turbidity calc within any other
+!       AED2 modules should be configured to use the following names:
+!        PHY_name        (where name is as defined in the nml)
+!        PHY_name_IN     (internal nitrogen)
+!        PHY_name_IP     (internal phosphorus)
+!
+! DIAGNOSTICS:
+!        PHY_name_fI     (light limitation)
+!        PHY_name_fT     (temp limitation)
+!        PHY_name_fS     (salinity limitation)
+!        PHY_name_fN     (nitrogen limitation)
+!        PHY_name_fP     (phosphorus limitation)
+!        PHY_name_fSi    (silica limitation)
+!        PHY_tchla       (total module chlorophyll-a)
+!        PHY_gpp         (total module gross primary productivity)
+!
+!-------------------------------------------------------------------------------
+&aed2_phytoplankton
+   num_phytos = 1
+   the_phytos = 1
+   p_excretion_target_variable='OGM_dop'
+   n_excretion_target_variable='OGM_don'
+   c_excretion_target_variable='OGM_doc'
+   si_excretion_target_variable=''
+   p_mortality_target_variable='OGM_pop'
+   n_mortality_target_variable='OGM_pon'
+   c_mortality_target_variable='OGM_poc'
+   si_mortality_target_variable=''
+   p1_uptake_target_variable='PHS_frp'
+   n1_uptake_target_variable='NIT_nit'
+   n2_uptake_target_variable='NIT_amm'
+   si_uptake_target_variable=''
+   do_uptake_target_variable='OXY_oxy'
+   c_uptake_target_variable=''
+/
+
+!-------------------------------------------------------------------------------
+! aed2_zooplankton - AED2 zooplankton model
+!-------------------------------------------------------------------------------
+! num_zoops      [integer]
+!                   number of zooplankton groups within this module to include
+! the_zoops      [integer]
+!                   list of ID's of groups in aed_zoop_pars.nml (len=num_zoops)
+! dX_target_variable  [string]
+!                   state variable linked to provide/receive dissoved OM
+! pX_target_variable  [string]
+!                   state variable linked to provide/receive particulate OM
+!
+! NOTE: Users must supply a valid "aed_zoops_pars.nml" file
+!
+!
+! NOTE: Processes such as zoop grazing or turbidity calc within any other
+!       AED2 modules should be configured to use the following names:
+!        ZOO_name        (where name is as defined in the nml)
+!
+! DIAGNOSTICS:
+!       -
+!
+!-------------------------------------------------------------------------------
+&aed2_zooplankton
+   num_zoops = 1
+   the_zoops = 1
+   dn_target_variable='OGM_don'  ! dissolved nitrogen target variable
+   pn_target_variable='OGM_pon'  ! particulate nitrogen target variable
+   dp_target_variable='OGM_dop'  ! dissolved phosphorus target variable
+   pp_target_variable='OGM_pop'  ! particulate phosphorus target variable
+   dc_target_variable='OGM_doc'  ! dissolved carbon target variable
+   pc_target_variable='OGM_poc'  ! particulate carbon target variable
+/
+
+!-------------------------------------------------------------------------------
+! aed2_pathogens
+!  num_pathogens = number of pathogens to model
+!  the_pathogens = list of pathogens classes (referencing the pathogens database)
+!-------------------------------------------------------------------------------
+&aed2_pathogens
+   num_pathogens = 2
+   the_pathogens = 3,4
+!  dbase = 'aed2_pathogen_pars.nml'
+/
+
+!-------------------------------------------------------------------------------
+&aed2_tracer
+   num_tracers = 1
+   decay = 0 !, 0, 0, ...
+   settling = 0 !, 0, 0, ....
+   fsed = 0 !, 0, 0, ...
+/
+
+!-------------------------------------------------------------------------------
+&aed2_totals
+   TN_vars =  'NIT_nit',
+         'NIT_amm',
+         'OGM_don',
+         'OGM_pon',
+         'PHY_grn_IN',
+         'PHY_bga_IN'
+   TN_varscale = 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
+   TP_vars =  'PHS_frp',
+         'PHS_frp_ads',
+         'OGM_dop',
+         'OGM_pop',
+         'PHY_grn_IN',
+         'PHY_bga_IN'
+   TP_varscale = 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
+   TOC_vars = 'OGM_doc',
+         'OGM_poc',
+         'PHY_grn',
+         'PHY_bga'
+!  TOC_varscale = 1.0, 1.0, 1.0, 1.0
+!  TSS_vars = 'PHY_grn'
+!  TSS_vars = 'aed_tracer_ss1',
+!         'PHY_grn' !, ....
+!  TSS_varscale = 0.1,0.1,0.,0.1            !,  <vector same length as TSS names>
+/
+

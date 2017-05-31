@@ -1,0 +1,4 @@
+*.o
+*.mod
+fabm-build
+fabm-lib

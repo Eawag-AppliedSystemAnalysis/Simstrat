@@ -1,0 +1,12 @@
+*.o
+*.mod
+libaed2.a
+.*.swp
+.DS*
+._.DS*
+*.i90
+cnv
+aed2_sedcandi_o.F90
+aed2_sedcandi_n.F90
+src/aed2_seddiagenesis_o.F90
+src/aed2_seddiagenesis_n.F90
