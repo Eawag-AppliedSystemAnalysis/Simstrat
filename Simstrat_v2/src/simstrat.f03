@@ -116,6 +116,10 @@ contains
 
     ! Read forcing file
     call mod_forcing%update(simdata%model)
+
+    ! Update absorption
+    call mod_absorption%update(simdata%model)
+
     ! Update physics
     call mod_stability%update(simdata%model)
     !advection%update()
