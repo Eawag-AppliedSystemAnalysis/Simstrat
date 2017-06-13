@@ -19,6 +19,7 @@ program simstrat_main
   use strat_keps
   use strat_turbulence
   use strat_transport
+  use strat_absorption
   use, intrinsic :: ieee_arithmetic
 
   implicit none
@@ -37,6 +38,7 @@ program simstrat_main
   type(EpsModelVar) :: mod_eps
   type(TransportModVar) :: mod_s
   type(TurbulenceModule) :: mod_turbulence
+  type(AbsorptionModule) :: mod_absorption
 
   character(len=100) :: arg
   character(len=:), allocatable :: ParName
@@ -62,6 +64,12 @@ program simstrat_main
   call mod_forcing%init(simdata%model_cfg, &
                         simdata%model_param, &
                         simdata%input_cfg%ForcingName, &
+                        simdata%grid)
+
+  ! initialize absorption module
+  call mod_absorption%init(simdata%model_cfg, &
+                        simdata%model_param, &
+                        simdata%input_cfg%AbsorpName, &
                         simdata%grid)
 
   ! Setup logger
@@ -125,7 +133,7 @@ contains
 
     ! update turbulence states
     call mod_turbulence%update(simdata%model, simdata%model_param)
-        call logger%log(simdata%model%datum-simdata%model%dt/2.0_RK)
+    call logger%log(simdata%model%datum-simdata%model%dt/2.0_RK)
     ! Solve k & eps
     call mod_k%update(simdata%model, simdata%model_param)
     call mod_eps%update(simdata%model, simdata%model_param)
