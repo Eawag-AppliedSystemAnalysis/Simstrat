@@ -52,7 +52,9 @@ contains
     procedure, pass :: interpolate_from_vol => grid_interpolate_from_vol
     procedure, pass :: grow => grid_grow
     procedure, pass :: shrink => grid_shrink
+    procedure, pass :: modify_top_box => grid_modify_top_box
     procedure, pass :: update_nz => grid_update_nz
+
 end type
 
 
@@ -250,6 +252,17 @@ subroutine grid_memory_init(self)
     end do
   end associate
   end subroutine grid_update_area_factors
+
+  subroutine grid_modify_top_box(self, dh)
+    implicit none
+    class(StaggeredGrid), intent(inout) :: self
+    real(RK) :: dh
+
+    self%h(self%ubnd_vol) = self%h(self%ubnd_vol) + dh
+    self%z_volume(self%ubnd_vol) = self%z_volume(self%ubnd_vol) + 0.5_RK * dh
+    self%z_face(self%ubnd_fce) = self%z_face(self%ubnd_fce) + dh
+
+  end subroutine
 
   subroutine grid_shrink(self, dh)
     implicit none

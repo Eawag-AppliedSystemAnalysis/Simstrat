@@ -83,7 +83,7 @@ module strat_simdata
     real(RK), dimension(:), allocatable :: U,V       ! Water velocities [m/s]
     real(RK), dimension(:), allocatable :: T,S       ! Temperature [°C], Salinity [‰]
     real(RK), dimension(:), allocatable :: dS        ! Source/sink for salinity
-    real(RK), dimension(:), allocatable :: Q_inp     ! Horizontal inflow [m^3/s]
+    real(RK), dimension(:,:), allocatable :: Q_inp     ! Horizontal inflow [m^3/s]
     real(RK), dimension(:), allocatable :: rho       ! Water density [kg/m^3]
 
     ! Variables located on z_upp grid
@@ -152,7 +152,7 @@ module strat_simdata
       allocate(this%T(state_size))
       allocate(this%S(state_size))
       allocate(this%dS(state_size))
-      allocate(this%Q_inp(state_size))
+      allocate(this%Q_inp(1:4,state_size))
       allocate(this%rho(state_size))
 
       ! Values on z_upp grid
