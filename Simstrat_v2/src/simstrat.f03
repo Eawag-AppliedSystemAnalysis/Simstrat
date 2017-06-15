@@ -20,6 +20,7 @@ program simstrat_main
   use strat_turbulence
   use strat_transport
   use strat_absorption
+  use strat_advection
   use, intrinsic :: ieee_arithmetic
 
   implicit none
@@ -39,6 +40,7 @@ program simstrat_main
   type(TransportModVar) :: mod_s
   type(TurbulenceModule) :: mod_turbulence
   type(AbsorptionModule) :: mod_absorption
+  type(AdvectionModule) :: mod_advection
 
   character(len=100) :: arg
   character(len=:), allocatable :: ParName
@@ -70,6 +72,11 @@ program simstrat_main
   call mod_absorption%init(simdata%model_cfg, &
                         simdata%model_param, &
                         simdata%input_cfg%AbsorpName, &
+                        simdata%grid)
+
+  ! initialize advection module
+  call mod_advection%init(simdata%model_cfg, &
+                        simdata%model_param, &
                         simdata%grid)
 
   ! Setup logger
@@ -105,7 +112,6 @@ contains
     call logger%log(0.0_RK) ! Write initial conditions
 
     ! todo: time control!
-    !simdata%model%dS(20) = 0.01
     simdata%model%dt = 0.1
 
     do i=1,100
@@ -122,7 +128,7 @@ contains
 
     ! Update physics
     call mod_stability%update(simdata%model)
-    !advection%update()
+    call mod_advection%update(simdata%model)
     call mod_forcing%update_coriolis(simdata%model)
 
     ! Update and solve U and V - terms

@@ -50,6 +50,8 @@ contains
     procedure, pass :: interpolate_to_vol => grid_interpolate_to_vol
     procedure, pass :: interpolate_from_face => grid_interpolate_from_face
     procedure, pass :: interpolate_from_vol => grid_interpolate_from_vol
+    procedure, pass :: grow => grid_grow
+    procedure, pass :: shrink => grid_shrink
     procedure, pass :: update_nz => grid_update_nz
 end type
 
@@ -249,6 +251,54 @@ subroutine grid_memory_init(self)
   end associate
   end subroutine grid_update_area_factors
 
+  subroutine grid_shrink(self, dh)
+    implicit none
+    class(StaggeredGrid), intent(inout) :: self
+    real(RK) :: dh
+
+    ! update grid
+    self%z_face(self%ubnd_fce - 1) = self%z_face(self%ubnd_fce) + dh
+    self%z_volume(self%ubnd_vol -1) = 0.5_RK * (self%z_face(self%ubnd_fce - 1) + &
+                                                self%z_face(self%ubnd_fce - 2))
+
+    self%h(self%ubnd_vol-1) = (self%z_face(self%ubnd_fce - 1) - &
+                               self%z_face(self%ubnd_fce - 2))
+
+    ! update number of occupied cells
+    self%nz_occupied = self%nz_occupied - 1
+
+    ! update boundaries (ubnd_fce and ubnd_vol)
+    call self%update_nz()
+
+  end subroutine
+
+  subroutine grid_grow(self, dh)
+    implicit none
+    class(StaggeredGrid), intent(inout) :: self
+    real(RK) :: dh
+
+    associate(z_face => self%z_face, &
+              ubnd_fce => self%ubnd_fce, &
+              z_volume => self%z_volume, &
+              ubnd_vol => self%ubnd_vol, &
+              h => self%h)
+
+    z_face(ubnd_fce+1) = z_face(ubnd_fce) + dh
+    z_face(ubnd_fce) = z_face(ubnd_fce) - (h(ubnd_vol) - dh)
+
+    z_volume(ubnd_vol+1) = z_volume(ubnd_vol) + 0.5_RK*dh
+    z_volume(ubnd_vol) = z_volume(ubnd_vol) - 0.5_RK*(h(ubnd_vol) - dh)
+
+    h(ubnd_vol + 1) = z_face(ubnd_fce + 1) - z_face(ubnd_fce)
+    h(ubnd_vol) = z_face(ubnd_fce) - z_face(ubnd_fce - 1)
+
+    ! update number of occupied cells
+    self%nz_occupied = self%nz_occupied - 1
+
+    call self%update_nz()
+
+  end associate
+  end subroutine
 
   subroutine grid_update_depth(self, new_depth)
     implicit none
