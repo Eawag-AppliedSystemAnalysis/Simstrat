@@ -110,6 +110,8 @@ module strat_simdata
     real(RK)                :: cde,cm0
     real(RK)                ::  fsed
     real(RK), dimension(:), allocatable     :: fgeo_add
+    logical :: has_advection
+    integer :: nz_input
     logical :: has_salinity_grad, has_salinity
 
   contains

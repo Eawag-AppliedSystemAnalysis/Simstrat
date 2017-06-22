@@ -24,6 +24,7 @@ module strat_inputfile
       procedure, pass(self), public :: read_grid_config
       procedure, pass(self), public :: setup_model
       procedure, pass(self), public :: setup_output_conf
+      procedure, pass(self), public :: check_advection
   end type SimstratSimulationFactory
 
 contains
@@ -57,6 +58,9 @@ contains
 
     ! Init rest of model
     call self%setup_model()
+
+    ! check input files for advection
+    call self%check_advection()
 
     ! Set output configuration
     call self%setup_output_conf()
@@ -161,7 +165,6 @@ contains
     model%drag=(kappa/log(1.0_RK+30/K_s*grid%h(1)/2))**2
 
 
-    ! Geothermal heat flux
     ! Geothermal heat flux
     if (model_param%fgeo/=0) then
         model%fgeo_add(1:grid%nz_grid) = model_param%fgeo/rho_0/cp*grid%dAz(1:grid%nz_grid)/grid%Az(2:grid%nz_grid+1) ! calculation per kg
@@ -443,6 +446,44 @@ contains
       stop
     end if
   end subroutine check_field
+
+  !Set advection to 1 if any inflow/outflow file contains data, otherwise to 0
+  subroutine check_advection(self)
+      implicit none
+      class(SimstratSimulationFactory) :: self
+
+      ! Local variables
+      integer  :: i, j, fnum(1:4), nval(1:4), if_adv
+      real(RK) :: dummy, z_Inp_dummy(0:self%simdata%grid%nz_grid_max)
+
+
+      write(6,*) 'Opening physical inflow/outflow files...'
+      open(41,status='old',file=self%simdata%input_cfg%QinpName)
+      open(42,status='old',file=self%simdata%input_cfg%QoutName)
+      open(43,status='old',file=self%simdata%input_cfg%TinpName)
+      open(44,status='old',file=self%simdata%input_cfg%SinpName)
+
+      fnum = [41,42,43,44]
+      if_adv = 0
+      do i=1,4
+          read(fnum(i),*,end=8)                           ! Skip header (description of columns)
+          read(fnum(i),*,end=8) nval(i)                  ! Read number of input depths (static)
+          read(fnum(i),*,end=8) dummy, (z_Inp_dummy(j),j=0,nval(i)-1) ! Read input depths
+          goto 9
+      8   if_adv = if_adv + 1
+      9   rewind(fnum(i))
+      end do
+
+      if (if_adv==4) then
+          self%simdata%model%has_advection = .FALSE.
+      else
+          self%simdata%model%has_advection = .TRUE.
+      end if
+
+      self%simdata%model%nz_input = maxval(nval)
+
+      return
+  end subroutine check_advection
 
 
 end module strat_inputfile

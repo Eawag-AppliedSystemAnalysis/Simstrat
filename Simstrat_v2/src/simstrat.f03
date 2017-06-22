@@ -21,6 +21,7 @@ program simstrat_main
   use strat_transport
   use strat_absorption
   use strat_advection
+  use strat_lateral
   use, intrinsic :: ieee_arithmetic
 
   implicit none
@@ -41,6 +42,9 @@ program simstrat_main
   type(TurbulenceModule) :: mod_turbulence
   type(AbsorptionModule) :: mod_absorption
   type(AdvectionModule) :: mod_advection
+  type(LateralModule), target :: mod_lateral_normal
+  type(LateralRhoModule), target :: mod_lateral_rho
+  class(GenericLateralModule), pointer :: mod_lateral
 
   character(len=100) :: arg
   character(len=:), allocatable :: ParName
@@ -78,6 +82,18 @@ program simstrat_main
   call mod_advection%init(simdata%model_cfg, &
                         simdata%model_param, &
                         simdata%grid)
+
+  ! initliaze lateral module based on configuration
+  if(simdata%model_cfg%inflow_placement == 1) then
+    ! Gravity based inflow
+    mod_lateral => mod_lateral_rho
+  else
+    mod_lateral => mod_lateral_normal
+  end if
+  call mod_lateral%init(simdata%model_cfg, &
+                        simdata%model_param, &
+                        simdata%grid)
+
 
   ! Setup logger
   call logger%initialize(simdata%output_cfg, simdata%grid)
@@ -128,6 +144,7 @@ contains
 
     ! Update physics
     call mod_stability%update(simdata%model)
+    call mod_lateral%update(simdata%model)
     call mod_advection%update(simdata%model)
     call mod_forcing%update_coriolis(simdata%model)
 
