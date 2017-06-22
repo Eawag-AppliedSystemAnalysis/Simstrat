@@ -21,6 +21,11 @@ contains
       integer, intent(in) :: num_z,num_zi
       integer :: posk1,posk2,posi,i
 
+      if(num_z == 1) then ! only one value
+        yi(1:num_zi) = y(1)
+        return
+      end if
+
       !Assign closest value if out of given grid
       posk1 = 1
       do while (zi(posk1)<=z(1))

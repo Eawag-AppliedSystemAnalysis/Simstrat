@@ -87,6 +87,7 @@ contains
     implicit none
     class(LateralRhoModule) :: self
     class(ModelState) :: state
+    write(*,*) "lateral_rho_update not implemented"
   end subroutine
 
   subroutine lateral_update(self, state)
@@ -101,6 +102,7 @@ contains
     integer :: i, j
     integer :: fnum(1:4)  ! File number
     character*20 :: fname(1:4)
+
 
     associate(datum => state%datum, &
               idx => state%std, &
@@ -165,6 +167,7 @@ contains
          end do
        end if
       end if  ! idx==1
+
 
       ! If lake level changes and if there is surface inflow, adjust inflow depth to keep them at the surface
     if((.not. self%grid%lake_level_old==self%grid%z_face(self%grid%ubnd_fce)).and. (self%nval_surface(i)>0)) then
@@ -241,7 +244,11 @@ contains
            Q_inp(i,grid%ubnd_vol-j+1) = Q_inp(i,grid%ubnd_vol-j+1)-Q_inp(i,grid%ubnd_vol-j)
        end do
    end do
-
+   Q_inp = 0
+   Q_vert = 0
+   write(*,*) Q_inp
+   write(*,*) "-------"
+   write(*,*) Q_vert
   end associate
   end subroutine
 

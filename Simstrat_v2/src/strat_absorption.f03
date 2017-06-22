@@ -41,9 +41,9 @@ contains
     self%file = absorption_file
 
     ! Allocate arrays (used to be "save" variables)
-    allocate(self%z_absorb(grid%nz_grid_max))
-    allocate(self%absorb_start(grid%nz_grid_max))
-    allocate(self%absorb_end(grid%nz_grid_max))
+    allocate(self%z_absorb(grid%nz_grid_max+1))
+    allocate(self%absorb_start(grid%nz_grid_max+1))
+    allocate(self%absorb_end(grid%nz_grid_max+1))
 
   end subroutine
 
@@ -55,7 +55,7 @@ contains
 
     ! Local Variables
     real(RK) :: dummy !Read depths
-    real(RK) :: absorb_read_start(self%grid%nz_grid_max), absorb_read_end(self%grid%nz_grid_max) !Read start and end values
+    real(RK) :: absorb_read_start(self%grid%nz_grid_max+1), absorb_read_end(self%grid%nz_grid_max+1) !Read start and end values
     integer :: i
 
     associate(tb_start => self%tb_start, &
@@ -92,7 +92,12 @@ contains
            read(30,*,end=7) tb_end, (absorb_read_end(i),i=1,nval)
 
            ! Do the same for absorb_read_end
-           call self%grid%interpolate_to_face(z_absorb ,absorb_read_end, nval, absorb_end)
+           call self%grid%interpolate_to_face(z_absorb ,absorb_read_end, nval , absorb_end)
+
+           write(*,*) absorb_end
+           write(*,*) "---"
+           write(*,*) absorb_start
+
        end if
 
        if (state%datum<=tb_start .or. eof==1) then !If datum before first date or end of file reached
