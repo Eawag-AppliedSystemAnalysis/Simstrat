@@ -47,6 +47,7 @@ contains
     procedure, pass :: update_area_factors => grid_update_area_factors
     procedure, pass :: update_depth => grid_update_depth
     procedure, pass :: interpolate_to_face => grid_interpolate_to_face
+    procedure, pass :: interpolate_to_face_from_second => grid_interpolate_to_face_from_second
     procedure, pass :: interpolate_to_vol => grid_interpolate_to_vol
     procedure, pass :: interpolate_from_face => grid_interpolate_from_face
     procedure, pass :: interpolate_from_vol => grid_interpolate_from_vol
@@ -373,6 +374,16 @@ subroutine grid_memory_init(self)
 
     integer, intent(in) :: num_z
     call Interp(z, y, num_z, self%z_face, yi, self%nz_grid+1)
+  end subroutine
+
+  subroutine grid_interpolate_to_face_from_second(self, z,y,num_z,yi)
+    implicit none
+    class(StaggeredGrid), intent(in) :: self
+    real(RK), dimension(:), intent(in) :: z,y
+    real(RK), dimension(:), intent(out) :: yi
+
+    integer, intent(in) :: num_z
+    call Interp(z, y, num_z, self%z_face(2:self%nz_grid+1), yi, self%nz_grid)
   end subroutine
 
   subroutine grid_interpolate_from_vol(self, z, y, num_z, yi)

@@ -92,13 +92,9 @@ contains
            read(30,*,end=7) tb_end, (absorb_read_end(i),i=1,nval)
 
            ! Do the same for absorb_read_end
-           call self%grid%interpolate_to_face(z_absorb ,absorb_read_end, nval , absorb_end)
+           call self%grid%interpolate_to_face(z_absorb ,absorb_read_end, nval, absorb_end)
 
-           write(*,*) absorb_end
-           write(*,*) "---"
-           write(*,*) absorb_start
-
-       end if
+         end if
 
        if (state%datum<=tb_start .or. eof==1) then !If datum before first date or end of file reached
            goto 8

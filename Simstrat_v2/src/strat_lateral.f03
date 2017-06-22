@@ -145,18 +145,20 @@ contains
 
        ! Read first line
        read(fnum(i),*,end=9) self%tb_start(i),(self%Inp_read_start(i,j),j=0,self%nval(i)-1)
+       write(*,*) self%Inp_read_start(i,:)
+
 
        ! Integrate the inflow (direct interpolation of inflow is not correct)
        call Integrate(self%z_Inp(i,:),self%Inp_read_start(i,:),Q_read_start(i,:), self%nval_deep(i))
 
        ! Very important: once the inflowing quantitiy is integrated, it necessarily has to be
        ! interpolated on the z_upp grid starting with index 1
-       call grid%interpolate_to_face(self%z_Inp(i,:), Q_read_start(i,:), self%nval_deep(i)-1, self%Q_start(i,:))
+       call grid%interpolate_to_face_from_second(self%z_Inp(i,:), Q_read_start(i,:), self%nval_deep(i)-1, self%Q_start(i,:))
 
        ! Read second line and treatment of deep inflow
        read(fnum(i),*,end=7) self%tb_end(i),(self%Inp_read_end(i,j),j=0,self%nval(i)-1)
        call Integrate(self%z_Inp(i,:),self%Inp_read_end(i,:),Q_read_end(i,:),self%nval_deep(i))
-       call grid%interpolate_to_face(self%z_Inp(i,:),Q_read_end(i,:),self%nval_deep(i)-1,self%Q_end(i,:))
+       call grid%interpolate_to_face_from_second(self%z_Inp(i,:),Q_read_end(i,:),self%nval_deep(i)-1,self%Q_end(i,:))
 
        ! Add surface flow for both in- and outflow
        if(self%nval_surface(i)>0) then
@@ -175,11 +177,11 @@ contains
       !! next two blocks are exactly same as above?! - why?
       ! Recalculate Q_start from deep inflows
       call Integrate(self%z_Inp(i,:),self%Inp_read_start(i,:),Q_read_start(i,:), self%nval_deep(i))
-      call grid%interpolate_to_face(self%z_Inp(i,:), Q_read_start(i,:), self%nval_deep(i)-1, self%Q_start(i,:))
+      call grid%interpolate_to_face_from_second(self%z_Inp(i,:), Q_read_start(i,:), self%nval_deep(i)-1, self%Q_start(i,:))
 
       ! Recalculate Q_end from deep inflows
       call Integrate(self%z_Inp(i,:),self%Inp_read_end(i,:),Q_read_end(i,:),self%nval_deep(i))
-      call grid%interpolate_to_face(self%z_Inp(i,:),Q_read_end(i,:),self%nval_deep(i)-1,self%Q_end(i,:))
+      call grid%interpolate_to_face_from_second(self%z_Inp(i,:),Q_read_end(i,:),self%nval_deep(i)-1,self%Q_end(i,:))
 
       ! Add surface flow
       if(self%nval_surface(i)>0) then
@@ -201,7 +203,7 @@ contains
 
        ! Treat deep inflow
        call Integrate(self%z_Inp(i,:),self%Inp_read_end(i,:),Q_read_end(i,:),self%nval_deep(i))
-       call grid%interpolate_to_face(self%z_Inp(i,:),Q_read_end(i,:),self%nval_deep(i)-1,self%Q_end(i,:))
+       call grid%interpolate_to_face_from_second(self%z_Inp(i,:),Q_read_end(i,:),self%nval_deep(i)-1,self%Q_end(i,:))
 
        ! Add surface flow
        if(self%nval_surface(i)>0) then
@@ -214,39 +216,38 @@ contains
    end if
 
    !Linearly interpolate value at correct datum (for all depths)
-    do j=1,grid%ubnd_fce
+    do j=1,grid%ubnd_vol
       state%Q_inp(i,j) = self%Q_start(i,j) + (datum-self%tb_start(i)) * (self%Q_end(i,j)-self%Q_start(i,j))/(self%tb_end(i)-self%tb_start(i))
     end do
 
     goto 11
 
  7         self%eof(i) = 1
- 8         state%Q_inp(i,1:grid%ubnd_fce) = self%Q_start(i,1:grid%ubnd_fce)              ! Set to closest available value
+ 8         state%Q_inp(i,1:grid%ubnd_vol) = self%Q_start(i,1:grid%ubnd_vol)              ! Set to closest available value
     goto 11
  9         write(6,*) 'No data found in ',trim(fname(i)),' file. Check number of depths. Values set to zero.'
     self%eof(i) = 1
-    state%Q_inp(i,0:grid%ubnd_fce) = 0.0_RK
+    state%Q_inp(i,0:grid%ubnd_vol) = 0.0_RK
     self%Q_start(i,1:grid%ubnd_fce) = 0.0_RK
 
  11        continue
 
 
    end do      ! end do i=1,4
-
    ! Q_vert is the integrated difference between in- and outflow (starting at the lake bottom)
    ! Q_vert is located on the face grid, m^3/s
-   Q_vert(1:grid%ubnd_fce) = Q_inp(1,1:grid%ubnd_fce)+Q_inp(2,1:grid%ubnd_fce)
+   Q_vert(2:grid%ubnd_fce) = Q_inp(1,1:grid%ubnd_vol)+Q_inp(2,1:grid%ubnd_vol)
 
    ! Set all Q to the differences (from the integrals)
    ! Q_inp is located on the volume grid, element 1 remains unchanged since element 0 is 0
    do i=1,4
-       do j=1,grid%ubnd_vol
+
+       do j=1,grid%ubnd_vol-1
            Q_inp(i,grid%ubnd_vol-j+1) = Q_inp(i,grid%ubnd_vol-j+1)-Q_inp(i,grid%ubnd_vol-j)
        end do
    end do
-   Q_inp = 0
-   Q_vert = 0
-   write(*,*) Q_inp
+
+   write(*,*) Q_inp(1,:)
    write(*,*) "-------"
    write(*,*) Q_vert
   end associate

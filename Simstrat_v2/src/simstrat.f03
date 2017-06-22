@@ -130,7 +130,7 @@ contains
     ! todo: time control!
     simdata%model%dt = 0.1
 
-    do i=1,2
+    do i=1,100
       simdata%model%std  = i
       if(simdata%model%datum >= simdata%sim_cfg%end_datum) then
         exit
