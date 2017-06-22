@@ -20,7 +20,7 @@ contains
       real(RK), dimension(:), intent(out) :: yi
       integer, intent(in) :: num_z,num_zi
       integer :: posk1,posk2,posi,i
-      
+
       !Assign closest value if out of given grid
       posk1 = 1
       do while (zi(posk1)<=z(1))
@@ -89,21 +89,21 @@ contains
 
   !!Integrate discrete function y[x] using the trapezoidal rule
   !!####################################################################
-  !subroutine Integrate(x,y,inty,num)
+  subroutine Integrate(x,y,inty,num)
   !!####################################################################
-  !      implicit none
+        implicit none
 
-  !      real(RK), intent(in) :: x(1:num), y(1:num)
-  !      real(RK), intent(inout) :: inty(1:num)
-  !      integer :: num, i
+        integer :: num, i
+        real(RK), intent(in) :: x(1:num), y(1:num)
+        real(RK), intent(inout) :: inty(1:num)
 
-  !      inty(1) = 0
-  !      do i=2,num
-  !         inty(i) = inty(i-1) + 0.5_RK*(x(i)-x(i-1))*(y(i)+y(i-1))
-  !      end do
 
-  !      return
-  !end
+        inty(1) = 0
+        do i=2,num
+           inty(i) = inty(i-1) + 0.5_RK*(x(i)-x(i-1))*(y(i)+y(i-1))
+        end do
+        return
+  end
 
   pure function linspace(x0, xend, n, endpoint) result(x)
     implicit none
