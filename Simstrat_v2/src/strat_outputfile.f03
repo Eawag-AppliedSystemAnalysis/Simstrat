@@ -73,7 +73,7 @@ contains
        allocate(self%output_files(self%n_vars))
 
     do i=1,self%n_vars
-      if(self%config%output_vars(i)%center_grid) then
+      if(self%config%output_vars(i)%volume_grid) then
         call self%output_files(i)%open(config%PathOut//'/'//trim(self%config%output_vars(i)%name)//'_out.dat', n_cols=grid%l_vol+1, status_ok=status_ok)
         call self%output_files(i)%add('')
         call self%output_files(i)%add(grid%z_volume(1:grid%ubnd_vol), real_fmt='(F12.3)')
@@ -166,7 +166,7 @@ contains
     end do
 
     do i=0,self%n_vars-1
-      if(self%config%output_vars(i)%center_grid) then
+      if(self%config%output_vars(i)%volume_grid) then
         call self%grid%interpolate_from_vol(test,self%config%output_vars(i)%values,self%n_depths,values_on_zout)
       else
         call self%grid%interpolate_from_face(test,self%config%output_vars(i)%values,self%n_depths,values_on_zout)

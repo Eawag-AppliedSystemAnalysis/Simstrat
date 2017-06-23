@@ -20,7 +20,7 @@ module strat_simdata
   type, public :: LogVariable
     character(len=:), allocatable :: name
     real(RK), dimension(:), pointer :: values
-    logical :: center_grid
+    logical :: volume_grid
   end type
 
   type, public :: OutputConfig

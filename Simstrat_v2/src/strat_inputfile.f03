@@ -96,47 +96,47 @@ contains
 
     self%simdata%output_cfg%output_vars(1)%name = "V"
     self%simdata%output_cfg%output_vars(1)%values => self%simdata%model%V
-    self%simdata%output_cfg%output_vars(1)%center_grid = .true.
+    self%simdata%output_cfg%output_vars(1)%volume_grid = .true.
 
     self%simdata%output_cfg%output_vars(2)%name = "U"
     self%simdata%output_cfg%output_vars(2)%values => self%simdata%model%U
-    self%simdata%output_cfg%output_vars(2)%center_grid = .true.
+    self%simdata%output_cfg%output_vars(2)%volume_grid = .true.
 
     self%simdata%output_cfg%output_vars(3)%name = "T"
     self%simdata%output_cfg%output_vars(3)%values => self%simdata%model%T
-    self%simdata%output_cfg%output_vars(3)%center_grid = .true.
+    self%simdata%output_cfg%output_vars(3)%volume_grid = .true.
 
     self%simdata%output_cfg%output_vars(4)%name = "S"
     self%simdata%output_cfg%output_vars(4)%values => self%simdata%model%S
-    self%simdata%output_cfg%output_vars(4)%center_grid = .true.
+    self%simdata%output_cfg%output_vars(4)%volume_grid = .true.
 
     self%simdata%output_cfg%output_vars(5)%name = "P"
     self%simdata%output_cfg%output_vars(5)%values => self%simdata%model%P
-    self%simdata%output_cfg%output_vars(5)%center_grid = .false.
+    self%simdata%output_cfg%output_vars(5)%volume_grid = .false.
 
     self%simdata%output_cfg%output_vars(6)%name = "num"
     self%simdata%output_cfg%output_vars(6)%values => self%simdata%model%num
-    self%simdata%output_cfg%output_vars(6)%center_grid = .false.
+    self%simdata%output_cfg%output_vars(6)%volume_grid = .false.
 
     self%simdata%output_cfg%output_vars(7)%name = "nuh"
     self%simdata%output_cfg%output_vars(7)%values => self%simdata%model%nuh
-    self%simdata%output_cfg%output_vars(7)%center_grid = .false.
+    self%simdata%output_cfg%output_vars(7)%volume_grid = .false.
 
     self%simdata%output_cfg%output_vars(8)%name = "NN"
     self%simdata%output_cfg%output_vars(8)%values => self%simdata%model%NN
-    self%simdata%output_cfg%output_vars(8)%center_grid = .false.
+    self%simdata%output_cfg%output_vars(8)%volume_grid = .false.
 
     self%simdata%output_cfg%output_vars(9)%name = "k"
     self%simdata%output_cfg%output_vars(9)%values => self%simdata%model%k
-    self%simdata%output_cfg%output_vars(9)%center_grid = .false.
+    self%simdata%output_cfg%output_vars(9)%volume_grid = .false.
 
     self%simdata%output_cfg%output_vars(10)%name = "eps"
     self%simdata%output_cfg%output_vars(10)%values => self%simdata%model%eps
-    self%simdata%output_cfg%output_vars(10)%center_grid = .false.
+    self%simdata%output_cfg%output_vars(10)%volume_grid = .false.
 
     self%simdata%output_cfg%output_vars(11)%name = "B"
     self%simdata%output_cfg%output_vars(11)%values => self%simdata%model%B
-    self%simdata%output_cfg%output_vars(11)%center_grid = .false.
+    self%simdata%output_cfg%output_vars(11)%volume_grid = .false.
     end associate
   end subroutine
 

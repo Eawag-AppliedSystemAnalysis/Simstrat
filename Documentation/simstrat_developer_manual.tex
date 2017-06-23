@@ -136,6 +136,7 @@ Once the simulation has been set up, only the update methods of each module are 
 \begin{enumerate}
 	\item Update current simulation date
 	\item Read \& update forcing data (ForcingModule update)
+	\item Read \& update in/outflows
 	\item Update stability data $N^{2},cmue$ (StabilityModule update)
 	\item Update $U$ and $V$ (UVModelVar update)
 	\item Update $T$ (TempModelVar update)
@@ -202,6 +203,12 @@ The following classes/modules/interfaces are of importance:
 		\item[Stability] Manipulates the NN and cmue1/2 variables of the ModelState
 \end{description}
 
+		\item[Absorption] Reads absorption input file and modifies corresponding variables of the Modelstate
+		
+		\item[Lateral] Reads input files for in/outflows (Qinp, Qout, Tin, Sin) and integrates/interpolates values in order to modify $Q_{inp}$/$Q_{vert}$
+		
+		\item[Advection] Based on already read in/outflows ($Q_{inp}$/$Q_{vert}$), calculates the advection terms
+
  \hrule
 \item[Model state variable classes] \noindent Classes that are inherited from ModelVariable
  \begin{description}[style=multiline, leftmargin=17em]
@@ -222,7 +229,38 @@ The following classes/modules/interfaces are of importance:
 \subsection{Implementation of an equation}
 In this chapter, the detailed approach how a state variable is solved is explained (mostly for code documentation purposes - for more information about the math/discretization used, see next chapters).
 
+
+
 \subsection{Grid}
+All methods and variables concerning the grid structure are now combined into a grid class.
+The grid class takes care of 
+\begin{itemize}
+	\item Updating area factors
+	\item Storing the two grids (volume and face) including heights, areas etc
+	\item Growing/merging grid boxes if needed
+	\item updating upper bounds and sizes
+	\item Interpolate from and to the grid (e.g. interpolate a value with a different z-axis onto the volume grid)
+\end{itemize}
+
+Note that there 2 grids - one that stores the depth of each face, and one that stores the depth of each volume center.
+Consequently, they are named \texttt{z\_face} respectively \texttt{z\_volume}. Both are 1-indexed and \texttt{z\_face} is always one element longer than \texttt{z\_volume}. The current upper bounds for both grids can be queried using the \texttt{ubnd\_fce} and \texttt{ubnd\_vol} variable in the grid class. 
+
+These upper bounds are automatically updated using the \texttt{update\_nz} method, e.g. when shrinking/growing the grid.
+
+
+\subsection{Output logger} 
+The interface \texttt{SimstratOutputLogger} in file \texttt{strat\_outputfile.f03} defines a generic logger. Currently, \texttt{SimpleLogger} is implemented.
+
+Configuration of the logger is done using the \texttt{output\_cfg} variable in the \texttt{simdata} structure. It consists of an array of pointers and descriptions, so that the logger knows which variables has to be saved to which file. 
+
+Example:
+\begin{verbatim}
+self%simdata%output_cfg%output_vars(1)%name = "V"
+self%simdata%output_cfg%output_vars(1)%values => self%simdata%model%V
+self%simdata%output_cfg%output_vars(1)%center_grid = .true.
+\end{verbatim}
+
+This tells the logger to output variable \texttt{self\%simdata\%model\%V} as variable with the name "V" on the volume grid, whenever the log function is called.
 
 \subsection{Proposed Coupling to AED2}
 
@@ -234,7 +272,17 @@ In this chapter, the detailed approach how a state variable is solved is explain
 
 \subsubsection{Output files}
 
+\subsection{Further work on the implementation}
+The current state (Spring 17) of the code should give a solid foundation for further development. It is by no means ideal - it is more a high-level restructuring than a in-depth refactoring of each part/method. Thus, there are still a lot of things to improve. This chapter should give some ideas on what could be further improved.
 
+\begin{itemize}
+	\item Clean code and readability: Lot of ambigious named variables and hard to debug if/else constructs with code duplication. Methods (e.g. the lateral method) are sometimes very long and could probably be restructured into a combination of well named, short and easy to test methods. 
+	
+	\item File reading of input files: Very hard to debug, very unclear and old-style goto- failure modes. For long term development, this should be refactored out into a generic time-series class that can read the desired file format and returns it as a 2d array or so. This class could then be re-used in all modules that have to read input files (such as Qin, Qout, Tin etc).
+	
+	\item todo
+
+\end{itemize}
 
 
 \section{Discretisation Scheme and Numerical Approach}
