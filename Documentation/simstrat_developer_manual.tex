@@ -280,7 +280,12 @@ The current state (Spring 17) of the code should give a solid foundation for fur
 	
 	\item File reading of input files: Very hard to debug, very unclear and old-style goto- failure modes. For long term development, this should be refactored out into a generic time-series class that can read the desired file format and returns it as a 2d array or so. This class could then be re-used in all modules that have to read input files (such as Qin, Qout, Tin etc).
 	
-	\item todo
+	\item List of methods that badly need refactoring:
+	\begin{itemize}
+		\item \texttt{forcing\_update}: Much too long. Should be multiple, well named subfunctions instead of long if/else structure
+		
+			\item \texttt{everything in lateral}: same as above
+	\end{itemize}
 
 \end{itemize}
 
