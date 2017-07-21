@@ -135,11 +135,16 @@ subroutine simstrat_simulation()
 
     gamma = Az(xl)/(volume**1.5)/sqrt(rho_0)*CD
 
+    std=0
+    step=0
+    itera=0
+    iav=0
+
     if (write_tout==0) then     !if output is written at specific times (irregularly)
         if (tout_ctr2(0)==0) then           ! if first required output time is initial time
             if(disp_sim==1) write(6,990) datum,T(xl),T(xl-5)
             !call write_out(datum,u,v,T,S,k,eps,num,nuh,B,P,NN,P_Seiche,E_Seiche,zu,M)
-            call write_out(datum,u,v,T,S,k,eps,num,nuh,B,P,NN,P_Seiche,E_Seiche,zu)
+            !call write_out(datum,u,v,T,S,k,eps,num,nuh,B,P,NN,P_Seiche,E_Seiche,zu)
             itera=0
             step=1
         end if
@@ -166,10 +171,8 @@ subroutine simstrat_simulation()
         call write_text(datum,U,V,T,S,k,eps,nuh,B,P,NN,P_Seiche,E_Seiche,zu(0:xl),zk(0:xl),Qvert)
     end if
 
-    std=0
-    step=0
-    itera=0
-    iav=0
+    dt_0 = dt
+    
     ! START OF SIMULATION LOOP
     do while (datum<t_end)
         std=std+1
@@ -181,6 +184,7 @@ subroutine simstrat_simulation()
                 itera=0
                 step=step+1
             end if
+            if(dt==0) dt=dt_0
         end if
 
         datum = datum + dt/86400
