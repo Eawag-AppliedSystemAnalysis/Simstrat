@@ -1,7 +1,7 @@
 [default]
 compiler=Gnu
 cflags=-c  -std=f2008 -ffree-line-length-none -fcheck=all
-mod_dir=./
+mod_dir=./bin
 obj_dir=./
 build_dir=./bin/
 src=./src/
