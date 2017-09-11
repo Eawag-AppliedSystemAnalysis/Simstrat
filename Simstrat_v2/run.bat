@@ -1,3 +1,3 @@
 cd testcase
-..\bin\simstrat.exe simstrat.par
+..\bin\simstrat.exe TestCase_1.par
 cd ..

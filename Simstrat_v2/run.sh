@@ -1,3 +1,3 @@
 cd testcase
-../bin/simstrat
+../bin/simstrat TestCase_1.par
 cd ..

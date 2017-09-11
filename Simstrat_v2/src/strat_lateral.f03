@@ -117,7 +117,7 @@ contains
 
       integer :: i, j
       integer :: fnum(1:4) ! File number
-      character*20 :: fname(1:4)
+      character(len=20) :: fname(1:4)
 
       associate (datum=>state%datum, &
                  idx=>state%std, &
@@ -160,28 +160,30 @@ contains
 
                ! Read first line
                read (fnum(i), *, end=9) self%tb_start(i), (self%Inp_read_start(i, j), j=0, self%nval(i) - 1)
-               write (*, *) self%Inp_read_start(i, :)
+               !write (*, *) self%Inp_read_start(i, :)
 
                ! Integrate the inflow (direct interpolation of inflow is not correct)
                call Integrate(self%z_Inp(i, :), self%Inp_read_start(i, :), Q_read_start(i, :), self%nval_deep(i))
 
                ! Very important: once the inflowing quantitiy is integrated, it necessarily has to be
                ! interpolated on the z_upp grid starting with index 1
-          call grid%interpolate_to_face_from_second(self%z_Inp(i, :), Q_read_start(i, :), self%nval_deep(i) - 1, self%Q_start(i, :))
+               call grid%interpolate_to_face_from_second(self%z_Inp(i, :), Q_read_start(i, :), self%nval_deep(i) - 1, self%Q_start(i, :))
 
                ! Read second line and treatment of deep inflow
                read (fnum(i), *, end=7) self%tb_end(i), (self%Inp_read_end(i, j), j=0, self%nval(i) - 1)
                call Integrate(self%z_Inp(i, :), self%Inp_read_end(i, :), Q_read_end(i, :), self%nval_deep(i))
-              call grid%interpolate_to_face_from_second(self%z_Inp(i, :), Q_read_end(i, :), self%nval_deep(i) - 1, self%Q_end(i, :))
+               call grid%interpolate_to_face_from_second(self%z_Inp(i, :), Q_read_end(i, :), self%nval_deep(i) - 1, self%Q_end(i, :))
 
                ! Add surface flow for both in- and outflow
                if (self%nval_surface(i) > 0) then
                   do j = 1, self%nval_surface(i)
                      self%depth_surfaceFlow(i, j) = self%z_Inp(i, self%nval_deep(i) - 1 + j)
-      call self%surface_flow(self%Inp_read_start(i, self%nval_deep(i) - 1 + j), self%Q_start(i, :), self%depth_surfaceFlow(i, j), i)
-          call self%surface_flow(self%Inp_read_end(i, self%nval_deep(i) - 1 + j), self%Q_end(i, :), self%depth_surfaceFlow(i, j), i)
+                     call self%surface_flow(self%Inp_read_start(i, self%nval_deep(i) - 1 + j), self%Q_start(i, :), self%depth_surfaceFlow(i, j), i)
+                     call self%surface_flow(self%Inp_read_end(i, self%nval_deep(i) - 1 + j), self%Q_end(i, :), self%depth_surfaceFlow(i, j), i)
                   end do
                end if
+
+               write(6, ' (A,A)') "Input file successfully read: ",fname(i)
             end if ! idx==1
 
             ! If lake level changes and if there is surface inflow, adjust inflow depth to keep them at the surface
@@ -190,17 +192,17 @@ contains
                !! next two blocks are exactly same as above?! - why?
                ! Recalculate Q_start from deep inflows
                call Integrate(self%z_Inp(i, :), self%Inp_read_start(i, :), Q_read_start(i, :), self%nval_deep(i))
-          call grid%interpolate_to_face_from_second(self%z_Inp(i, :), Q_read_start(i, :), self%nval_deep(i) - 1, self%Q_start(i, :))
+               call grid%interpolate_to_face_from_second(self%z_Inp(i, :), Q_read_start(i, :), self%nval_deep(i) - 1, self%Q_start(i, :))
 
                ! Recalculate Q_end from deep inflows
                call Integrate(self%z_Inp(i, :), self%Inp_read_end(i, :), Q_read_end(i, :), self%nval_deep(i))
-              call grid%interpolate_to_face_from_second(self%z_Inp(i, :), Q_read_end(i, :), self%nval_deep(i) - 1, self%Q_end(i, :))
+               call grid%interpolate_to_face_from_second(self%z_Inp(i, :), Q_read_end(i, :), self%nval_deep(i) - 1, self%Q_end(i, :))
 
                ! Add surface flow
                if (self%nval_surface(i) > 0) then
                   do j = 1, self%nval_surface(i)
-      call self%surface_flow(self%Inp_read_start(i, self%nval_deep(i) - 1 + j), self%Q_start(i, :), self%depth_surfaceFlow(i, j), i)
-          call self%surface_flow(self%Inp_read_end(i, self%nval_deep(i) - 1 + j), self%Q_end(i, :), self%depth_surfaceFlow(i, j), i)
+                     call self%surface_flow(self%Inp_read_start(i, self%nval_deep(i) - 1 + j), self%Q_start(i, :), self%depth_surfaceFlow(i, j), i)
+                     call self%surface_flow(self%Inp_read_end(i, self%nval_deep(i) - 1 + j), self%Q_end(i, :), self%depth_surfaceFlow(i, j), i)
                   end do
                end if
             end if ! end if not lake_level_old...

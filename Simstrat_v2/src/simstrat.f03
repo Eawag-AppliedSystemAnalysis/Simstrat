@@ -134,10 +134,11 @@ contains
       call logger%log(0.0_RK) ! Write initial conditions
 
       ! Time step (currently fixed - could be changed in future)
-      simdata%model%dt = 0.1
+      !simdata%model%dt = 300
 
-      do i = 1, 10000
+      do i = 1, 100000
          simdata%model%std = i
+
          if (simdata%model%datum >= simdata%sim_cfg%end_datum) then
             exit
          end if
@@ -159,6 +160,7 @@ contains
          call mod_v%update(simdata%model, simdata%model_param)
 
          ! Update and solve t - terms
+         if (mod(i,1)==0) write( 6,*) simdata%model%datum, simdata%model%T(simdata%grid%nz_occupied)
          call mod_temperature%update(simdata%model, simdata%model_param)
 
          ! Update and solve transportation terms (here: Salinity S only)
@@ -175,7 +177,8 @@ contains
          call logger%log(simdata%model%datum)
 
          !increase datum
-         simdata%model%datum = simdata%model%datum + simdata%model%dt
+         simdata%model%datum = simdata%model%datum + simdata%model%dt/86400
+         
       end do
    end subroutine
 

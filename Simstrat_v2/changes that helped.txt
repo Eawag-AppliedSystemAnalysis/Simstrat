@@ -1,0 +1,4 @@
+- leave out lowest depth in morphology
+- index bug somewhere
+- results are different with different grid
+- more than 2 dephts are not accepted in input files

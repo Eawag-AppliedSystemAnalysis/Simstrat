@@ -50,7 +50,7 @@ contains
 
       !Parse inputfile
       call self%read_json_par_file(fname)
-
+  
       !Set up grid
       call self%read_grid_config
 
@@ -58,6 +58,7 @@ contains
 
       !Read initial data
       call self%read_initial_data
+      write(6,*) simdata%model%T(simdata%grid%nz_occupied)
 
       ! Update area factors
       call self%simdata%grid%update_area_factors()
@@ -171,12 +172,16 @@ contains
          model%ty = 0.0_RK
 
          model%drag = (kappa/log(1.0_RK + 30/K_s*grid%h(1)/2))**2
-
+write(6,*) 'steff1'
          ! Geothermal heat flux
          if (model_param%fgeo /= 0) then
+            write(6,*) 'steff2'
             model%fgeo_add(1:grid%nz_grid) = model_param%fgeo/rho_0/cp*grid%dAz(1:grid%nz_grid)/grid%Az(2:grid%nz_grid + 1) ! calculation per kg
+            write(6,*) 'steff3'
             if (grid%Az(1) /= 0) then
+               write(6,*) 'steff4'
                model%fgeo_add(1) = model%fgeo_add(1) + 2*model_param%fgeo/rho_0/cp*grid%Az(1)/((grid%Az(1) + grid%Az(2))*grid%h(1))
+            write(6,*) 'steff5'
             end if
          end if
 
@@ -207,6 +212,7 @@ contains
 
          ! Set up timing
          model%datum = self%simdata%sim_cfg%start_datum
+         model%dt = self%simdata%sim_cfg%timestep
          model%std = 1
          model%step = 0
       end associate
@@ -231,8 +237,14 @@ contains
          do ictr = 1, nz_max
             read (12, *, end=69) grid_config%grid_read(ictr)
          end do
-69  if(ictr==nz_max) write(6,*) 'Only first ',nz_max,' values of file read.'
+
+69       if(ictr==nz_max) then
+            write(6,*) 'Only first ',nz_max,' values of file read.'
+         else 
+            write(6,*) "Grid file successfully read"
+         end if
          close (12)
+
          if (ictr == 2) then ! Constant spacing
             grid_config%nz_grid = int(grid_config%grid_read(1))
             grid_config%equidistant_grid = .TRUE.
@@ -247,7 +259,11 @@ contains
          do i = 1, nz_max ! Read depth and area
             read (11, *, end=86) z_tmp(i), A_tmp(i)
          end do
-86       if(i==nz_max) write(6,*) 'Only first ',nz_max,' values of file read.'
+86       if(i==nz_max) then
+            write(6,*) 'Only first ',nz_max,' values of file read.'
+         else
+            write(6,*) "Morphology file successfully read"
+         end if
          close (11)
 
          num_read = i - 1 ! Number of area values
@@ -442,6 +458,8 @@ contains
             call grid%interpolate_to_face(z_read, eps_read, num_read, model%eps)
          end if
 
+         write(6, *) "Initial data file successfully read"
+
       end associate
    end subroutine
 
@@ -466,7 +484,6 @@ contains
       integer  :: i, j, fnum(1:4), nval(1:4), if_adv
       real(RK) :: dummy, z_Inp_dummy(0:self%simdata%grid%nz_grid_max)
 
-      write (6, *) 'Opening physical inflow/outflow files...'
       open (41, status='old', file=self%simdata%input_cfg%QinpName)
       open (42, status='old', file=self%simdata%input_cfg%QoutName)
       open (43, status='old', file=self%simdata%input_cfg%TinpName)
