@@ -46,18 +46,18 @@
   },
 
   "ModelParameter" : {
-    "Lat"       : 47.0,
-    "p_air"     : 990,
+    "Lat"       : 47.3,
+    "p_air"     : 960,
     "a_seiche"  : 0.0011046,
-    "q_NN"      : 1.25,
-    "f_wind"    : 0.20,
+    "q_NN"      : 0.75,
+    "f_wind"    : 1.6423,
     "C10"       : 0.001,
     "CD"        : 0.002,
-    "fgeo"      : 0.0,
-    "k_min"     : 1e-15,
-    "p_radin"   : 1.0,
-    "p_windf"   : 3.2,
-    "beta_sol"  : 0.30,
+    "fgeo"      : 0.1,
+    "k_min"     : 1e-30,
+    "p_radin"   : 1.1978,
+    "p_windf"   : 1,
+    "beta_sol"  : 0.35,
     "albsw"     : 0.08
   }
 }

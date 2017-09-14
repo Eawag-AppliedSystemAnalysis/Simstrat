@@ -80,21 +80,23 @@ program simstrat_main
                             simdata%input_cfg%AbsorpName, &
                             simdata%grid)
 
-   ! initialize advection module
-   call mod_advection%init(simdata%model_cfg, &
+   if (simdata%model%has_advection) then
+      ! initialize advection module
+      call mod_advection%init(simdata%model_cfg, &
                            simdata%model_param, &
                            simdata%grid)
 
-   ! initliaze lateral module based on configuration
-   if (simdata%model_cfg%inflow_placement == 1) then
-      ! Gravity based inflow
-      mod_lateral => mod_lateral_rho
-   else
-      mod_lateral => mod_lateral_normal
+      ! initliaze lateral module based on configuration
+      if (simdata%model_cfg%inflow_placement == 1) then
+         ! Gravity based inflow
+         mod_lateral => mod_lateral_rho
+      else
+         mod_lateral => mod_lateral_normal
+      end if
+      call mod_lateral%init(simdata%model_cfg, &
+                           simdata%model_param, &
+                           simdata%grid)
    end if
-   call mod_lateral%init(simdata%model_cfg, &
-                         simdata%model_param, &
-                         simdata%grid)
 
    ! Setup logger
    call logger%initialize(simdata%output_cfg, simdata%grid)
@@ -151,8 +153,10 @@ contains
 
          ! Update physics
          call mod_stability%update(simdata%model)
-         call mod_lateral%update(simdata%model)
-         call mod_advection%update(simdata%model)
+         if (simdata%model%has_advection) then
+            call mod_lateral%update(simdata%model)
+            call mod_advection%update(simdata%model)
+         end if
          call mod_forcing%update_coriolis(simdata%model)
 
          ! Update and solve U and V - terms

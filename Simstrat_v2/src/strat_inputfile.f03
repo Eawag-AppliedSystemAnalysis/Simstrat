@@ -172,16 +172,15 @@ contains
          model%ty = 0.0_RK
 
          model%drag = (kappa/log(1.0_RK + 30/K_s*grid%h(1)/2))**2
-write(6,*) 'steff1'
+
          ! Geothermal heat flux
          if (model_param%fgeo /= 0) then
-            write(6,*) 'steff2'
+            allocate(model%fgeo_add(grid%nz_grid))
+
             model%fgeo_add(1:grid%nz_grid) = model_param%fgeo/rho_0/cp*grid%dAz(1:grid%nz_grid)/grid%Az(2:grid%nz_grid + 1) ! calculation per kg
-            write(6,*) 'steff3'
+            write(6,*) grid%Az(1), grid%Az(grid%nz_grid+1)
             if (grid%Az(1) /= 0) then
-               write(6,*) 'steff4'
                model%fgeo_add(1) = model%fgeo_add(1) + 2*model_param%fgeo/rho_0/cp*grid%Az(1)/((grid%Az(1) + grid%Az(2))*grid%h(1))
-            write(6,*) 'steff5'
             end if
          end if
 
