@@ -4,7 +4,7 @@ TestCase_1\Grid.dat
 TestCase_1\morph_zuri.dat
 TestCase_1\forcing_lake_zurich_1981_2013_waedenswil_homogenized.dat3
 TestCase_1\absorption_zh_1981_2013.dat
-TestCases_Results\
+TestCase_1_Results\
 TestCase_1\Output_depth.dat
 TestCase_1\Output_time.dat
 TestCase_1\Qinp.dat
