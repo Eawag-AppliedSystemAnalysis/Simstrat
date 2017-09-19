@@ -35,3 +35,20 @@ Year: 2016
    ```
    gfortran simstrat.f90 -o simstrat.exe -O2 -ffree-line-length-none -g -ffpe-trap=overflow,zero,invalid -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans
    ```
+
+## Getting gfortran on Windows
+
+1. To get gfortran on Windows we recommend to download and install [MSYS2](http://www.msys2.org/). Follow the installation instruction on the webpage (update the package database with `pacman -Syu`.
+
+2. Install a toolchain:
+   a) for 32-bit:
+      ```
+      pacman -S mingw-w64-i686-toolchain
+      ```
+   b) for 64-bit:
+      ```
+      pacman -S mingw-w64-x86_64-toolchain
+      ```
+   Select which package to install, default is all
+
+3. To compile simstrat use the 'MinGW-w64 32-bit Shell' or 'MinGW-w64 64-bit Shell' which should be available in your start menu now.
