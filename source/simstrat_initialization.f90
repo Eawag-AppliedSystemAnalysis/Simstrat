@@ -20,6 +20,7 @@ subroutine Initialization()
 
     ! Local variables
     integer i
+    integer idx
 
     ! Calculations
     call ParameterList()
@@ -46,7 +47,24 @@ subroutine Initialization()
 
     ! Determine if output is binary or text
     OutBin = .false.
-    if(scan(PathOut,'.')/=0) OutBin = .true.
+    if(scan(PathOut,'.')/=0) then
+        OutBin = .true.
+    else
+        ! remove slashes
+        ! this only supports a single subfolder 
+        do
+            if(scan(PathOut,'/')==0) exit
+            idx = scan(PathOut,'/')
+            if(idx == 1) then
+                PathOut = PathOut(2:len(PathOut))
+            else if(idx == len(PathOut)) then
+                PathOut = PathOut(1:len(PathOut)-1)
+            else
+                PathOut = PathOut(1:idx-1)//PathOut(idx+1:len(PathOut))
+            end if
+        end do
+        call system('mkdir ' // trim(PathOut))
+    end if
     if(OutBin) open(80,access='SEQUENTIAL',status='unknown',FORM='unformatted',file=PathOut)
 
     ! Set output properties
