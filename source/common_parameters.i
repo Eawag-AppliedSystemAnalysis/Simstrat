@@ -1,7 +1,7 @@
       integer mxl
       parameter(mxl=1000)
 
-      double precision depth,dt,t_start,t_end
+      double precision depth,dt,dt_0,t_start,t_end
       double precision pi,g,cp,rho_0,rho_air,kappa,K_s,z0,Prndtl
       double precision k_min,eps_min,avh_min
       double precision sig_e,sig_k,ce1,ce2,ce3,cde,cmue,cm0
