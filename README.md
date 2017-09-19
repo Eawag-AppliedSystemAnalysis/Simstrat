@@ -17,6 +17,7 @@ Year: 2016
 ## Compile Simstrat
 
 1. Download the simstrat source code of a specific simstrat version using the link above or clone the current master branch:
+
 ```
 git clone https://github.com/Eawag-AppliedSystemAnalysis/Simstrat
 ```
