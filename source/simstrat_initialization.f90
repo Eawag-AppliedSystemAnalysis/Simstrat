@@ -21,6 +21,7 @@ subroutine Initialization()
     ! Local variables
     integer i
     integer idx
+    character(len=:), allocatable :: OutputFolderName
 
     ! Calculations
     call ParameterList()
@@ -50,20 +51,23 @@ subroutine Initialization()
     if(scan(PathOut,'.')/=0) then
         OutBin = .true.
     else
+        allocate(character(len=len(PathOut)) :: OutputFolderName)
+        OutputFolderName = PathOut
         ! remove slashes
         ! this only supports a single subfolder 
         do
-            if(scan(PathOut,'/')==0) exit
-            idx = scan(PathOut,'/')
+            if(scan(OutputFolderName,'/')==0) exit
+            idx = scan(OutputFolderName,'/')
             if(idx == 1) then
-                PathOut = PathOut(2:len(PathOut))
-            else if(idx == len(PathOut)) then
-                PathOut = PathOut(1:len(PathOut)-1)
+                OutputFolderName = OutputFolderName(2:len(OutputFolderName))
+            else if(idx == len(OutputFolderName)) then
+                OutputFolderName = OutputFolderName(1:len(OutputFolderName)-1)
             else
-                PathOut = PathOut(1:idx-1)//PathOut(idx+1:len(PathOut))
+                OutputFolderName = OutputFolderName(1:idx-1)//OutputFolderName(idx+1:len(OutputFolderName))
             end if
         end do
-        call system('mkdir ' // trim(PathOut))
+        call system('mkdir ' // trim(OutputFolderName))
+        PathOut = trim(OutputFolderName) // '/'
     end if
     if(OutBin) open(80,access='SEQUENTIAL',status='unknown',FORM='unformatted',file=PathOut)
 
