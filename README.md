@@ -64,7 +64,7 @@ Year: 2016
 
 3. To compile simstrat use the 'MinGW-w64 32-bit Shell' or 'MinGW-w64 64-bit Shell' which should be available in your start menu now.
 
-## Getting Intel Fortran Compiler for Windws
+## Getting Intel Fortran Compiler for Windows, Linux & macOS
 
 Intel supports the next generation of scientists and engineers by ensuring that students and the faculty at qualifying universities have access to the full-featured Intel® Parallel Studio XE.
 You can find the free options for Windows, Linux and macOS [here](https://software.intel.com/en-us/parallel-studio-xe/choose-download).
