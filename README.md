@@ -26,19 +26,30 @@ Year: 2016
 
 3. Depending on the compiler on your system run the following command:
 
-   Intel Fortran Compiler  
+   Intel Fortran Compiler (on Windows)
    ```
-   ifort simstrat.f90 -O3 -Qipo -Qprec-div -QxHost
+   ifort simstrat.f90 /O3 /Qipo /Qprec-div /QxHost
    ```
 
-   gfortran
+   Intel Fortran Compiler (on Linux and macOS)
    ```
-   gfortran simstrat.f90 -o simstrat.exe -O2 -ffree-line-length-none -g -ffpe-trap=overflow,zero,invalid -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans
+   ifort simstrat.f90 -O3 -ipo -prec-div -xHost
    ```
+
+   gfortran (on Windows)
+   ```
+   gfortran simstrat.f90 -o simstrat.exe -O2 -ffree-line-length-none -g -ffpe-trap=overflow,zero,invalid -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans -static-libgfortran
+   ```
+
+   gfortran (on Linux and macOS)
+   ```
+   gfortran simstrat.f90 -o simstrat -O2 -ffree-line-length-none -g -ffpe-trap=overflow,zero,invalid -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans -static-libgfortran
+   ```
+   (don't forget to make the file executable, i.e. `chmod +x simstrat`)
 
 ## Getting gfortran for Windows
 
-1. To get gfortran on Windows we recommend to download and install [MSYS2](http://www.msys2.org/). Follow the installation instruction on the webpage (update the package database with `pacman -Syu`.
+1. To get gfortran on Windows we recommend to download and install [MSYS2](http://www.msys2.org/). Follow the installation instruction on the webpage (update the package database with `pacman -Syu`).
 
 2. Install a toolchain:
    a) for 32-bit:
