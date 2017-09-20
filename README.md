@@ -26,7 +26,7 @@ Year: 2016
 
 3. Depending on the compiler on your system run the following command:
 
-   Intel Fortran Compile  
+   Intel Fortran Compiler  
    ```
    ifort simstrat.f90 -O3 -Qipo -Qprec-div -QxHost
    ```
@@ -36,7 +36,7 @@ Year: 2016
    gfortran simstrat.f90 -o simstrat.exe -O2 -ffree-line-length-none -g -ffpe-trap=overflow,zero,invalid -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans
    ```
 
-## Getting gfortran on Windows
+## Getting gfortran for Windows
 
 1. To get gfortran on Windows we recommend to download and install [MSYS2](http://www.msys2.org/). Follow the installation instruction on the webpage (update the package database with `pacman -Syu`.
 
@@ -52,3 +52,8 @@ Year: 2016
    Select which package to install, default is all
 
 3. To compile simstrat use the 'MinGW-w64 32-bit Shell' or 'MinGW-w64 64-bit Shell' which should be available in your start menu now.
+
+## Getting Intel Fortran Compiler for Windws
+
+Intel supports the next generation of scientists and engineers by ensuring that students and the faculty at qualifying universities have access to the full-featured Intel® Parallel Studio XE.
+You can find the free options for Windows, Linux and macOS [here](https://software.intel.com/en-us/parallel-studio-xe/choose-download).
