@@ -38,12 +38,12 @@ Year: 2016
 
    gfortran (on Windows)
    ```
-   gfortran simstrat.f90 -o simstrat.exe -O2 -ffree-line-length-none -g -ffpe-trap=overflow,zero,invalid -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans -static-libgfortran
+   gfortran simstrat.f90 -o simstrat.exe -O2 -ffree-line-length-none -g -ffpe-trap=overflow,zero,invalid -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans -static
    ```
 
    gfortran (on Linux and macOS)
    ```
-   gfortran simstrat.f90 -o simstrat -O2 -ffree-line-length-none -g -ffpe-trap=overflow,zero,invalid -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans -static-libgfortran
+   gfortran simstrat.f90 -o simstrat -O2 -ffree-line-length-none -g -ffpe-trap=overflow,zero,invalid -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans -static
    ```
    (don't forget to make the file executable, i.e. `chmod +x simstrat`)
 
