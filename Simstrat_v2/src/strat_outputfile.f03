@@ -15,8 +15,8 @@ module strat_outputfile
    ! Main interface for loggers
    type, abstract, public :: SimstratOutputLogger
       !###########################################
-      type(OutputConfig), public, pointer   :: config
-      type(StaggeredGrid), public, pointer ::grid
+      class(OutputConfig), public, pointer   :: config
+      class(StaggeredGrid), public, pointer ::grid
       type(csv_file), dimension(:), allocatable :: output_files
       integer, public :: n_depths
       integer, public :: n_vars
