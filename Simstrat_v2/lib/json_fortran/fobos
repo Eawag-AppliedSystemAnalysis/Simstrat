@@ -1,11 +1,30 @@
-[default]
+[modes]
+modes = release-gnu release-intel
+
+[release-gnu]
 compiler=Gnu
 cflags=-c -O2 -std=f2008 -ffree-line-length-none
 mod_dir=./
 obj_dir=./
 build_dir=./bin/
 src=./src/
-colors=True
+colors=False
+quiet=False
+target=json_module.F90
+output=libjson.a
+mklib=static
+log=True
+
+[release-intel]
+compiler=intel
+cflags=-c -O3
+preproc=-fpp
+modsw=-module=
+mod_dir=./
+obj_dir=./
+build_dir=bin
+src=./src/
+colors=False
 quiet=False
 target=json_module.F90
 output=libjson.a
