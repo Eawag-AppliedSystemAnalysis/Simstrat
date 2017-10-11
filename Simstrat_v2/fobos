@@ -8,7 +8,7 @@ build_dir=./bin/
 src=./src/
 colors=False
 quiet=False
-target=simstrat.f03
+target=simstrat.f90
 dependon=./lib/csv_fortran/fobos:release-gnu((direct))
          ./lib/json_fortran/fobos:release-gnu((direct))
 log=True
