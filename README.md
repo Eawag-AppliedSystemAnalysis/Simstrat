@@ -1,8 +1,8 @@
 # Version 2 (2017)
-- Based on the modularized version
-- Rebuild with array indexing in fortran standard (1-indexes whenever possible)
-- Objectoriented Architecture
-- JSON Files for configuration
+- Object-oriented Architecture
+- JSON formatted configuration files
+- Consistent array indexing in fortran standard (arrays start with index 1)
+
 
 ## Compile Simstrat
 
