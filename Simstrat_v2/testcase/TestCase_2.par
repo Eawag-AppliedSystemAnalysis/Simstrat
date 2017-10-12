@@ -1,0 +1,63 @@
+{
+  "Input" : {
+    "Initial conditions"  : "TestCase_2/initcond_zuri_810107.dat",
+    "Grid"                : "TestCase_2/Grid.dat",
+    "Morphology"          : "TestCase_2/morph_zuri.dat",
+    "Forcing"             : "TestCase_2/forcing_lake_zurich_1981_2013_waedenswil_homogenized.dat3",
+    "Absorption"          : "TestCase_2/absorption_zh_1981_2013.dat",
+    "Inflow"              : "TestCase_2/Qinp.dat",
+    "Outflow"             : "TestCase_2/Qout.dat",
+    "TemperatureInflow"   : "TestCase_2/Tinp.dat",
+    "SalinityInflow"      : "TestCase_2/Sinp.dat"
+  },
+
+  "Output" : {
+    "path"  : "TestCases_Results/",
+    "depth" : "TestCase_2/Output_depth.dat",
+    "time"  : "TestCase_2/Output_time.dat",
+    "WriteOnTheFly" : false,
+    "ThinningInterval" : 96
+  },
+
+  "ModelConfig" : {
+    "MaxNrGridCells"          : 50,
+    "StencilType"             : "implicit euler",
+    "CoupleAED2"              : false,
+    "UseBufferedForcing"      : false,
+    "TurbulenceModel"         : 1,
+    "StabilityFunction"       : 2,
+    "FluxCondition"           : 1,
+    "Forcing"                 : 3,
+    "UseFilteredWind"         : false,
+    "SeicheNormalization"     : 2,
+    "Wind drag model"         : 3,
+    "InflowPlacement"         : 0,
+    "PressureGradients"       : 0,
+    "EnableSalinityTransport" : 1,
+    "DisplaySimulation"       : 1,
+    "DisplayDiagnose"         : 1,
+    "DataAveraging"           : 10
+  },
+
+  "Simulation" : {
+    "Timestep"  : 300,
+    "Start"     : 35001,
+    "End"       : 35731
+  },
+
+  "ModelParameter" : {
+    "Lat"       : 47.3,
+    "p_air"     : 960,
+    "a_seiche"  : 0.0011046,
+    "q_NN"      : 0.75,
+    "f_wind"    : 1.6423,
+    "C10"       : 0.001,
+    "CD"        : 0.002,
+    "fgeo"      : 0.1,
+    "k_min"     : 1e-30,
+    "p_radin"   : 1.1978,
+    "p_windf"   : 1,
+    "beta_sol"  : 0.35,
+    "albsw"     : 0.08
+  }
+}

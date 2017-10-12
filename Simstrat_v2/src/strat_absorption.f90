@@ -94,6 +94,8 @@ contains
 
             read (30, *, end=7) tb_end, (absorb_read_end(i), i=1, nval)
 
+            ! Write to console that file was successfully read
+            write (6, *) "Adsorption input file successfully read"
             ! Do the same for absorb_read_end
             call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end)
 

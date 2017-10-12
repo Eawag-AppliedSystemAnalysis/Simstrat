@@ -1,5 +1,5 @@
 [modes]
-modes = release-gnu release-intel
+modes = release-gnu rel	ease-intel
 
 [release-gnu]
 compiler=Gnu

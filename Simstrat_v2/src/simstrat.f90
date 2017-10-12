@@ -80,21 +80,23 @@ program simstrat_main
                             simdata%input_cfg%AbsorpName, &
                             simdata%grid)
 
-   ! initialize advection module
-   call mod_advection%init(simdata%model_cfg, &
+   if (simdata%model%has_advection) then
+      ! initialize advection module
+      call mod_advection%init(simdata%model_cfg, &
                            simdata%model_param, &
                            simdata%grid)
 
-   ! initliaze lateral module based on configuration
-   if (simdata%model_cfg%inflow_placement == 1) then
-      ! Gravity based inflow
-      mod_lateral => mod_lateral_rho
-   else
-      mod_lateral => mod_lateral_normal
+      ! initliaze lateral module based on configuration
+      if (simdata%model_cfg%inflow_placement == 1) then
+         ! Gravity based inflow
+         mod_lateral => mod_lateral_rho
+      else
+         mod_lateral => mod_lateral_normal
+      end if
+      call mod_lateral%init(simdata%model_cfg, &
+                           simdata%model_param, &
+                           simdata%grid)
    end if
-   call mod_lateral%init(simdata%model_cfg, &
-                         simdata%model_param, &
-                         simdata%grid)
 
    ! Setup logger
    call logger%initialize(simdata%output_cfg, simdata%grid)
@@ -134,10 +136,11 @@ contains
       call logger%log(0.0_RK) ! Write initial conditions
 
       ! Time step (currently fixed - could be changed in future)
-      simdata%model%dt = 0.1
+      !simdata%model%dt = 300
 
-      do i = 1, 10000
+      do i = 1, 100000
          simdata%model%std = i
+
          if (simdata%model%datum >= simdata%sim_cfg%end_datum) then
             exit
          end if
@@ -150,8 +153,10 @@ contains
 
          ! Update physics
          call mod_stability%update(simdata%model)
-         call mod_lateral%update(simdata%model)
-         call mod_advection%update(simdata%model)
+         if (simdata%model%has_advection) then
+            call mod_lateral%update(simdata%model)
+            call mod_advection%update(simdata%model)
+         end if
          call mod_forcing%update_coriolis(simdata%model)
 
          ! Update and solve U and V - terms
@@ -159,6 +164,7 @@ contains
          call mod_v%update(simdata%model, simdata%model_param)
 
          ! Update and solve t - terms
+         if (mod(i,100)==0) write( 6,*) simdata%model%datum, simdata%model%T(simdata%grid%nz_occupied)
          call mod_temperature%update(simdata%model, simdata%model_param)
 
          ! Update and solve transportation terms (here: Salinity S only)
@@ -175,7 +181,8 @@ contains
          call logger%log(simdata%model%datum)
 
          !increase datum
-         simdata%model%datum = simdata%model%datum + simdata%model%dt
+         simdata%model%datum = simdata%model%datum + simdata%model%dt/86400
+         
       end do
    end subroutine
 

@@ -179,7 +179,7 @@ contains
          ! Equidistant grid
          self%h(1:self%nz_grid) = config%depth/self%nz_grid
       else
-         ! Set up h according to configuraiton
+         ! Set up h according to configuration
          do i = 1, self%nz_grid
             self%h(1 + self%nz_grid - i) = config%grid_read(i) - config%grid_read(i - 1)
          end do
@@ -220,6 +220,7 @@ contains
       num_read = size(config%A_read)
 
       self%z_zero = config%z_A_read(1) ! z_zero is the uppermost depth (might be above zero)
+
       self%lake_level_old = self%z_zero !needed?
 
       config%z_A_read = self%z_zero - config%z_A_read ! z-coordinate is positive upwards, zero point is at reservoir bottom
@@ -300,7 +301,6 @@ contains
 
       ! update number of occupied cells
       self%nz_occupied = self%nz_occupied - 1
-
       ! update boundaries (ubnd_fce and ubnd_vol)
       call self%update_nz()
 
@@ -348,7 +348,6 @@ contains
                  z_volume=>self%z_volume, &
                  h=>self%h, &
                  z_zero=>self%z_zero)
-
          do i = 1, nz_grid + 1
             if (z_face(i) >= (z_zero - new_depth)) then ! If above initial water level
                zmax = z_face(i)
@@ -404,7 +403,7 @@ contains
       real(RK), dimension(:), intent(out) :: yi
 
       integer, intent(in) :: num_z
-      call Interp(z, y, num_z, self%z_face(2:self%nz_grid + 1), yi, self%nz_grid)
+      call Interp(z, y, num_z, self%z_face(2:self%nz_grid + 1), yi, self%nz_grid+1)
    end subroutine
 
    subroutine grid_interpolate_from_vol(self, z, y, num_z, yi)

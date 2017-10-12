@@ -100,8 +100,8 @@ contains
       implicit none
 
       integer :: num, i
-      real(RK), intent(in) :: x(1:num), y(1:num)
-      real(RK), intent(inout) :: inty(1:num)
+      real(RK), dimension(:), intent(in) :: x, y
+      real(RK), dimension(:), intent(inout) :: inty
 
       inty(1) = 0
       do i = 2, num

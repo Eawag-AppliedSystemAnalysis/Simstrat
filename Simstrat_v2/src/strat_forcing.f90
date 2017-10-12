@@ -76,6 +76,8 @@ contains
             write (6, *) 'Warning: first forcing date after simulation start time. datum=', datum, " start=", tb_start
          end if
          read (20, *, end=7) tb_end, (A_e(i), i=1, nval)
+
+         write (6, *) "Forcing input file successfully read"
       end if
 
       if (datum <= tb_start .or. eof == 1) then !If datum before first date or end of file reached

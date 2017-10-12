@@ -48,7 +48,7 @@ contains
          state%ko(1:ubnd_fce) = state%k(1:ubnd_fce) ! ko = TKE at old time step
 
          ! indices of avh not clear! do they need to be changed to 3:ubnd_fcd-2 ??
-         state%avh(2:ubnd_fce - 1) = 0.5_RK/sig_k*(state%num(1:ubnd_fce - 1) + state%num(2:ubnd_fce)) ! average num for TKE
+         state%avh(2:ubnd_fce - 1) = 0.5_RK/sig_k*(state%num(1:ubnd_fce - 2) + state%num(2:ubnd_fce - 1)) ! average num for TKE
 
          if (self%cfg%flux_condition == 1 .and. self%cfg%turbulence_model == 1) then
             state%avh(1) = 0.0_RK
