@@ -83,7 +83,7 @@ contains
       if (allocated(self%output_files)) deallocate (self%output_files)
       allocate (self%output_files(self%n_vars))
 
-      ! For each configured variable, ccreate file and write header
+      ! For each configured variable, create file and write header
       do i = 1, self%n_vars
          if (self%config%output_vars(i)%volume_grid) then
             !Variable on volume grid

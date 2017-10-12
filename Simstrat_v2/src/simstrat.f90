@@ -138,12 +138,7 @@ contains
       ! Time step (currently fixed - could be changed in future)
       !simdata%model%dt = 300
 
-      do i = 1, 100000
-         simdata%model%std = i
-
-         if (simdata%model%datum >= simdata%sim_cfg%end_datum) then
-            exit
-         end if
+      do while (simdata%model%datum<simdata%sim_cfg%end_datum)
 
          ! Read forcing file
          call mod_forcing%update(simdata%model)
@@ -164,7 +159,7 @@ contains
          call mod_v%update(simdata%model, simdata%model_param)
 
          ! Update and solve t - terms
-         if (mod(i,100)==0) write( 6,*) simdata%model%datum, simdata%model%T(simdata%grid%nz_occupied)
+         if (mod(simdata%model%std,1000)==0) write( 6,*) simdata%model%datum, simdata%model%T(simdata%grid%nz_occupied)
          call mod_temperature%update(simdata%model, simdata%model_param)
 
          ! Update and solve transportation terms (here: Salinity S only)
@@ -178,10 +173,13 @@ contains
          call mod_eps%update(simdata%model, simdata%model_param)
 
          ! Call logger to write files
-         call logger%log(simdata%model%datum)
+         if (mod(simdata%model%std,simdata%output_cfg%thinning_interval)==0) then
+            call logger%log(simdata%model%datum)
+         end if
 
-         !increase datum
+         !increase datum and step
          simdata%model%datum = simdata%model%datum + simdata%model%dt/86400
+         simdata%model%std = simdata%model%std + 1
          
       end do
    end subroutine

@@ -31,8 +31,10 @@ module strat_simdata
    ! Logging configuration
    type, public :: OutputConfig
       character(len=:), allocatable :: PathOut
-      character(len=:), allocatable   :: zoutName
+      character(len=:), allocatable :: zoutName
+      character(len=:), allocatable :: toutName
       real(RK), dimension(:), allocatable :: zout
+      real(RK), dimension(:), allocatable :: tout
       class(LogVariable), dimension(:), allocatable :: output_vars
       logical :: write_on_the_fly
       integer :: thinning_interval

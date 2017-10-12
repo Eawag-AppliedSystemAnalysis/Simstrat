@@ -85,8 +85,7 @@ contains
       associate (model=>self%simdata%model, &
                  output_cfg=>self%simdata%output_cfg)
 
-         ! read output depths
-
+         ! Read output depths
          call check_file_exists(output_cfg%zoutName)
 
          call f%read (output_cfg%zoutName, header_row=1, status_ok=status_ok)
@@ -96,6 +95,18 @@ contains
             stop
          end if
          call f%get(1, output_cfg%zout, status_ok)
+         call f%destroy()
+
+         ! Read output times
+         call check_file_exists(output_cfg%toutName)
+
+         call f%read (output_cfg%toutName, header_row=1, status_ok=status_ok)
+         if (.not. status_ok) then
+            call error('Unable to read output depths: '//output_cfg%toutName)
+            call f%destroy()
+            stop
+         end if
+         call f%get(1, output_cfg%tout, status_ok)
          call f%destroy()
 
          ! Define variables that should be written
@@ -325,6 +336,7 @@ contains
       !Output
       call par_file%get('Output.path', PathOut, found); self%simdata%output_cfg%PathOut = PathOut; call check_field(found, 'Output.path', ParName)
       call par_file%get('Output.depth', zoutName, found); self%simdata%output_cfg%zoutName = zoutName; call check_field(found, 'Output.depth', ParName)
+      call par_file%get('Output.time', toutname, found); self%simdata%output_cfg%toutName = toutName; call check_field(found, 'Output.time', ParName)
       call par_file%get('Output.WriteOnTheFly', self%simdata%output_cfg%write_on_the_fly, found); call check_field(found, 'Output.WriteOnTheFly', ParName)
       call par_file%get('Output.ThinningInterval', self%simdata%output_cfg%thinning_interval, found); call check_field(found, 'Output.ThinningInterval', ParName)
 
