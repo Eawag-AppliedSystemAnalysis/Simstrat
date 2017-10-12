@@ -34,7 +34,7 @@
     "InflowPlacement"         : 0,
     "PressureGradients"       : 0,
     "EnableSalinityTransport" : 1,
-    "DisplaySimulation"       : 0,
+    "DisplaySimulation"       : 1,
     "DisplayDiagnose"         : 1,
     "DataAveraging"           : 10
   },

@@ -146,7 +146,7 @@ contains
 
                ! Read number of deep and surface inflows
                read (fnum(i), *, end=9) self%nval_deep(i), self%nval_surface(i)
-               write(6,*) self%nval_deep(i), self%nval_surface(i)
+
                ! Total number of values to read
                self%nval(i) = self%nval_deep(i) + self%nval_surface(i)
 
@@ -154,17 +154,17 @@ contains
                read (fnum(i), *, end=9) dummy, (self%z_Inp(i, j), j=1, self%nval(i))
 
                self%z_Inp(i, 1:self%nval_deep(i)) = grid%z_zero + self%z_Inp(i, 1:self%nval_deep(i))
-               write(6,*) self%z_Inp(i,:)
+
                ! Allocate array for depth of the surface inflow (only done for i=1)
                if (.not. allocated(self%depth_surfaceFlow)) allocate (self%depth_surfaceFlow(1:4, 1:(self%nval_surface(i) + 2)))
 
                ! Read first line
                read (fnum(i), *, end=9) self%tb_start(i), (self%Inp_read_start(i, j), j=1, self%nval(i))
-               write (6, *) self%Inp_read_start(i, :)
+
 
                ! Integrate the inflow (direct interpolation of inflow is not correct)
                call Integrate(self%z_Inp(i, :), self%Inp_read_start(i, :), Q_read_start(i, :), self%nval_deep(i))
-               write(6,*) Q_read_start(i,:)
+
                ! Very important: once the inflowing quantitiy is integrated, it necessarily has to be
                ! interpolated on the z_upp grid starting with index 1
                call grid%interpolate_to_face_from_second(self%z_Inp(i, :), Q_read_start(i, :), self%nval_deep(i), self%Q_start(i, :))

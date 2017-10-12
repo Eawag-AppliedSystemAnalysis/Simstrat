@@ -135,9 +135,7 @@ contains
       integer :: i
       call logger%log(0.0_RK) ! Write initial conditions
 
-      ! Time step (currently fixed - could be changed in future)
-      !simdata%model%dt = 300
-
+      ! Run simulation until end datum
       do while (simdata%model%datum<simdata%sim_cfg%end_datum)
 
          ! Read forcing file
@@ -148,6 +146,7 @@ contains
 
          ! Update physics
          call mod_stability%update(simdata%model)
+         ! If there is inflow/outflow do advection part
          if (simdata%model%has_advection) then
             call mod_lateral%update(simdata%model)
             call mod_advection%update(simdata%model)
@@ -159,7 +158,6 @@ contains
          call mod_v%update(simdata%model, simdata%model_param)
 
          ! Update and solve t - terms
-         if (mod(simdata%model%std,1000)==0) write( 6,*) simdata%model%datum, simdata%model%T(simdata%grid%nz_occupied)
          call mod_temperature%update(simdata%model, simdata%model_param)
 
          ! Update and solve transportation terms (here: Salinity S only)
@@ -175,6 +173,20 @@ contains
          ! Call logger to write files
          if (mod(simdata%model%std,simdata%output_cfg%thinning_interval)==0) then
             call logger%log(simdata%model%datum)
+         end if
+
+         ! Display simulation (datum, lake surface, temperature at bottom, temperature at surface)
+         
+         ! Standard display: display when logged
+         if (simdata%model_cfg%disp_simulation==1) then
+            if (mod(simdata%model%std,simdata%output_cfg%thinning_interval)==0) then
+               write(6,'(F10.4,F10.4,F10.4,F10.4)') simdata%model%datum, simdata%grid%z_face(simdata%grid%ubnd_fce), &
+               simdata%model%T(1), simdata%model%T(simdata%grid%nz_occupied)
+            end if
+         ! Extra display: display every iteration
+         else if (simdata%model_cfg%disp_simulation==2) then
+            write(6,'(F10.4,F10.4,F10.4,F10.4)') simdata%model%datum, simdata%grid%z_face(simdata%grid%ubnd_fce), &
+            simdata%model%T(1), simdata%model%T(simdata%grid%nz_occupied)
          end if
 
          !increase datum and step
