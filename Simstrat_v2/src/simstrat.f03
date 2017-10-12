@@ -164,7 +164,7 @@ contains
          call mod_v%update(simdata%model, simdata%model_param)
 
          ! Update and solve t - terms
-         if (mod(i,1)==0) write( 6,*) simdata%model%datum, simdata%model%T(simdata%grid%nz_occupied)
+         if (mod(i,100)==0) write( 6,*) simdata%model%datum, simdata%model%T(simdata%grid%nz_occupied)
          call mod_temperature%update(simdata%model, simdata%model_param)
 
          ! Update and solve transportation terms (here: Salinity S only)

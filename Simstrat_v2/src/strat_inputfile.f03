@@ -58,7 +58,6 @@ contains
 
       !Read initial data
       call self%read_initial_data
-      write(6,*) simdata%model%T(simdata%grid%nz_occupied)
 
       ! Update area factors
       call self%simdata%grid%update_area_factors()
@@ -178,7 +177,6 @@ contains
             allocate(model%fgeo_add(grid%nz_grid))
 
             model%fgeo_add(1:grid%nz_grid) = model_param%fgeo/rho_0/cp*grid%dAz(1:grid%nz_grid)/grid%Az(2:grid%nz_grid + 1) ! calculation per kg
-            write(6,*) grid%Az(1), grid%Az(grid%nz_grid+1)
             if (grid%Az(1) /= 0) then
                model%fgeo_add(1) = model%fgeo_add(1) + 2*model_param%fgeo/rho_0/cp*grid%Az(1)/((grid%Az(1) + grid%Az(2))*grid%h(1))
             end if

@@ -253,8 +253,6 @@ contains
          ! Q_vert is located on the face grid, m^3/s
          Q_vert(1)=0
          Q_vert(2:grid%ubnd_fce) = Q_inp(1, 1:grid%ubnd_vol) + Q_inp(2, 1:grid%ubnd_vol)
-         write(6,*) grid%ubnd_fce, grid%ubnd_vol
-         Q_vert=0
          !write(6,*) Q_vert(1:self%grid%ubnd_fce)
 
          !write(6,*) Q_inp(2,:)
