@@ -3,7 +3,7 @@ modes = release-gnu release-intel
 
 [release-gnu]
 compiler=Gnu
-cflags=-c -O2 -std=f2008 -ffree-line-length-none
+cflags=-c -O2 -ffree-line-length-none -static-libgcc -static-libgfortran
 mod_dir=./
 obj_dir=./
 build_dir=./bin/
