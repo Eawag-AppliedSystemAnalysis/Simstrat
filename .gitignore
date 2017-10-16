@@ -5,9 +5,9 @@
 *.mod
 
 ## Folders
-./Simstrat_v2/bin/
-./Simstrat_v2/lib/json_fortran/bin/
-./Simstrat_v2/lib/csv_fortran/bin/
+Simstrat_v2/bin/
+Simstrat_v2/lib/json_fortran/bin/
+Simstrat_v2/lib/csv_fortran/bin/
 
 #Latex gitignores:
 ## Core latex/pdflatex auxiliary files:
