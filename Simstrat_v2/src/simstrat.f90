@@ -176,17 +176,17 @@ contains
          end if
 
          ! Display simulation (datum, lake surface, temperature at bottom, temperature at surface)
-         
+
          ! Standard display: display when logged
          if (simdata%model_cfg%disp_simulation==1) then
             if (mod(simdata%model%std,simdata%output_cfg%thinning_interval)==0) then
                write(6,'(F10.4,F10.4,F10.4,F10.4)') simdata%model%datum, simdata%grid%z_face(simdata%grid%ubnd_fce), &
-               simdata%model%T(1), simdata%model%T(simdata%grid%nz_occupied)
+               simdata%model%T(simdata%grid%nz_occupied), simdata%model%T(1)
             end if
          ! Extra display: display every iteration
          else if (simdata%model_cfg%disp_simulation==2) then
             write(6,'(F10.4,F10.4,F10.4,F10.4)') simdata%model%datum, simdata%grid%z_face(simdata%grid%ubnd_fce), &
-            simdata%model%T(1), simdata%model%T(simdata%grid%nz_occupied)
+            simdata%model%T(simdata%grid%nz_occupied), simdata%model%T(1)
          end if
 
          !increase datum and step

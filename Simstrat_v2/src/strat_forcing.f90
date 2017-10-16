@@ -120,7 +120,7 @@ contains
       integer :: nval_offset
       real(RK) :: tau
       real(RK) :: A_s(7), A_e(7), A_cur(7)
-      real(RK) :: fu, Vap_wat, heat0
+      real(RK) :: r_a, B0, sig, fu, Vap_wat, heat0
       real(RK) :: T_surf, T_atm, F_glob, Vap_atm, Cloud
       real(RK) :: H_A, H_K, H_V, H_W
       save A_s, A_e
@@ -182,9 +182,16 @@ contains
             state%uv10 = sqrt(state%u10**2 + state%v10**2) !AG 2014
 
             if (cfg%forcing_mode /= 4) then ! in the water column
+               r_a = 0.03_RK           ! Ratio of reflected to total long-wave iradiance
+               B0 = 0.61_RK            ! Bowen constant
+               sig = 5.67e-8_RK        ! Stefan-Boltzmann constant [W/m2/K4]
 
+               ! Wind function (Adams et al., 1990), changed by MS, June 2016
+               ! Factor 0.6072 to account for changing wind height from 10 to 2 m
+               ! Further evaluation of evaporation algorithm may be required.
+               fu = sqrt((2.7_RK*max(0.0_RK,(T_surf-T_atm)/(1-0.378_RK*Vap_atm/param%p_air))**0.333_RK)**2 + (0.6072_RK*3.1_RK*state%uv10)**2)
                ! Wind function (Livingstone & Imboden 1989)
-               fu = 4.40_RK + 1.82_RK*state%uv10 + 0.26_RK*(T_surf - T_atm)
+               !fu = 4.40_RK + 1.82_RK*state%uv10 + 0.26_RK*(T_surf - T_atm)
                !fu = 5.44+2.19*wind+0.24*(T_surf-T_atm)
                fu = fu*param%p_windf ! Provided fitting factor p_windf (~1)
                ! Water vapor saturation pressure in air at water temperature (Gill 1992) [millibar]
