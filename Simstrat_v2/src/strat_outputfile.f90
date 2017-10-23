@@ -210,6 +210,8 @@ contains
 
       ! For each variable, write state
       do i = 1, self%n_vars
+         where (abs(self%config%output_vars(i)%values) < 1E-20_RK) &
+            self%config%output_vars(i)%values = 0.0_RK
          call self%output_files(i)%add(datum, real_fmt='(F12.4)')
          call self%output_files(i)%add(self%config%output_vars(i)%values, real_fmt='(ES14.6)')
          call self%output_files(i)%next_row()
