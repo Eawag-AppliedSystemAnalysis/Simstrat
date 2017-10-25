@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ## Build output
 *.o
 *.a
@@ -230,8 +229,3 @@ TSWLatexianTemp*
 
 # expex forward references with \gathertags
 *-tags.tex
-=======
-**/*.*~
-**/*.exe
-**/*.obj
->>>>>>> f3f23734df6ef9ab994bbc107cb0425b0d681bd9
