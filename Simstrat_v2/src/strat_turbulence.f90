@@ -177,10 +177,10 @@ contains
 
          !Adjust wind params based on configuration
          if (self%model_cfg%use_filtered_wind) then !use filtered wind (AG 2014)
-            PW = param%a_seiche*grid%Az(ubnd_fce)*rho_air*param%C10*state%Wf**3
+            PW = param%a_seiche*grid%Az(ubnd_fce)*rho_air*state%C10*state%Wf**3
          else !use real wind
             W10 = sqrt(state%u10**2 + state%v10**2)
-            PW = param%a_seiche*grid%Az(ubnd_fce)*rho_air*param%C10*W10**3
+            PW = param%a_seiche*grid%Az(ubnd_fce)*rho_air*state%C10*W10**3
          end if
 
          !Update E_Seiche

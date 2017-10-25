@@ -373,7 +373,7 @@ contains
       call par_file%get("ModelParameter.a_seiche", self%simdata%model_param%a_seiche, found); call check_field(found, 'ModelParameter.a_seiche', ParName)
       call par_file%get("ModelParameter.q_NN", self%simdata%model_param%q_NN, found); call check_field(found, 'ModelParameter.q_NN', ParName)
       call par_file%get("ModelParameter.f_wind", self%simdata%model_param%f_wind, found); call check_field(found, 'ModelParameter.f_wind', ParName)
-      call par_file%get("ModelParameter.C10", self%simdata%model_param%C10, found); call check_field(found, 'ModelParameter.C10', ParName)
+      call par_file%get("ModelParameter.C10", self%simdata%model_param%C10_constant, found); call check_field(found, 'ModelParameter.C10', ParName)
       call par_file%get("ModelParameter.CD", self%simdata%model_param%CD, found); call check_field(found, 'ModelParameter.CD', ParName)
       call par_file%get("ModelParameter.fgeo", self%simdata%model_param%fgeo, found); call check_field(found, 'ModelParameter.fgeo', ParName)
       call par_file%get("ModelParameter.k_min", self%simdata%model_param%k_min, found); call check_field(found, 'ModelParameter.k_min', ParName)

@@ -224,25 +224,27 @@ contains
          end if
 
          !Drag coefficient as a function of wind speed (AG 2014)
-         if (cfg%wind_drag_model == 2) then !Ocean model
-            param%C10 = -0.000000712_RK*state%uv10**2 + 0.00007387_RK*state%uv10 + 0.0006605_RK
+         if (cfg%wind_drag_model == 1) then !constant wind drag coefficient
+            state%C10 = param%C10_constant
+         else if (cfg%wind_drag_model == 2) then !Ocean model
+            state%C10 = param%C10_constant*(-0.000000712_RK*state%uv10**2 + 0.00007387_RK*state%uv10 + 0.0006605_RK)
          else if (cfg%wind_drag_model == 3) then !Lake model (Wüest and Lorke 2003)
             if (state%uv10 <= 0.1) then
-               param%C10 = 0.06215_RK
+               state%C10 = param%C10_constant*0.06215_RK
             else if (state%uv10 <= 3.85_RK) then
-               param%C10 = 0.0044_RK*state%uv10**(-1.15_RK)
+               state%C10 = param%C10_constant*0.0044_RK*state%uv10**(-1.15_RK)
             else !Polynomial approximation of Charnock's law
-               param%C10 = -0.000000712_RK*state%uv10**2 + 0.00007387_RK*state%uv10 + 0.0006605_RK
+               state%C10 = param%C10_constant*(-0.000000712_RK*state%uv10**2 + 0.00007387_RK*state%uv10 + 0.0006605_RK)
                !C10 = -0.000000385341*wind**2+0.0000656519*wind+0.000703768
                !C10 = 0.0000000216952*wind**3-0.00000148692*wind**2+0.0000820705*wind+0.000636251
             end if
          end if
 
-         tau = param%C10*rho_air/rho_0*state%uv10**2
+         tau = state%C10*rho_air/rho_0*state%uv10**2
          state%u_taus = sqrt(tau)
 
-         state%tx = param%C10*rho_air/rho_0*state%uv10*state%u10
-         state%ty = param%C10*rho_air/rho_0*state%uv10*state%v10
+         state%tx = state%C10*rho_air/rho_0*state%uv10*state%u10
+         state%ty = state%C10*rho_air/rho_0*state%uv10*state%v10
          return
       end associate
    end subroutine

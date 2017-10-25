@@ -74,7 +74,7 @@ module strat_simdata
       real(RK) :: a_seiche
       real(RK) :: q_NN
       real(RK) :: f_wind
-      real(RK) :: C10
+      real(RK) :: C10_constant
       real(RK) :: CD
       real(RK) :: fgeo
       real(RK) :: k_min
@@ -114,6 +114,7 @@ module strat_simdata
       real(RK) :: u10, v10, uv10, Wf ! Wind speeds, wind factor
       real(RK) :: u_taub, drag, u_taus ! Drag
       real(RK) :: tx, ty ! Shear stress
+      real(RK) :: C10 ! Wind drag coefficient
       real(RK) :: SST, heat ! Sea surface temperature and heat flux
       real(RK) :: rad0 ! Solar radiation at surface
       real(RK), dimension(:), allocatable :: rad ! Solar radiation (in water)
