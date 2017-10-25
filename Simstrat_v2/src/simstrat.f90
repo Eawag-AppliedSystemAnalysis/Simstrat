@@ -133,7 +133,7 @@ contains
 
    subroutine run_simulation()
       integer :: i
-      call logger%log(0.0_RK) ! Write initial conditions
+      !call logger%log(0.0_RK) ! Write initial conditions
 
       ! Run simulation until end datum
       do while (simdata%model%datum<simdata%sim_cfg%end_datum)
@@ -170,6 +170,10 @@ contains
          call mod_k%update(simdata%model, simdata%model_param)
          call mod_eps%update(simdata%model, simdata%model_param)
 
+         !increase datum and step
+         simdata%model%datum = simdata%model%datum + simdata%model%dt/86400
+         simdata%model%std = simdata%model%std + 1
+
          ! Call logger to write files
          if (mod(simdata%model%std,simdata%output_cfg%thinning_interval)==0) then
             call logger%log(simdata%model%datum)
@@ -188,10 +192,6 @@ contains
             write(6,'(F10.4,F10.4,F10.4,F10.4)') simdata%model%datum, simdata%grid%z_face(simdata%grid%ubnd_fce), &
             simdata%model%T(simdata%grid%nz_occupied), simdata%model%T(1)
          end if
-
-         !increase datum and step
-         simdata%model%datum = simdata%model%datum + simdata%model%dt/86400
-         simdata%model%std = simdata%model%std + 1
          
       end do
    end subroutine
