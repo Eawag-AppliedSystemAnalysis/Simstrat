@@ -183,6 +183,8 @@ contains
 
          model%drag = (kappa/log(1.0_RK + 30/K_s*grid%h(1)/2))**2
 
+         model%gamma = grid%Az(grid%ubnd_fce)/(grid%volume**1.5_RK)/sqrt(rho_0)*model_param%CD
+
          ! Geothermal heat flux
          if (model_param%fgeo /= 0) then
             allocate(model%fgeo_add(grid%nz_grid))
