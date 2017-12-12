@@ -38,7 +38,7 @@ TestCase_1\Sinp.dat
 0.001        C10 [-]		Wind drag coefficient (used if wind drag model is 1:lazy)
 0.002        CD [-]			Bottom friction coefficient
 0.10         fgeo [W/m2]	Geothermal heat flux
-1e-30        k_min [J/kg]	Minimal value for TKE
+1e-9         k_min [J/kg]	Minimal value for TKE
 1.1978       p1				Fit parameter for absorption of IR radiation from sky
 1.00         p2				Fit parameter for convective and latent heat fluxes
 0.35         beta [-]		Fraction of short-wave radiation directly absorbed as heat??
