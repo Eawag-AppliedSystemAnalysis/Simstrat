@@ -859,7 +859,7 @@ subroutine Dissipation(cmue1,cmue2,P,B,k,ko,h,Az,eps,L,num,nuh,&
             cee3=ce3
         end if
         Prod=ce1*eps(i)/ko(i)*(P(i)+P_Seiche(i))        ! New code plus seiche
-        Buoy=ce1*cee3*eps(i)/ko(i)*B(i)
+        Buoy=cee3*eps(i)/ko(i)*B(i)
         Diss=ce2*eps(i)*eps(i)/ko(i)
         if (Prod+Buoy>0) then
             pplus(i)=Prod+Buoy
