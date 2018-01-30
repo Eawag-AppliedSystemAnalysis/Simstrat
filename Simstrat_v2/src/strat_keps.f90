@@ -47,15 +47,15 @@ contains
          boundaries = 0
          state%ko(1:ubnd_fce) = state%k(1:ubnd_fce) ! ko = TKE at old time step
 
-         ! indices of avh not clear! do they need to be changed to 3:ubnd_fcd-2 ??
-         state%avh(2:ubnd_fce - 1) = 0.5_RK/sig_k*(state%num(1:ubnd_fce - 2) + state%num(2:ubnd_fce - 1)) ! average num for TKE
+         ! Diffusivity for k is located on volume grid
+         state%avh(2:ubnd_vol - 1) = 0.5_RK/sig_k*(state%num(2:ubnd_fce - 2) + state%num(3:ubnd_fce - 1))
 
          if (self%cfg%flux_condition == 1 .and. self%cfg%turbulence_model == 1) then
             state%avh(1) = 0.0_RK
-            state%avh(ubnd_fce) = 0.0_RK
+            state%avh(ubnd_vol) = 0.0_RK
          else
             state%avh(1) = 2*state%u_taub**4/(state%eps(1) + state%eps(2)) ! = 0 for no shear stress
-            state%avh(ubnd_fce) = 2*state%u_taus**4/(state%eps(ubnd_fce) + state%eps(ubnd_fce - 1)) ! = 0 for no shear stress
+            state%avh(ubnd_vol) = 2*state%u_taus**4/(state%eps(ubnd_fce) + state%eps(ubnd_fce - 1)) ! = 0 for no shear stress
          end if
 
          do i = 2, ubnd_fce - 1
@@ -110,7 +110,7 @@ contains
          end if
 
          ! check lower limit of k
-         do i = 1, ubnd_fce - 1
+         do i = 1, ubnd_fce
             if (self%var(i) < k_min) self%var(i) = k_min ! Lower limit of TKE
          end do
 
@@ -136,23 +136,22 @@ contains
          sources = 0
          boundaries = 0
 
-         ! indices of avh not clear! do they need to be changed to 3:ubnd_fcd-2 ??
-         ! indices of avh not clear! do they need to be changed to 3:ubnd_fcd-2 ??
-         state%avh(1:ubnd_fce - 1) = 0.5_RK/sig_e*(state%num(1:ubnd_fce - 1) + state%num(2:ubnd_fce)) ! average num for TKE
+         ! Diffusivity for eps is located on volume grid
+         state%avh(1:ubnd_vol) = 0.5_RK/sig_e*(state%num(1:ubnd_fce - 1) + state%num(2:ubnd_fce))
 
          if (self%cfg%flux_condition == 1 .and. self%cfg%turbulence_model == 1) then
-            flux(1) = state%avh(1)*(state%cde*((state%ko(1))**1.5_RK))/(kappa*(K_s + 0.5_RK*grid%h(1)))**2
-            flux(ubnd_fce) = state%avh(ubnd_fce - 1)*(state%cde*((state%ko(ubnd_fce - 1))**1.5_RK))/(kappa*(z0 + 0.5_RK*grid%h(ubnd_vol)))**2
+            flux(1) = state%avh(1)*(state%cde*((state%ko(2))**1.5_RK))/(kappa*(K_s + 0.5_RK*grid%h(1)))**2
+            flux(ubnd_fce) = state%avh(ubnd_vol)*(state%cde*((state%ko(ubnd_fce - 1))**1.5_RK))/(kappa*(z0 + 0.5_RK*grid%h(ubnd_vol)))**2
 
             do i = 2, ubnd_fce - 1
               flux(i) = state%num(i)/sig_e*(state%cde*((state%ko(i))**1.5_RK)/(kappa*(z0 + 0.25_RK*(grid%h(i - 1) + grid%h(i))))**2)
             end do
 
             state%avh(1) = 0.0_RK
-            state%avh(ubnd_fce - 1) = 0.0_RK
+            state%avh(ubnd_vol) = 0.0_RK
          else
             state%avh(1) = 2*state%u_taub**4/sig_e/(state%eps(1) + state%eps(2)) ! = 0 for no shear stress
-            state%avh(ubnd_fce - 1) = 2*state%u_taus**4/sig_e/(state%eps(ubnd_fce) + state%eps(ubnd_fce - 1)) ! = 0 for no shear stress
+            state%avh(ubnd_vol) = 2*state%u_taus**4/sig_e/(state%eps(ubnd_fce) + state%eps(ubnd_fce - 1)) ! = 0 for no shear stress
          end if
 
          do i = 2, ubnd_fce - 1
@@ -180,11 +179,11 @@ contains
          !!!!!! Define boundary conditions !!!!
          boundaries(2:ubnd_fce - 1) = pminus(2:ubnd_fce - 1)/state%eps(2:ubnd_fce - 1)
          if (self%cfg%flux_condition == 1 .and. self%cfg%turbulence_model == 1) then
-            sources(2:ubnd_fce - 1) = sources(2:ubnd_fce - 1) + flux(2:ubnd_fce - 1)*grid%AreaFactor_eps(2:ubnd_fce - 1) ! AreaFactor_eps = 1/A * dA/dz (at epsilon posions)
+            sources(2:ubnd_fce - 1) = sources(2:ubnd_fce - 1) + flux(2:ubnd_fce - 1)*grid%AreaFactor_eps(1:ubnd_fce - 2) ! AreaFactor_eps = 1/A * dA/dz (at epsilon posions)
             if (grid%Az(1) /= 0) then ! Flux from bottom only!
                sources(2) = sources(2) + flux(1)*(grid%Az(1) + grid%Az(2))/(grid%Az(2)*(grid%h(1) + grid%h(2)))
             end if
-            sources(ubnd_fce-1)= sources(ubnd_fce-1)+flux(ubnd_fce)*(grid%Az(ubnd_fce)+grid%Az(ubnd_fce-1))/(grid%Az(ubnd_fce-1)*(grid%h(ubnd_fce-1)+grid%h(ubnd_fce-2)))
+            sources(ubnd_fce-1)= sources(ubnd_fce-1)+flux(ubnd_fce)*(grid%Az(ubnd_fce)+grid%Az(ubnd_fce-1))/(grid%Az(ubnd_fce-1)*(grid%h(ubnd_vol)+grid%h(ubnd_vol-1)))
             ! eps(0) and eps(ubnd_fce) are assigned in the post processing function
          else ! no fluxes, unity A-matrix + condition on RHS
             rhs_0 = state%u_taub**2/sqrt(state%cm0*state%cde)

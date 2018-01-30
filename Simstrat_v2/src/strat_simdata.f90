@@ -168,6 +168,7 @@ contains
       allocate (this%dS(state_size))
       allocate (this%Q_inp(1:4, state_size))
       allocate (this%rho(state_size))
+      allocate (this%avh(state_size))
 
       ! Values on z_upp grid
       allocate (this%k(state_size + 1))
@@ -175,7 +176,6 @@ contains
       allocate (this%eps(state_size + 1))
       allocate (this%num(state_size + 1))
       allocate (this%nuh(state_size + 1))
-      allocate (this%avh(state_size + 1))
       allocate (this%P(state_size + 1))
       allocate (this%B(state_size + 1))
       allocate (this%NN(state_size + 1))

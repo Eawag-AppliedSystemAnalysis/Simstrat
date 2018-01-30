@@ -108,7 +108,7 @@ contains
                tb_start = tb_end
                absorb_start(1:nz) = absorb_end(1:nz)
                !Read next value
-               read (30, *, end=7) tb_end, (absorb_read_end(i), i=1, nval - 1)
+               read (30, *, end=7) tb_end, (absorb_read_end(i), i=1, nval)
                call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end)
             end do
             !Linearly interpolate value at correct datum (for all depths)
