@@ -110,7 +110,7 @@ contains
          call f%destroy()
 
          ! Define variables that should be written
-         allocate (self%simdata%output_cfg%output_vars(11))
+         allocate (self%simdata%output_cfg%output_vars(12))
 
          self%simdata%output_cfg%output_vars(1)%name = "V"
          self%simdata%output_cfg%output_vars(1)%values => self%simdata%model%V
@@ -155,6 +155,10 @@ contains
          self%simdata%output_cfg%output_vars(11)%name = "B"
          self%simdata%output_cfg%output_vars(11)%values => self%simdata%model%B
          self%simdata%output_cfg%output_vars(11)%volume_grid = .false.
+
+         self%simdata%output_cfg%output_vars(12)%name = "Ps"
+         self%simdata%output_cfg%output_vars(12)%values => self%simdata%model%P_seiche
+         self%simdata%output_cfg%output_vars(12)%volume_grid = .false.
       end associate
    end subroutine
 
@@ -223,7 +227,7 @@ contains
          ! Set up timing
          model%datum = self%simdata%sim_cfg%start_datum
          model%dt = self%simdata%sim_cfg%timestep
-         model%std = 1
+         model%std = 0
          model%step = 0
       end associate
    end subroutine
