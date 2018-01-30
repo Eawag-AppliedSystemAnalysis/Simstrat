@@ -181,7 +181,6 @@ contains
             call self%grid%interpolate_from_face(test, self%config%output_vars(i)%values, self%n_depths, values_on_zout)
          end if
 
-         where (abs(values_on_zout) < 1E-25_RK) values_on_zout = 0.0_RK
          call self%output_files(i)%add(datum, real_fmt='(F12.4)')
          call self%output_files(i)%add(values_on_zout, real_fmt='(ES12.4)')
          call self%output_files(i)%next_row()
@@ -210,8 +209,6 @@ contains
 
       ! For each variable, write state
       do i = 1, self%n_vars
-         where (abs(self%config%output_vars(i)%values) < 1E-25_RK) &
-            self%config%output_vars(i)%values = 0.0_RK
          call self%output_files(i)%add(datum, real_fmt='(F12.4)')
          call self%output_files(i)%add(self%config%output_vars(i)%values, real_fmt='(ES14.4)')
          call self%output_files(i)%next_row()
