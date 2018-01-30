@@ -138,6 +138,10 @@ contains
       ! Run simulation until end datum
       do while (simdata%model%datum<simdata%sim_cfg%end_datum)
 
+         !increase datum and step
+         simdata%model%datum = simdata%model%datum + simdata%model%dt/86400
+         simdata%model%std = simdata%model%std + 1
+         
          ! Read forcing file
          call mod_forcing%update(simdata%model)
 
@@ -169,10 +173,6 @@ contains
          ! Solve k & eps
          call mod_k%update(simdata%model, simdata%model_param)
          call mod_eps%update(simdata%model, simdata%model_param)
-
-         !increase datum and step
-         simdata%model%datum = simdata%model%datum + simdata%model%dt/86400
-         simdata%model%std = simdata%model%std + 1
 
          ! Call logger to write files
          if (mod(simdata%model%std,simdata%output_cfg%thinning_interval)==0) then
