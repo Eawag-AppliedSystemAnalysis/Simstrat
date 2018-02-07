@@ -94,7 +94,7 @@ subroutine simstrat_simulation()
     double precision k(0:xli),ko(0:xli) !Turbulent kinetic energy (TKE) [J/kg]
     double precision eps(0:xli),L(0:xli) !TKE dissipation rate [W/kg]
     double precision num(0:xli),nuh(0:xli) !Turbulent viscosity (momentum) and diffusivity (temperature)
-    double precision P(0:xli),B(0:xli),NN(0:xli) !Shear stress production [W/kg], buoyancy production [W/kg], Brunt-Väisälä frequency [s-2]
+    double precision P(0:xli),B(0:xli),NN(0:xli) !Shear stress production [W/kg], buoyancy production [W/kg], Brunt-VÃ¤isÃ¤lÃ¤ frequency [s-2]
     double precision dS(0:xli) !Source/sink for salinity
     double precision cmue1(0:xli),cmue2(0:xli) !Model constants
     double precision rho(0:xli) !density
@@ -496,7 +496,7 @@ subroutine Temperature(nuh,rad0,rad,h,T,heat,SST,ga1,form_1,form_2)
 
     ! Calculation
     !Radiation reaching each layer
-    rad(xl) = rad0/rho_0/cp ![°C*m/s]
+    rad(xl) = rad0/rho_0/cp ![Â°C*m/s]
     do i=xl-1,0,-1
         rad(i) = rad(i+1)*exp(-h(i)*ga1(xl-i)) !Attenuated by absorption
     end do
@@ -932,7 +932,7 @@ subroutine Advection(Qvert,Q_inp,U,V,T,S,k,eps,zu,zk,h,Az)
     double precision U(0:xli), V(0:xli), T(0:xli), S(0:xli)
     double precision k(0:xli), eps(0:xli)
     double precision Qvert(0:xli) ! Vertical advection [m3/s]
-    double precision Q_inp(1:4,0:xli) ! Inflow [m3/s], Outflow [m3/s], T-input [°C*m3/s], S-input [‰*m3/s]
+    double precision Q_inp(1:4,0:xli) ! Inflow [m3/s], Outflow [m3/s], T-input [Â°C*m3/s], S-input [Â‰*m3/s]
 
     double precision dh, dhi(1:2)      ! depth differences
     double precision dti(1:2)          ! first and second time step
@@ -1548,7 +1548,7 @@ subroutine write_text_var(datum,zext,var,fid)
     double precision xs(0:nsave+1)
     integer i,fid
 
-    call Interp_nan(zext,var,xl-1,zsave,xs,nsave)
+    call Interp(zext,var,xl-1,zsave,xs,nsave)
     xs(nsave+1) = var(xl) !Surface value
 
     write(fid,*)
