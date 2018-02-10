@@ -14,6 +14,11 @@ Year: 2014
 Improved parameterization of heat fluxes, revision of the code (Schmid and Köster, 2016)  
 Year: 2016  
 
+[Version 1.6](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/releases/tag/V1.6)  
+Improved handling of inflows, revision of the code, addition of warning messages
+Year: 2018  
+
+
 ## Compile Simstrat
 
 1. Download the simstrat source code of a specific simstrat version using the link above or clone the current master branch:
