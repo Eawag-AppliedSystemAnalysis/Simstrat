@@ -52,8 +52,8 @@ subroutine Interp_nan(z,y,num_z,zi,yi,num_zi)
       end do
       posk2 = num_zi
       do while (zi(posk2)>z(num_z))
-         yi(posk1) = 0.
-         yi(posk2) = 0./yi(posk1)   ! NaN
+         yi(posk2) = 0.
+         yi(posk2) = 0./yi(posk2)   ! NaN
          posk2 = posk2-1
       end do
 
@@ -204,7 +204,7 @@ subroutine Forcing(datum,T,idx,tx,ty,u_taus,rad0,heat,SST,u10,v10,wind,Wf)
           C10 = C10_const
       else if (ModC10==2) then !Ocean model
           C10 = C10_const*(-0.000000712*wind**2+0.00007387*wind+0.0006605) !MS 2016 added C10_const as calibration parameter
-      else if (ModC10==3) then !Lake model (Wüest and Lorke 2003) 
+      else if (ModC10==3) then !Lake model (WÃ¼est and Lorke 2003) 
           if (wind<=0.1) then !MS 2016 added C10_const as calibration parameter
               C10 = C10_const*0.06215
           else if (wind<=3.85) then
@@ -570,8 +570,8 @@ subroutine Lateral_rho(datum,idx,zu,zk,z_zero,h,T,S,rho,Qvert,Q_inp)
           slope = 0.05
           phi = pi/4
           Q_in(xl) = Inp(1) !Inflow flow rate [m3/s]
-          T_in = Inp(3) !Inflow temperature [°C*m3/s]
-          S_in = Inp(4) !Inflow salinity [‰*m3/s]
+          T_in = Inp(3) !Inflow temperature [Â°C*m3/s]
+          S_in = Inp(4) !Inflow salinity [Â‰*m3/s]
           rho_in = rho_0*(0.9998395+T_in*(6.7914e-5+T_in*(-9.0894e-6+T_in*&
                    (1.0171e-7+T_in*(-1.2846e-9+T_in*(1.1592e-11+T_in*(-5.0125e-14))))))+&
                    (8.181e-4+T_in*(-3.85e-6+T_in*(4.96e-8)))*S_in) !Inflow density [kg/m3]
