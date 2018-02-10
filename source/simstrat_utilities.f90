@@ -438,6 +438,10 @@ subroutine Lateral(datum,idx,zk,z_zero,Qvert,Q_inp)
                  !Q_s(i,j) = Q_s(i,xl)
              !end do
              !Linearly interpolate value at correct datum (for all depths)
+             if(tb_e(i)<=tb_s(i)) then
+                write(6,*) 'Error: dates in ',trim(fname(i)),' file must always be increasing.'
+                stop
+             end if
              do j=1,xl
                  Q_inp(i,j) = Q_s(i,j) + (datum-tb_s(i)) * (Q_e(i,j)-Q_s(i,j))/(tb_e(i)-tb_s(i))
              end do
