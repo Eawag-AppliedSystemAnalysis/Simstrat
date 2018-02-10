@@ -1011,7 +1011,7 @@ subroutine Advection(Qvert,Q_inp,U,V,T,S,k,eps,zu,zk,h,Az)
                 h(xl) = h(xl) + dhi(1)                      ! New thickness of top box
                 zu(xl) = zu(xl) + dhi(1)/2                  ! New centre coordinate of top box
                 zk(xl) = zk(xl) + dhi(1)                    ! New surface coordinate of top box
-                return                                      ! No change in volume (overflow)
+                !return                                     ! No change in volume (overflow)
             else if (((dh+h(xl))>h(xl-1)/2) .and.&   ! If top box>0.5*lower box
                      ((dh+h(xl))<2*h(xl-1))) then    ! and top box<2*lower box
                 h(xl) = h(xl) + dhi(1)                      ! New thickness of top box
