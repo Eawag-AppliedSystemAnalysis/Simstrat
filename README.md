@@ -15,7 +15,7 @@ Improved parameterization of heat fluxes, revision of the code (Schmid and Köst
 Year: 2016  
 
 [Version 1.6](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/releases/tag/V1.6)  
-Improved handling of inflows, revision of the code, addition of warning messages
+Improved handling of inflows, revision of the code, addition of warning messages  
 Year: 2018  
 
 
