@@ -495,15 +495,15 @@ subroutine Lateral_rho(datum,idx,zu,zk,z_zero,h,T,S,rho,Qvert,Q_inp)
       integer i, j, k, i1, i2, num_z(1:4), fnum(1:4), eof(1:4)
       character*20 fname(1:4)
       double precision z_Inp(1:4,mxl), dummy
-      double precision Inp_rs(1:4,mxl), Inp_re(1:4,mxl), Inp(1:4)
+      double precision Inp_rs(1:4,mxl), Inp_re(1:4,mxl), Inp(1:4,mxl)
       double precision Q_s(1:4,mxl), Q_e(1:4,mxl)
       double precision Q_rs(1:4,mxl), Q_re(1:4,mxl)
       double precision tb_s(1:4), tb_e(1:4)
       double precision T_in, S_in, rho_in
-      double precision slope, phi, CD_in, Ri, g_red, E
-      double precision h_in(0:xl), Q_in(0:xl)
+      double precision slope, hang, CD_in, Ri, g_red, E
+      double precision h_in(0:xl), Q_in(0:xl), Q_inp_inc
 
-      save Inp_rs, Inp_re
+      save Inp_rs, Inp_re, Q_s, Q_e
       save num_z, eof
       save tb_s, tb_e
 
@@ -517,15 +517,26 @@ subroutine Lateral_rho(datum,idx,zu,zk,z_zero,h,T,S,rho,Qvert,Q_inp)
             read(fnum(i),*,end=9)
             read(fnum(i),*,end=9) num_z(i)
             read(fnum(i),*,end=9) dummy, (z_Inp(i,j),j=1,num_z(i))
-            if(i/=2) num_z(i)=1
-            if(i==2) z_Inp(i,1:num_z(i)) = z_zero + z_Inp(i,1:num_z(i))
+            z_Inp(i,1:num_z(i)) = z_zero + z_Inp(i,1:num_z(i))
+            if (i==2 .and. num_z(i)>1) then
+                if (any(z_Inp(i,2:num_z(i))<=z_Inp(i,1:(num_z(i)-1)))) then
+                    write(6,*) 'Error: outflow depths in ',trim(fname(i)),' file must be strictly increasing.'
+                    stop
+                end if
+            end if
+            if (i==3 .or. i==4) then
+                if (any(z_Inp(i,1:num_z(i))/=z_Inp(1,1:num_z(i)))) then
+                    write(6,*) 'Error: inflow depths in ',trim(fname(i)),' file must match the ones in inflow file.'
+                    stop
+                end if
+            end if
             !Read first values
             read(fnum(i),*,end=9) tb_s(i),(Inp_rs(i,j),j=1,num_z(i))
             if(i==2) call Integrate(z_Inp(i,1:num_z(i)),Inp_rs(i,1:num_z(i)),Q_rs(i,1:num_z(i)),num_z(i))
-            if(i==2) call Interp(z_Inp(i,1:num_z(i)),Q_rs(i,1:num_z(i)),num_z(i)-1,zu,Q_s(i,1:xl),xl-1)
+            if(i==2) call Interp(z_Inp(i,1:num_z(i)),Q_rs(i,1:num_z(i)),num_z(i)-1,zk(1:xl),Q_s(i,1:xl),xl-1)
             read(fnum(i),*,end=7) tb_e(i),(Inp_re(i,j),j=1,num_z(i))
             if(i==2) call Integrate(z_Inp(i,1:num_z(i)),Inp_re(i,1:num_z(i)),Q_re(i,1:num_z(i)),num_z(i))
-            if(i==2) call Interp(z_Inp(i,1:num_z(i)),Q_re(i,1:num_z(i)),num_z(i)-1,zu,Q_e(i,1:xl),xl-1)
+            if(i==2) call Interp(z_Inp(i,1:num_z(i)),Q_re(i,1:num_z(i)),num_z(i)-1,zk(1:xl),Q_e(i,1:xl),xl-1)
          end if
 
          if ((datum<=tb_s(i)).or.(eof(i)==1)) then       ! if datum before first date or end of file reached
@@ -533,16 +544,21 @@ subroutine Lateral_rho(datum,idx,zu,zk,z_zero,h,T,S,rho,Qvert,Q_inp)
          else
              do while (.not.((datum>=tb_s(i)).and.(datum<=tb_e(i)))) ! do until datum between dates
                  tb_s(i) = tb_e(i)             ! move one step in time
-                 if(i/=2) Inp_rs(i,1) = Inp_re(i,1)
+                 if(i/=2) Inp_rs(i,1:num_z(i)) = Inp_re(i,1:num_z(i))
                  if(i==2) Q_s(i,1:xl) = Q_e(i,1:xl)
                  read(fnum(i),*,end=7) tb_e(i),(Inp_re(i,j),j=1,num_z(i))
                  if(i==2) call Integrate(z_Inp(i,1:num_z(i)),Inp_re(i,1:num_z(i)),Q_re(i,1:num_z(i)),num_z(i))
-                 if(i==2) call Interp(z_Inp(i,1:num_z(i)),Q_re(i,1:num_z(i)),num_z(i)-1,zu,Q_e(i,1:xl),xl-1)
+                 if(i==2) call Interp(z_Inp(i,1:num_z(i)),Q_re(i,1:num_z(i)),num_z(i)-1,zk(1:xl),Q_e(i,1:xl),xl-1)
              end do
              !Linearly interpolate value at correct datum
              if (i/=2) then
-                 Inp(i) = Inp_rs(i,1) + (datum-tb_s(i)) * (Inp_re(i,1)-Inp_rs(i,1))/(tb_e(i)-tb_s(i))
+                Inp(i,1:num_z(i)) = Inp_rs(i,1:num_z(i)) +&
+                         (datum-tb_s(i)) * (Inp_re(i,1:num_z(i))-Inp_rs(i,1:num_z(i)))/(tb_e(i)-tb_s(i))
              else
+                 if(tb_e(i)<=tb_s(i)) then
+                    write(6,*) 'Error: dates in ',trim(fname(i)),' file must always be increasing.'
+                    stop
+                 end if
                  do j=1,xl
                      Q_inp(i,j) = Q_s(i,j) + (datum-tb_s(i)) * (Q_e(i,j)-Q_s(i,j))/(tb_e(i)-tb_s(i))
                  end do
@@ -551,13 +567,13 @@ subroutine Lateral_rho(datum,idx,zu,zk,z_zero,h,T,S,rho,Qvert,Q_inp)
          goto 11
 
 7        eof(i) = 1
-8        if(i/=2) Inp(i) = Inp_rs(i,1)            ! Set to closest available value
-         if(i==2) Q_inp(i,1:xl) = Q_s(i,1:xl)     ! Set to closest available value
+8        if(i/=2) Inp(i,1:num_z(i)) = Inp_rs(i,1:num_z(i)) ! Set to closest available value
+         if(i==2) Q_inp(i,1:xl) = Q_s(i,1:xl)              ! Set to closest available value
          goto 11
 
 9        write(6,*) 'No data found in ',trim(fname(i)),' file. Check number of depths. Values set to zero.'
          eof(i) = 1
-         if(i/=2) Inp(i) = 0.
+         if(i/=2) Inp(i,1:num_z(i)) = 0.
          if(i/=2) Inp_rs(i,1) = 0.
          if(i==2) Q_inp(i,0:xl) = 0.
          if(i==2) Q_s(i,1:xl) = 0.
@@ -570,60 +586,74 @@ subroutine Lateral_rho(datum,idx,zu,zk,z_zero,h,T,S,rho,Qvert,Q_inp)
           Q_inp(2,xl-j+1) = Q_inp(2,xl-j+1)-Q_inp(2,xl-j)
       end do
 
-      if (Inp(1)>1E-15) then
-          slope = 0.05
-          phi = pi/4
-          Q_in(xl) = Inp(1) !Inflow flow rate [m3/s]
-          T_in = Inp(3) !Inflow temperature [°C*m3/s]
-          S_in = Inp(4) !Inflow salinity [*m3/s]
-          rho_in = rho_0*(0.9998395+T_in*(6.7914e-5+T_in*(-9.0894e-6+T_in*&
-                   (1.0171e-7+T_in*(-1.2846e-9+T_in*(1.1592e-11+T_in*(-5.0125e-14))))))+&
-                   (8.181e-4+T_in*(-3.85e-6+T_in*(4.96e-8)))*S_in) !Inflow density [kg/m3]
-          g_red = g*(rho_in-rho(xl))/rho_in !Reduced gravity [m/s2]
-          if (g_red>0) then
-              CD_in = CD*10 !Inflow drag coefficient
-              Ri = CD_in*(1+0.21*CD_in*sin(atan(slope)))/(sin(atan(slope))*tan(phi)) !Richardson number
-              E = 1.6*CD_in**1.5/Ri !Entrainment coefficient
-              h_in(xl) = (2*Inp(1)**2*Ri*slope**2/g_red)**0.2 !Inflow thickness [m]
-              do k=xl,1,-1
-                  if(rho_in<=rho(k)) exit
-                  h_in(k-1) = 1.2*E*(zu(k)-zu(k-1))/slope + h_in(k)
-                  Q_in(k-1) = Q_in(k)*(h_in(k-1)/h_in(k))**(5./3.)
-                  Q_inp(2,k) = Q_inp(2,k) - (Q_in(k-1)-Q_in(k))
-                  T_in = (T_in*Q_in(k)+T(k)*(Q_in(k-1)-Q_in(k)))/Q_in(k-1)
-                  S_in = (S_in*Q_in(k)+S(k)*(Q_in(k-1)-Q_in(k)))/Q_in(k-1)
-                  rho_in = (rho_in*Q_in(k)+rho(k)*(Q_in(k-1)-Q_in(k)))/Q_in(k-1)
-              end do
-          else
+      Q_inp(1,:) = 0
+      Q_inp(3:4,:) = 0
+
+      do j=1,num_z(1)
+          if (Inp(1,j)>1E-15) then
               k=xl
-          end if
-
-          if (k==xl) then !surface flow
-              i1=xl
-              i2=xl-1
-          else
-              do i1=k,xl !extend upwards
-                  if(zu(i1)>zu(k)+h_in(k)/2) exit
+              do while (zu(k)>z_Inp(1,j))
+                k=k-1
               end do
-              do i2=k,1,-1 !extend downwards
-                  if(zu(i2)<zu(k)-h_in(k)/2) exit
+              Q_in(k) = Inp(1,j) !Inflow flow rate [m3/s]
+              T_in = Inp(3,j) !Inflow temperature [°C*m3/s]
+              S_in = Inp(4,j) !Inflow salinity [‰*m3/s]
+              rho_in = rho_0*(0.9998395+T_in*(6.7914e-5+T_in*(-9.0894e-6+T_in*&
+                       (1.0171e-7+T_in*(-1.2846e-9+T_in*(1.1592e-11+T_in*(-5.0125e-14))))))+&
+                       (8.181e-4+T_in*(-3.85e-6+T_in*(4.96e-8)))*S_in) !Inflow density [kg/m3]
+              g_red = g*(rho_in-rho(k))/rho_in !Reduced gravity [m/s2]
+					   
+              slope = pi/72 !Slope of inflow
+              !hang = pi/3 !Stream half-angle
+              CD_in = CD*10 !Inflow drag coefficient
+              !Ri = CD_in*(1+0.21*CD_in**0.5*sin(hang))/(sin(hang)*tan(slope)) !Richardson number
+              !Ri = CD_in/tan(slope)*(1/sin(hang)+0.21*CD_in**0.5) !Richardson number
+              Ri = CD_in/tan(slope)*(1.15+0.21*CD_in**0.5) !Richardson number (assuming an inflow half-angle of pi/3)
+              E = 1.6*CD_in**1.5/Ri !Entrainment coefficient
+              h_in(k) = (2*Q_in(k)**2*Ri*tan(slope)**2/abs(g_red))**0.2 !Inflow thickness [m]
+			  
+              if (g_red>0) then !Inflow plunges
+                  do while ((rho_in>rho(k)).and.(k>1))
+                      h_in(k-1) = 1.2*E*(zu(k)-zu(k-1))/sin(slope) + h_in(k)
+                      Q_in(k-1) = Q_in(k)*(h_in(k-1)/h_in(k))**(5./3.)
+                      Q_inp(2,k) = Q_inp(2,k) - (Q_in(k-1)-Q_in(k))
+                      T_in = (T_in*Q_in(k)+T(k)*(Q_in(k-1)-Q_in(k)))/Q_in(k-1)
+                      S_in = (S_in*Q_in(k)+S(k)*(Q_in(k-1)-Q_in(k)))/Q_in(k-1)
+                      rho_in = (rho_in*Q_in(k)+rho(k)*(Q_in(k-1)-Q_in(k)))/Q_in(k-1)
+                      k=k-1
+                  end do
+                  i2 = k
+                  do i1=k,xl !extend upwards
+                      if((i1==xl).or.(zu(i1+1)>(zu(k)+h_in(k)))) exit
+                  end do
+              else if (g_red<0) then !Inflow rises
+                  do while ((rho_in<rho(k)).and.(k<xl))
+                      h_in(k+1) = 1.2*E*(zu(k+1)-zu(k))/sin(slope) + h_in(k)
+                      Q_in(k+1) = Q_in(k)*(h_in(k+1)/h_in(k))**(5./3.)
+                      Q_inp(2,k) = Q_inp(2,k) - (Q_in(k+1)-Q_in(k))
+                      T_in = (T_in*Q_in(k)+T(k)*(Q_in(k+1)-Q_in(k)))/Q_in(k+1)
+                      S_in = (S_in*Q_in(k)+S(k)*(Q_in(k+1)-Q_in(k)))/Q_in(k+1)
+                      rho_in = (rho_in*Q_in(k)+rho(k)*(Q_in(k+1)-Q_in(k)))/Q_in(k+1)
+                      k=k+1
+                  end do
+                  i1 = k
+                  do i2=k,1,-1 !extend downwards
+                      if((i2==1).or.(zu(i2-1)<(zu(k)-h_in(k)))) exit
+                  end do
+              end if
+
+              do i=i2,i1
+                  Q_inp_inc = Q_in(k)/(zk(i1)-zk(i2)+h(i))*h(i)
+                  Q_inp(1,i) = Q_inp(1,i) + Q_inp_inc
+                  Q_inp(3,i) = Q_inp(3,i) + T_in*Q_inp_inc
+                  Q_inp(4,i) = Q_inp(4,i) + S_in*Q_inp_inc
               end do
           end if
-          i1 = i1-1
-          i2 = i2-1
+      end do
 
-          Q_inp(1,:) = 0
-          Q_inp(3:4,:) = 0
-          do i=i1,i2+1,-1
-              Q_inp(1,i) = Q_in(k)/(zk(i1)-zk(i2))*h(i)
-              Q_inp(3,i) = T_in*Q_inp(1,i)
-              Q_inp(4,i) = S_in*Q_inp(1,i)
-          end do
-      end if
-
-      Qvert(1) = Q_inp(1,1)+Q_inp(2,1)
+      Qvert(1) = Q_inp(1,1) + Q_inp(2,1)
       do i=2,xl
-          Qvert(i) = Qvert(i-1)+Q_inp(1,i)+Q_inp(2,i)
+          Qvert(i) = Qvert(i-1) + Q_inp(1,i) + Q_inp(2,i)
       end do
 
       return
