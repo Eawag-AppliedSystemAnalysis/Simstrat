@@ -964,38 +964,39 @@ subroutine Advection(Qvert,Q_inp,U,V,T,S,k,eps,zu,zk,h,Az)
 
         do i=1,xl
             if (i==xl .and. Qvert(i)>0) then
-                top = 0
-            else
-                top = 1
+                dU(i) = 0
+                dV(i) = 0
+                dTemp(i) = 0
+                dS(i) = 0
+            else ! Advective flow out of box i, always negative
+                dU(i)    = -abs(Qvert(i))*U(i)
+                dV(i)    = -abs(Qvert(i))*V(i)
+                dTemp(i) = -abs(Qvert(i))*T(i)
+                dS(i)    = -abs(Qvert(i))*S(i)
             end if
-            ! Advective flow out of box i, always negative
-            dU(i)    = -top*abs(form_adv(i)*Qvert(i))*U(i)
-            dV(i)    = -top*abs(form_adv(i)*Qvert(i))*V(i)
-            dTemp(i) = -top*abs(form_adv(i)*Qvert(i))*T(i)
-            dS(i)    = -top*abs(form_adv(i)*Qvert(i))*S(i)
             if (i>1 .and. Qvert(i-1)>0) then       ! Advective flow into box i, from above
-                dU(i)    = dU(i) + form_adv(i)*Qvert(i-1)*U(i-1)
-                dV(i)    = dV(i) + form_adv(i)*Qvert(i-1)*V(i-1)
-                dTemp(i) = dTemp(i) + form_adv(i)*Qvert(i-1)*T(i-1)
-                dS(i)    = dS(i) + form_adv(i)*Qvert(i-1)*S(i-1)
+                dU(i)    = dU(i) + Qvert(i-1)*U(i-1)
+                dV(i)    = dV(i) + Qvert(i-1)*V(i-1)
+                dTemp(i) = dTemp(i) + Qvert(i-1)*T(i-1)
+                dS(i)    = dS(i) + Qvert(i-1)*S(i-1)
             end if
             if (i<xl .and. Qvert(i+1)<0) then      ! Advective flow into box i, from below
-                dU(i)    = dU(i) - form_adv(i)*Qvert(i+1)*U(i+1)
-                dV(i)    = dV(i) - form_adv(i)*Qvert(i+1)*V(i+1)
-                dTemp(i) = dTemp(i) - form_adv(i)*Qvert(i+1)*T(i+1)
-                dS(i)    = dS(i) - form_adv(i)*Qvert(i+1)*S(i+1)
+                dU(i)    = dU(i) - Qvert(i+1)*U(i+1)
+                dV(i)    = dV(i) - Qvert(i+1)*V(i+1)
+                dTemp(i) = dTemp(i) - Qvert(i+1)*T(i+1)
+                dS(i)    = dS(i) - Qvert(i+1)*S(i+1)
             end if
         end do
 
         ! Inflow and outflow
-        dTemp(1:xl) = dTemp(1:xl) + form_adv(1:xl)*(Q_inp(3,1:xl)+Q_inp(2,1:xl)*T(1:xl))
-        dS(1:xl) = dS(1:xl) + form_adv(1:xl)*(Q_inp(4,1:xl)+Q_inp(2,1:xl)*S(1:xl))
+        dTemp(1:xl) = dTemp(1:xl) + Q_inp(3,1:xl) + Q_inp(2,1:xl)*T(1:xl)
+        dS(1:xl) = dS(1:xl) + Q_inp(4,1:xl) + Q_inp(2,1:xl)*S(1:xl)
 
         ! Take first time step
-        U(1:xl) = U(1:xl) + dU(1:xl)
-        V(1:xl) = V(1:xl) + dV(1:xl)
-        T(1:xl) = T(1:xl) + dTemp(1:xl)
-        S(1:xl) = S(1:xl) + dS(1:xl)
+        U(1:xl) = U(1:xl) + form_adv(1:xl)*dU(1:xl)
+        V(1:xl) = V(1:xl) + form_adv(1:xl)*dV(1:xl)
+        T(1:xl) = T(1:xl) + form_adv(1:xl)*dTemp(1:xl)
+        S(1:xl) = S(1:xl) + form_adv(1:xl)*dS(1:xl)
 
         ! Variation of variables due to change in volume
         U(xl) = U(xl)*h(xl)/(h(xl)+dhi(ti))
