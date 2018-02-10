@@ -159,13 +159,13 @@ subroutine simstrat_simulation()
             open(80+j,access='SEQUENTIAL',action='WRITE',status='unknown',FORM='formatted',&
                       file=trim(PathOut)//trim(filelst(j))//'_out.dat')
             if (j/=13) then
-                write(80+j,'(I10,$)'), 1
+                write(80+j,'(I10,$)') 1
                 do i=0,nsave
                     write(80+j,'(F12.3,$)') zsave(i)-z_zero
                 end do
-                write(80+j,'(A12,$)'), 'NaN'
+                write(80+j,'(A12,$)') 'NaN'
             else
-                write(93,'(I10,I12,$)'), 1, 1
+                write(93,'(I10,I12,$)') 1, 1
             end if
         end do
         call write_text(datum,U,V,T,S,k,eps,nuh,B,P,NN,P_Seiche,E_Seiche,zu(0:xl),zk(0:xl),Qvert)
