@@ -263,7 +263,7 @@ contains
             grid_config%nz_grid = int(grid_config%grid_read(1))
             grid_config%equidistant_grid = .TRUE.
          else ! Variable spacing
-            grid_config%nz_grid = ictr - 1
+            grid_config%nz_grid = ictr
             grid_config%equidistant_grid = .FALSE.
          end if
 
