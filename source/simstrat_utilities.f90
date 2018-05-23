@@ -592,7 +592,7 @@ subroutine Lateral_rho(datum,idx,zu,zk,z_zero,h,T,S,rho,Qvert,Q_inp)
       do j=1,num_z(1)
           if (Inp(1,j)>1E-15) then
               k=xl
-              do while (zu(k)>z_Inp(1,j))
+              do while (zu(k)>z_Inp(1,j).and.(k>1))
                 k=k-1
               end do
               Q_in(k) = Inp(1,j) !Inflow flow rate [m3/s]
