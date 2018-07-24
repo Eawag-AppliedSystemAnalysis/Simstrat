@@ -14,7 +14,7 @@ module strat_grid
    type, public :: GridConfig
       integer :: nz_grid_max
       integer :: nz_grid
-      real(RK) :: depth
+      real(RK) :: max_depth
       real(RK), dimension(:), allocatable :: grid_read ! Grid definition
       real(RK), dimension(:), allocatable :: A_read ! Area definition
       real(RK), dimension(:), allocatable :: z_A_read ! Height of area definitions
@@ -45,7 +45,7 @@ module strat_grid
       integer :: ubnd_vol, ubnd_fce, l_vol, l_fce   ! Upper and lenght for volume (vol) and face(fce) grids
       real(RK) :: z_zero
       real(RK) :: lake_level_old
-      real(RK) :: depth
+      real(RK) :: max_depth
 
    contains
       !Many methods...
@@ -88,6 +88,7 @@ contains
       ! Assign config
       self%nz_grid = config%nz_grid
       self%nz_grid_max = config%nz_grid_max
+      self%max_depth = config%max_depth
 
       ! Use read config to determine grid size
       call self%init_morphology(config)
@@ -154,7 +155,7 @@ contains
          end if
 
          !If maxdepth grid larger than morphology
-         if (config%grid_read(self%nz_grid) > config%depth) then
+         if (config%grid_read(self%nz_grid) > config%max_depth) then
             write (*, *) "Grid invalid - maxdepth of grid larger than morphology"
             !Todo: check indexing of this code
             !do while ((config%grid_read(self%nz_grid)>config%depth).and.(self%nz_grid>0.))
@@ -163,7 +164,7 @@ contains
          end if
 
          !Include bottom value if not included
-         if (config%grid_read(self%nz_grid) < config%depth) then
+         if (config%grid_read(self%nz_grid) < config%max_depth) then
             write (*, *) "Grid invalid - Bottom value not included"
             !Todo: check indexing of this code
             !self%nz_grid=self%nz_grid+1
@@ -177,7 +178,7 @@ contains
       self%h(self%nz_grid + 1) = 0 ! Note that h(0) has no physical meaning but helps with some calculations
       if (config%equidistant_grid) then
          ! Equidistant grid
-         self%h(1:self%nz_grid) = config%depth/self%nz_grid
+         self%h(1:self%nz_grid) = config%max_depth/self%nz_grid
       else
          ! Set up h according to configuration
          do i = 1, self%nz_grid
@@ -197,14 +198,15 @@ contains
       self%z_face(1) = 0.0_RK
       do i = 1, self%nz_grid
          self%z_volume(i) = self%z_volume(i - 1) + 0.5_RK*(self%h(i - 1) + self%h(i))
-         self%z_volume(i) = nint(1e6_RK*self%z_volume(i))/1e6_RK
+         self%z_volume(i-1) = nint(1e6_RK*self%z_volume(i-1))/1e6_RK
       end do
+      self%z_volume(self%nz_grid) = nint(1e6_RK*self%z_volume(self%nz_grid))/1e6_RK
 
       do i = 2, self%nz_grid + 1
          self%z_face(i) = self%z_face(i - 1) + self%h(i - 1)
-         self%z_face(i) = nint(1e6_RK*self%z_face(i))/1e6_RK
+         self%z_face(i - 1) = nint(1e6_RK*self%z_face(i - 1))/1e6_RK
       end do
-
+      self%z_face(self%nz_grid + 1) = nint(1e6_RK*self%z_face(self%nz_grid + 1))/1e6_RK
       ! needed?
       !self%lake_level_old = self%z_face(self%nz_occupied)
       write (*, *) "Warning, nz_occupied not set yet"
@@ -317,18 +319,17 @@ contains
                  z_volume=>self%z_volume, &
                  ubnd_vol=>self%ubnd_vol, &
                  h=>self%h)
+         h(ubnd_vol + 1) = h(ubnd_vol)/2+dh
+         h(ubnd_vol) = h(ubnd_vol)/2
 
-         z_face(ubnd_fce + 1) = z_face(ubnd_fce) + dh
-         z_face(ubnd_fce) = z_face(ubnd_fce) - (h(ubnd_vol) - dh)
+         z_face(ubnd_fce+1) = z_face(ubnd_fce)+dh
+         z_face(ubnd_fce) = z_face(ubnd_fce)-h(ubnd_vol)/2
 
-         z_volume(ubnd_vol + 1) = z_volume(ubnd_vol) + 0.5_RK*dh
-         z_volume(ubnd_vol) = z_volume(ubnd_vol) - 0.5_RK*(h(ubnd_vol) - dh)
-
-         h(ubnd_vol + 1) = z_face(ubnd_fce + 1) - z_face(ubnd_fce)
-         h(ubnd_vol) = z_face(ubnd_fce) - z_face(ubnd_fce - 1)
+         z_volume(ubnd_vol+1)=z_volume(ubnd_vol)+h(ubnd_vol+1)/2
+         z_volume(ubnd_vol)=z_volume(ubnd_vol)-h(ubnd_vol+1)/2
 
          ! update number of occupied cells
-         self%nz_occupied = self%nz_occupied - 1
+         self%nz_occupied = self%nz_occupied + 1
 
          call self%update_nz()
 
@@ -393,7 +394,7 @@ contains
       real(RK), dimension(:), intent(out) :: yi
 
       integer, intent(in) :: num_z
-      call Interp(z, y, num_z, self%z_face, yi, self%nz_grid + 1)
+      call Interp(z, y, num_z, self%z_face, yi, self%nz_grid)
    end subroutine
 
    subroutine grid_interpolate_to_face_from_second(self, z, y, num_z, yi)
@@ -403,7 +404,7 @@ contains
       real(RK), dimension(:), intent(out) :: yi
 
       integer, intent(in) :: num_z
-      call Interp(z, y, num_z, self%z_face(2:self%nz_grid + 1), yi, self%nz_grid+1)
+      call Interp(z, y, num_z, self%z_face(2:self%nz_grid + 1), yi, self%nz_grid)
    end subroutine
 
    subroutine grid_interpolate_from_vol(self, z, y, num_z, yi)

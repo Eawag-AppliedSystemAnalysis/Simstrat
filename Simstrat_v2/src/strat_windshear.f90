@@ -55,7 +55,7 @@ contains
          !!!!!!!! Define sources !!!!!!!!
          sources = 0
          if (self%cfg%pressure_gradients == 1) then !Svensson 1978
-            sources(2:ubnd_vol - 1) = -pi**2*rho_0*g*integr/ubnd_vol*grid%depth/length**2
+            sources(2:ubnd_vol - 1) = -pi**2*rho_0*g*integr/ubnd_vol*grid%max_depth/length**2
          elseif (self%cfg%pressure_gradients == 2) then !???
             sources(2:ubnd_vol - 1) = -state%drag*self%var(2:ubnd_vol - 1)* &
                                       uv_norm(2:ubnd_vol - 1)* &

@@ -37,7 +37,7 @@ contains
          !From surface to bottom, calculate
          ! todo: check indices
          do i = ubnd_fce - 1, 1, -1
-            state%rad(i) = state%rad(i + 1)*exp(-grid%h(i)*state%absorb(ubnd_fce - i)) !Attenuated by absorption
+            state%rad(i) = state%rad(i + 1)*exp(-grid%h(i - 1)*state%absorb(ubnd_fce - i + 1)) !Attenuated by absorption
          end do
 
          !!!!!!!! Define sources !!!!!!!!

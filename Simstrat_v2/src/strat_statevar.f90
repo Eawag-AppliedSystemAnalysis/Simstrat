@@ -21,7 +21,7 @@ module strat_statevar
       class(ModelConfig), pointer :: cfg          ! Configuration of the model
       real(RK), dimension(:), pointer :: nu       ! nu concerning this variable
       real(RK), dimension(:), pointer :: var      ! pointer to variable data (usually points to some state var in modelstate)
-
+      integer, pointer :: ubnd                    ! Current upper bound of variable
    contains
       procedure, pass(self), public :: init => generic_var_init
       procedure(generic_var_calc_terms), deferred, pass(self), public :: calc_terms
@@ -30,7 +30,7 @@ module strat_statevar
    end type
 
 contains
-   subroutine generic_var_init(self, cfg, grid, solver, disc, nu, var)
+   subroutine generic_var_init(self, cfg, grid, solver, disc, nu, var, ubnd)
       class(ModelVariable), intent(inout) :: self
       class(LinSysSolver), target :: solver
       class(StaggeredGrid), target :: grid
@@ -38,6 +38,7 @@ contains
       class(ModelConfig), target :: cfg
 
       real(RK), dimension(:), target :: nu, var
+      integer, target :: ubnd
 
       ! Assign pointers
       self%cfg => cfg
@@ -46,6 +47,7 @@ contains
       self%disc => disc
       self%nu => nu
       self%var => var
+      self%ubnd => ubnd
    end subroutine
 
    ! Generic base method for update of a variable
@@ -62,7 +64,7 @@ contains
       call self%disc%create_LES(self%var, self%nu, sources, boundaries, lower_diag, main_diag, upper_diag, rhs, state%dt)
 
       ! Solve LES
-      call self%solver%solve(lower_diag, main_diag, upper_diag, rhs, self%var)
+      call self%solver%solve(lower_diag, main_diag, upper_diag, rhs, self%var, self%ubnd)
 
       ! Do post processing (e.g. set boundary values)
       call self%post_solve(state, param)

@@ -159,7 +159,7 @@ contains
             f_norm = (f_norm**param%q_NN)*grid%Az(ubnd_fce)*rho_0
          else if (self%model_cfg%seiche_normalization == 2) then !integral
             do i = 2, ubnd_fce - 1
-               f_norm = f_norm + distrib(i)*grid%Az(i)*grid%h(i) !todo: which h? i or i-1?
+               f_norm = f_norm + distrib(i)*grid%Az(i)*grid%h(i-1)
 
             end do
 
@@ -170,7 +170,7 @@ contains
          ! why is this code here?
          if (f_norm == 0.) then
             do i = 2, ubnd_fce - 1
-               distrib(i) = 1/grid%h(i - 1) !todo: which h? i or i-1?
+               distrib(i) = 1/grid%h(i-1)
             end do
             f_norm = grid%Az(ubnd_fce)*rho_0
          end if

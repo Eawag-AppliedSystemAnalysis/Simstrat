@@ -106,23 +106,23 @@ program simstrat_main
    call mod_turbulence%init(simdata%grid, simdata%model_cfg, simdata%model_param)
 
    ! Set temperature state var to have nu_h as nu and T as model variable
-   call mod_temperature%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%nuh, simdata%model%T)
+   call mod_temperature%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%nuh, simdata%model%T, simdata%grid%ubnd_vol)
 
    ! Set U and V var to have num as nu and U reps V as model variable
    ! also, assign shear stress in model for this variable
-   call mod_u%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%num, simdata%model%U)
+   call mod_u%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%num, simdata%model%U, simdata%grid%ubnd_vol)
    call mod_u%assign_shear_stress(simdata%model%tx)
 
-   call mod_v%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%num, simdata%model%V)
+   call mod_v%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%num, simdata%model%V, simdata%grid%ubnd_vol)
    call mod_v%assign_shear_stress(simdata%model%ty)
 
    ! Set mod_s (transport module) to have nuh as nu and to manipulate S based on dS
-   call mod_s%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%nuh, simdata%model%S)
+   call mod_s%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%nuh, simdata%model%S, simdata%grid%ubnd_vol)
    call mod_s%assign_external_source(simdata%model%dS)
 
    ! Set up K and eps state vars with keps discretization and avh as nu
-   call mod_k%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc_keps, simdata%model%avh, simdata%model%K)
-   call mod_eps%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc_keps, simdata%model%avh, simdata%model%eps)
+   call mod_k%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc_keps, simdata%model%avh, simdata%model%K, simdata%grid%ubnd_fce)
+   call mod_eps%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc_keps, simdata%model%avh, simdata%model%eps, simdata%grid%ubnd_fce)
 
    call run_simulation()
 
@@ -184,13 +184,13 @@ contains
          ! Standard display: display when logged
          if (simdata%model_cfg%disp_simulation==1) then
             if (mod(simdata%model%std,simdata%output_cfg%thinning_interval)==0) then
-               write(6,'(F10.4,F10.4,F10.4,F10.4)') simdata%model%datum, simdata%grid%z_face(simdata%grid%ubnd_fce), &
+               write(6,'(F10.4,F10.5,F10.5,F10.5)') simdata%model%datum, simdata%grid%z_face(simdata%grid%ubnd_fce), &
                simdata%model%T(simdata%grid%nz_occupied), simdata%model%T(1)
             end if
          ! Extra display: display every iteration
          else if (simdata%model_cfg%disp_simulation==2) then
             write(6,'(F10.4,F10.4,F10.4,F10.4)') simdata%model%datum, simdata%grid%z_face(simdata%grid%ubnd_fce), &
-            simdata%model%T(simdata%grid%nz_occupied), simdata%model%T(1)
+            simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
          end if
          
       end do

@@ -53,7 +53,8 @@ contains
       real(RK), dimension(:), intent(inout) :: var, sources, boundaries, lower_diag, upper_diag, main_diag, rhs, nu
       real(RK), intent(inout) :: dt
       integer :: n
-      n = size(main_diag)
+      
+      n=self%grid%ubnd_vol
 
       ! Build diagonals
       upper_diag(1) = 0.0_RK
@@ -73,7 +74,8 @@ contains
       real(RK), dimension(:), intent(inout) :: var, sources, boundaries, lower_diag, upper_diag, main_diag, rhs, nu
       real(RK), intent(inout) :: dt
       integer :: n
-      n = size(main_diag)
+
+      n=self%grid%ubnd_fce
 
       ! Build diagonals
       upper_diag(1) = 0

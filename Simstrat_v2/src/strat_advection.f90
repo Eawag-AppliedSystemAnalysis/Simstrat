@@ -46,10 +46,10 @@ contains
       class(AdvectionModule) :: self
       class(ModelState) :: state
 
-      real(RK) :: top_z, top_h, curr_depth
+      real(RK) :: top_z, top_h
       real(RK) :: top
       real(RK) :: dh, dh_i(1:2), h_div_2, h_mult_2 ! depth differences
-      real(RK) :: dU(self%grid%nz_occupied), dV(self%grid%nz_occupied), dTemp(self%grid%nz_occupied), dS(self%grid%nz_occupied)
+      real(RK) :: dU(self%grid%nz_grid), dV(self%grid%nz_grid), dTemp(self%grid%nz_grid), dS(self%grid%nz_grid)
       real(RK) :: dt_i(1:2) ! first and second time step
       real(RK) :: AreaFactor_adv(1:self%grid%nz_grid_max)
       integer :: i, t_i
@@ -58,15 +58,15 @@ contains
                  nz_occupied=>self%grid%nz_occupied, &
                  dt=>state%dt, &
                  h=>self%grid%h, &
-                 ubnd_vol=>self%grid%ubnd_vol)
-         !todo: grid%lake_level_old = z_upp(nz)
+                 ubnd_vol=>self%grid%ubnd_vol, &
+                 ubnd_fce=>self%grid%ubnd_fce)
+         grid%lake_level_old = grid%z_face(ubnd_fce)
 
          !Depth difference compared to previous timestep
-         top_z = grid%z_face(grid%nz_occupied)
-         top_h = grid%h(grid%nz_occupied)
-         curr_depth = grid%depth
+         top_z = grid%z_face(ubnd_fce)
+         top_h = grid%h(ubnd_vol)
 
-         dh = state%Q_vert(grid%nz_occupied)/grid%Az(grid%nz_occupied)*state%dt
+         dh = state%Q_vert(grid%nz_occupied+1)/grid%Az(grid%nz_occupied+1)*state%dt
          h_div_2 = 0.5_RK*grid%h(grid%nz_occupied - 1) ! Take second highest box since the top box might not be at the full height
          h_mult_2 = 2_RK*grid%h(grid%nz_occupied - 1)
 
@@ -74,8 +74,8 @@ contains
          !Split timestep depending on situation
          if (dh == 0.) then ! If volume does not change, take one normal time step
             dt_i(1) = dt
-         else if ((dh + top_z) >= curr_depth) then ! If surface level reached, take a step until surface
-            dt_i(1) = (curr_depth - top_z)/dh*dt
+         else if ((dh + top_z) >= grid%max_depth) then ! If surface level reached, take a step until surface
+            dt_i(1) = (grid%max_depth - top_z)/dh*dt
          else if (((dh + top_h) > h_div_2) .and. & ! If top box>0.5*lower box and <2*lower box, take one time step
                   ((dh + top_h) < h_mult_2)) then
             dt_i(1) = dt
@@ -88,32 +88,32 @@ contains
 
          ! FB 2016: Revision
          do t_i = 1, 2 !First and (if needed) second timestep
-            AreaFactor_adv(1:nz_occupied) = dt_i(t_i)/(self%grid%Az(1:nz_occupied)*self%grid%h(1:nz_occupied)) ! Area factor for dt(t_i)
+            AreaFactor_adv(1:nz_occupied) = dt_i(t_i)/(self%grid%Az(2:nz_occupied+1)*self%grid%h(1:nz_occupied)) ! Area factor for dt(t_i)
             dh_i(t_i) = dh*dt_i(t_i)/dt ! Depth difference for dt(t_i)
 
             ! Calculate changes
             do i = 1, grid%ubnd_vol
-               if (i == grid%ubnd_vol .and. state%Q_vert(i) > 0) then
+               if (i == grid%ubnd_vol .and. state%Q_vert(i+1) > 0) then
                   top = 0
                else
                   top = 1
                end if
                ! Advective flow out of box i, always negative
-               dU(i) = -top*abs(state%Q_vert(i))*state%U(i)
-               dV(i) = -top*abs(state%Q_vert(i))*state%V(i)
-               dTemp(i) = -top*abs(state%Q_vert(i))*state%T(i)
-               dS(i) = -top*abs(state%Q_vert(i))*state%S(i)
-               if (i > 1 .and. state%Q_vert(i - 1) > 0) then ! Advective flow into box i, from above
-                  dU(i) = dU(i) + state%Q_vert(i - 1)*state%U(i - 1)
-                  dV(i) = dV(i) + state%Q_vert(i - 1)*state%V(i - 1)
-                  dTemp(i) = dTemp(i) + state%Q_vert(i - 1)*state%T(i - 1)
-                  dS(i) = dS(i) + state%Q_vert(i - 1)*state%S(i - 1)
+               dU(i) = -top*abs(state%Q_vert(i+1))*state%U(i)
+               dV(i) = -top*abs(state%Q_vert(i+1))*state%V(i)
+               dTemp(i) = -top*abs(state%Q_vert(i+1))*state%T(i)
+               dS(i) = -top*abs(state%Q_vert(i+1))*state%S(i)
+               if (i > 1 .and. state%Q_vert(i) > 0) then ! Advective flow into box i, from above
+                  dU(i) = dU(i) + state%Q_vert(i)*state%U(i - 1)
+                  dV(i) = dV(i) + state%Q_vert(i)*state%V(i - 1)
+                  dTemp(i) = dTemp(i) + state%Q_vert(i)*state%T(i - 1)
+                  dS(i) = dS(i) + state%Q_vert(i)*state%S(i - 1)
                end if
-               if (i < grid%ubnd_vol .and. state%Q_vert(i + 1) < 0) then ! Advective flow into box i, from below
-                  dU(i) = dU(i) - state%Q_vert(i + 1)*state%U(i + 1)
-                  dV(i) = dV(i) - state%Q_vert(i + 1)*state%V(i + 1)
-                  dTemp(i) = dTemp(i) - state%Q_vert(i + 1)*state%T(i + 1)
-                  dS(i) = dS(i) - state%Q_vert(i + 1)*state%S(i + 1)
+               if (i < grid%ubnd_vol .and. state%Q_vert(i + 2) < 0) then ! Advective flow into box i, from below
+                  dU(i) = dU(i) - state%Q_vert(i + 2)*state%U(i + 1)
+                  dV(i) = dV(i) - state%Q_vert(i + 2)*state%V(i + 1)
+                  dTemp(i) = dTemp(i) - state%Q_vert(i + 2)*state%T(i + 1)
+                  dS(i) = dS(i) - state%Q_vert(i + 2)*state%S(i + 1)
                end if
             end do
 
@@ -138,9 +138,10 @@ contains
             ! Adjust boxes (Horrible if/else construction - replace!)
             if (dh == 0) then ! If volume does not change, return
                return
-            else if ((dh + top_z) >= curr_depth) then ! If surface level reached
-               if (.not. (top_z == curr_depth)) then
+            else if ((dh + top_z) >= grid%max_depth) then ! If surface level reached
+               if (.not. (top_z == grid%max_depth)) then
                   call grid%modify_top_box(dh_i(t_i))
+                  return
                else
                   return
                end if
@@ -148,6 +149,7 @@ contains
             else if (((dh_i(t_i) + top_h) > h_div_2) .and. &
                      ((dh_i(t_i) + top_h) < (h_mult_2))) then ! and top box<2*lower box
                call grid%modify_top_box(dh_i(t_i))
+               return
             else if (t_i == 1 .and. (dh + top_h) <= h_div_2) then ! If top box<=0.5*lower box, merge 2 boxes
                call self%merge_box(state, dh_i(t_i))
             else if (t_i == 1 .and. (dh + top_h) >= h_mult_2) then ! If top box>=2*lower box, add one box

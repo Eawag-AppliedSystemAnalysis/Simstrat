@@ -43,8 +43,8 @@ contains
                  ubnd_vol=>self%grid%ubnd_vol)
 
          !!!!!!!! Precalculations !!!!!!!!
-         sources = 0
-         boundaries = 0
+         sources = 0.0_RK
+         boundaries = 0.0_RK
          state%ko(1:ubnd_fce) = state%k(1:ubnd_fce) ! ko = TKE at old time step
 
          ! Diffusivity for k is located on volume grid
@@ -133,8 +133,8 @@ contains
                  ubnd_vol=>self%grid%ubnd_vol)
 
          !!!!!!!! Precalculations !!!!!!!!
-         sources = 0
-         boundaries = 0
+         sources = 0.0_RK
+         boundaries = 0.0_RK
 
          ! Diffusivity for eps is located on volume grid
          state%avh(1:ubnd_vol) = 0.5_RK/sig_e*(state%num(1:ubnd_fce - 1) + state%num(2:ubnd_fce))

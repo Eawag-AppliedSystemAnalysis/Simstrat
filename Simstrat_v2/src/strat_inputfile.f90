@@ -290,7 +290,7 @@ contains
             grid_config%A_read(i) = A_tmp(num_read - i + 1)
          end do
 
-         grid_config%depth = grid_config%z_A_read(1) - grid_config%z_A_read(num_read) ! depth = max - min depth
+         grid_config%max_depth = grid_config%z_A_read(1) - grid_config%z_A_read(num_read) ! depth = max - min depth
 
          ! initialize Grid of simdata
          call simdata%grid%init(grid_config)
@@ -490,14 +490,14 @@ contains
       end if
    end subroutine check_field
 
-   !Set advection to 1 if any inflow/outflow file contains data, otherwise to 0
+   !Set has_advection to 1 if any inflow/outflow file contains data, otherwise to 0
    subroutine check_advection(self)
       implicit none
       class(SimstratSimulationFactory) :: self
 
       ! Local variables
       integer  :: i, j, fnum(1:4), nval(1:4), if_adv
-      real(RK) :: dummy, z_Inp_dummy(0:self%simdata%grid%nz_grid_max)
+      real(RK) :: dummy, z_Inp_dummy(1:self%simdata%grid%nz_grid_max)
 
       open (41, status='old', file=self%simdata%input_cfg%QinpName)
       open (42, status='old', file=self%simdata%input_cfg%QoutName)
@@ -509,13 +509,13 @@ contains
       do i = 1, 4
          read (fnum(i), *, end=8) ! Skip header (description of columns)
          read (fnum(i), *, end=8) nval(i) ! Read number of input depths (static)
-         read (fnum(i), *, end=8) dummy, (z_Inp_dummy(j), j=0, nval(i) - 1) ! Read input depths
+         read (fnum(i), *, end=8) dummy, (z_Inp_dummy(j), j=1, nval(i)) ! Read input depths
          goto 9
-      8   if_adv = if_adv + 1
+      8   if_adv = if_adv + 1    ! +1 in case there is no data in the file
       9   rewind(fnum(i))
       end do
 
-      if (if_adv == 4) then
+      if (if_adv == 4) then   ! if all input files are empty
          self%simdata%model%has_advection = .FALSE.
       else
          self%simdata%model%has_advection = .TRUE.

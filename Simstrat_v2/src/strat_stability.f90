@@ -66,7 +66,7 @@ contains
          call self%update_cmue_cn(state%cmue1, state%cmue2)
       else if (self%model_cfg%stability_func == 2) then
 
-         beta = state%NN*(state%k/state%eps)**2
+         beta = state%NN(1:self%grid%ubnd_fce)*(state%k(1:self%grid%ubnd_fce)/state%eps(1:self%grid%ubnd_fce))**2
          !beta = state%NN*exp(2*(log(state%k)-log(state%eps)))
          beta(1) = 0
          beta(self%grid%ubnd_fce) = 0

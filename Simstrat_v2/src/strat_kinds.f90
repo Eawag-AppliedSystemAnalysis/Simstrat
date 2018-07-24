@@ -28,13 +28,14 @@ end type
 
 contains
 
-subroutine generic_linsyssolver_solve(ld, md, ud, rhs, x)
+subroutine generic_linsyssolver_solve(ld, md, ud, rhs, x, ubnd)
    implicit none
 
    ! Arguments
    real(RK), intent(in) :: ld(:), md(:), ud(:) ! Diagonals (A)
    real(RK), intent(in) :: rhs(:) ! right-hand side (b)
    real(RK), intent(out) :: x(:) ! solution (x)
+   integer, intent(in) :: ubnd
 
 end subroutine
 
