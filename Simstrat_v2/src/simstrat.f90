@@ -18,6 +18,7 @@ program simstrat_main
    use strat_discretization
    use strat_keps
    use strat_turbulence
+   use strat_ice     
    use strat_transport
    use strat_absorption
    use strat_advection
@@ -42,6 +43,7 @@ program simstrat_main
    type(EpsModelVar) :: mod_eps
    type(TransportModVar) :: mod_s
    type(TurbulenceModule) :: mod_turbulence
+   type(IceModule) :: mod_ice   
    type(AbsorptionModule) :: mod_absorption
    type(AdvectionModule) :: mod_advection
    type(LateralModule), target :: mod_lateral_normal
@@ -104,6 +106,7 @@ program simstrat_main
    ! initialize simulation modules
    call mod_stability%init(simdata%grid, simdata%model_cfg, simdata%model_param)
    call mod_turbulence%init(simdata%grid, simdata%model_cfg, simdata%model_param)
+   call mod_ice%init(simdata%model_cfg, simdata%model_param, simdata%grid)
 
    ! Set temperature state var to have nu_h as nu and T as model variable
    call mod_temperature%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%nuh, simdata%model%T, simdata%grid%ubnd_vol)
@@ -173,7 +176,12 @@ contains
          ! Solve k & eps
          call mod_k%update(simdata%model, simdata%model_param)
          call mod_eps%update(simdata%model, simdata%model_param)
-
+		 
+         ! Update ice 
+         if (simdata%model_cfg%ice_model == 1) then 
+            call mod_ice%update(simdata%model, simdata%model_param)   
+         end if      
+		 
          ! Call logger to write files
          if (mod(simdata%model%std,simdata%output_cfg%thinning_interval)==0) then
             call logger%log(simdata%model%datum)

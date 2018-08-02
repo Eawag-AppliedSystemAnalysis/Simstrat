@@ -23,6 +23,7 @@ module strat_inputfile
    type, public :: SimstratSimulationFactory
       private
       class(SimulationData), pointer :: simdata
+   
    contains
       procedure, pass(self), public :: initialize_model
       procedure, pass(self), public :: read_json_par_file
@@ -78,7 +79,6 @@ contains
    subroutine setup_output_conf(self)
       implicit none
       class(SimstratSimulationFactory) :: self
-
       type(csv_file) :: f
       logical :: status_ok
 
@@ -159,6 +159,34 @@ contains
          self%simdata%output_cfg%output_vars(12)%name = "Ps"
          self%simdata%output_cfg%output_vars(12)%values => self%simdata%model%P_seiche
          self%simdata%output_cfg%output_vars(12)%volume_grid = .false.
+   
+         self%simdata%output_cfg%output_vars(13)%name = "H_A"
+         self%simdata%output_cfg%output_vars(13)%values_surf => self%simdata%model%ha
+         self%simdata%output_cfg%output_vars(13)%volume_grid = .false. 
+   
+         self%simdata%output_cfg%output_vars(14)%name = "H_W"
+         self%simdata%output_cfg%output_vars(14)%values_surf => self%simdata%model%hw
+         self%simdata%output_cfg%output_vars(14)%volume_grid = .false. 
+   
+         self%simdata%output_cfg%output_vars(15)%name = "H_K"
+         self%simdata%output_cfg%output_vars(15)%values_surf => self%simdata%model%hk
+         self%simdata%output_cfg%output_vars(15)%volume_grid = .false. 
+   
+         self%simdata%output_cfg%output_vars(16)%name = "H_V"
+         self%simdata%output_cfg%output_vars(16)%values_surf => self%simdata%model%hv
+         self%simdata%output_cfg%output_vars(16)%volume_grid = .false. 
+   
+         self%simdata%output_cfg%output_vars(17)%name = "Rad0"
+         self%simdata%output_cfg%output_vars(17)%values_surf => self%simdata%model%rad0
+         self%simdata%output_cfg%output_vars(17)%volume_grid = .false. 
+
+         self%simdata%output_cfg%output_vars(18)%name = "Ice_h"
+         self%simdata%output_cfg%output_vars(18)%values_surf => self%simdata%model%ice_h
+         self%simdata%output_cfg%output_vars(18)%volume_grid = .false.
+
+         self%simdata%output_cfg%output_vars(19)%name = "Snow_h"
+         self%simdata%output_cfg%output_vars(19)%values_surf => self%simdata%model%snow_h
+         self%simdata%output_cfg%output_vars(19)%volume_grid = .false.    
       end associate
    end subroutine
 
@@ -344,7 +372,8 @@ contains
       call par_file%get('Output.Depths', zoutName, found); self%simdata%output_cfg%zoutName = zoutName; call check_field(found, 'Output.Depths', ParName)
       call par_file%get('Output.Times', toutname, found); self%simdata%output_cfg%toutName = toutName; call check_field(found, 'Output.Times', ParName)
       call par_file%get('Output.WriteOnTheFly', self%simdata%output_cfg%write_on_the_fly, found); call check_field(found, 'Output.WriteOnTheFly', ParName)
-
+      call par_file%get('Output.ThinningInterval', self%simdata%output_cfg%thinning_interval, found); call check_field(found, 'Output.ThinningInterval', ParName)
+   
       !Model configuration
       call par_file%get("ModelConfig.MaxNrGridCells", self%simdata%model_cfg%max_nr_grid_cells, found);
       if (.not. found) then
@@ -369,6 +398,8 @@ contains
       call par_file%get("ModelConfig.DisplaySimulation", self%simdata%model_cfg%disp_simulation, found); call check_field(found, 'ModelConfig.DisplaySimulation', ParName)
       call par_file%get("ModelConfig.DisplayDiagnose", self%simdata%model_cfg%disp_diagnostic, found); call check_field(found, 'ModelConfig.DisplayDiagnose', ParName)
       call par_file%get("ModelConfig.DataAveraging", self%simdata%model_cfg%data_averaging, found); call check_field(found, 'ModelConfig.DataAveraging', ParName)
+      call par_file%get("ModelConfig.IceModel", self%simdata%model_cfg%ice_model, found); call check_field(found, 'ModelConfig.IceModel', ParName)
+      call par_file%get("ModelConfig.SnowModel", self%simdata%model_cfg%snow_model, found); call check_field(found, 'ModelConfig.SnowModel', ParName)
 
       !Model Parameter
       call par_file%get("ModelParameters.lat", self%simdata%model_param%Lat, found); call check_field(found, 'ModelParameters.lat', ParName)
@@ -383,12 +414,16 @@ contains
       call par_file%get("ModelParameters.p_radin", self%simdata%model_param%p_radin, found); call check_field(found, 'ModelParameters.p_radin', ParName)
       call par_file%get("ModelParameters.p_windf", self%simdata%model_param%p_windf, found); call check_field(found, 'ModelParameters.p_windf', ParName)
       call par_file%get("ModelParameters.beta_sol", self%simdata%model_param%beta_sol, found); call check_field(found, 'ModelParameters.beta_sol', ParName)
+      call par_file%get("ModelParameters.beta_snow_ice", self%simdata%model_param%beta_snow_ice, found); call check_field(found, 'ModelParameters.beta_snow_ice', ParName)     
       call par_file%get("ModelParameters.albsw", self%simdata%model_param%albsw, found); call check_field(found, 'ModelParameters.albsw', ParName)
-
+      call par_file%get("ModelParameters.ice_albedo", self%simdata%model_param%ice_albedo, found); call check_field(found, 'ModelParameters.ice_albedo', ParName)
+      call par_file%get("ModelParameters.snow_albedo", self%simdata%model_param%snow_albedo, found); call check_field(found, 'ModelParameters.snow_albedo', ParName)
+      call par_file%get("ModelParameters.freez_Temp", self%simdata%model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_Temp', ParName)
+   
       !Simulation Parameter
-      call par_file%get("Simulation.Timestep [s]", self%simdata%sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep [s]', ParName)
-      call par_file%get("Simulation.Start [d]", self%simdata%sim_cfg%start_datum, found); call check_field(found, 'Simulation.Start [d]', ParName)
-      call par_file%get("Simulation.End [d]", self%simdata%sim_cfg%end_datum, found); call check_field(found, 'Simulation.End [d]', ParName)
+      call par_file%get("Simulation.Timestep s", self%simdata%sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep s', ParName)
+      call par_file%get("Simulation.Start d", self%simdata%sim_cfg%start_datum, found); call check_field(found, 'Simulation.Start d', ParName)
+      call par_file%get("Simulation.End d", self%simdata%sim_cfg%end_datum, found); call check_field(found, 'Simulation.End d', ParName)
 
       call par_file%destroy()
 
