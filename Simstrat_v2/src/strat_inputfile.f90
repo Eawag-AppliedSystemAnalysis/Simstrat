@@ -336,15 +336,14 @@ contains
       call par_file%get('Input.Grid', GridName, found); self%simdata%input_cfg%GridName = GridName; call check_field(found, 'Input.Grid', ParName)
       call par_file%get('Input.Inflow', QinpName, found); self%simdata%input_cfg%QinpName = QinpName; call check_field(found, 'Input.Inflow', ParName)
       call par_file%get('Input.Outflow', QoutName, found); self%simdata%input_cfg%QoutName = QoutName; call check_field(found, 'Input.Outflow', ParName)
-      call par_file%get('Input.TemperatureInflow', TinpName, found); self%simdata%input_cfg%TinpName = TinpName; call check_field(found, 'Input.TemperatureInflow', ParName)
-      call par_file%get('Input.SalinityInflow', SinpName, found); self%simdata%input_cfg%SinpName = SinpName; call check_field(found, 'Input.SalinityInflow', ParName)
+      call par_file%get('Input.Inflow temperature', TinpName, found); self%simdata%input_cfg%TinpName = TinpName; call check_field(found, 'Input.Inflow temperature', ParName)
+      call par_file%get('Input.Inflow salinity', SinpName, found); self%simdata%input_cfg%SinpName = SinpName; call check_field(found, 'Input.Inflow salinity', ParName)
 
       !Output
-      call par_file%get('Output.path', PathOut, found); self%simdata%output_cfg%PathOut = PathOut; call check_field(found, 'Output.path', ParName)
-      call par_file%get('Output.depth', zoutName, found); self%simdata%output_cfg%zoutName = zoutName; call check_field(found, 'Output.depth', ParName)
-      call par_file%get('Output.time', toutname, found); self%simdata%output_cfg%toutName = toutName; call check_field(found, 'Output.time', ParName)
+      call par_file%get('Output.Path', PathOut, found); self%simdata%output_cfg%PathOut = PathOut; call check_field(found, 'Output.Path', ParName)
+      call par_file%get('Output.Depths', zoutName, found); self%simdata%output_cfg%zoutName = zoutName; call check_field(found, 'Output.Depths', ParName)
+      call par_file%get('Output.Times', toutname, found); self%simdata%output_cfg%toutName = toutName; call check_field(found, 'Output.Times', ParName)
       call par_file%get('Output.WriteOnTheFly', self%simdata%output_cfg%write_on_the_fly, found); call check_field(found, 'Output.WriteOnTheFly', ParName)
-      call par_file%get('Output.ThinningInterval', self%simdata%output_cfg%thinning_interval, found); call check_field(found, 'Output.ThinningInterval', ParName)
 
       !Model configuration
       call par_file%get("ModelConfig.MaxNrGridCells", self%simdata%model_cfg%max_length_input_data, found);
@@ -363,7 +362,7 @@ contains
       call par_file%get("ModelConfig.Forcing", self%simdata%model_cfg%forcing_mode, found); call check_field(found, 'ModelConfig.Forcing', ParName)
       call par_file%get("ModelConfig.UseFilteredWind", self%simdata%model_cfg%use_filtered_wind, found); call check_field(found, 'ModelConfig.UseFilteredWind', ParName)
       call par_file%get("ModelConfig.SeicheNormalization", self%simdata%model_cfg%seiche_normalization, found); call check_field(found, 'ModelConfig.SeicheNormalization', ParName)
-      call par_file%get("ModelConfig.Wind drag model", self%simdata%model_cfg%wind_drag_model, found); call check_field(found, 'ModelConfig.Wind drag model', ParName)
+      call par_file%get("ModelConfig.WindDragModel", self%simdata%model_cfg%wind_drag_model, found); call check_field(found, 'ModelConfig.WindDragModel', ParName)
       call par_file%get("ModelConfig.InflowPlacement", self%simdata%model_cfg%inflow_placement, found); call check_field(found, 'ModelConfig.InflowPlacement', ParName)
       call par_file%get("ModelConfig.PressureGradients", self%simdata%model_cfg%pressure_gradients, found); call check_field(found, 'ModelConfig.PressureGradients', ParName)
       call par_file%get("ModelConfig.EnableSalinityTransport", self%simdata%model_cfg%salinity_transport, found); call check_field(found, 'ModelConfig.EnableSalinityTransport', ParName)
@@ -372,24 +371,24 @@ contains
       call par_file%get("ModelConfig.DataAveraging", self%simdata%model_cfg%data_averaging, found); call check_field(found, 'ModelConfig.DataAveraging', ParName)
 
       !Model Parameter
-      call par_file%get("ModelParameter.Lat", self%simdata%model_param%Lat, found); call check_field(found, 'ModelParameter.Lat', ParName)
-      call par_file%get("ModelParameter.p_air", self%simdata%model_param%p_air, found); call check_field(found, 'ModelParameter.p_air', ParName)
-      call par_file%get("ModelParameter.a_seiche", self%simdata%model_param%a_seiche, found); call check_field(found, 'ModelParameter.a_seiche', ParName)
-      call par_file%get("ModelParameter.q_NN", self%simdata%model_param%q_NN, found); call check_field(found, 'ModelParameter.q_NN', ParName)
-      call par_file%get("ModelParameter.f_wind", self%simdata%model_param%f_wind, found); call check_field(found, 'ModelParameter.f_wind', ParName)
-      call par_file%get("ModelParameter.C10", self%simdata%model_param%C10_constant, found); call check_field(found, 'ModelParameter.C10', ParName)
-      call par_file%get("ModelParameter.CD", self%simdata%model_param%CD, found); call check_field(found, 'ModelParameter.CD', ParName)
-      call par_file%get("ModelParameter.fgeo", self%simdata%model_param%fgeo, found); call check_field(found, 'ModelParameter.fgeo', ParName)
-      call par_file%get("ModelParameter.k_min", self%simdata%model_param%k_min, found); call check_field(found, 'ModelParameter.k_min', ParName)
-      call par_file%get("ModelParameter.p_radin", self%simdata%model_param%p_radin, found); call check_field(found, 'ModelParameter.p_radin', ParName)
-      call par_file%get("ModelParameter.p_windf", self%simdata%model_param%p_windf, found); call check_field(found, 'ModelParameter.p_windf', ParName)
-      call par_file%get("ModelParameter.beta_sol", self%simdata%model_param%beta_sol, found); call check_field(found, 'ModelParameter.beta_sol', ParName)
-      call par_file%get("ModelParameter.albsw", self%simdata%model_param%albsw, found); call check_field(found, 'ModelParameter.albsw', ParName)
+      call par_file%get("ModelParameters.lat", self%simdata%model_param%Lat, found); call check_field(found, 'ModelParameters.lat', ParName)
+      call par_file%get("ModelParameters.p_air", self%simdata%model_param%p_air, found); call check_field(found, 'ModelParameters.p_air', ParName)
+      call par_file%get("ModelParameters.a_seiche", self%simdata%model_param%a_seiche, found); call check_field(found, 'ModelParameters.a_seiche', ParName)
+      call par_file%get("ModelParameters.q_nn", self%simdata%model_param%q_NN, found); call check_field(found, 'ModelParameters.q_nn', ParName)
+      call par_file%get("ModelParameters.f_wind", self%simdata%model_param%f_wind, found); call check_field(found, 'ModelParameters.f_wind', ParName)
+      call par_file%get("ModelParameters.c10", self%simdata%model_param%C10_constant, found); call check_field(found, 'ModelParameters.c10', ParName)
+      call par_file%get("ModelParameters.cd", self%simdata%model_param%CD, found); call check_field(found, 'ModelParameters.cd', ParName)
+      call par_file%get("ModelParameters.hgeo", self%simdata%model_param%fgeo, found); call check_field(found, 'ModelParameters.hgeo', ParName)
+      call par_file%get("ModelParameters.k_min", self%simdata%model_param%k_min, found); call check_field(found, 'ModelParameters.k_min', ParName)
+      call par_file%get("ModelParameters.p_radin", self%simdata%model_param%p_radin, found); call check_field(found, 'ModelParameters.p_radin', ParName)
+      call par_file%get("ModelParameters.p_windf", self%simdata%model_param%p_windf, found); call check_field(found, 'ModelParameters.p_windf', ParName)
+      call par_file%get("ModelParameters.beta_sol", self%simdata%model_param%beta_sol, found); call check_field(found, 'ModelParameters.beta_sol', ParName)
+      call par_file%get("ModelParameters.albsw", self%simdata%model_param%albsw, found); call check_field(found, 'ModelParameters.albsw', ParName)
 
       !Simulation Parameter
-      call par_file%get("Simulation.Timestep", self%simdata%sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep', ParName)
-      call par_file%get("Simulation.Start", self%simdata%sim_cfg%start_datum, found); call check_field(found, 'Simulation.Start', ParName)
-      call par_file%get("Simulation.End", self%simdata%sim_cfg%end_datum, found); call check_field(found, 'Simulation.End', ParName)
+      call par_file%get("Simulation.Timestep [s]", self%simdata%sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep [s]', ParName)
+      call par_file%get("Simulation.Start [d]", self%simdata%sim_cfg%start_datum, found); call check_field(found, 'Simulation.Start [d]', ParName)
+      call par_file%get("Simulation.End [d]", self%simdata%sim_cfg%end_datum, found); call check_field(found, 'Simulation.End [d]', ParName)
 
       call par_file%destroy()
 

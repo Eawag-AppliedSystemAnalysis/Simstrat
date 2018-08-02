@@ -7,16 +7,15 @@
     "Absorption"          : "TestCase_LakeZurich/absorption_zh_1981_2013.dat",
     "Inflow"              : "TestCase_LakeZurich/Qinp.dat",
     "Outflow"             : "TestCase_LakeZurich/Qout.dat",
-    "TemperatureInflow"   : "TestCase_LakeZurich/Tinp.dat",
-    "SalinityInflow"      : "TestCase_LakeZurich/Sinp.dat"
+    "Inflow temperature"  : "TestCase_LakeZurich/Tinp.dat",
+    "Inflow salinity"     : "TestCase_LakeZurich/Sinp.dat"
   },
 
   "Output" : {
-    "path"  : "TestCases_Results/",
-    "depth" : "TestCase_LakeZurich/Output_depth.dat",
-    "time"  : "TestCase_LakeZurich/Output_time.dat",
-    "WriteOnTheFly" : true,
-    "ThinningInterval" : 96
+    "Path"  : "TestCases_Results/",
+    "Depths" : "TestCase_LakeZurich/Output_depth.dat",
+    "Times"  : "TestCase_LakeZurich/Output_time.dat",
+    "WriteOnTheFly" : true
   },
 
   "ModelConfig" : {
@@ -30,7 +29,7 @@
     "Forcing"                 : 3,
     "UseFilteredWind"         : false,
     "SeicheNormalization"     : 2,
-    "Wind drag model"         : 3,
+    "WindDragModel"           : 3,
     "InflowPlacement"         : 0,
     "PressureGradients"       : 0,
     "EnableSalinityTransport" : 1,
@@ -40,20 +39,20 @@
   },
 
   "Simulation" : {
-    "Timestep"  : 300,
-    "Start"     : 35001,
-    "End"       : 35731
+    "Timestep [s]" : 300,
+    "Start [d]"    : 35001,
+    "End [d]"      : 35731
   },
 
-  "ModelParameter" : {
-    "Lat"       : 47.3,
+  "ModelParameters" : {
+    "lat"       : 47.3,
     "p_air"     : 960,
     "a_seiche"  : 0.0011046,
-    "q_NN"      : 0.75,
+    "q_nn"      : 0.75,
     "f_wind"    : 1.6423,
-    "C10"       : 1,
-    "CD"        : 0.002,
-    "fgeo"      : 0.1,
+    "c10"       : 1,
+    "cd"        : 0.002,
+    "hgeo"      : 0.1,
     "k_min"     : 1e-30,
     "p_radin"   : 1.1978,
     "p_windf"   : 1,
