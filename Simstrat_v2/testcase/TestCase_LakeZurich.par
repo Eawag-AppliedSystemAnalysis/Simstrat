@@ -15,7 +15,8 @@
     "Path"  : "TestCases_Results/",
     "Depths" : "TestCase_LakeZurich/Output_depth.dat",
     "Times"  : "TestCase_LakeZurich/Output_time.dat",
-    "WriteOnTheFly" : true
+    "WriteOnTheFly" : true,
+	"ThinningInterval": 76
   },
 
   "ModelConfig" : {
@@ -35,15 +36,15 @@
     "EnableSalinityTransport" : 1,
     "DisplaySimulation"       : 1,
     "DisplayDiagnose"         : 3,
-    "DataAveraging"           : 10
+    "DataAveraging"           : 10,
 	"IceModel"				  : 1,
-	"SnowModel"				  : 1	
+	"SnowModel"				  : 0	
   },
 
   "Simulation" : {
-    "Timestep [s]" : 300,
-    "Start [d]"    : 35001,
-    "End [d]"      : 35731
+    "Timestep s" : 300,
+    "Start d"    : 35001,
+    "End d"      : 35731
   },
 
   "ModelParameters" : {
