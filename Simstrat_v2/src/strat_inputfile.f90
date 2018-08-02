@@ -418,7 +418,7 @@ contains
       call par_file%get("ModelParameters.albsw", self%simdata%model_param%albsw, found); call check_field(found, 'ModelParameters.albsw', ParName)
       call par_file%get("ModelParameters.ice_albedo", self%simdata%model_param%ice_albedo, found); call check_field(found, 'ModelParameters.ice_albedo', ParName)
       call par_file%get("ModelParameters.snow_albedo", self%simdata%model_param%snow_albedo, found); call check_field(found, 'ModelParameters.snow_albedo', ParName)
-      call par_file%get("ModelParameters.freez_Temp", self%simdata%model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_Temp', ParName)
+      call par_file%get("ModelParameters.freez_temp", self%simdata%model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_temp', ParName)
    
       !Simulation Parameter
       call par_file%get("Simulation.Timestep s", self%simdata%sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep s', ParName)
