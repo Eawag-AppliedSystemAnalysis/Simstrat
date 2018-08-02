@@ -110,7 +110,7 @@ contains
          call f%destroy()
 
          ! Define variables that should be written
-         allocate (self%simdata%output_cfg%output_vars(12))
+         allocate (self%simdata%output_cfg%output_vars(19))
 
          self%simdata%output_cfg%output_vars(1)%name = "V"
          self%simdata%output_cfg%output_vars(1)%values => self%simdata%model%V
