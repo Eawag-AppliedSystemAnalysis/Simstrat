@@ -237,14 +237,14 @@ contains
       implicit none
       class(SimstratSimulationFactory) :: self
       type(GridConfig) :: grid_config
-      real(RK), dimension(:) :: z_tmp(self%simdata%model_cfg%max_nr_grid_cells)
-      real(RK), dimension(:) :: A_tmp(self%simdata%model_cfg%max_nr_grid_cells)
+      real(RK), dimension(:) :: z_tmp(self%simdata%model_cfg%max_length_input_data)
+      real(RK), dimension(:) :: A_tmp(self%simdata%model_cfg%max_length_input_data)
       integer :: num_read, i, ictr
       associate (simdata=>self%simdata, &
-                 nz_max=>self%simdata%model_cfg%max_nr_grid_cells)
+                 nz_max=>grid_config%nz_max)
 
-         grid_config%nz_grid_max = self%simdata%model_cfg%max_nr_grid_cells
-         allocate (grid_config%grid_read(nz_max))
+         grid_config%nz_max = self%simdata%model_cfg%max_length_input_data
+         allocate (grid_config%grid_read(grid_config%nz_max))
          ! Read grid
          open (12, status='old', file=simdata%input_cfg%GridName)
          read (12, *)
@@ -347,9 +347,9 @@ contains
       call par_file%get('Output.ThinningInterval', self%simdata%output_cfg%thinning_interval, found); call check_field(found, 'Output.ThinningInterval', ParName)
 
       !Model configuration
-      call par_file%get("ModelConfig.MaxNrGridCells", self%simdata%model_cfg%max_nr_grid_cells, found);
+      call par_file%get("ModelConfig.MaxNrGridCells", self%simdata%model_cfg%max_length_input_data, found);
       if (.not. found) then
-         self%simdata%model_cfg%max_nr_grid_cells = 1000
+         self%simdata%model_cfg%max_length_input_data = 1000
          call warn('Variable "ModelConfig.MaxNrGridCells" is not set. Assume a value of 1000')
       end if
       call par_file%get("ModelConfig.CoupleAED2", self%simdata%model_cfg%couple_aed2, found);
@@ -497,7 +497,7 @@ contains
 
       ! Local variables
       integer  :: i, j, fnum(1:4), nval(1:4), if_adv
-      real(RK) :: dummy, z_Inp_dummy(1:self%simdata%grid%nz_grid_max)
+      real(RK) :: dummy, z_Inp_dummy(1:self%simdata%grid%nz_max)
 
       open (41, status='old', file=self%simdata%input_cfg%QinpName)
       open (42, status='old', file=self%simdata%input_cfg%QoutName)

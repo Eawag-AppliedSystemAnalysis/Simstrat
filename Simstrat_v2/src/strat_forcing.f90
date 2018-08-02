@@ -14,7 +14,7 @@ module strat_forcing
    private
 
    type, public :: ForcingModule
-      integer :: nz_grid_max
+      integer :: nz_max
       class(ModelConfig), pointer :: cfg
       class(StaggeredGrid), pointer :: grid
       class(ModelParam), pointer :: param

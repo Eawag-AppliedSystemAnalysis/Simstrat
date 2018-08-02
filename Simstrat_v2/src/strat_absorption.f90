@@ -45,9 +45,9 @@ contains
       self%file = absorption_file
 
       ! Allocate arrays (used to be "save" variables)
-      allocate (self%z_absorb(grid%nz_grid_max + 1))
-      allocate (self%absorb_start(grid%nz_grid_max + 1))
-      allocate (self%absorb_end(grid%nz_grid_max + 1))
+      allocate (self%z_absorb(grid%nz_max + 1))
+      allocate (self%absorb_start(grid%nz_max + 1))
+      allocate (self%absorb_end(grid%nz_max + 1))
 
    end subroutine
 
@@ -58,7 +58,7 @@ contains
 
       ! Local Variables
       real(RK) :: dummy !Read depths
-      real(RK) :: absorb_read_start(self%grid%nz_grid_max + 1), absorb_read_end(self%grid%nz_grid_max + 1) !Read start and end values
+      real(RK) :: absorb_read_start(self%grid%nz_max + 1), absorb_read_end(self%grid%nz_max + 1) !Read start and end values
       integer :: i
 
       ! Associations for easier readability / comparability to old code

@@ -49,7 +49,7 @@ module strat_simdata
 
    ! Model configuration (read from file)
    type, public :: ModelConfig
-      integer :: max_nr_grid_cells
+      integer :: max_length_input_data
       logical :: couple_aed2
       logical :: use_buffered_forcing
       integer :: turbulence_model
