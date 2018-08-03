@@ -120,7 +120,7 @@ contains
       character(len=20) :: fname(1:4)
 
       associate (datum=>state%datum, &
-                 idx=>state%std, &
+                 idx=>state%model_step_counter, &
                  Q_inp=>state%Q_inp, & ! Q_inp is the input at each depth for each time step, Q_vert is the integrated net water input
                  Q_vert=>state%Q_vert, &
                  grid=>self%grid)

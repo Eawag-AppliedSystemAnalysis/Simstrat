@@ -35,16 +35,19 @@ module strat_simdata
       character(len=:), allocatable :: toutName
       real(RK), dimension(:), allocatable :: zout
       real(RK), dimension(:), allocatable :: tout
+      real(RK), dimension(:), allocatable :: n_timesteps_between_tout
+      real(RK), dimension(:), allocatable :: adjusted_timestep
+      logical :: write_to_file
       class(LogVariable), dimension(:), allocatable :: output_vars
-      logical :: write_on_the_fly
+
       integer :: thinning_interval
    end type
 
    ! Simulation configuration
    type, public :: SimConfig
       integer :: timestep
-      integer :: start_datum
-      integer :: end_datum
+      real(RK) :: start_datum
+      real(RK) :: end_datum
    end type
 
    ! Model configuration (read from file)
@@ -87,7 +90,7 @@ module strat_simdata
    ! Model state (this is actually the simulation data!!!)
    type, public :: ModelState
       ! Iteration variables
-      integer :: step, itera, i, j, std
+      integer :: i, j, output_counter, model_step_counter
       real(RK) :: datum, dt
 
       ! Variables located on z_cent grid

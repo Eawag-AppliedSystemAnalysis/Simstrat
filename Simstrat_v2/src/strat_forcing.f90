@@ -137,7 +137,7 @@ contains
          end if
 
          if (cfg%forcing_mode == 1) then
-            call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%std)
+            call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%model_step_counter)
             state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
             state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
             state%uv10 = sqrt(state%u10**2 + state%v10**2) !AG 2014
@@ -147,7 +147,7 @@ contains
             if (cfg%use_filtered_wind) state%Wf = A_cur(5) !AG 2014
          else if (cfg%forcing_mode >= 2) then
             if (cfg%forcing_mode == 2) then ! date, U,V,Tatm,Hsol,Vap
-               call self%read (state%datum, A_s, A_e, A_cur, 5 + nval_offset, state%std)
+               call self%read (state%datum, A_s, A_e, A_cur, 5 + nval_offset, state%model_step_counter)
                state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
                state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
                T_atm = A_cur(3)
@@ -156,7 +156,7 @@ contains
                Cloud = 0.5_RK
                if (cfg%use_filtered_wind) state%Wf = A_cur(6) !AG 2014
             else if (cfg%forcing_mode == 3) then ! date,U10,V10,Tatm,Hsol,Vap,Clouds
-               call self%read (state%datum, A_s, A_e, A_cur, 6 + nval_offset, state%std)
+               call self%read (state%datum, A_s, A_e, A_cur, 6 + nval_offset, state%model_step_counter)
                state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
                state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
                T_atm = A_cur(3)
@@ -169,7 +169,7 @@ contains
                end if
                if (cfg%use_filtered_wind) state%Wf = A_cur(7) !AG 2014
             else if (cfg%forcing_mode == 4) then ! date,U10,V10,Hnet,Hsol
-               call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%std)
+               call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%model_step_counter)
                state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
                state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
                heat0 = A_cur(3) !MS 2014

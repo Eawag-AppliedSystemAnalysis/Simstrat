@@ -109,6 +109,14 @@ contains
          call f%get(1, output_cfg%tout, status_ok)
          call f%destroy()
 
+         ! Determine output mode: If only one element in tout, then this number is the thinning interval.
+         ! If there are more than one number in tout, these are the output times and thinning_interval is set to 0.
+         if (size(output_cfg%tout)==1) then
+            output_cfg%thinning_interval = int(output_cfg%tout(1))
+         else
+            output_cfg%thinning_interval = 0
+         endif
+
          ! Define variables that should be written
          allocate (self%simdata%output_cfg%output_vars(12))
 
@@ -227,8 +235,8 @@ contains
          ! Set up timing
          model%datum = self%simdata%sim_cfg%start_datum
          model%dt = self%simdata%sim_cfg%timestep
-         model%std = 0
-         model%step = 0
+         model%model_step_counter = 0
+         model%output_counter = 1
       end associate
    end subroutine
 
@@ -343,13 +351,12 @@ contains
       call par_file%get('Output.Path', PathOut, found); self%simdata%output_cfg%PathOut = PathOut; call check_field(found, 'Output.Path', ParName)
       call par_file%get('Output.Depths', zoutName, found); self%simdata%output_cfg%zoutName = zoutName; call check_field(found, 'Output.Depths', ParName)
       call par_file%get('Output.Times', toutname, found); self%simdata%output_cfg%toutName = toutName; call check_field(found, 'Output.Times', ParName)
-      call par_file%get('Output.WriteOnTheFly', self%simdata%output_cfg%write_on_the_fly, found); call check_field(found, 'Output.WriteOnTheFly', ParName)
 
       !Model configuration
-      call par_file%get("ModelConfig.MaxNrGridCells", self%simdata%model_cfg%max_length_input_data, found);
+      call par_file%get("ModelConfig.MaxLengthInputData", self%simdata%model_cfg%max_length_input_data, found);
       if (.not. found) then
          self%simdata%model_cfg%max_length_input_data = 1000
-         call warn('Variable "ModelConfig.MaxNrGridCells" is not set. Assume a value of 1000')
+         call warn('Variable "ModelConfig.MaxLengthInputData" is not set. Assume a value of 1000')
       end if
       call par_file%get("ModelConfig.CoupleAED2", self%simdata%model_cfg%couple_aed2, found);
       if (.not. found) then
@@ -386,9 +393,9 @@ contains
       call par_file%get("ModelParameters.albsw", self%simdata%model_param%albsw, found); call check_field(found, 'ModelParameters.albsw', ParName)
 
       !Simulation Parameter
-      call par_file%get("Simulation.Timestep [s]", self%simdata%sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep [s]', ParName)
-      call par_file%get("Simulation.Start [d]", self%simdata%sim_cfg%start_datum, found); call check_field(found, 'Simulation.Start [d]', ParName)
-      call par_file%get("Simulation.End [d]", self%simdata%sim_cfg%end_datum, found); call check_field(found, 'Simulation.End [d]', ParName)
+      call par_file%get("Simulation.Timestep s", self%simdata%sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep s', ParName)
+      call par_file%get("Simulation.Start d", self%simdata%sim_cfg%start_datum, found); call check_field(found, 'Simulation.Start d', ParName)
+      call par_file%get("Simulation.End d", self%simdata%sim_cfg%end_datum, found); call check_field(found, 'Simulation.End d', ParName)
 
       call par_file%destroy()
 

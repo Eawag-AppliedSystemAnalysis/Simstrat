@@ -71,7 +71,7 @@ contains
                  nval=>self%nval, &
                  nz=>self%grid%nz_grid)
 
-         if (state%std == 1) then ! First iteration
+         if (state%model_step_counter == 1) then ! First iteration
             open (30, status='old', file=self%file)
             eof = 0
 

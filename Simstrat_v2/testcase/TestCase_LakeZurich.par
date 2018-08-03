@@ -15,7 +15,6 @@
     "Path"  : "TestCases_Results/",
     "Depths" : "TestCase_LakeZurich/Output_depth.dat",
     "Times"  : "TestCase_LakeZurich/Output_time.dat",
-    "WriteOnTheFly" : true
   },
 
   "ModelConfig" : {
@@ -39,9 +38,9 @@
   },
 
   "Simulation" : {
-    "Timestep [s]" : 300,
-    "Start [d]"    : 35001,
-    "End [d]"      : 35731
+    "Timestep s" : 300,
+    "Start d"    : 35001,
+    "End d"      : 35731
   },
 
   "ModelParameters" : {
