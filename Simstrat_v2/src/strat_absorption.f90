@@ -46,8 +46,8 @@ contains
 
       ! Allocate arrays (used to be "save" variables)
       allocate (self%z_absorb(grid%max_length_input_data))
-      allocate (self%absorb_start(grid%max_length_input_data))
-      allocate (self%absorb_end(grid%max_length_input_data))
+      allocate (self%absorb_start(grid%nz_grid))
+      allocate (self%absorb_end(grid%nz_grid))
 
    end subroutine
 
@@ -58,7 +58,7 @@ contains
 
       ! Local Variables
       real(RK) :: dummy !Read depths
-      real(RK) :: absorb_read_start(self%grid%max_length_input_data + 1), absorb_read_end(self%grid%max_length_input_data + 1) !Read start and end values
+      real(RK) :: absorb_read_start(self%grid%max_length_input_data), absorb_read_end(self%grid%max_length_input_data) !Read start and end values
       integer :: i
 
       ! Associations for easier readability / comparability to old code
@@ -69,7 +69,7 @@ contains
                  absorb_end=>self%absorb_end, &
                  eof=>self%eof, &
                  nval=>self%nval, &
-                 nz=>self%grid%nz_grid)
+                 nz=>self%grid%nz_occupied)
 
          if (state%model_step_counter == 1) then ! First iteration
             open (30, status='old', file=self%file)
