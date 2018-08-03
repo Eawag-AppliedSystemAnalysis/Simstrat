@@ -23,11 +23,9 @@ module strat_turbulence
    contains
       procedure, pass :: init => turbulence_module_init
       procedure, pass :: update => turbulence_module_update
-      procedure, pass :: update_post_eps => turbulence_module_update_post_eps
 
       procedure, pass :: do_production => turbulence_module_do_production
       procedure, pass :: do_seiche => turbulence_module_do_seiche
-      procedure, pass :: update_nu => turbulence_module_update_nu
 
    end type
 contains
@@ -59,50 +57,6 @@ contains
          state%P_seiche = 0.0_RK
       end if
 
-   end subroutine
-
-   subroutine turbulence_module_update_post_eps(self, state)
-      implicit none
-      class(TurbulenceModule) :: self
-      class(ModelState) :: state
-
-      call self%update_nu(state)
-   end subroutine
-
-   subroutine turbulence_module_update_nu(self, state)
-      implicit none
-      class(TurbulenceModule) :: self
-      class(ModelState) :: state
-      real(RK), dimension(self%grid%ubnd_fce) :: avh
-      real(RK) :: epslim
-      integer :: i
-      associate (grid=>self%grid, &
-                 ubnd_vol=>self%grid%ubnd_vol, &
-                 ubnd_fce=>self%grid%ubnd_fce)
-
-         avh(1:ubnd_fce) = 0.5_RK/sig_e*(state%num(1:ubnd_fce - 1) + state%num(2:ubnd_fce)) ! Average num for Diss
-         do i = 1, ubnd_fce
-            ! determine epslim
-            if (state%NN(i) > 0) then
-               epslim = 0.212_RK*state%k(i)*sqrt(state%NN(i))
-            else
-               epslim = eps_min
-            end if
-
-            ! Check positivity of eps
-            if (state%eps(i) < epslim) state%eps(i) = epslim
-            if (state%eps(i) < 0) then
-               write (6, *) 'Dissipation negative'
-            end if
-
-            ! update nu_m and nu_h
-            state%num(i) = state%cmue1(i)*state%k(i)*state%k(i)/state%eps(i) + 1.5e-6_RK
-            state%nuh(i) = state%cmue2(i)*state%k(i)*state%k(i)/state%eps(i) + 1.5e-7_RK
-         end do
-
-         state%num(1) = kappa*state%u_taub*K_s + avh_min
-         state%num(ubnd_fce) = kappa*state%u_taus*z0 + avh_min
-      end associate
    end subroutine
 
    subroutine turbulence_module_do_production(self, state)

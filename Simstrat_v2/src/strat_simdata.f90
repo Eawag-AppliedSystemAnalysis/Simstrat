@@ -137,7 +137,7 @@ module strat_simdata
       real(RK) :: snow_dens ! On ice snow density [kg m-3]   
       real(RK) :: ice_temp ! Ice density [kg m-3]
       real(RK) :: snow_temp ! Ice density [kg m-3]
-      real(RK) :: percip ! Percipiation in water eqvivalent hight [m] 
+      real(RK) :: precip ! precipiation in water eqvivalent hight [m] 
    
       !For saving heatflux 
       real(RK), allocatable :: ha ! Incoming long wave [W m-2]

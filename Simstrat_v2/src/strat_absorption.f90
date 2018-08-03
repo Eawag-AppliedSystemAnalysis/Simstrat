@@ -45,9 +45,9 @@ contains
       self%file = absorption_file
 
       ! Allocate arrays (used to be "save" variables)
-      allocate (self%z_absorb(grid%nz_max + 1))
-      allocate (self%absorb_start(grid%nz_max + 1))
-      allocate (self%absorb_end(grid%nz_max + 1))
+      allocate (self%z_absorb(grid%max_length_input_data))
+      allocate (self%absorb_start(grid%max_length_input_data))
+      allocate (self%absorb_end(grid%max_length_input_data))
 
    end subroutine
 
@@ -58,7 +58,7 @@ contains
 
       ! Local Variables
       real(RK) :: dummy !Read depths
-      real(RK) :: absorb_read_start(self%grid%nz_max + 1), absorb_read_end(self%grid%nz_max + 1) !Read start and end values
+      real(RK) :: absorb_read_start(self%grid%max_length_input_data + 1), absorb_read_end(self%grid%max_length_input_data + 1) !Read start and end values
       integer :: i
 
       ! Associations for easier readability / comparability to old code
@@ -95,7 +95,8 @@ contains
             read (30, *, end=7) tb_end, (absorb_read_end(i), i=1, nval)
 
             ! Write to console that file was successfully read
-            write (6, *) "Adsorption input file successfully read"
+            write (6, *) "--Absorption input file successfully read"
+            write(6,*)
             ! Do the same for absorb_read_end
             call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end)
 

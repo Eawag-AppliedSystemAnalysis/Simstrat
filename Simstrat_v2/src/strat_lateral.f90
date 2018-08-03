@@ -133,7 +133,7 @@ contains
          do i = 1, 4
             if (idx == 1) then ! First iteration
 
-               ! Allocate arrays if not already done, this saves memory compared to declaring with nz_max
+               ! Allocate arrays if not already done, this saves memory compared to declaring with max_length_input_data
                if (.not. allocated(self%z_Inp)) allocate (self%z_Inp(1:4, 1:state%nz_input)) ! Input depths
                if (.not. allocated(self%Inp_read_start)) allocate (self%Inp_read_start(1:4, 1:state%nz_input))
                if (.not. allocated(self%Inp_read_end)) allocate (self%Inp_read_end(1:4, 1:state%nz_input))
@@ -182,8 +182,8 @@ contains
                      call self%surface_flow(self%Inp_read_end(i, self%nval_deep(i) - 1 + j), self%Q_end(i, :), self%depth_surfaceFlow(i, j), i)
                   end do
                end if
-
-               write(6, ' (A,A)') "Input file successfully read: ",fname(i)
+               
+               write(6,*) "--Input file successfully read: ",fname(i)
             end if ! idx==1
 
             ! If lake level changes and if there is surface inflow, adjust inflow depth to keep them at the surface

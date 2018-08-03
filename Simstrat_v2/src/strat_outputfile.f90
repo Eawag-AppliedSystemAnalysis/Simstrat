@@ -232,8 +232,7 @@ contains
       end if
 
       if (output_config%thinning_interval>1) write(6,*) 'Interval [days]: ',output_config%thinning_interval*sim_config%timestep/86400.
-      write(6,*) 'Output times successfully read'
-      write(6,*)
+      write(6,*) '--Output times successfully read'
 
     call self%init_files(output_config, grid)
    end subroutine

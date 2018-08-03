@@ -15,7 +15,7 @@ module strat_forcing
    private
 
    type, public :: ForcingModule
-      integer :: nz_max
+      integer :: max_length_input_data
       class(ModelConfig), pointer :: cfg
       class(StaggeredGrid), pointer :: grid
       class(ModelParam), pointer :: param
@@ -78,7 +78,7 @@ contains
          end if
          read (20, *, end=7) tb_end, (A_e(i), i=1, nval)
 
-         write (6, *) "Forcing input file successfully read"
+         write (6, *) "--Forcing input file successfully read"
       end if
 
       if (datum <= tb_start .or. eof == 1) then !If datum before first date or end of file reached
@@ -122,7 +122,7 @@ contains
       real(RK) :: tau
       real(RK) :: A_s(8), A_e(8), A_cur(8) ! adopted for rain (8 positions, previus 7)
       real(RK) :: fu, Vap_wat, heat0, emissivity
-      real(RK) :: T_surf, T_atm, F_glob, Vap_atm, Cloud, Percip
+      real(RK) :: T_surf, T_atm, F_glob, Vap_atm, Cloud, precip
       real(RK) :: H_A, H_K, H_V, H_W
       save A_s, A_e
       associate (cfg=>self%cfg, param=>self%param)
@@ -135,7 +135,7 @@ contains
          T_surf = state%T(self%grid%ubnd_vol)
       end if
    
-         ! number of values to read, depending on filtered wind and percipitation
+         ! number of values to read, depending on filtered wind and precipitation
          if (cfg%use_filtered_wind .and. cfg%ice_model == 0) then
             nval_offset = 1
          else if (cfg%ice_model == 1 .and. cfg%use_filtered_wind) then
@@ -181,9 +181,9 @@ contains
                Cloud = 0.5
                if (cfg%use_filtered_wind) state%Wf = A_cur(6) !AG 2014
                if (cfg%ice_model == 1 .and. cfg%use_filtered_wind) then
-                 state%percip = A_cur(7)
+                 state%precip = A_cur(7)
                else if (cfg%ice_model == 1) then 
-                 state%percip = A_cur(6)
+                 state%precip = A_cur(6)
                end if
 
             else if (cfg%forcing_mode == 3) then ! date,U10,V10,Tatm,Hsol,Vap,Clouds
@@ -207,9 +207,9 @@ contains
                end if
                if (cfg%use_filtered_wind) state%Wf = A_cur(7) !AG 2014
                if (cfg%ice_model == 1 .and. cfg%use_filtered_wind) then
-                state%percip = A_cur(8)
+                state%precip = A_cur(8)
                else if (cfg%ice_model == 1) then
-                state%percip = A_cur(7)     
+                state%precip = A_cur(7)     
                end if
 
             else if (cfg%forcing_mode == 4) then ! date,U10,V10,Hnet,Hsol

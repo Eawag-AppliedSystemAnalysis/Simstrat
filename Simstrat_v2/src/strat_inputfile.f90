@@ -296,21 +296,21 @@ contains
       real(RK), dimension(:) :: A_tmp(self%simdata%model_cfg%max_length_input_data)
       integer :: num_read, i, ictr
       associate (simdata=>self%simdata, &
-                 nz_max=>grid_config%nz_max)
+                 max_length_input_data=>grid_config%max_length_input_data)
 
-         grid_config%nz_max = self%simdata%model_cfg%max_length_input_data
-         allocate (grid_config%grid_read(grid_config%nz_max))
+         grid_config%max_length_input_data = self%simdata%model_cfg%max_length_input_data
+         allocate (grid_config%grid_read(grid_config%max_length_input_data))
          ! Read grid
          open (12, status='old', file=simdata%input_cfg%GridName)
          read (12, *)
-         do ictr = 1, nz_max
+         do ictr = 1, max_length_input_data
             read (12, *, end=69) grid_config%grid_read(ictr)
          end do
 
-69       if(ictr==nz_max) then
-            write(6,*) 'Only first ',nz_max,' values of file read.'
+69       if(ictr==max_length_input_data) then
+            write(6,*) 'Only first ',max_length_input_data,' values of file read.'
          else 
-            write(6,*) "Grid file successfully read"
+            write(6,*) "--Grid file successfully read"
          end if
          close (12)
 
@@ -325,13 +325,13 @@ contains
          ! Read Morphology
          open (11, status='old', file=simdata%input_cfg%MorphName)
          read (11, *) ! Skip header
-         do i = 1, nz_max ! Read depth and area
+         do i = 1, max_length_input_data ! Read depth and area
             read (11, *, end=86) z_tmp(i), A_tmp(i)
          end do
-86       if(i==nz_max) then
-            write(6,*) 'Only first ',nz_max,' values of file read.'
+86       if(i==max_length_input_data) then
+            write(6,*) 'Only first ',max_length_input_data,' values of file read.'
          else
-            write(6,*) "Morphology file successfully read"
+            write(6,*) "--Morphology file successfully read"
          end if
          close (11)
 
@@ -468,12 +468,12 @@ contains
       class(SimstratSimulationFactory) :: self
 
       ! Local variables
-      integer, parameter :: nz_max = 1000
+      integer, parameter :: max_length_input_data = 1000
 
-      real(RK) :: z_read(nz_max), U_read(nz_max), V_read(nz_max)
-      real(RK) :: T_read(nz_max), S_read(nz_max), k_read(nz_max), eps_read(nz_max)
+      real(RK) :: z_read(max_length_input_data), U_read(max_length_input_data), V_read(max_length_input_data)
+      real(RK) :: T_read(max_length_input_data), S_read(max_length_input_data), k_read(max_length_input_data), eps_read(max_length_input_data)
 
-      real(RK) :: z_ini(nz_max)
+      real(RK) :: z_ini(max_length_input_data)
       real(RK) :: z_ini_depth, zmax
 
       integer :: i, num_read
@@ -485,7 +485,7 @@ contains
          ! Read file
          open (13, status='old', file=self%simdata%input_cfg%InitName) ! Opens initial conditions file
          read (13, *) ! Skip header
-         do i = 1, nz_max ! Read initial u,v,T, etc
+         do i = 1, max_length_input_data ! Read initial u,v,T, etc
             read (13, *, end=99) z_read(i), U_read(i), V_read(i), T_read(i), S_read(i), k_read(i), eps_read(i)
          end do
 99       num_read = i-1                               ! Number of valuInitNamees
@@ -532,7 +532,7 @@ contains
             call grid%interpolate_to_face(z_read, eps_read, num_read, model%eps)
          end if
 
-         write(6, *) "Initial data file successfully read"
+         write(6,*) "--Initial data file successfully read"
 
       end associate
    end subroutine
@@ -556,7 +556,7 @@ contains
 
       ! Local variables
       integer  :: i, j, fnum(1:4), nval(1:4), if_adv
-      real(RK) :: dummy, z_Inp_dummy(1:self%simdata%grid%nz_max)
+      real(RK) :: dummy, z_Inp_dummy(1:self%simdata%grid%max_length_input_data)
 
       open (41, status='old', file=self%simdata%input_cfg%QinpName)
       open (42, status='old', file=self%simdata%input_cfg%QoutName)

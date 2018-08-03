@@ -171,14 +171,14 @@ contains
                ! Log next model state
                simdata%output_cfg%write_to_file = .true.
             else
-               ! Else don't log
+               ! Don't log
                simdata%output_cfg%write_to_file = .false.
             end if
          end if 
 
          ! Advance to the next timestep
          simdata%model%datum = simdata%model%datum + simdata%model%dt/86400
-         
+
          ! ************************************
          ! ***** Compute next model state *****
          ! ************************************
@@ -196,6 +196,16 @@ contains
          if (simdata%model%has_advection) then
             call mod_lateral%update(simdata%model)
             call mod_advection%update(simdata%model)
+         end if
+
+         ! Display to screen
+         if (simdata%model%model_step_counter==1 .and. simdata%model_cfg%disp_simulation/=0) then
+            write(6,*)
+            write(6,*) ' -------------------------- '
+            write(6,*) '   SIMULATION IN PROGRESS   '
+            write(6,*) ' -------------------------- '
+            write(6,*)
+            if(simdata%model_cfg%disp_simulation/=0) write(6,'(A12, A20, A20, A20)') 'Time [d]','Surface level [m]','T_surf [degC]','T_bottom [degC]'
          end if
 
          ! Update Coriolis
@@ -234,16 +244,24 @@ contains
 
          ! Standard display: display when logged: datum, lake surface, T(1), T(surf)
          if (simdata%model_cfg%disp_simulation==1 .and. simdata%output_cfg%write_to_file) then
-            write(6,'(F10.4,F10.5,F10.5,F10.5)') simdata%model%datum, simdata%grid%z_face(simdata%grid%ubnd_fce), &
+            write(6,'(F12.4,F16.5,F20.5,F20.5)') simdata%model%datum, simdata%grid%z_face(simdata%grid%ubnd_fce), &
             simdata%model%T(simdata%grid%nz_occupied), simdata%model%T(1)
 
          ! Extra display: display every iteration: datum, lake surface, T(1), T(surf)
          else if (simdata%model_cfg%disp_simulation==2) then
-            write(6,'(F10.4,F10.4,F10.4,F10.4)') simdata%model%datum, simdata%grid%z_face(simdata%grid%ubnd_fce), &
+            write(6,'(F12.4,F20.5,F15.5,F15.5)') simdata%model%datum, simdata%grid%z_face(simdata%grid%ubnd_fce), &
             simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
          end if
          
       end do
+
+      if (simdata%model_cfg%disp_simulation/=0) then
+         write(6,*)
+         write(6,*) ' -------------------------- '
+         write(6,*) '    SIMULATION COMPLETED    '
+         write(6,*) ' -------------------------- '
+         write(6,*)
+      end if
    end subroutine
 
 end program simstrat_main

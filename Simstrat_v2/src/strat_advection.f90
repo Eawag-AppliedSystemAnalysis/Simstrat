@@ -51,7 +51,7 @@ contains
       real(RK) :: dh, dh_i(1:2), h_div_2, h_mult_2 ! depth differences
       real(RK) :: dU(self%grid%nz_grid), dV(self%grid%nz_grid), dTemp(self%grid%nz_grid), dS(self%grid%nz_grid)
       real(RK) :: dt_i(1:2) ! first and second time step
-      real(RK) :: AreaFactor_adv(1:self%grid%nz_max)
+      real(RK) :: AreaFactor_adv(1:self%grid%max_length_input_data)
       integer :: i, t_i
 
       associate (grid=>self%grid, &

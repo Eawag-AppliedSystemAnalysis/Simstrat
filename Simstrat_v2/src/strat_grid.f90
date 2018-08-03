@@ -12,7 +12,7 @@ module strat_grid
 
    ! Class that holds initial configuration for grid setup
    type, public :: GridConfig
-      integer :: nz_max
+      integer :: max_length_input_data
       integer :: nz_grid
       real(RK) :: max_depth
       real(RK), dimension(:), allocatable :: grid_read ! Grid definition
@@ -40,7 +40,7 @@ module strat_grid
       
       integer :: nz_grid      ! Number of allocated grid cells
       integer :: nz_occupied  ! number of grid cells in use as per current lake depth
-      integer :: nz_max  ! Hard limit of grid cells for reading files of unknnown length etc
+      integer :: max_length_input_data  ! Hard limit of grid cells for reading files of unknnown length etc
 
       integer :: ubnd_vol, ubnd_fce, l_vol, l_fce   ! Upper and lenght for volume (vol) and face(fce) grids
       real(RK) :: z_zero
@@ -87,7 +87,7 @@ contains
 
       ! Assign config
       self%nz_grid = config%nz_grid
-      self%nz_max = config%nz_max
+      self%max_length_input_data = config%max_length_input_data
       self%max_depth = config%max_depth
 
       ! Use read config to determine grid size
