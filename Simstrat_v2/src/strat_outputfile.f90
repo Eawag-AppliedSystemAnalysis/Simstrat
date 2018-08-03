@@ -93,16 +93,16 @@ contains
             call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=grid%l_vol+1, status_ok=status_ok)
             call self%output_files(i)%add('')
             call self%output_files(i)%add(grid%z_volume(1:grid%ubnd_vol), real_fmt='(F12.3)')
-         else if (self%output_config%output_vars(i)%surface_grid) then
-            !Variable on surface
-            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=1 + 1, status_ok=status_ok)
-            call self%output_files(i)%add('')
-            call self%output_files(i)%add(grid%z_volume(grid%ubnd_vol), real_fmt='(F12.3)')   
-         else  
+         else if (self%output_config%output_vars(i)%face_grid) then
             ! Variable on face grid
             call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=grid%l_fce+1, status_ok=status_ok)
             call self%output_files(i)%add('')
             call self%output_files(i)%add(grid%z_face(1:grid%ubnd_fce), real_fmt='(F12.3)')
+         else  
+            !Variable at surface
+            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=1 + 1, status_ok=status_ok)
+            call self%output_files(i)%add('')
+            call self%output_files(i)%add(grid%z_face(grid%ubnd_fce), real_fmt='(F12.3)')             
          end if
          call self%output_files(i)%next_row()
       end do
@@ -125,9 +125,22 @@ contains
       allocate (self%output_files(1:self%n_vars))
 
       do i = 1, self%n_vars
-      call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=self%n_depths+1, status_ok=status_ok)
-         call self%output_files(i)%add('')
-         call self%output_files(i)%add(self%output_config%zout(self%n_depths:1:-1), real_fmt='(F12.3)')
+         if (self%output_config%output_vars(i)%volume_grid) then
+            !Variable on volume grid
+            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=grid%l_vol+1, status_ok=status_ok)
+            call self%output_files(i)%add('')
+            call self%output_files(i)%add(grid%z_volume(1:grid%ubnd_vol), real_fmt='(F12.3)')
+         else if (self%output_config%output_vars(i)%face_grid) then
+            ! Variable on face grid
+            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=grid%l_fce+1, status_ok=status_ok)
+            call self%output_files(i)%add('')
+            call self%output_files(i)%add(grid%z_face(1:grid%ubnd_fce), real_fmt='(F12.3)')
+         else  
+            !Variable at surface
+            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=1 + 1, status_ok=status_ok)
+            call self%output_files(i)%add('')
+            call self%output_files(i)%add(grid%z_face(grid%ubnd_fce), real_fmt='(F12.3)')             
+         end if
          call self%output_files(i)%next_row()
       end do
 
@@ -256,16 +269,17 @@ contains
       end do
 
       do i = 1, self%n_vars
-         if (self%output_config%output_vars(i)%volume_grid) then
-            call self%grid%interpolate_from_vol(test, self%output_config%output_vars(i)%values, self%n_depths, values_on_zout)
-         else if (self%output_config%output_vars(i)%surface_grid) then
-         else
-            call self%grid%interpolate_from_face(test, self%output_config%output_vars(i)%values, self%n_depths, values_on_zout)
-         end if
-
-         call self%output_files(i)%add(datum, real_fmt='(F12.4)')
-         call self%output_files(i)%add(values_on_zout, real_fmt='(ES12.4)')
-         call self%output_files(i)%next_row()
+        call self%output_files(i)%add(datum, real_fmt='(F12.4)')
+        if (self%output_config%output_vars(i)%volume_grid) then
+          call self%grid%interpolate_from_vol(test, self%output_config%output_vars(i)%values, self%n_depths, values_on_zout)
+          call self%output_files(i)%add(self%output_config%output_vars(i)%values, real_fmt='(ES14.4)')
+        else if (self%output_config%output_vars(i)%face_grid) then
+          call self%grid%interpolate_from_face(test, self%output_config%output_vars(i)%values, self%n_depths, values_on_zout)
+          call self%output_files(i)%add(self%output_config%output_vars(i)%values, real_fmt='(ES14.4)')
+        else
+          call self%output_files(i)%add(self%output_config%output_vars(i)%values_surf, real_fmt='(ES14.4)')
+        end if
+        call self%output_files(i)%next_row()
       end do
 
       deallocate (values_on_zout)
@@ -292,10 +306,10 @@ contains
       ! For each variable, write state
       do i = 1, self%n_vars
         call self%output_files(i)%add(datum, real_fmt='(F12.4)')
-        if (self%output_config%output_vars(i)%surface_grid) then
-           call self%output_files(i)%add(self%output_config%output_vars(i)%values_surf, real_fmt='(ES14.4)')   
+        if (self%output_config%output_vars(i)%volume_grid .or. self%output_config%output_vars(i)%face_grid) then
+           call self%output_files(i)%add(self%output_config%output_vars(i)%values, real_fmt='(ES14.4)')   
         else
-           call self%output_files(i)%add(self%output_config%output_vars(i)%values, real_fmt='(ES14.4)')
+           call self%output_files(i)%add(self%output_config%output_vars(i)%values_surf, real_fmt='(ES14.4)')
         end if
            call self%output_files(i)%next_row()
       end do

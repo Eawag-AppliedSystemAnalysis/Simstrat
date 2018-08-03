@@ -26,7 +26,7 @@ module strat_simdata
       character(len=:), allocatable :: name
       real(RK), dimension(:), pointer :: values
       real(RK), pointer :: values_surf 
-      logical :: volume_grid, surface_grid
+      logical :: volume_grid, face_grid
    end type
 
    ! Logging configuration
