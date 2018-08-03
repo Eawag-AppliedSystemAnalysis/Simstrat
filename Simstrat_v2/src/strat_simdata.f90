@@ -25,7 +25,8 @@ module strat_simdata
    type, public :: LogVariable
       character(len=:), allocatable :: name
       real(RK), dimension(:), pointer :: values
-      logical :: volume_grid
+      real(RK), pointer :: values_surf 
+      logical :: volume_grid, surface_grid
    end type
 
    ! Logging configuration
@@ -68,6 +69,8 @@ module strat_simdata
       integer :: disp_simulation
       integer :: disp_diagnostic
       integer :: data_averaging
+      integer :: ice_model
+      integer :: snow_model
    end type
 
    ! Model params (read from file)
@@ -84,7 +87,11 @@ module strat_simdata
       real(RK) :: p_radin
       real(RK) :: p_windf
       real(RK) :: beta_sol
+      real(RK) :: beta_snow_ice
       real(RK) :: albsw
+      real(RK) :: ice_albedo ! Ice albedo
+      real(RK) :: snow_albedo ! Snow albedo   
+      real(RK) :: freez_temp ! Water freez point [kg m-3]     
    end type
 
    ! Model state (this is actually the simulation data!!!)
@@ -100,7 +107,7 @@ module strat_simdata
       real(RK), dimension(:), allocatable :: dS ! Source/sink for salinity
       real(RK), dimension(:, :), allocatable :: Q_inp ! Horizontal inflow [m^3/s]
       real(RK), dimension(:), allocatable :: rho ! Water density [kg/m^3]
-
+   
       ! Variables located on z_upp grid
       real(RK), dimension(:), allocatable :: k, ko ! Turbulent kinetic energy (TKE) [J/kg]
       real(RK), dimension(:), allocatable :: avh
@@ -118,13 +125,29 @@ module strat_simdata
       real(RK) :: u_taub, drag, u_taus ! Drag
       real(RK) :: tx, ty ! Shear stress
       real(RK) :: C10 ! Wind drag coefficient
-      real(RK) :: SST, heat ! Sea surface temperature and heat flux
-      real(RK) :: rad0 ! Solar radiation at surface
+      real(RK) :: SST, heat , heat_snow_ice! Sea surface temperature and heat flux
+      !real(RK) :: rad0 ! Solar radiation at surface
+      real(RK) :: T_atm ! Air temp at surface   
       real(RK), dimension(:), allocatable :: rad ! Solar radiation (in water)
       real(RK), dimension(:), allocatable :: Q_vert ! Vertical exchange between boxes
 
-      real(RK)                :: cde, cm0
-      real(RK)                ::  fsed
+      ! Snow and Ice
+      real(RK), allocatable :: snow_h ! Snow layer height [m]
+      real(RK), allocatable :: ice_h ! Ice layer height [m]   
+      real(RK) :: snow_dens ! On ice snow density [kg m-3]   
+      real(RK) :: ice_temp ! Ice density [kg m-3]
+      real(RK) :: snow_temp ! Ice density [kg m-3]
+      real(RK) :: percip ! Percipiation in water eqvivalent hight [m] 
+   
+      !For saving heatflux 
+      real(RK), allocatable :: ha ! Incoming long wave [W m-2]
+      real(RK), allocatable :: hw ! Outgoing long wave [W m-2]
+      real(RK), allocatable :: hk ! Sensible flux [W m-2]
+      real(RK), allocatable :: hv ! Latent heat [W m-2]
+      real(RK), allocatable :: rad0 !  Solar radiation at surface  [W m-2]
+   
+      real(RK) :: cde, cm0
+      real(RK) ::  fsed
       real(RK), dimension(:), allocatable     :: fgeo_add
       logical :: has_advection
       integer :: nz_input
@@ -140,8 +163,8 @@ module strat_simdata
       type(OutputConfig), public  :: output_cfg
       type(SimConfig), public     :: sim_cfg
       type(ModelConfig), public   :: model_cfg
-      type(ModelParam), public   :: model_param
-      type(ModelState), public   :: model
+      type(ModelParam), public    :: model_param
+      type(ModelState), public    :: model
       type(StaggeredGrid), public :: grid
    contains
       procedure, pass :: init => simulation_data_init
@@ -190,6 +213,15 @@ contains
       allocate (this%rad(state_size + 1))
       allocate (this%Q_vert(state_size + 1))
 
+      allocate (this%snow_h) 
+      allocate (this%ice_h)  
+   
+      allocate (this%ha) 
+      allocate (this%hw) 
+      allocate (this%hk) 
+      allocate (this%hv) 
+      allocate (this%rad0) 
+   
       ! init to zero
       this%U = 0.0_RK
       this%V = 0.0_RK
@@ -214,6 +246,18 @@ contains
       this%absorb = 0.0_RK
       this%rad = 0.0_RK
       this%Q_vert = 0.0_RK
+    
+      this%snow_h = 0.0_RK
+      this%ice_h = 0.0_RK
+      this%ice_temp = 0.0_RK 
+      this%snow_temp = 0.0_RK
+   
+      this%ha = 0.0_RK
+      this%hw = 0.0_RK
+      this%hk = 0.0_RK 
+      this%hv = 0.0_RK 
+      this%rad0 = 0.0_RK   
+   
    end subroutine
 
 end module strat_simdata

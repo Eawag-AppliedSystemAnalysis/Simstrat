@@ -34,7 +34,9 @@
     "EnableSalinityTransport" : 1,
     "DisplaySimulation"       : 1,
     "DisplayDiagnose"         : 3,
-    "DataAveraging"           : 10
+    "DataAveraging"           : 10,
+    "IceModel"                : 1,
+    "SnowModel"               : 0	
   },
 
   "Simulation" : {
@@ -44,18 +46,22 @@
   },
 
   "ModelParameters" : {
-    "lat"       : 47.3,
-    "p_air"     : 960,
-    "a_seiche"  : 0.0011046,
-    "q_nn"      : 0.75,
-    "f_wind"    : 1.6423,
-    "c10"       : 1,
-    "cd"        : 0.002,
-    "hgeo"      : 0.1,
-    "k_min"     : 1e-30,
-    "p_radin"   : 1.1978,
-    "p_windf"   : 1,
-    "beta_sol"  : 0.35,
-    "albsw"     : 0.08
+    "lat"           : 47.3,
+    "p_air"         : 960,
+    "a_seiche"      : 0.0011046,
+    "q_nn"          : 0.75,
+    "f_wind"        : 1.6423,
+    "c10"           : 1,
+    "cd"            : 0.002,
+    "hgeo"          : 0.1,
+    "k_min"         : 1e-30,
+    "p_radin"       : 1.1978,
+    "p_windf"       : 1,
+    "beta_sol"      : 0.35,
+    "beta_snow_ice" : 0.40,	
+    "albsw"         : 0.08,
+    "ice_albedo"    : 0.30,
+    "snow_albedo"   : 0.77,
+    "freez_temp"    : 0.05	
   }
 }
