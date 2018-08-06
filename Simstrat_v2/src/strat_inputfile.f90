@@ -439,7 +439,7 @@ contains
       call par_file%get("ModelParameters.p_radin", self%simdata%model_param%p_radin, found); call check_field(found, 'ModelParameters.p_radin', ParName)
       call par_file%get("ModelParameters.p_windf", self%simdata%model_param%p_windf, found); call check_field(found, 'ModelParameters.p_windf', ParName)
       call par_file%get("ModelParameters.beta_sol", self%simdata%model_param%beta_sol, found); call check_field(found, 'ModelParameters.beta_sol', ParName)
-      call par_file%get("ModelParameters.beta_snow_ice", self%simdata%model_param%beta_snow_ice, found); call check_field(found, 'ModelParameters.beta_snow_ice', ParName)     
+      call par_file%get("ModelParameters.beta_snowice", self%simdata%model_param%beta_snow_ice, found); call check_field(found, 'ModelParameters.beta_snowice', ParName)     
       call par_file%get("ModelParameters.albsw", self%simdata%model_param%albsw, found); call check_field(found, 'ModelParameters.albsw', ParName)
       call par_file%get("ModelParameters.ice_albedo", self%simdata%model_param%ice_albedo, found); call check_field(found, 'ModelParameters.ice_albedo', ParName)
       call par_file%get("ModelParameters.snow_albedo", self%simdata%model_param%snow_albedo, found); call check_field(found, 'ModelParameters.snow_albedo', ParName)
