@@ -42,7 +42,7 @@ module strat_grid
       integer :: nz_occupied  ! number of grid cells in use as per current lake depth
       integer :: max_length_input_data  ! Hard limit of grid cells for reading files of unknnown length etc
 
-      integer :: ubnd_vol, ubnd_fce, l_vol, l_fce   ! Upper and lenght for volume (vol) and face(fce) grids
+      integer :: ubnd_vol, ubnd_fce, length_vol, length_fce   ! Upper and lenght for volume (vol) and face(fce) grids
       real(RK) :: z_zero
       real(RK) :: lake_level_old
       real(RK) :: max_depth
@@ -433,8 +433,8 @@ contains
 
       self%ubnd_vol = self%nz_occupied
       self%ubnd_fce = self%nz_occupied + 1
-      self%l_vol = self%nz_occupied
-      self%l_fce = self%nz_occupied + 1
+      self%length_vol = self%nz_occupied
+      self%length_fce = self%nz_occupied + 1
    end subroutine
 
    pure function grid_convert2height_above_sed(z, z_zero) result(h)

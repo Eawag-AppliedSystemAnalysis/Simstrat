@@ -46,7 +46,7 @@ contains
       implicit none
       class(StabilityModule) :: self
       class(ModelState) :: state
-      real(RK), dimension(self%grid%l_fce) :: beta
+      real(RK), dimension(self%grid%length_fce) :: beta
 
       !Do buoyancy update (update NN)
       if (state%has_salinity) then
@@ -85,8 +85,8 @@ contains
       real(RK), dimension(:), intent(inout) :: NN, rho
 
       ! Local variables
-      real(RK) :: a(self%grid%l_fce), buoy(self%grid%l_fce)
-      real(RK) :: rho0t(self%grid%l_fce), rho0st(self%grid%l_fce)
+      real(RK) :: a(self%grid%length_fce), buoy(self%grid%length_fce)
+      real(RK) :: rho0t(self%grid%length_fce), rho0st(self%grid%length_fce)
       integer :: i
 
       associate (grd=>self%grid)

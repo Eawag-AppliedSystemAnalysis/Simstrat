@@ -21,12 +21,12 @@ module strat_outputfile
       type(csv_file), dimension(:), allocatable :: output_files
       integer, public :: n_depths
       integer, public :: n_vars
-      integer, public :: thinning_interval, current_i
+
    contains
       procedure(generic_log_init), deferred, pass(self), public :: initialize
+      procedure(generic_init_files), deferred, pass(self), public :: init_files
       procedure(generic_log), deferred, pass(self), public :: log   ! Method that is called each loop to write data
       procedure(generic_log_close), deferred, pass(self), public :: close
-      procedure(generic_init_files), deferred, pass(self), public :: init_files
    end type
 
    !Simple logger = Logger that just writes out current state of variables,
@@ -40,7 +40,7 @@ module strat_outputfile
       procedure, pass(self), public :: close => log_close
    end type
 
-   ! Logger that interpolates on a specified output grid. Implementation not finished
+   ! Logger that interpolates on a specified output grid at specific times.
    type, extends(SimpleLogger), public :: InterpolatingLogger
       private
    contains
@@ -70,82 +70,22 @@ contains
 
    end subroutine
 
-   ! Simple logger initialiation
-   subroutine init_files_simple(self, output_config, grid)
+   subroutine generic_log(self, datum)
       implicit none
-      class(SimpleLogger), intent(inout) :: self
-      class(OutputConfig), target :: output_config
-      class(StaggeredGrid), target :: grid
 
-      logical :: status_ok
-      integer :: n_depths, i
-      n_depths = grid%l_fce
-      self%n_depths = n_depths
-
-      ! Allocate output files
-      if (allocated(self%output_files)) deallocate (self%output_files)
-      allocate (self%output_files(self%n_vars))
-
-      ! For each configured variable, create file and write header
-      do i = 1, self%n_vars
-         if (self%output_config%output_vars(i)%volume_grid) then
-            !Variable on volume grid
-            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=grid%l_vol+1, status_ok=status_ok)
-            call self%output_files(i)%add('')
-            call self%output_files(i)%add(grid%z_volume(1:grid%ubnd_vol), real_fmt='(F12.3)')
-         else if (self%output_config%output_vars(i)%face_grid) then
-            ! Variable on face grid
-            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=grid%l_fce+1, status_ok=status_ok)
-            call self%output_files(i)%add('')
-            call self%output_files(i)%add(grid%z_face(1:grid%ubnd_fce), real_fmt='(F12.3)')
-         else  
-            !Variable at surface
-            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=1 + 1, status_ok=status_ok)
-            call self%output_files(i)%add('')
-            call self%output_files(i)%add(grid%z_face(grid%ubnd_fce), real_fmt='(F12.3)')             
-         end if
-         call self%output_files(i)%next_row()
-      end do
-      !self%thinning_interval = 1
-      self%current_i = 0
-
+      class(SimstratOutputLogger), intent(inout) :: self
+      real(RK), intent(in) :: datum
    end subroutine
 
-   subroutine init_files_interpolating(self, output_config, grid)
-      implicit none
-      class(InterpolatingLogger), intent(inout) :: self
-      class(OutputConfig), target :: output_config
-      class(StaggeredGrid), target :: grid
+   subroutine generic_log_close(self)
+      implicit none      
 
-      logical :: status_ok
-      integer :: n_depths, i
-      n_depths = size(output_config%zout)
-      self%n_depths = n_depths
-      if (allocated(self%output_files)) deallocate (self%output_files)
-      allocate (self%output_files(1:self%n_vars))
-
-      do i = 1, self%n_vars
-         if (self%output_config%output_vars(i)%volume_grid) then
-            !Variable on volume grid
-            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=grid%l_vol+1, status_ok=status_ok)
-            call self%output_files(i)%add('')
-            call self%output_files(i)%add(grid%z_volume(1:grid%ubnd_vol), real_fmt='(F12.3)')
-         else if (self%output_config%output_vars(i)%face_grid) then
-            ! Variable on face grid
-            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=grid%l_fce+1, status_ok=status_ok)
-            call self%output_files(i)%add('')
-            call self%output_files(i)%add(grid%z_face(1:grid%ubnd_fce), real_fmt='(F12.3)')
-         else  
-            !Variable at surface
-            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=1 + 1, status_ok=status_ok)
-            call self%output_files(i)%add('')
-            call self%output_files(i)%add(grid%z_face(grid%ubnd_fce), real_fmt='(F12.3)')             
-         end if
-         call self%output_files(i)%next_row()
-      end do
-
+      class(SimstratOutputLogger), intent(inout) :: self
    end subroutine
 
+   !************************* Init logging ****************************
+
+   ! Init logging for simple logger
    subroutine log_init_simple(self, sim_config, output_config, grid)
       implicit none
       class(SimpleLogger), intent(inout) :: self
@@ -158,12 +98,12 @@ contains
       self%sim_config => sim_config
       self%output_config => output_config
       self%grid => grid
-      n_vars = size(output_config%output_vars)
-      self%n_vars = n_vars
+      self%n_vars = size(output_config%output_vars)
 
       call self%init_files(output_config, grid)
    end subroutine
 
+   ! Init logging for interpolating logger
    subroutine log_init_interpolating(self, sim_config, output_config, grid)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
@@ -237,55 +177,85 @@ contains
     call self%init_files(output_config, grid)
    end subroutine
 
-   subroutine generic_log(self, datum)
+   !************************* Init files ****************************
+
+   ! Initialize files for simple logger
+   subroutine init_files_simple(self, output_config, grid)
       implicit none
+      class(SimpleLogger), intent(inout) :: self
+      class(OutputConfig), target :: output_config
+      class(StaggeredGrid), target :: grid
 
-      class(SimstratOutputLogger), intent(inout) :: self
-      real(RK), intent(in) :: datum
-   end subroutine
-
-   subroutine generic_log_close(self)
-      implicit none
-
-      class(SimstratOutputLogger), intent(inout) :: self
-   end subroutine
-
-
-   subroutine log_interpolating(self, datum)
-      implicit none
-
-      class(InterpolatingLogger), intent(inout) :: self
-      real(RK), intent(in) :: datum
-      !workaround gfortran bug => cannot pass allocatable array to csv file
-      real(RK), dimension(:), allocatable :: values, values_on_zout, test
+      logical :: status_ok
       integer :: i
+      self%n_depths = grid%length_fce
 
-      allocate (values_on_zout(self%n_depths))
-      allocate (test(self%n_depths))
+      ! Allocate output files
+      if (allocated(self%output_files)) deallocate (self%output_files)
+      allocate (self%output_files(self%n_vars))
 
-      do i = 1, self%n_depths
-         test(i) = self%grid%z_zero + self%output_config%zout(self%n_depths - i + 1)
+      ! For each configured variable, create file and write header
+      do i = 1, self%n_vars
+         if (self%output_config%output_vars(i)%volume_grid) then
+            !Variable on volume grid
+            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=grid%length_vol+1, status_ok=status_ok)
+            call self%output_files(i)%add('')
+            call self%output_files(i)%add(grid%z_volume(1:grid%ubnd_vol), real_fmt='(F12.3)')
+         else if (self%output_config%output_vars(i)%face_grid) then
+            ! Variable on face grid
+            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=grid%length_fce+1, status_ok=status_ok)
+            call self%output_files(i)%add('')
+            call self%output_files(i)%add(grid%z_face(1:grid%ubnd_fce), real_fmt='(F12.3)')
+         else  
+            !Variable at surface
+            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=1 + 1, status_ok=status_ok)
+            call self%output_files(i)%add('')
+            call self%output_files(i)%add(grid%z_face(grid%ubnd_fce), real_fmt='(F12.3)')             
+         end if
+         call self%output_files(i)%next_row()
       end do
+
+   end subroutine
+
+   ! Initialize files for interpolating logger
+   subroutine init_files_interpolating(self, output_config, grid)
+      implicit none
+      class(InterpolatingLogger), intent(inout) :: self
+      class(OutputConfig), target :: output_config
+      class(StaggeredGrid), target :: grid
+
+      logical :: status_ok
+      integer :: n_depths, i
+      self%n_depths = size(output_config%zout)
+
+      if (allocated(self%output_files)) deallocate (self%output_files)
+      allocate (self%output_files(1:self%n_vars))
 
       do i = 1, self%n_vars
-        call self%output_files(i)%add(datum, real_fmt='(F12.4)')
-        if (self%output_config%output_vars(i)%volume_grid) then
-          call self%grid%interpolate_from_vol(test, self%output_config%output_vars(i)%values, self%n_depths, values_on_zout)
-          call self%output_files(i)%add(self%output_config%output_vars(i)%values, real_fmt='(ES14.4)')
-        else if (self%output_config%output_vars(i)%face_grid) then
-          call self%grid%interpolate_from_face(test, self%output_config%output_vars(i)%values, self%n_depths, values_on_zout)
-          call self%output_files(i)%add(self%output_config%output_vars(i)%values, real_fmt='(ES14.4)')
-        else
-          call self%output_files(i)%add(self%output_config%output_vars(i)%values_surf, real_fmt='(ES14.4)')
-        end if
-        call self%output_files(i)%next_row()
+         if (self%output_config%output_vars(i)%volume_grid) then
+            !Variable on volume grid
+            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=self%n_depths+1, status_ok=status_ok)
+            call self%output_files(i)%add('')
+            call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
+         else if (self%output_config%output_vars(i)%face_grid) then
+            ! Variable on face grid
+            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=self%n_depths+1, status_ok=status_ok)
+            call self%output_files(i)%add('')
+            call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
+         else  
+            !Variable at surface
+            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=1 + 1, status_ok=status_ok)
+            call self%output_files(i)%add('')
+            call self%output_files(i)%add(grid%z_face(grid%ubnd_fce), real_fmt='(F12.3)')             
+         end if
+         call self%output_files(i)%next_row()
       end do
 
-      deallocate (values_on_zout)
    end subroutine
 
+   !************************* Log ****************************
 
-   ! log current state
+   ! Log current state
    subroutine log_simple(self, datum)
       implicit none
 
@@ -295,25 +265,67 @@ contains
       !real(RK), dimension(:), allocatable :: values, values_on_zout,test
       integer :: i
 
-      if (mod(self%current_i, self%thinning_interval) /= 0) then
-         self%current_i = self%current_i + 1
-         return ! dont log
-      else
-         self%current_i = self%current_i + 1
-      end if
-
       ! For each variable, write state
       do i = 1, self%n_vars
+        ! Write datum
         call self%output_files(i)%add(datum, real_fmt='(F12.4)')
+        ! If on volume or faces grid
         if (self%output_config%output_vars(i)%volume_grid .or. self%output_config%output_vars(i)%face_grid) then
+           ! Write state
            call self%output_files(i)%add(self%output_config%output_vars(i)%values, real_fmt='(ES14.4)')   
         else
+           ! If only value at surface
            call self%output_files(i)%add(self%output_config%output_vars(i)%values_surf, real_fmt='(ES14.4)')
         end if
-           call self%output_files(i)%next_row()
+         ! Advance to next row
+         call self%output_files(i)%next_row()
       end do
 
    end subroutine
+
+   ! Log current state on interpolated grid at specific times
+   subroutine log_interpolating(self, datum)
+      implicit none
+
+      class(InterpolatingLogger), intent(inout) :: self
+      real(RK), intent(in) :: datum
+      !workaround gfortran bug => cannot pass allocatable array to csv file
+      real(RK), dimension(:), allocatable :: values_on_zout, water_h_above_sed
+      integer :: i
+
+      allocate (values_on_zout(self%n_depths))
+      allocate (water_h_above_sed(self%n_depths))
+
+      ! Transform to depths above sediment
+      do i = 1, self%n_depths
+         water_h_above_sed(i) = self%grid%z_zero + self%output_config%zout(self%n_depths - i + 1)
+      end do
+
+      do i = 1, self%n_vars
+        ! Write datum
+        call self%output_files(i)%add(datum, real_fmt='(F12.4)')
+        ! If on volume or faces grid
+        if (self%output_config%output_vars(i)%volume_grid) then
+          ! Interpolate state on volume grid
+          call self%grid%interpolate_from_vol(water_h_above_sed, self%output_config%output_vars(i)%values, self%n_depths, values_on_zout)
+          call self%output_files(i)%add(values_on_zout, real_fmt='(ES14.4)')
+        else if (self%output_config%output_vars(i)%face_grid) then
+          ! Interpolate state on face grid
+          call self%grid%interpolate_from_face(water_h_above_sed, self%output_config%output_vars(i)%values, self%n_depths, values_on_zout)
+          ! Write state
+          call self%output_files(i)%add(values_on_zout, real_fmt='(ES14.4)')
+        else
+          ! If only value at surface
+          call self%output_files(i)%add(self%output_config%output_vars(i)%values_surf, real_fmt='(ES14.4)')
+        end if
+        ! Advance to next row
+        call self%output_files(i)%next_row()
+      end do
+
+      deallocate (values_on_zout, water_h_above_sed)
+end subroutine
+
+   !************************* Close ****************************
 
    ! Close all files
    subroutine log_close(self)
