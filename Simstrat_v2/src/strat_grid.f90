@@ -394,7 +394,7 @@ contains
       real(RK), dimension(:), intent(out) :: yi
 
       integer, intent(in) :: num_z
-      call Interp(z, y, num_z, self%z_face, yi, self%nz_grid)
+      call Interp(z, y, num_z, self%z_face, yi, self%nz_grid + 1)
    end subroutine
 
    subroutine grid_interpolate_to_face_from_second(self, z, y, num_z, yi)
@@ -404,7 +404,7 @@ contains
       real(RK), dimension(:), intent(out) :: yi
 
       integer, intent(in) :: num_z
-      call Interp(z, y, num_z, self%z_face(2:self%nz_grid + 1), yi, self%nz_grid)
+      call Interp(z, y, num_z, self%z_face(2:self%nz_grid + 1), yi(2:self%nz_grid + 1), self%nz_grid)
    end subroutine
 
    subroutine grid_interpolate_from_vol(self, z, y, num_z, yi)

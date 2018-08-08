@@ -137,8 +137,8 @@ contains
                if (.not. allocated(self%z_Inp)) allocate (self%z_Inp(1:4, 1:state%nz_input)) ! Input depths
                if (.not. allocated(self%Inp_read_start)) allocate (self%Inp_read_start(1:4, 1:state%nz_input))
                if (.not. allocated(self%Inp_read_end)) allocate (self%Inp_read_end(1:4, 1:state%nz_input))
-               if (.not. allocated(self%Q_start)) allocate (self%Q_start(1:4, 1:self%grid%nz_grid + 1)) ! Input interpolated on grid
-               if (.not. allocated(self%Q_end)) allocate (self%Q_end(1:4, 1:self%grid%nz_grid + 1)) ! Input interpolated on grid
+               if (.not. allocated(self%Q_start)) allocate (self%Q_start(1:4, 1:grid%nz_grid + 1)) ! Input interpolated on grid
+               if (.not. allocated(self%Q_end)) allocate (self%Q_end(1:4, 1:grid%nz_grid + 1)) ! Input interpolated on grid
 
                ! Open file and start to read
                self%eof(i) = 0
@@ -166,7 +166,7 @@ contains
                call Integrate(self%z_Inp(i, :), self%Inp_read_start(i, :), Q_read_start(i, :), self%nval_deep(i))
 
                ! Very important: once the inflowing quantitiy is integrated, it necessarily has to be
-               ! interpolated on the z_upp grid starting with index 1
+               ! interpolated to the face grid
                call grid%interpolate_to_face_from_second(self%z_Inp(i, :), Q_read_start(i, :), self%nval_deep(i), self%Q_start(i, :))
 
                ! Read second line and treatment of deep inflow
@@ -182,14 +182,12 @@ contains
                      call self%surface_flow(self%Inp_read_end(i, self%nval_deep(i) - 1 + j), self%Q_end(i, :), self%depth_surfaceFlow(i, j), i)
                   end do
                end if
-               
                write(6,*) "--Input file successfully read: ",fname(i)
             end if ! idx==1
 
             ! If lake level changes and if there is surface inflow, adjust inflow depth to keep them at the surface
-            if ((.not. self%grid%lake_level_old == self%grid%z_face(self%grid%ubnd_fce)) .and. (self%nval_surface(i) > 0)) then
+            if ((.not. grid%lake_level_old == grid%z_face(grid%ubnd_fce)) .and. (self%nval_surface(i) > 0)) then
 
-               !! next two blocks are exactly same as above?! - why?
                ! Recalculate Q_start from deep inflows
                call Integrate(self%z_Inp(i, :), self%Inp_read_start(i, :), Q_read_start(i, :), self%nval_deep(i))
                call grid%interpolate_to_face_from_second(self%z_Inp(i, :), Q_read_start(i, :), self%nval_deep(i), self%Q_start(i, :))
@@ -230,11 +228,12 @@ contains
                end do ! end do while
             end if
 
-            !Linearly interpolate value at correct datum (for all depths)
+            ! Linearly interpolate value at correct datum
+            ! Note that Q_inp is on the face grid
             self%Q_start(i,1)=0
             self%Q_end(i,1)=0
-            do j = 1, grid%ubnd_vol
-               state%Q_inp(i,j) = self%Q_start(i,j) + (datum-self%tb_start(i)) * (self%Q_end(i,j)-self%Q_start(i,j))/(self%tb_end(i)-self%tb_start(i))
+            do j = 1, grid%ubnd_fce
+               Q_inp(i,j) = self%Q_start(i,j) + (datum-self%tb_start(i)) * (self%Q_end(i,j)-self%Q_start(i,j))/(self%tb_end(i)-self%tb_start(i))
             end do
             goto 11
 
@@ -250,18 +249,17 @@ contains
 
          end do ! end do i=1,4
          ! Q_vert is the integrated difference between in- and outflow (starting at the lake bottom)
-         ! Q_vert is located on the face grid, m^3/s
+         ! Q_vert is located on the volume grid, m^3/s
          Q_vert(1)=0
-         Q_vert(2:grid%ubnd_fce) = Q_inp(1, 1:grid%ubnd_vol) + Q_inp(2, 1:grid%ubnd_vol)
-         !write(6,*) Q_vert(1:self%grid%ubnd_fce)
+         Q_vert(2:grid%ubnd_fce) = Q_inp(1, 1:grid%ubnd_fce) + Q_inp(2, 1:grid%ubnd_fce)
 
-         !write(6,*) Q_inp(2,:)
          ! Set all Q to the differences (from the integrals)
-         ! Q_inp is located on the volume grid, element 1 remains unchanged since element 0 is 0
+         ! The new Q_inp is located on the volume grid, element 1 remains unchanged since element 0 is 0
          do i = 1, 4
-            do j = 1, grid%ubnd_vol - 1
-               Q_inp(i, grid%ubnd_vol - j + 1) = Q_inp(i, grid%ubnd_vol - j + 1) - Q_inp(i, grid%ubnd_vol - j)
+            do j = 1, grid%ubnd_vol
+               Q_inp(i, j) = Q_inp(i, j + 1) - Q_inp(i, j)
             end do
+               Q_inp(i,grid%ubnd_vol+1) = 0
          end do
 
       end associate
