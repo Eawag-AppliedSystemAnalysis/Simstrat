@@ -66,8 +66,8 @@ module strat_grid
       procedure, pass :: interpolate_to_face => grid_interpolate_to_face    ! Interpolate quantitiy onto face grid
       procedure, pass :: interpolate_to_face_from_second => grid_interpolate_to_face_from_second  ! Interpolate quantity onto face grid, ignoring first value
       procedure, pass :: interpolate_to_vol => grid_interpolate_to_vol      ! Interpolate quantity onto volume grid
-      procedure, pass :: interpolate_from_face => grid_interpolate_from_face  ! Interpolate quantity that is stored on face grid onto arbitrary grid
-      procedure, pass :: interpolate_from_vol => grid_interpolate_from_vol    !  and so on
+      procedure, pass :: interpolate_from_face => grid_interpolate_from_face  ! Interpolate quantity that is stored on face grid onto output grid
+      procedure, pass :: interpolate_from_vol => grid_interpolate_from_vol    ! Interpolate quantity that is stored on volume grid onto output grid
 
       ! Manipulation methods
       procedure, pass :: grow => grid_grow          ! Add a new box
@@ -407,23 +407,48 @@ contains
       call Interp(z, y, num_z, self%z_face(2:self%nz_grid + 1), yi(2:self%nz_grid + 1), self%nz_grid)
    end subroutine
 
-   subroutine grid_interpolate_from_vol(self, z, y, num_z, yi)
+   subroutine grid_interpolate_from_vol(self, y, zi, yi, num_zi)
       class(StaggeredGrid), intent(in) :: self
-      real(RK), dimension(:), intent(in) :: z, y
+      real(RK), dimension(:), intent(in) :: zi, y
       real(RK), dimension(:), intent(out) :: yi
-      integer, intent(in) :: num_z
+      integer, intent(in) :: num_zi
 
-      ! TO do: Interp or Interp_NAN for grid boundaries??
-      call Interp(self%z_volume(1:self%nz_grid), y, self%nz_grid, z, yi, num_z)
+      real(RK), dimension(:), allocatable :: z_volume_mod
+      integer :: i
+
+      allocate(z_volume_mod(self%ubnd_vol))
+
+      ! Transform z_volume for interpolation on zout grid
+      z_volume_mod(1) = self%z_face(1) - self%z_face(self%ubnd_fce)
+      do i = 2, self%ubnd_vol-1
+         z_volume_mod(i) = self%z_volume(i) - self%z_face(self%ubnd_fce)
+      end do
+      z_volume_mod(self%ubnd_vol) = 0
+
+      call Interp_nan(z_volume_mod(1:self%ubnd_vol), y(1:self%ubnd_vol), self%ubnd_vol, zi, yi, num_zi)
+
+      deallocate(z_volume_mod)
    end subroutine
 
-   subroutine grid_interpolate_from_face(self, z, y, num_z, yi)
+   subroutine grid_interpolate_from_face(self, y, zi, yi, num_zi)
       class(StaggeredGrid), intent(in) :: self
-      real(RK), dimension(:), intent(in) :: z, y
+      real(RK), dimension(:), intent(in) :: zi, y
       real(RK), dimension(:), intent(out) :: yi
-      integer, intent(in) :: num_z
+      integer, intent(in) :: num_zi
 
-      call Interp(self%z_face, y, self%nz_grid + 1, z, yi, num_z)
+      real(RK), dimension(:), allocatable :: z_face_mod
+      integer :: i
+
+      allocate(z_face_mod(self%ubnd_fce))
+
+      ! Transform z_face for interpolation on zout grid
+      do i = 1, self%ubnd_fce
+         z_face_mod(i) = self%z_face(i) - self%z_face(self%ubnd_fce)
+      end do
+
+      call Interp_nan(z_face_mod(1:self%ubnd_fce), y(1:self%ubnd_fce), self%ubnd_fce, zi, yi, num_zi)
+
+      deallocate(z_face_mod)
    end subroutine
 
    ! Update all upper bounds and lengths

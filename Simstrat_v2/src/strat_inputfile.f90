@@ -96,6 +96,7 @@ contains
          end if
          call f%get(1, output_cfg%zout, status_ok)
          call f%destroy()
+         call reverse_in_place(output_cfg%zout)
 
          ! Read output times
          call check_file_exists(output_cfg%toutName)

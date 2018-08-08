@@ -290,16 +290,10 @@ contains
       class(InterpolatingLogger), intent(inout) :: self
       real(RK), intent(in) :: datum
       !workaround gfortran bug => cannot pass allocatable array to csv file
-      real(RK), dimension(:), allocatable :: values_on_zout, water_h_above_sed
+      real(RK), dimension(:), allocatable :: values_on_zout
       integer :: i
 
       allocate (values_on_zout(self%n_depths))
-      allocate (water_h_above_sed(self%n_depths))
-
-      ! Transform to depths above sediment
-      do i = 1, self%n_depths
-         water_h_above_sed(i) = self%grid%z_zero + self%output_config%zout(self%n_depths - i + 1)
-      end do
 
       do i = 1, self%n_vars
         ! Write datum
@@ -307,11 +301,11 @@ contains
         ! If on volume or faces grid
         if (self%output_config%output_vars(i)%volume_grid) then
           ! Interpolate state on volume grid
-          call self%grid%interpolate_from_vol(water_h_above_sed, self%output_config%output_vars(i)%values, self%n_depths, values_on_zout)
+          call self%grid%interpolate_from_vol(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths)
           call self%output_files(i)%add(values_on_zout, real_fmt='(ES14.4)')
         else if (self%output_config%output_vars(i)%face_grid) then
           ! Interpolate state on face grid
-          call self%grid%interpolate_from_face(water_h_above_sed, self%output_config%output_vars(i)%values, self%n_depths, values_on_zout)
+          call self%grid%interpolate_from_face(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths)
           ! Write state
           call self%output_files(i)%add(values_on_zout, real_fmt='(ES14.4)')
         else
@@ -322,7 +316,7 @@ contains
         call self%output_files(i)%next_row()
       end do
 
-      deallocate (values_on_zout, water_h_above_sed)
+      deallocate (values_on_zout)
 end subroutine
 
    !************************* Close ****************************
