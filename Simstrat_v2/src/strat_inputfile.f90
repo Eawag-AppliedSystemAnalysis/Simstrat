@@ -119,7 +119,7 @@ contains
          endif
 
          ! Define variables that should be written
-         allocate (self%simdata%output_cfg%output_vars(19))
+         allocate (self%simdata%output_cfg%output_vars(20))
 
          self%simdata%output_cfg%output_vars(1)%name = "V"
          self%simdata%output_cfg%output_vars(1)%values => self%simdata%model%V
@@ -215,6 +215,11 @@ contains
          self%simdata%output_cfg%output_vars(19)%values_surf => self%simdata%model%snow_h
          self%simdata%output_cfg%output_vars(19)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(19)%face_grid = .false.  
+
+         self%simdata%output_cfg%output_vars(20)%name = "Water_depth"
+         self%simdata%output_cfg%output_vars(20)%values_surf => self%simdata%grid%z_face(self%simdata%grid%ubnd_fce)
+         self%simdata%output_cfg%output_vars(20)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(20)%face_grid = .false.  
       end associate
    end subroutine
 
