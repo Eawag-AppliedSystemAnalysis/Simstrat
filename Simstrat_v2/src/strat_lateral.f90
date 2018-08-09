@@ -249,18 +249,23 @@ contains
 
          end do ! end do i=1,4
          ! Q_vert is the integrated difference between in- and outflow (starting at the lake bottom)
-         ! Q_vert is located on the volume grid, m^3/s
+         ! Q_vert is located on the face grid, m^3/s
          Q_vert(1)=0
-         Q_vert(2:grid%ubnd_fce) = Q_inp(1, 1:grid%ubnd_fce) + Q_inp(2, 1:grid%ubnd_fce)
+         Q_vert(2:grid%ubnd_fce) = Q_inp(1, 2:grid%ubnd_fce) + Q_inp(2, 2:grid%ubnd_fce)
 
          ! Set all Q to the differences (from the integrals)
-         ! The new Q_inp is located on the volume grid, element 1 remains unchanged since element 0 is 0
+         ! The new Q_inp is located on the volume grid, element 1 remains unchanged since element 1 is 0
          do i = 1, 4
+            Q_inp(i, 1) = 0
             do j = 1, grid%ubnd_vol
-               Q_inp(i, j) = Q_inp(i, j + 1) - Q_inp(i, j)
+               Q_inp(i, j + 1) = Q_inp(i, j + 2) - Q_inp(i, j + 1)
             end do
-               Q_inp(i,grid%ubnd_vol+1) = 0
+               Q_inp(i,grid%ubnd_vol + 1) = 0
          end do
+         !write(6,*) Q_inp(1,1:grid%ubnd_vol)
+         !write(6,*) Q_inp(2,1:grid%ubnd_vol)
+         !write(6,*) Q_inp(3,1:grid%ubnd_vol)
+         !write(6,*) size(Q_inp(1,1:grid%ubnd_vol))
 
       end associate
    end subroutine
