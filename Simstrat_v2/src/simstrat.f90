@@ -196,6 +196,7 @@ contains
          if (simdata%model%has_advection) then
             call mod_lateral%update(simdata%model)
             call mod_advection%update(simdata%model)
+            simdata%grid%lake_level = simdata%grid%z_face(simdata%grid%ubnd_fce)
          end if
 
          ! Display to screen
@@ -244,12 +245,12 @@ contains
 
          ! Standard display: display when logged: datum, lake surface, T(1), T(surf)
          if (simdata%model_cfg%disp_simulation==1 .and. simdata%output_cfg%write_to_file) then
-            write(6,'(F12.4,F16.4,F20.4,F20.4)') simdata%model%datum, simdata%grid%z_face(simdata%grid%ubnd_fce), &
+            write(6,'(F12.4,F16.4,F20.4,F20.4)') simdata%model%datum, simdata%grid%lake_level, &
             simdata%model%T(simdata%grid%nz_occupied), simdata%model%T(1)
 
          ! Extra display: display every iteration: datum, lake surface, T(1), T(surf)
          else if (simdata%model_cfg%disp_simulation==2) then
-            write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%z_face(simdata%grid%ubnd_fce), &
+            write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%lake_level, &
             simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
          end if
          

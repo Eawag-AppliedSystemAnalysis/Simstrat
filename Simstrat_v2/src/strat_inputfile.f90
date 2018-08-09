@@ -217,7 +217,7 @@ contains
          self%simdata%output_cfg%output_vars(19)%face_grid = .false.  
 
          self%simdata%output_cfg%output_vars(20)%name = "Water_depth"
-         self%simdata%output_cfg%output_vars(20)%values_surf => self%simdata%grid%z_face(self%simdata%grid%ubnd_fce)
+         self%simdata%output_cfg%output_vars(20)%values_surf => self%simdata%grid%lake_level
          self%simdata%output_cfg%output_vars(20)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(20)%face_grid = .false.  
       end associate

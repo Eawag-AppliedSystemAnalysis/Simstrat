@@ -188,7 +188,7 @@ contains
             end if ! idx==1
 
             ! If lake level changes and if there is surface inflow, adjust inflow depth to keep them at the surface
-            if ((.not. grid%lake_level_old == grid%z_face(ubnd_fce)) .and. (self%nval_surface(i) > 0)) then
+            if ((.not. grid%lake_level == grid%z_face(ubnd_fce)) .and. (self%nval_surface(i) > 0)) then
 
                ! Recalculate Q_start from deep inflows
                call Integrate(self%z_Inp(i, :), self%Inp_read_start(i, :), Q_read_start(i, :), self%nval_deep(i))
@@ -205,7 +205,7 @@ contains
                      call self%surface_flow(self%Inp_read_end(i, self%nval_deep(i) - 1 + j), self%Q_end(i, :), self%depth_surfaceFlow(i, j), i)
                   end do
                end if
-            end if ! end if not lake_level_old...
+            end if ! end if not lake_level...
 
             ! Temporal treatment of inflow
             if ((datum <= self%tb_start(i)) .or. (self%eof(i) == 1)) then ! if datum before first date or end of file reached

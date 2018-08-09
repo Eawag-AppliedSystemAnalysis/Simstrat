@@ -62,8 +62,6 @@ contains
                  ubnd_vol=>self%grid%ubnd_vol, &
                  ubnd_fce=>self%grid%ubnd_fce)
 
-         grid%lake_level_old = grid%z_face(ubnd_fce)
-
          !Depth difference compared to previous timestep
          top_z = grid%z_face(ubnd_fce)
          top_h = grid%h(ubnd_vol)
@@ -105,7 +103,7 @@ contains
                dV(i) = -top*abs(Q_vert(i+1))*state%V(i)
                dTemp(i) = -top*abs(Q_vert(i+1))*state%T(i)
                dS(i) = -top*abs(Q_vert(i+1))*state%S(i)
-               
+
                if (i > 1 .and. Q_vert(i) > 0) then ! Advective flow into box i, from above
                   dU(i) = dU(i) + Q_vert(i)*state%U(i - 1)
                   dV(i) = dV(i) + Q_vert(i)*state%V(i - 1)
