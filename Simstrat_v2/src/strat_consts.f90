@@ -32,7 +32,7 @@
      real(RK), parameter     :: rho_s_0 = 250_RK ! New snowfall density [kg/m3]
      real(RK), parameter     :: rho_s_max = 450.0_RK ! maximum (wet) snow dens [kg/m3] 
      real(RK), parameter     :: cp_s = 2090 ! Mean snow heat capacity (-5°C) [J/kg/K] 
-     real(RK), parameter     :: emiss_water = 0.96 ! Emissivity water
+     real(RK), parameter     :: emiss_water = 0.97 ! Emissivity water
      real(RK), parameter     :: emiss_ice = 0.97   ! Emissivity ice
      !Emissivity snow range from 0.8 to 0.9 depending on snow density in strat_forcing.f90
   
