@@ -123,7 +123,9 @@ contains
                  idx=>state%model_step_counter, &
                  Q_inp=>state%Q_inp, & ! Q_inp is the input at each depth for each time step, Q_vert is the integrated net water input
                  Q_vert=>state%Q_vert, &
-                 grid=>self%grid)
+                 grid=>self%grid, &
+                 ubnd_vol=>self%grid%ubnd_vol, &
+                 ubnd_fce=>self%grid%ubnd_fce)
 
          fname = ['inflow           ', 'outflow          ', 'input temperature', 'input salinity   ']
          fnum = [41, 42, 43, 44]
@@ -186,7 +188,7 @@ contains
             end if ! idx==1
 
             ! If lake level changes and if there is surface inflow, adjust inflow depth to keep them at the surface
-            if ((.not. grid%lake_level_old == grid%z_face(grid%ubnd_fce)) .and. (self%nval_surface(i) > 0)) then
+            if ((.not. grid%lake_level_old == grid%z_face(ubnd_fce)) .and. (self%nval_surface(i) > 0)) then
 
                ! Recalculate Q_start from deep inflows
                call Integrate(self%z_Inp(i, :), self%Inp_read_start(i, :), Q_read_start(i, :), self%nval_deep(i))
@@ -232,40 +234,36 @@ contains
             ! Note that Q_inp is on the face grid
             self%Q_start(i,1)=0
             self%Q_end(i,1)=0
-            do j = 1, grid%ubnd_fce
+            do j = 1, ubnd_fce
                Q_inp(i,j) = self%Q_start(i,j) + (datum-self%tb_start(i)) * (self%Q_end(i,j)-self%Q_start(i,j))/(self%tb_end(i)-self%tb_start(i))
             end do
             goto 11
 
  7          self%eof(i) = 1
- 8          state%Q_inp(i,1:grid%ubnd_vol) = self%Q_start(i,1:grid%ubnd_vol)              ! Set to closest available value
+ 8          state%Q_inp(i,1:ubnd_vol) = self%Q_start(i,1:ubnd_vol)              ! Set to closest available value
             goto 11
 
  9          write(6,*) 'No data found in ',trim(fname(i)),' file. Check number of depths. Values set to zero.'
             self%eof(i) = 1
-            state%Q_inp(i,1:grid%ubnd_vol) = 0.0_RK
-            self%Q_start(i,1:grid%ubnd_fce) = 0.0_RK
+            state%Q_inp(i,1:ubnd_vol) = 0.0_RK
+            self%Q_start(i,1:ubnd_fce) = 0.0_RK
             11        continue
 
          end do ! end do i=1,4
          ! Q_vert is the integrated difference between in- and outflow (starting at the lake bottom)
          ! Q_vert is located on the face grid, m^3/s
          Q_vert(1)=0
-         Q_vert(2:grid%ubnd_fce) = Q_inp(1, 2:grid%ubnd_fce) + Q_inp(2, 2:grid%ubnd_fce)
+         Q_vert(2:ubnd_fce) = Q_inp(1, 2:ubnd_fce) + Q_inp(2, 2:ubnd_fce)
 
          ! Set all Q to the differences (from the integrals)
          ! The new Q_inp is located on the volume grid, element 1 remains unchanged since element 1 is 0
          do i = 1, 4
             Q_inp(i, 1) = 0
-            do j = 1, grid%ubnd_vol
+            do j = 1, ubnd_vol
                Q_inp(i, j + 1) = Q_inp(i, j + 2) - Q_inp(i, j + 1)
             end do
-               Q_inp(i,grid%ubnd_vol + 1) = 0
+               Q_inp(i,ubnd_vol + 1) = 0
          end do
-         !write(6,*) Q_inp(1,1:grid%ubnd_vol)
-         !write(6,*) Q_inp(2,1:grid%ubnd_vol)
-         !write(6,*) Q_inp(3,1:grid%ubnd_vol)
-         !write(6,*) size(Q_inp(1,1:grid%ubnd_vol))
 
       end associate
    end subroutine

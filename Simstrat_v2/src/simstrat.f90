@@ -88,7 +88,7 @@ program simstrat_main
                            simdata%model_param, &
                            simdata%grid)
 
-      ! initliaze lateral module based on configuration
+      ! initialize lateral module based on configuration
       if (simdata%model_cfg%inflow_placement == 1) then
          ! Gravity based inflow
          mod_lateral => mod_lateral_rho
@@ -103,7 +103,7 @@ program simstrat_main
    ! Setup logger
    call logger%initialize(simdata%sim_cfg, simdata%output_cfg, simdata%grid)
 
-   ! initialize simulation modules
+   ! Initialize simulation modules
    call mod_stability%init(simdata%grid, simdata%model_cfg, simdata%model_param)
    call mod_turbulence%init(simdata%grid, simdata%model_cfg, simdata%model_param)
    call mod_ice%init(simdata%model_cfg, simdata%model_param, simdata%grid)
@@ -129,7 +129,7 @@ program simstrat_main
 
    call run_simulation()
 
-   ! close logger files after simulation
+   ! Close logger files after simulation
    call logger%close()
 
 contains
@@ -244,12 +244,12 @@ contains
 
          ! Standard display: display when logged: datum, lake surface, T(1), T(surf)
          if (simdata%model_cfg%disp_simulation==1 .and. simdata%output_cfg%write_to_file) then
-            write(6,'(F12.4,F16.5,F20.5,F20.5)') simdata%model%datum, simdata%grid%z_face(simdata%grid%ubnd_fce), &
+            write(6,'(F12.4,F16.4,F20.4,F20.4)') simdata%model%datum, simdata%grid%z_face(simdata%grid%ubnd_fce), &
             simdata%model%T(simdata%grid%nz_occupied), simdata%model%T(1)
 
          ! Extra display: display every iteration: datum, lake surface, T(1), T(surf)
          else if (simdata%model_cfg%disp_simulation==2) then
-            write(6,'(F12.4,F20.5,F15.5,F15.5)') simdata%model%datum, simdata%grid%z_face(simdata%grid%ubnd_fce), &
+            write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%z_face(simdata%grid%ubnd_fce), &
             simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
          end if
          

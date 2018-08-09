@@ -81,16 +81,16 @@ contains
          write (6, *) "--Forcing input file successfully read"
       end if
 
-      if (datum <= tb_start .or. eof == 1) then !If datum before first date or end of file reached
+      if (datum <= tb_start .or. eof == 1) then ! If datum before first date or end of file reached
          goto 8
       else
-         do while (datum > tb_end) !Move to appropriate interval to get correct values
+         do while (datum > tb_end) ! Move to appropriate interval to get correct values
             tb_start = tb_end
             A_s(1:nval) = A_e(1:nval)
             !Read next value
             read (20, *, end=7) tb_end, (A_e(i), i=1, nval)
          end do
-         !Linearly interpolate values at correct datum
+         ! Linearly interpolate values at correct datum
          A_cur(1:nval) = A_s(1:nval) + (datum - tb_start)*(A_e(1:nval) - A_s(1:nval))/(tb_end - tb_start)
       end if
       return
@@ -108,7 +108,8 @@ contains
    end subroutine
 
    !Compute appropriate forcing parameters at given datum
-   !Copied from old simstrat, NEEDS refactoring!
+   !LV 2018: Added ice
+   !MP 2017: Copied from old simstrat, NEEDS refactoring!
    !AG 2014: revision
    !######################################################################
    subroutine forcing_update(self, state)
@@ -135,7 +136,7 @@ contains
          T_surf = state%T(self%grid%ubnd_vol)
       end if
    
-         ! number of values to read, depending on filtered wind and precipitation
+         ! Number of values to read, depending on filtered wind and precipitation
          if (cfg%use_filtered_wind .and. cfg%ice_model == 0) then
             nval_offset = 1
          else if (cfg%ice_model == 1 .and. cfg%use_filtered_wind) then
@@ -286,7 +287,7 @@ contains
                 state%heat_snow_ice = H_A + H_W + H_K + H_V + F_glob * param%beta_snow_ice !MS: added term with beta_snow_ice
                ! Removal of solar short-wave radiation absorbed in snow and ice and first water cell
                state%rad0 = F_glob * (1 - param%beta_sol) * (1 - param%beta_snow_ice)!MS: added beta_sol and beta_snow_ice      
-               ! Supress wind turbulence with wind lid (heat flux affected by wind still active on snow and ice)
+               ! Suppress wind turbulence with wind lid (heat flux affected by wind still active on snow and ice)
                state%u10 = 0
                state%v10 = 0
                state%uv10 = 0      
@@ -297,7 +298,7 @@ contains
                state%heat_snow_ice = H_A + H_W + H_K + H_V + F_glob*param%beta_snow_ice !MS: added term with beta_snow_ice 
                ! Removal of solar short-wave radiation absorbed in snow and ice and first water cell
                state%rad0 = F_glob * (1 - param%beta_sol) * (1 - param%beta_snow_ice)!MS: added beta_sol and beta_snow_ice (Bouffard. 2016,Ice-covered Lake Onega)
-               ! Supress wind turbulence with wind lid (heat flux affected by wind still active on snow and ice)
+               ! Suppress wind turbulence with wind lid (heat flux affected by wind still active on snow and ice)
                state%u10 = 0
                state%v10 = 0
                state%uv10 = 0
@@ -308,7 +309,7 @@ contains
                ! Removal of solar short-wave radiation absorbed in first water cell
                state%rad0 = F_glob * (1 - param%beta_sol) !MS: added beta_sol
                end if 
-                ! save for output, not used in calculations
+                ! Save for output, not used in calculations
                 state%ha = H_A
                 state%hw = H_W
                 state%hk = H_K
@@ -319,7 +320,7 @@ contains
             if ((T_surf < 0) .and. (state%heat < 0)) state%heat = 0.
          end if
 
-         !Drag coefficient as a function of wind speed (AG 2014)
+         ! Drag coefficient as a function of wind speed (AG 2014)
          if (cfg%wind_drag_model == 1) then !constant wind drag coefficient
             state%C10 = param%C10_constant
          else if (cfg%wind_drag_model == 2) then !Ocean model
@@ -352,18 +353,18 @@ contains
       class(ModelState) :: state
       real(RK) :: cori
       real(RK), dimension(size(state%U)) :: u_temp
-      associate (grid=>self%grid, dt=>state%dt, param=>self%param)
-         ! calculate u_taub before changing U resp V
+      associate (ubnd_vol=>self%grid%ubnd_vol, dt=>state%dt, param=>self%param)
+         ! Calculate u_taub before changing U resp V
          state%u_taub = sqrt(state%drag*(state%U(1)**2 + state%V(1)**2))
 
          ! Calculate coriolis parameter based on latitude
          cori = 2.0_RK*7.292e-5_RK*sin(param%Lat*pi/180.0_RK)
 
-         !Update state based on coriolis parameter
+         ! Update state based on coriolis parameter
          u_temp = state%U
 
-         state%U(1:grid%ubnd_vol) = state%U(1:grid%ubnd_vol)*cos(Cori*dt) + state%V(1:grid%ubnd_vol)*sin(Cori*dt)
-         state%V(1:grid%ubnd_vol) = -u_temp(1:grid%ubnd_vol)*sin(Cori*dt) + state%V(1:grid%ubnd_vol)*cos(Cori*dt)
+         state%U(1:ubnd_vol) = state%U(1:ubnd_vol)*cos(Cori*dt) + state%V(1:ubnd_vol)*sin(Cori*dt)
+         state%V(1:ubnd_vol) = -u_temp(1:ubnd_vol)*sin(Cori*dt) + state%V(1:ubnd_vol)*cos(Cori*dt)
 
          return
       end associate
