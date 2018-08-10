@@ -194,8 +194,13 @@ contains
 
          ! If there is inflow/outflow do advection part
          if (simdata%model%has_advection) then
+            ! Treat inflow/outflow
             call mod_lateral%update(simdata%model)
+            ! Set old lake level (before it is changed by advection module)
+            simdata%grid%lake_level_old = simdata%grid%z_face(simdata%grid%ubnd_fce)
+            ! Update lake advection using the inflow/outflow data
             call mod_advection%update(simdata%model)
+            ! Update lake level
             simdata%grid%lake_level = simdata%grid%z_face(simdata%grid%ubnd_fce)
          end if
 

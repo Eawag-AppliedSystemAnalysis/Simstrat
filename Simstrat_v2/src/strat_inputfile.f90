@@ -560,7 +560,7 @@ contains
       class(SimstratSimulationFactory) :: self
 
       ! Local variables
-      integer  :: i, j, fnum(1:4), nval(1:4), if_adv
+      integer  :: i, j, fnum(1:4), nval(1:4), nval_deep, nval_surface, if_adv
       real(RK) :: dummy, z_Inp_dummy(1:self%simdata%grid%max_length_input_data)
 
       open (41, status='old', file=self%simdata%input_cfg%QinpName)
@@ -572,7 +572,8 @@ contains
       if_adv = 0
       do i = 1, 4
          read (fnum(i), *, end=8) ! Skip header (description of columns)
-         read (fnum(i), *, end=8) nval(i) ! Read number of input depths (static)
+         read (fnum(i), *, end=8) nval_deep, nval_surface ! Read number of input depths (static)
+         nval(i) = nval_deep + nval_surface
          read (fnum(i), *, end=8) dummy, (z_Inp_dummy(j), j=1, nval(i)) ! Read input depths
          goto 9
       8   if_adv = if_adv + 1    ! +1 in case there is no data in the file

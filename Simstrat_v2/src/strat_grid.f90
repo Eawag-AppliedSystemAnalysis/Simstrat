@@ -44,7 +44,7 @@ module strat_grid
 
       integer :: ubnd_vol, ubnd_fce, length_vol, length_fce   ! Upper and lenght for volume (vol) and face(fce) grids
       real(RK) :: z_zero
-      real(RK) :: lake_level
+      real(RK) :: lake_level, lake_level_old
       real(RK) :: max_depth
 
    contains
@@ -207,7 +207,7 @@ contains
          self%z_face(i - 1) = nint(1e6_RK*self%z_face(i - 1))/1e6_RK
       end do
       self%z_face(self%nz_grid + 1) = nint(1e6_RK*self%z_face(self%nz_grid + 1))/1e6_RK
-      ! needed?
+
       !self%lake_level = self%z_face(self%nz_occupied)
       write (*, *) "Warning, nz_occupied not set yet"
    end subroutine grid_init_z_axes
@@ -223,8 +223,8 @@ contains
 
       self%z_zero = config%z_A_read(1) ! z_zero is the uppermost depth (might be above zero)
 
-      self%lake_level = self%z_zero !needed?
-
+      self%lake_level = self%z_zero
+      self%lake_level_old = self%z_zero
       config%z_A_read = self%z_zero - config%z_A_read ! z-coordinate is positive upwards, zero point is at reservoir bottom
 
    end subroutine grid_init_morphology
