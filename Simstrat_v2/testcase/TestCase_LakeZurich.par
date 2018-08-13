@@ -15,12 +15,10 @@
     "Path"  : "TestCases_Results/",
     "Depths" : "TestCase_LakeZurich/Output_depth.dat",
     "Times"  : "TestCase_LakeZurich/Output_time.dat",
-    "WriteOnTheFly" : true,
-	"ThinningInterval": 76
   },
 
   "ModelConfig" : {
-    "MaxNrGridCells"          : 548,
+    "MaxLengthInputData"      : 1000,
     "StencilType"             : "implicit euler",
     "CoupleAED2"              : false,
     "UseBufferedForcing"      : false,
@@ -37,8 +35,8 @@
     "DisplaySimulation"       : 1,
     "DisplayDiagnose"         : 3,
     "DataAveraging"           : 10,
-	"IceModel"				  : 1,
-	"SnowModel"				  : 0	
+    "IceModel"                : 1,
+    "SnowModel"               : 0	
   },
 
   "Simulation" : {
@@ -60,10 +58,10 @@
     "p_radin"       : 1.1978,
     "p_windf"       : 1,
     "beta_sol"      : 0.35,
-	"beta_snow_ice" : 0.40,	
+    "beta_snowice" : 0.40,	
     "albsw"         : 0.08,
     "ice_albedo"    : 0.30,
     "snow_albedo"   : 0.77,
-    "freez_Temp"    : 0.05	
+    "freez_temp"    : 0.05	
   }
 }

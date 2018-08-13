@@ -36,7 +36,7 @@ program simstrat_main
    type(EulerIDiscretizationKEPS) :: euler_i_disc_keps
    type(ForcingModule) :: mod_forcing
    type(StabilityModule) :: mod_stability
-   type(SimpleLogger) :: logger
+   type(InterpolatingLogger) :: logger
    type(TempModelVar) :: mod_temperature
    type(UVModelVar) :: mod_u, mod_v
    type(KModelVar) :: mod_k
@@ -88,7 +88,7 @@ program simstrat_main
                            simdata%model_param, &
                            simdata%grid)
 
-      ! initliaze lateral module based on configuration
+      ! initialize lateral module based on configuration
       if (simdata%model_cfg%inflow_placement == 1) then
          ! Gravity based inflow
          mod_lateral => mod_lateral_rho
@@ -101,9 +101,9 @@ program simstrat_main
    end if
 
    ! Setup logger
-   call logger%initialize(simdata%output_cfg, simdata%grid)
+   call logger%initialize(simdata%sim_cfg, simdata%output_cfg, simdata%grid)
 
-   ! initialize simulation modules
+   ! Initialize simulation modules
    call mod_stability%init(simdata%grid, simdata%model_cfg, simdata%model_param)
    call mod_turbulence%init(simdata%grid, simdata%model_cfg, simdata%model_param)
    call mod_ice%init(simdata%model_cfg, simdata%model_param, simdata%grid)
@@ -129,7 +129,7 @@ program simstrat_main
 
    call run_simulation()
 
-   ! close logger files after simulation
+   ! Close logger files after simulation
    call logger%close()
 
 contains
@@ -138,13 +138,51 @@ contains
       integer :: i
       !call logger%log(0.0_RK) ! Write initial conditions
 
-      ! Run simulation until end datum
-      do while (simdata%model%datum<simdata%sim_cfg%end_datum)
+      ! Run simulation until end datum or until no more results are required by the output time file
+      do while (simdata%model%datum<simdata%sim_cfg%end_datum .and. simdata%model%output_counter<=size(simdata%output_cfg%tout))
 
-         !increase datum and step
+         ! ****************************************
+         ! ***** Update counters and timestep *****
+         ! ****************************************
+
+         ! Increase iteration counter
+         simdata%model%model_step_counter = simdata%model%model_step_counter + 1
+
+         ! If output times are specified in file
+         if(simdata%output_cfg%thinning_interval==0) then
+            ! At the first iteration or always after the model output was logged
+            if (simdata%model%model_step_counter==1 .or. simdata%output_cfg%write_to_file) then
+               ! Adjust timestep so that the next output time is on the "time grid"
+               simdata%model%dt = simdata%output_cfg%adjusted_timestep(simdata%model%output_counter)
+               ! Don't log anymore until the next output time is reached
+               simdata%output_cfg%write_to_file = .false.
+            end if
+
+            ! If the next output time is reached
+            if(simdata%model%model_step_counter==sum(int(simdata%output_cfg%n_timesteps_between_tout(1:simdata%model%output_counter)))) then
+               ! Increase output counter
+               simdata%model%output_counter = simdata%model%output_counter + 1
+               ! Log next model state
+               simdata%output_cfg%write_to_file = .true.
+            end if
+         else ! If output frequency is given in file
+            ! If the next output time is reached
+            if(mod(simdata%model%model_step_counter,simdata%output_cfg%thinning_interval)==0) then
+               ! Log next model state
+               simdata%output_cfg%write_to_file = .true.
+            else
+               ! Don't log
+               simdata%output_cfg%write_to_file = .false.
+            end if
+         end if 
+
+         ! Advance to the next timestep
          simdata%model%datum = simdata%model%datum + simdata%model%dt/86400
-         simdata%model%std = simdata%model%std + 1
-         
+
+         ! ************************************
+         ! ***** Compute next model state *****
+         ! ************************************
+
          ! Read forcing file
          call mod_forcing%update(simdata%model)
 
@@ -153,18 +191,37 @@ contains
 
          ! Update physics
          call mod_stability%update(simdata%model)
+
          ! If there is inflow/outflow do advection part
          if (simdata%model%has_advection) then
+            ! Treat inflow/outflow
             call mod_lateral%update(simdata%model)
+            ! Set old lake level (before it is changed by advection module)
+            simdata%grid%lake_level_old = simdata%grid%z_face(simdata%grid%ubnd_fce)
+            ! Update lake advection using the inflow/outflow data
             call mod_advection%update(simdata%model)
+            ! Update lake level
+            simdata%grid%lake_level = simdata%grid%z_face(simdata%grid%ubnd_fce)
          end if
+
+         ! Display to screen
+         if (simdata%model%model_step_counter==1 .and. simdata%model_cfg%disp_simulation/=0) then
+            write(6,*)
+            write(6,*) ' -------------------------- '
+            write(6,*) '   SIMULATION IN PROGRESS   '
+            write(6,*) ' -------------------------- '
+            write(6,*)
+            if(simdata%model_cfg%disp_simulation/=0) write(6,'(A12, A20, A20, A20)') 'Time [d]','Surface level [m]','T_surf [degC]','T_bottom [degC]'
+         end if
+
+         ! Update Coriolis
          call mod_forcing%update_coriolis(simdata%model)
 
          ! Update and solve U and V - terms
          call mod_u%update(simdata%model, simdata%model_param)
          call mod_v%update(simdata%model, simdata%model_param)
 
-         ! Update and solve t - terms
+         ! Update and solve T - terms
          call mod_temperature%update(simdata%model, simdata%model_param)
 
          ! Update and solve transportation terms (here: Salinity S only)
@@ -183,25 +240,34 @@ contains
          end if      
 		 
          ! Call logger to write files
-         if (mod(simdata%model%std,simdata%output_cfg%thinning_interval)==0) then
-            call logger%log(simdata%model%datum)
+         if (simdata%output_cfg%write_to_file) then
+            call logger%log(simdata%model%datum)               
          end if
 
-         ! Display simulation (datum, lake surface, temperature at bottom, temperature at surface)
+         ! ***********************************
+         ! ***** Log to file and display *****
+         ! ***********************************
 
-         ! Standard display: display when logged
-         if (simdata%model_cfg%disp_simulation==1) then
-            if (mod(simdata%model%std,simdata%output_cfg%thinning_interval)==0) then
-               write(6,'(F10.4,F10.5,F10.5,F10.5)') simdata%model%datum, simdata%grid%z_face(simdata%grid%ubnd_fce), &
-               simdata%model%T(simdata%grid%nz_occupied), simdata%model%T(1)
-            end if
-         ! Extra display: display every iteration
+         ! Standard display: display when logged: datum, lake surface, T(1), T(surf)
+         if (simdata%model_cfg%disp_simulation==1 .and. simdata%output_cfg%write_to_file) then
+            write(6,'(F12.4,F16.4,F20.4,F20.4)') simdata%model%datum, simdata%grid%lake_level, &
+            simdata%model%T(simdata%grid%nz_occupied), simdata%model%T(1)
+
+         ! Extra display: display every iteration: datum, lake surface, T(1), T(surf)
          else if (simdata%model_cfg%disp_simulation==2) then
-            write(6,'(F10.4,F10.4,F10.4,F10.4)') simdata%model%datum, simdata%grid%z_face(simdata%grid%ubnd_fce), &
+            write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%lake_level, &
             simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
          end if
          
       end do
+
+      if (simdata%model_cfg%disp_simulation/=0) then
+         write(6,*)
+         write(6,*) ' -------------------------- '
+         write(6,*) '    SIMULATION COMPLETED    '
+         write(6,*) ' -------------------------- '
+         write(6,*)
+      end if
    end subroutine
 
 end program simstrat_main

@@ -77,7 +77,7 @@ contains
       do while (zi(posk2) > z(num_z))
          yi(posk2) = 0.0_RK
          yi(posk2) = ieee_value(yi(posk2), ieee_quiet_nan) ! NaN
-         yi(posk2) = z(num_z)
+         !yi(posk2) = z(num_z)
          posk2 = posk2 - 1
       end do
 

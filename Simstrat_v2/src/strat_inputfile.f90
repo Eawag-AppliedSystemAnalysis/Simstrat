@@ -96,6 +96,7 @@ contains
          end if
          call f%get(1, output_cfg%zout, status_ok)
          call f%destroy()
+         call reverse_in_place(output_cfg%zout)
 
          ! Read output times
          call check_file_exists(output_cfg%toutName)
@@ -109,84 +110,116 @@ contains
          call f%get(1, output_cfg%tout, status_ok)
          call f%destroy()
 
+         ! Determine output mode: If only one element in tout, then this number is the thinning interval.
+         ! If there are more than one number in tout, these are the output times and thinning_interval is set to 0.
+         if (size(output_cfg%tout)==1) then
+            output_cfg%thinning_interval = int(output_cfg%tout(1))
+         else
+            output_cfg%thinning_interval = 0
+         endif
+
          ! Define variables that should be written
-         allocate (self%simdata%output_cfg%output_vars(19))
+         allocate (self%simdata%output_cfg%output_vars(20))
 
          self%simdata%output_cfg%output_vars(1)%name = "V"
          self%simdata%output_cfg%output_vars(1)%values => self%simdata%model%V
          self%simdata%output_cfg%output_vars(1)%volume_grid = .true.
+         self%simdata%output_cfg%output_vars(1)%face_grid = .false.
 
          self%simdata%output_cfg%output_vars(2)%name = "U"
          self%simdata%output_cfg%output_vars(2)%values => self%simdata%model%U
          self%simdata%output_cfg%output_vars(2)%volume_grid = .true.
+         self%simdata%output_cfg%output_vars(2)%face_grid = .false.
 
          self%simdata%output_cfg%output_vars(3)%name = "T"
          self%simdata%output_cfg%output_vars(3)%values => self%simdata%model%T
          self%simdata%output_cfg%output_vars(3)%volume_grid = .true.
+         self%simdata%output_cfg%output_vars(3)%face_grid = .false.
 
          self%simdata%output_cfg%output_vars(4)%name = "S"
          self%simdata%output_cfg%output_vars(4)%values => self%simdata%model%S
          self%simdata%output_cfg%output_vars(4)%volume_grid = .true.
+         self%simdata%output_cfg%output_vars(4)%face_grid = .false.
 
          self%simdata%output_cfg%output_vars(5)%name = "P"
          self%simdata%output_cfg%output_vars(5)%values => self%simdata%model%P
          self%simdata%output_cfg%output_vars(5)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(5)%face_grid = .true.
 
          self%simdata%output_cfg%output_vars(6)%name = "num"
          self%simdata%output_cfg%output_vars(6)%values => self%simdata%model%num
          self%simdata%output_cfg%output_vars(6)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(6)%face_grid = .true.
 
          self%simdata%output_cfg%output_vars(7)%name = "nuh"
          self%simdata%output_cfg%output_vars(7)%values => self%simdata%model%nuh
          self%simdata%output_cfg%output_vars(7)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(7)%face_grid = .true.
 
          self%simdata%output_cfg%output_vars(8)%name = "NN"
          self%simdata%output_cfg%output_vars(8)%values => self%simdata%model%NN
          self%simdata%output_cfg%output_vars(8)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(8)%face_grid = .true.
 
          self%simdata%output_cfg%output_vars(9)%name = "k"
          self%simdata%output_cfg%output_vars(9)%values => self%simdata%model%k
          self%simdata%output_cfg%output_vars(9)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(9)%face_grid = .true.
 
          self%simdata%output_cfg%output_vars(10)%name = "eps"
          self%simdata%output_cfg%output_vars(10)%values => self%simdata%model%eps
          self%simdata%output_cfg%output_vars(10)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(10)%face_grid = .true.
 
          self%simdata%output_cfg%output_vars(11)%name = "B"
          self%simdata%output_cfg%output_vars(11)%values => self%simdata%model%B
          self%simdata%output_cfg%output_vars(11)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(11)%face_grid = .true.
 
          self%simdata%output_cfg%output_vars(12)%name = "Ps"
          self%simdata%output_cfg%output_vars(12)%values => self%simdata%model%P_seiche
          self%simdata%output_cfg%output_vars(12)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(12)%face_grid = .true.
    
          self%simdata%output_cfg%output_vars(13)%name = "H_A"
          self%simdata%output_cfg%output_vars(13)%values_surf => self%simdata%model%ha
-         self%simdata%output_cfg%output_vars(13)%volume_grid = .false. 
+         self%simdata%output_cfg%output_vars(13)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(13)%face_grid = .false.
    
          self%simdata%output_cfg%output_vars(14)%name = "H_W"
          self%simdata%output_cfg%output_vars(14)%values_surf => self%simdata%model%hw
-         self%simdata%output_cfg%output_vars(14)%volume_grid = .false. 
+         self%simdata%output_cfg%output_vars(14)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(14)%face_grid = .false.
    
          self%simdata%output_cfg%output_vars(15)%name = "H_K"
          self%simdata%output_cfg%output_vars(15)%values_surf => self%simdata%model%hk
-         self%simdata%output_cfg%output_vars(15)%volume_grid = .false. 
+         self%simdata%output_cfg%output_vars(15)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(15)%face_grid = .false.
    
          self%simdata%output_cfg%output_vars(16)%name = "H_V"
          self%simdata%output_cfg%output_vars(16)%values_surf => self%simdata%model%hv
-         self%simdata%output_cfg%output_vars(16)%volume_grid = .false. 
+         self%simdata%output_cfg%output_vars(16)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(16)%face_grid = .false.
    
          self%simdata%output_cfg%output_vars(17)%name = "Rad0"
          self%simdata%output_cfg%output_vars(17)%values_surf => self%simdata%model%rad0
-         self%simdata%output_cfg%output_vars(17)%volume_grid = .false. 
+         self%simdata%output_cfg%output_vars(17)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(1)%face_grid = .false.
 
          self%simdata%output_cfg%output_vars(18)%name = "Ice_h"
          self%simdata%output_cfg%output_vars(18)%values_surf => self%simdata%model%ice_h
          self%simdata%output_cfg%output_vars(18)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(18)%face_grid = .false.
 
          self%simdata%output_cfg%output_vars(19)%name = "Snow_h"
          self%simdata%output_cfg%output_vars(19)%values_surf => self%simdata%model%snow_h
-         self%simdata%output_cfg%output_vars(19)%volume_grid = .false.    
+         self%simdata%output_cfg%output_vars(19)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(19)%face_grid = .false.  
+
+         self%simdata%output_cfg%output_vars(20)%name = "Water_depth"
+         self%simdata%output_cfg%output_vars(20)%values_surf => self%simdata%grid%lake_level
+         self%simdata%output_cfg%output_vars(20)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(20)%face_grid = .false.  
       end associate
    end subroutine
 
@@ -255,8 +288,8 @@ contains
          ! Set up timing
          model%datum = self%simdata%sim_cfg%start_datum
          model%dt = self%simdata%sim_cfg%timestep
-         model%std = 0
-         model%step = 0
+         model%model_step_counter = 0
+         model%output_counter = 1
       end associate
    end subroutine
 
@@ -265,25 +298,25 @@ contains
       implicit none
       class(SimstratSimulationFactory) :: self
       type(GridConfig) :: grid_config
-      real(RK), dimension(:) :: z_tmp(self%simdata%model_cfg%max_nr_grid_cells)
-      real(RK), dimension(:) :: A_tmp(self%simdata%model_cfg%max_nr_grid_cells)
+      real(RK), dimension(:) :: z_tmp(self%simdata%model_cfg%max_length_input_data)
+      real(RK), dimension(:) :: A_tmp(self%simdata%model_cfg%max_length_input_data)
       integer :: num_read, i, ictr
       associate (simdata=>self%simdata, &
-                 nz_max=>self%simdata%model_cfg%max_nr_grid_cells)
+                 max_length_input_data=>grid_config%max_length_input_data)
 
-         grid_config%nz_grid_max = self%simdata%model_cfg%max_nr_grid_cells
-         allocate (grid_config%grid_read(nz_max))
+         grid_config%max_length_input_data = self%simdata%model_cfg%max_length_input_data
+         allocate (grid_config%grid_read(grid_config%max_length_input_data))
          ! Read grid
          open (12, status='old', file=simdata%input_cfg%GridName)
          read (12, *)
-         do ictr = 1, nz_max
+         do ictr = 1, max_length_input_data
             read (12, *, end=69) grid_config%grid_read(ictr)
          end do
 
-69       if(ictr==nz_max) then
-            write(6,*) 'Only first ',nz_max,' values of file read.'
+69       if(ictr==max_length_input_data) then
+            write(6,*) 'Only first ',max_length_input_data,' values of file read.'
          else 
-            write(6,*) "Grid file successfully read"
+            write(6,*) "--Grid file successfully read"
          end if
          close (12)
 
@@ -298,13 +331,13 @@ contains
          ! Read Morphology
          open (11, status='old', file=simdata%input_cfg%MorphName)
          read (11, *) ! Skip header
-         do i = 1, nz_max ! Read depth and area
+         do i = 1, max_length_input_data ! Read depth and area
             read (11, *, end=86) z_tmp(i), A_tmp(i)
          end do
-86       if(i==nz_max) then
-            write(6,*) 'Only first ',nz_max,' values of file read.'
+86       if(i==max_length_input_data) then
+            write(6,*) 'Only first ',max_length_input_data,' values of file read.'
          else
-            write(6,*) "Morphology file successfully read"
+            write(6,*) "--Morphology file successfully read"
          end if
          close (11)
 
@@ -371,14 +404,12 @@ contains
       call par_file%get('Output.Path', PathOut, found); self%simdata%output_cfg%PathOut = PathOut; call check_field(found, 'Output.Path', ParName)
       call par_file%get('Output.Depths', zoutName, found); self%simdata%output_cfg%zoutName = zoutName; call check_field(found, 'Output.Depths', ParName)
       call par_file%get('Output.Times', toutname, found); self%simdata%output_cfg%toutName = toutName; call check_field(found, 'Output.Times', ParName)
-      call par_file%get('Output.WriteOnTheFly', self%simdata%output_cfg%write_on_the_fly, found); call check_field(found, 'Output.WriteOnTheFly', ParName)
-      call par_file%get('Output.ThinningInterval', self%simdata%output_cfg%thinning_interval, found); call check_field(found, 'Output.ThinningInterval', ParName)
-   
+
       !Model configuration
-      call par_file%get("ModelConfig.MaxNrGridCells", self%simdata%model_cfg%max_nr_grid_cells, found);
+      call par_file%get("ModelConfig.MaxLengthInputData", self%simdata%model_cfg%max_length_input_data, found);
       if (.not. found) then
-         self%simdata%model_cfg%max_nr_grid_cells = 1000
-         call warn('Variable "ModelConfig.MaxNrGridCells" is not set. Assume a value of 1000')
+         self%simdata%model_cfg%max_length_input_data = 1000
+         call warn('Variable "ModelConfig.MaxLengthInputData" is not set. Assume a value of 1000')
       end if
       call par_file%get("ModelConfig.CoupleAED2", self%simdata%model_cfg%couple_aed2, found);
       if (.not. found) then
@@ -414,11 +445,11 @@ contains
       call par_file%get("ModelParameters.p_radin", self%simdata%model_param%p_radin, found); call check_field(found, 'ModelParameters.p_radin', ParName)
       call par_file%get("ModelParameters.p_windf", self%simdata%model_param%p_windf, found); call check_field(found, 'ModelParameters.p_windf', ParName)
       call par_file%get("ModelParameters.beta_sol", self%simdata%model_param%beta_sol, found); call check_field(found, 'ModelParameters.beta_sol', ParName)
-      call par_file%get("ModelParameters.beta_snow_ice", self%simdata%model_param%beta_snow_ice, found); call check_field(found, 'ModelParameters.beta_snow_ice', ParName)     
+      call par_file%get("ModelParameters.beta_snowice", self%simdata%model_param%beta_snow_ice, found); call check_field(found, 'ModelParameters.beta_snowice', ParName)     
       call par_file%get("ModelParameters.albsw", self%simdata%model_param%albsw, found); call check_field(found, 'ModelParameters.albsw', ParName)
       call par_file%get("ModelParameters.ice_albedo", self%simdata%model_param%ice_albedo, found); call check_field(found, 'ModelParameters.ice_albedo', ParName)
       call par_file%get("ModelParameters.snow_albedo", self%simdata%model_param%snow_albedo, found); call check_field(found, 'ModelParameters.snow_albedo', ParName)
-      call par_file%get("ModelParameters.freez_Temp", self%simdata%model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_Temp', ParName)
+      call par_file%get("ModelParameters.freez_temp", self%simdata%model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_temp', ParName)
    
       !Simulation Parameter
       call par_file%get("Simulation.Timestep s", self%simdata%sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep s', ParName)
@@ -443,24 +474,23 @@ contains
       class(SimstratSimulationFactory) :: self
 
       ! Local variables
-      integer, parameter :: nz_max = 1000
+      real(RK) :: z_read(self%simdata%model_cfg%max_length_input_data), U_read(self%simdata%model_cfg%max_length_input_data), V_read(self%simdata%model_cfg%max_length_input_data)
+      real(RK) :: T_read(self%simdata%model_cfg%max_length_input_data), S_read(self%simdata%model_cfg%max_length_input_data), k_read(self%simdata%model_cfg%max_length_input_data), eps_read(self%simdata%model_cfg%max_length_input_data)
 
-      real(RK) :: z_read(nz_max), U_read(nz_max), V_read(nz_max)
-      real(RK) :: T_read(nz_max), S_read(nz_max), k_read(nz_max), eps_read(nz_max)
-
-      real(RK) :: z_ini(nz_max)
+      real(RK) :: z_ini(self%simdata%model_cfg%max_length_input_data)
       real(RK) :: z_ini_depth, zmax
 
       integer :: i, num_read
 
       associate (grid=>self%simdata%grid, &
                  model=>self%simdata%model, &
-                 nz_occupied=>self%simdata%grid%nz_occupied)
+                 nz_occupied=>self%simdata%grid%nz_occupied, &
+                 max_length_input_data=>self%simdata%model_cfg%max_length_input_data)
 
          ! Read file
          open (13, status='old', file=self%simdata%input_cfg%InitName) ! Opens initial conditions file
          read (13, *) ! Skip header
-         do i = 1, nz_max ! Read initial u,v,T, etc
+         do i = 1, max_length_input_data ! Read initial u,v,T, etc
             read (13, *, end=99) z_read(i), U_read(i), V_read(i), T_read(i), S_read(i), k_read(i), eps_read(i)
          end do
 99       num_read = i-1                               ! Number of valuInitNamees
@@ -507,7 +537,7 @@ contains
             call grid%interpolate_to_face(z_read, eps_read, num_read, model%eps)
          end if
 
-         write(6, *) "Initial data file successfully read"
+         write(6,*) "--Initial data file successfully read"
 
       end associate
    end subroutine
@@ -530,8 +560,8 @@ contains
       class(SimstratSimulationFactory) :: self
 
       ! Local variables
-      integer  :: i, j, fnum(1:4), nval(1:4), if_adv
-      real(RK) :: dummy, z_Inp_dummy(1:self%simdata%grid%nz_grid_max)
+      integer  :: i, j, fnum(1:4), nval(1:4), nval_deep, nval_surface, if_adv
+      real(RK) :: dummy, z_Inp_dummy(1:self%simdata%grid%max_length_input_data)
 
       open (41, status='old', file=self%simdata%input_cfg%QinpName)
       open (42, status='old', file=self%simdata%input_cfg%QoutName)
@@ -542,7 +572,8 @@ contains
       if_adv = 0
       do i = 1, 4
          read (fnum(i), *, end=8) ! Skip header (description of columns)
-         read (fnum(i), *, end=8) nval(i) ! Read number of input depths (static)
+         read (fnum(i), *, end=8) nval_deep, nval_surface ! Read number of input depths (static)
+         nval(i) = nval_deep + nval_surface
          read (fnum(i), *, end=8) dummy, (z_Inp_dummy(j), j=1, nval(i)) ! Read input depths
          goto 9
       8   if_adv = if_adv + 1    ! +1 in case there is no data in the file

@@ -26,7 +26,7 @@ module strat_simdata
       character(len=:), allocatable :: name
       real(RK), dimension(:), pointer :: values
       real(RK), pointer :: values_surf 
-      logical :: volume_grid, surface_grid
+      logical :: volume_grid, face_grid
    end type
 
    ! Logging configuration
@@ -36,21 +36,24 @@ module strat_simdata
       character(len=:), allocatable :: toutName
       real(RK), dimension(:), allocatable :: zout
       real(RK), dimension(:), allocatable :: tout
+      real(RK), dimension(:), allocatable :: n_timesteps_between_tout
+      real(RK), dimension(:), allocatable :: adjusted_timestep
+      logical :: write_to_file
       class(LogVariable), dimension(:), allocatable :: output_vars
-      logical :: write_on_the_fly
+
       integer :: thinning_interval
    end type
 
    ! Simulation configuration
    type, public :: SimConfig
       integer :: timestep
-      integer :: start_datum
-      integer :: end_datum
+      real(RK) :: start_datum
+      real(RK) :: end_datum
    end type
 
    ! Model configuration (read from file)
    type, public :: ModelConfig
-      integer :: max_nr_grid_cells
+      integer :: max_length_input_data
       logical :: couple_aed2
       logical :: use_buffered_forcing
       integer :: turbulence_model
@@ -94,7 +97,7 @@ module strat_simdata
    ! Model state (this is actually the simulation data!!!)
    type, public :: ModelState
       ! Iteration variables
-      integer :: step, itera, i, j, std
+      integer :: i, j, output_counter, model_step_counter
       real(RK) :: datum, dt
 
       ! Variables located on z_cent grid
@@ -134,7 +137,7 @@ module strat_simdata
       real(RK) :: snow_dens ! On ice snow density [kg m-3]   
       real(RK) :: ice_temp ! Ice density [kg m-3]
       real(RK) :: snow_temp ! Ice density [kg m-3]
-      real(RK) :: percip ! Percipiation in water eqvivalent hight [m] 
+      real(RK) :: precip ! precipiation in water eqvivalent hight [m] 
    
       !For saving heatflux 
       real(RK), allocatable :: ha ! Incoming long wave [W m-2]

@@ -10,7 +10,9 @@
 
 - [Python](https://www.python.org/) 2.7 or later
 - [FoBiS.py](https://github.com/szaghi/FoBiS) 2.2.6 or later (available via GitHub or pip)
-- [Intel Fortran (Intel Parallel Studio XE 2016)](https://software.intel.com/en-us/parallel-studio-xe/choose-download) or gfortran 6.3 or later
+- 2 compiler options:
+	- [Intel Fortran (Intel Parallel Studio XE 2016)](https://software.intel.com/en-us/parallel-studio-xe/choose-download)
+	- Gfortran 6.3 or later
 
 
 **Building Simstrat v2.0 with FoBiS.py**

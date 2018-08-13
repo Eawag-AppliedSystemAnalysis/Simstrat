@@ -51,7 +51,7 @@ contains
          ! no explicit boundary conditions
          boundaries(1:ubnd_vol) = 0
 
-         !todo Forcing mode 1 for temp
+         ! Forcing mode 1 for temp is done in post solve method
          if (self%cfg%forcing_mode==1) then
          !   sources(ubnd_vol) = (state%SST-state%T(ubnd_vol))/state%dt
          !   boundaries(ubnd_vol) = 0

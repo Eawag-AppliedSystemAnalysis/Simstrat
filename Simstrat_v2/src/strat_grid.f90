@@ -12,7 +12,7 @@ module strat_grid
 
    ! Class that holds initial configuration for grid setup
    type, public :: GridConfig
-      integer :: nz_grid_max
+      integer :: max_length_input_data
       integer :: nz_grid
       real(RK) :: max_depth
       real(RK), dimension(:), allocatable :: grid_read ! Grid definition
@@ -40,11 +40,11 @@ module strat_grid
       
       integer :: nz_grid      ! Number of allocated grid cells
       integer :: nz_occupied  ! number of grid cells in use as per current lake depth
-      integer :: nz_grid_max  ! Hard limit of grid cells for reading files of unknnown length etc
+      integer :: max_length_input_data  ! Hard limit of grid cells for reading files of unknnown length etc
 
-      integer :: ubnd_vol, ubnd_fce, l_vol, l_fce   ! Upper and lenght for volume (vol) and face(fce) grids
+      integer :: ubnd_vol, ubnd_fce, length_vol, length_fce   ! Upper and lenght for volume (vol) and face(fce) grids
       real(RK) :: z_zero
-      real(RK) :: lake_level_old
+      real(RK) :: lake_level, lake_level_old
       real(RK) :: max_depth
 
    contains
@@ -66,8 +66,8 @@ module strat_grid
       procedure, pass :: interpolate_to_face => grid_interpolate_to_face    ! Interpolate quantitiy onto face grid
       procedure, pass :: interpolate_to_face_from_second => grid_interpolate_to_face_from_second  ! Interpolate quantity onto face grid, ignoring first value
       procedure, pass :: interpolate_to_vol => grid_interpolate_to_vol      ! Interpolate quantity onto volume grid
-      procedure, pass :: interpolate_from_face => grid_interpolate_from_face  ! Interpolate quantity that is stored on face grid onto arbitrary grid
-      procedure, pass :: interpolate_from_vol => grid_interpolate_from_vol    !  and so on
+      procedure, pass :: interpolate_from_face => grid_interpolate_from_face  ! Interpolate quantity that is stored on face grid onto output grid
+      procedure, pass :: interpolate_from_vol => grid_interpolate_from_vol    ! Interpolate quantity that is stored on volume grid onto output grid
 
       ! Manipulation methods
       procedure, pass :: grow => grid_grow          ! Add a new box
@@ -87,7 +87,7 @@ contains
 
       ! Assign config
       self%nz_grid = config%nz_grid
-      self%nz_grid_max = config%nz_grid_max
+      self%max_length_input_data = config%max_length_input_data
       self%max_depth = config%max_depth
 
       ! Use read config to determine grid size
@@ -207,8 +207,8 @@ contains
          self%z_face(i - 1) = nint(1e6_RK*self%z_face(i - 1))/1e6_RK
       end do
       self%z_face(self%nz_grid + 1) = nint(1e6_RK*self%z_face(self%nz_grid + 1))/1e6_RK
-      ! needed?
-      !self%lake_level_old = self%z_face(self%nz_occupied)
+
+      !self%lake_level = self%z_face(self%nz_occupied)
       write (*, *) "Warning, nz_occupied not set yet"
    end subroutine grid_init_z_axes
 
@@ -223,8 +223,8 @@ contains
 
       self%z_zero = config%z_A_read(1) ! z_zero is the uppermost depth (might be above zero)
 
-      self%lake_level_old = self%z_zero !needed?
-
+      self%lake_level = self%z_zero
+      self%lake_level_old = self%z_zero
       config%z_A_read = self%z_zero - config%z_A_read ! z-coordinate is positive upwards, zero point is at reservoir bottom
 
    end subroutine grid_init_morphology
@@ -394,7 +394,7 @@ contains
       real(RK), dimension(:), intent(out) :: yi
 
       integer, intent(in) :: num_z
-      call Interp(z, y, num_z, self%z_face, yi, self%nz_grid)
+      call Interp(z, y, num_z, self%z_face, yi, self%nz_grid + 1)
    end subroutine
 
    subroutine grid_interpolate_to_face_from_second(self, z, y, num_z, yi)
@@ -404,26 +404,51 @@ contains
       real(RK), dimension(:), intent(out) :: yi
 
       integer, intent(in) :: num_z
-      call Interp(z, y, num_z, self%z_face(2:self%nz_grid + 1), yi, self%nz_grid)
+      call Interp(z, y, num_z, self%z_face(2:self%nz_grid + 1), yi(2:self%nz_grid + 1), self%nz_grid)
    end subroutine
 
-   subroutine grid_interpolate_from_vol(self, z, y, num_z, yi)
+   subroutine grid_interpolate_from_vol(self, y, zi, yi, num_zi)
       class(StaggeredGrid), intent(in) :: self
-      real(RK), dimension(:), intent(in) :: z, y
+      real(RK), dimension(:), intent(in) :: zi, y
       real(RK), dimension(:), intent(out) :: yi
-      integer, intent(in) :: num_z
+      integer, intent(in) :: num_zi
 
-      ! TO do: Interp or Interp_NAN for grid boundaries??
-      call Interp(self%z_volume(1:self%nz_grid), y, self%nz_grid, z, yi, num_z)
+      real(RK), dimension(:), allocatable :: z_volume_mod
+      integer :: i
+
+      allocate(z_volume_mod(self%ubnd_vol))
+
+      ! Transform z_volume for interpolation on zout grid
+      z_volume_mod(1) = self%z_face(1) - self%z_face(self%ubnd_fce)
+      do i = 2, self%ubnd_vol-1
+         z_volume_mod(i) = self%z_volume(i) - self%z_face(self%ubnd_fce)
+      end do
+      z_volume_mod(self%ubnd_vol) = 0
+
+      call Interp_nan(z_volume_mod(1:self%ubnd_vol), y(1:self%ubnd_vol), self%ubnd_vol, zi, yi, num_zi)
+
+      deallocate(z_volume_mod)
    end subroutine
 
-   subroutine grid_interpolate_from_face(self, z, y, num_z, yi)
+   subroutine grid_interpolate_from_face(self, y, zi, yi, num_zi)
       class(StaggeredGrid), intent(in) :: self
-      real(RK), dimension(:), intent(in) :: z, y
+      real(RK), dimension(:), intent(in) :: zi, y
       real(RK), dimension(:), intent(out) :: yi
-      integer, intent(in) :: num_z
+      integer, intent(in) :: num_zi
 
-      call Interp(self%z_face, y, self%nz_grid + 1, z, yi, num_z)
+      real(RK), dimension(:), allocatable :: z_face_mod
+      integer :: i
+
+      allocate(z_face_mod(self%ubnd_fce))
+
+      ! Transform z_face for interpolation on zout grid
+      do i = 1, self%ubnd_fce
+         z_face_mod(i) = self%z_face(i) - self%z_face(self%ubnd_fce)
+      end do
+
+      call Interp_nan(z_face_mod(1:self%ubnd_fce), y(1:self%ubnd_fce), self%ubnd_fce, zi, yi, num_zi)
+
+      deallocate(z_face_mod)
    end subroutine
 
    ! Update all upper bounds and lengths
@@ -433,8 +458,8 @@ contains
 
       self%ubnd_vol = self%nz_occupied
       self%ubnd_fce = self%nz_occupied + 1
-      self%l_vol = self%nz_occupied
-      self%l_fce = self%nz_occupied + 1
+      self%length_vol = self%nz_occupied
+      self%length_fce = self%nz_occupied + 1
    end subroutine
 
    pure function grid_convert2height_above_sed(z, z_zero) result(h)
