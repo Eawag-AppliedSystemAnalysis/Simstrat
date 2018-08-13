@@ -41,7 +41,9 @@ contains
       self%param => model_param
       self%grid => grid
       self%file = forcing_file
-
+   
+      if(self%cfg%snow_model == 1) write(6,*) 'Warning: Snow module need percipitation input, control forcing file' 
+      !If percipitation column is missing in forcing file, Simstrat will read dates as percipitation  	  
    end subroutine
 
    !Read forcing file to get values A_cur at given datum
@@ -97,6 +99,7 @@ contains
 
   7   eof = 1
       if(datum>tb_start) write(6,*) 'Warning: last forcing date before simulation end time.'
+
 
   8   A_cur(1:nval) = A_s(1:nval)       !Take first value of current interval
       return
@@ -179,9 +182,9 @@ contains
                state%T_atm = T_atm  
                Cloud = 0.5
                if (cfg%use_filtered_wind) state%Wf = A_cur(6) !AG 2014
-               if (cfg%ice_model == 1 .and. cfg%use_filtered_wind) then
+               if (cfg%snow_model == 1 .and. cfg%use_filtered_wind) then
                  state%percip = A_cur(7)
-               else if (cfg%ice_model == 1) then 
+               else if (cfg%snow_model == 1) then 
                  state%percip = A_cur(6)
                end if
 
@@ -205,9 +208,9 @@ contains
                   stop
                end if
                if (cfg%use_filtered_wind) state%Wf = A_cur(7) !AG 2014
-               if (cfg%ice_model == 1 .and. cfg%use_filtered_wind) then
+               if (cfg%snow_model == 1 .and. cfg%use_filtered_wind) then
                 state%percip = A_cur(8)
-               else if (cfg%ice_model == 1) then
+               else if (cfg%snow_model == 1) then
                 state%percip = A_cur(7)     
                end if
 
@@ -280,10 +283,10 @@ contains
                if (state%ice_h > 0 .and. state%snow_h == 0) then !Ice Cover
                ! Global heat flux (positive: air to water, negative: water to air)
                ! Heat enters first water cell, heat_snow_ice into the ice or snow layer  
-                state%heat = 0 + 0 + 0 + 0 + F_glob * param%beta_sol * (1 - param%beta_snow_ice)      
-                state%heat_snow_ice = H_A + H_W + H_K + H_V + F_glob * param%beta_snow_ice !MS: added term with beta_snow_ice
+                state%heat = 0 + 0 + 0 + 0 + F_glob * param%beta_sol * (1 - param%beta_snow_ice) !Heat first layer, LRV added beta_snow_ice (Bouffard. 2016,Ice-covered Lake Onega)
+                state%heat_snow_ice = H_A + H_W + H_K + H_V + F_glob * param%beta_snow_ice !Heat snow and/or ice; LRV added beta_snow_ice
                ! Removal of solar short-wave radiation absorbed in snow and ice and first water cell
-               state%rad0 = F_glob * (1 - param%beta_sol) * (1 - param%beta_snow_ice)!MS: added beta_sol and beta_snow_ice      
+               state%rad0 = F_glob * (1 - param%beta_sol) * (1 - param%beta_snow_ice)!MS: added beta_sol ; LRV added beta_snow_ice      
                ! Supress wind turbulence with wind lid (heat flux affected by wind still active on snow and ice)
                state%u10 = 0
                state%v10 = 0
@@ -291,10 +294,10 @@ contains
                else if (state%ice_h > 0 .and. state%snow_h > 0) then !Snow Cover
                ! Global heat flux (positive: air to water, negative: water to air) 
                ! Heat enters first water cell, heat_snow_ice into the ice or snow layer
-               state%heat = 0 + 0 + 0 + 0 + F_glob * param%beta_sol * (1 - param%beta_snow_ice)     
-               state%heat_snow_ice = H_A + H_W + H_K + H_V + F_glob*param%beta_snow_ice !MS: added term with beta_snow_ice 
+               state%heat = 0 + 0 + 0 + 0 + F_glob * param%beta_sol * (1 - param%beta_snow_ice)  !Heat first layer, LRV added beta_snow_ice   
+               state%heat_snow_ice = H_A + H_W + H_K + H_V + F_glob*param%beta_snow_ice !Heat snow and/or ice; LRV added beta_snow_ice
                ! Removal of solar short-wave radiation absorbed in snow and ice and first water cell
-               state%rad0 = F_glob * (1 - param%beta_sol) * (1 - param%beta_snow_ice)!MS: added beta_sol and beta_snow_ice (Bouffard. 2016,Ice-covered Lake Onega)
+               state%rad0 = F_glob * (1 - param%beta_sol) * (1 - param%beta_snow_ice)!MS: added beta_sol ; LRV added beta_snow_ice (Bouffard. 2016,Ice-covered Lake Onega)
                ! Supress wind turbulence with wind lid (heat flux affected by wind still active on snow and ice)
                state%u10 = 0
                state%v10 = 0

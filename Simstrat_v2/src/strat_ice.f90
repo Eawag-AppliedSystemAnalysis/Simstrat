@@ -132,7 +132,7 @@ module strat_ice
      ! set surface temperature to freezing point
      state%T(self%grid%ubnd_vol) = param%Freez_Temp ![°C]
    
-     !Ice temp eq 17
+     !Ice temp eq 17 in Saloranta, T. M., & Andersen, T. (2007). 
      state%ice_temp = 0 ![°C]
        
       !write (*, *) 'Ice Formation'
@@ -154,11 +154,11 @@ module strat_ice
    
     P = max(P_snow,P_ice)
    
-    !Ice temp eq 17
+     !Ice temp eq 17 in Saloranta, T. M., & Andersen, T. (2007). 
     state%ice_temp = (P*param%freez_temp + state%T_atm)/(1 + P)
    
    
-     !snow ice formation, if wight of snow exeeds ice buoyancy
+     !snow ice formation, if wheight of snow exeeds ice buoyancy
      if (self%model_cfg%snow_model == 1 .and. state%snow_h > 0) then
         snow_weight = state%snow_h * state%snow_dens*1*1 !kg
         buoyancy_ice = state%ice_h*1*1 * (rho_0 - ice_dens) !kg
@@ -170,7 +170,6 @@ module strat_ice
   
           state%snow_h = state%snow_h - snow_height_ice_mass/state%snow_dens
           state%ice_h  = state%ice_h  + snow_height_ice_mass/ice_dens
-     
           !write (*, *) 'Snow ice forming'
           !write (*,'(A,F8.6)') 'Snow ice hight       :', snow_height_ice_mass/ice_dens 
           !write (*,'(A,F8.6)') 'snow height lost     :', snow_height_ice_mass/state%snow_dens    
@@ -185,7 +184,7 @@ module strat_ice
      end if
    
    
-    !Ice thickness eq. 16
+    !Ice thickness eq. 16 in Saloranta, T. M., & Andersen, T. (2007).
     state%ice_h = sqrt(state%ice_h**2 + (2*k_ice)/(ice_dens * l_h) * (param%freez_temp - state%ice_temp) * state%dt) 
 
    !Heating of first water cell might melt ice from below, put back first cell to freez temp., and melt ice from below
@@ -201,7 +200,7 @@ module strat_ice
     state%ice_h = state%ice_h - MeltHeight2 ! [m]
       ! if melting larger than ice height, put remaining energy to water and set ice/snow to zero
       if (state%ice_h < 0) then
-       state%heat = state%heat + (l_h / (ice_dens * 1 * 1) / (-1 * state%ice_h))![J/kg] / [kg/m3] / [m2] / [m] = [J]
+       state%heat = state%heat + (l_h * ice_dens * (-1 * state%ice_h) / state%dt)![J/kg] * [kg/m3] * [m] / [s] = [J/sm2] = [W/m2]
        state%ice_h = 0
        state%snow_dens = rho_s_0
        state%snow_h = 0
@@ -256,8 +255,8 @@ module strat_ice
       state%ice_h = state%ice_h - MeltHeight2 - MeltHeight1! [m]
 
       ! If melt larger than ice hight, put remaining energy to water and set ice hight to zero
-      if (state%ice_h < 0) then
-       state%heat = state%heat + (l_h / (ice_dens * 1 * 1) / (-1 * state%ice_h))![J/kg] / [kg/m3] / [m2] / [m] = [J]
+      if (state%ice_h < 0) then  
+       state%heat = state%heat + (l_h * ice_dens * (-1 * state%ice_h) / state%dt)![J/kg] * [kg/m3] * [m] / [s] = [J/sm2] = [W/m2]
        state%ice_h = 0
        state%snow_dens = rho_s_0
        state%snow_h = 0
@@ -295,7 +294,7 @@ module strat_ice
         !calculate new snow height
         snow_h_new = (state%percip / 3600 *state%dt) * (rho_0 / rho_s_0) !go from m/h to m/s and increas volume from water to snow
 
-        !calculate snow density due to compresion of snow layer, Yen 1981 eq. 9
+        !calculate snow density due to compresion of snow layer, Yen 1981 Review of thermal properties of ice and sea ice, eq. 9
         state%snow_dens = state%snow_dens + (snow_h_new * rho_s_0) * C1 * exp(-0.08 * (T0 - (state%snow_temp + T0))) * state%dt 
  
         !Add the two layers density togethere 
@@ -382,7 +381,7 @@ module strat_ice
    
    ! if melting larger than ice height, put remaining energy to water and set ice/snow to zero
       if (state%ice_h < 0) then
-       state%heat = state%heat + (l_h / (ice_dens * 1 * 1) / (-1 * state%ice_h))![J/kg] / [kg/m3] / [m2] / [m] = [J]
+       state%heat = state%heat + (l_h * ice_dens * (-1 * state%ice_h) / state%dt)![J/kg] * [kg/m3] * [m] / [s] = [J/sm2] = [W/m2]
        state%ice_h = 0
        state%snow_dens = rho_s_0
        state%snow_h = 0
