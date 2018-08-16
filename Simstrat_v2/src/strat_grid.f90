@@ -268,8 +268,7 @@ contains
          self%AreaFactor_eps(1:nz - 1) = 0.5_RK*((Az(2:nz) - Az(1:nz - 1))/h(1:nz - 1) + (Az(3:nz + 1) - Az(2:nz))/h(2:nz))/Az(2:nz)
          self%AreaFactor_eps(nz) = 0
          self%meanint(1:nz) = 2.0_RK/(h(1:nz) + h(2:nz + 1))
-         write(6,*) self%AreaFactor_k1(1:nz)
-         write(6,*) self%AreaFactor_k2(1:nz)
+         
          self%volume = 0
          do i = 1, nz
             self%volume = self%volume + 0.5_RK*h(i)*(Az(i) + Az(i + 1))
