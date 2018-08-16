@@ -76,7 +76,7 @@ module strat_ice
      call self%do_ice_freezing(state, param)   
    end if
    !Snow fall addition onto ice     
-   if (self%model_cfg%snow_model == 1 .and. param%Freez_Temp >= state%T_atm .and. state%ice_h > 0 .and. state%percip > 0) then
+   if (self%model_cfg%snow_model == 1 .and. param%Freez_Temp >= state%T_atm .and. state%ice_h > 0 .and. state%precip > 0) then
        call self%do_snow_build(state, param) 
    end if   
    
@@ -292,7 +292,7 @@ module strat_ice
 
 
         !calculate new snow height
-        snow_h_new = (state%percip / 3600 *state%dt) * (rho_0 / rho_s_0) !go from m/h to m/s and increas volume from water to snow
+        snow_h_new = (state%precip / 3600 *state%dt) * (rho_0 / rho_s_0) !go from m/h to m/s and increas volume from water to snow
 
         !calculate snow density due to compresion of snow layer, Yen 1981 Review of thermal properties of ice and sea ice, eq. 9
         state%snow_dens = state%snow_dens + (snow_h_new * rho_s_0) * C1 * exp(-0.08 * (T0 - (state%snow_temp + T0))) * state%dt 
@@ -313,7 +313,7 @@ module strat_ice
 
        !write (*, *) 'Snow layer build-up'    
        !write (*,'(A,F10.6)') 'Snow Height       : ' , state%snow_h  
-       !write (*,'(A,F10.6)') 'Percipitation     : ' , state%percip  
+       !write (*,'(A,F10.6)') 'precipitation     : ' , state%precip  
        !write (*,'(A,F12.2)') 'Snow Temp         : ' , state%snow_temp
        !write (*,'(A,F12.2)') 'Snow Dens         : ' , state%snow_dens     
        !write (*,'(A,F12.2)') 'Heat Flux         : ' , state%heat_snow_ice  
