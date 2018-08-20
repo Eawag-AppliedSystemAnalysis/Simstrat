@@ -124,7 +124,6 @@ contains
         do i=1,4
           if (idx==1) then
             if (i==1) then
-               write(6,*) state%nz_input,grid%nz_grid,grid%ubnd_fce,grid%ubnd_vol,size(Q_inp),size(Q_vert)
                ! Allocate arrays if not already done, this saves memory compared to declaring with max_length_input_data
                allocate (self%z_Inp(1:4,1:state%nz_input)) ! Input depths
                allocate (self%Inp_read_start(1:4,1:state%nz_input))
