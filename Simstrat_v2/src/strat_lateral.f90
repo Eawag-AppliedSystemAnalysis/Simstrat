@@ -101,7 +101,6 @@ contains
       implicit none
       class(LateralRhoModule) :: self
       class(ModelState) :: state
-      !class(SimulationData), pointer :: simdata
    
       ! Local Declarations
       real(RK) :: Q_read_start(1:4,1:state%nz_input), Q_read_end(1:4,1:state%nz_input) ! Integrated outflow
@@ -116,20 +115,23 @@ contains
      
       associate (datum=>state%datum, &
                  idx=>state%model_step_counter, &
-                 Q_inp=>state%Q_inp, & ! Q_inp is the input at each depth for each time step, Q_vert is the integrated net water input
-                 Q_vert=>state%Q_vert, &
+                 Q_inp=>state%Q_inp, & ! Q_inp is the input at each depth for each time step
+                 Q_vert=>state%Q_vert, & ! Q_vert is the integrated net water input
                  grid=>self%grid)
-      
+        
         fname = ['inflow           ','outflow          ','input temperature','input salinity   ']
         fnum = [41,42,43,44]
         do i=1,4
           if (idx==1) then
-            ! Allocate arrays if not already done, this saves memory compared to declaring with max_length_input_data
-            if (.not. allocated(self%z_Inp)) allocate (self%z_Inp(1:4,1:state%nz_input)) ! Input depths
-            if (.not. allocated(self%Inp_read_start)) allocate (self%Inp_read_start(1:4,1:state%nz_input))
-            if (.not. allocated(self%Inp_read_end)) allocate (self%Inp_read_end(1:4,1:state%nz_input))
-            if (.not. allocated(self%Q_start)) allocate (self%Q_start(1:4,1:self%grid%nz_grid+1)) ! Input interpolated on grid
-            if (.not. allocated(self%Q_end)) allocate (self%Q_end(1:4,1:self%grid%nz_grid+1)) ! Input interpolated on grid
+            if (i==1) then
+               write(6,*) state%nz_input,grid%nz_grid,grid%ubnd_fce,grid%ubnd_vol,size(Q_inp),size(Q_vert)
+               ! Allocate arrays if not already done, this saves memory compared to declaring with max_length_input_data
+               allocate (self%z_Inp(1:4,1:state%nz_input)) ! Input depths
+               allocate (self%Inp_read_start(1:4,1:state%nz_input))
+               allocate (self%Inp_read_end(1:4,1:state%nz_input))
+               allocate (self%Q_start(1:4,1:grid%nz_grid+1)) ! Input interpolated on grid
+               allocate (self%Q_end(1:4,1:grid%nz_grid+1)) ! Input interpolated on grid
+            end if
             
             if(self%cfg%disp_diagnostic==2) write(6,*) 'Starting to read '//trim(fname(i))//' file...'
             self%eof(i) = 0
@@ -180,7 +182,7 @@ contains
                   stop
                 end if
                 do j=1,grid%ubnd_vol
-                   state%Q_inp(i,j) = self%Q_start(i,j) + (datum-self%tb_start(i)) * (self%Q_end(i,j)-self%Q_start(i,j))/(self%tb_end(i)-self%tb_start(i))
+                   Q_inp(i,j) = self%Q_start(i,j) + (datum-self%tb_start(i)) * (self%Q_end(i,j)-self%Q_start(i,j))/(self%tb_end(i)-self%tb_start(i))
                 end do
              end if
           end if
@@ -188,14 +190,14 @@ contains
 
 7         self%eof(i) = 1
 8         if(i/=2) Inp(i,:) = self%Inp_read_start(i,:) ! Set to closest available value
-          if(i==2) state%Q_inp(i,1:grid%ubnd_vol) = self%Q_start(i,1:grid%ubnd_vol) ! Set to closest available value
+          if(i==2) Q_inp(i,1:grid%ubnd_vol) = self%Q_start(i,1:grid%ubnd_vol) ! Set to closest available value
           goto 11
 
 9         write(6,*) 'No data found in ',trim(fname(i)),' file. Check number of depths. Values set to zero.'
           self%eof(i) = 1
           if(i/=2) Inp(i,1:self%nval(i)) = 0.0_RK
           if(i/=2) self%Inp_read_start(i,1) = 0.0_RK
-          if(i==2) state%Q_inp(i,1:grid%ubnd_vol) = 0.0_RK
+          if(i==2) Q_inp(i,1:grid%ubnd_vol) = 0.0_RK
           if(i==2) self%Q_start(i,1:grid%ubnd_fce) = 0.0_RK
 
 11        continue
@@ -203,10 +205,10 @@ contains
 
         !Set Qout to the differences (from the integrals)
         do j=1,grid%ubnd_vol-1
-           state%Q_inp(2,grid%ubnd_vol-j+1) = state%Q_inp(2,grid%ubnd_vol-j+1)-state%Q_inp(2,grid%ubnd_vol-j)
+           Q_inp(2,grid%ubnd_vol-j+1) = Q_inp(2,grid%ubnd_vol-j+1)-Q_inp(2,grid%ubnd_vol-j)
         end do
-        state%Q_inp(1,:) = 0
-        state%Q_inp(3:4,:) = 0
+        Q_inp(1,:) = 0
+        Q_inp(3:4,:) = 0
 
         do j=1,self%nval(1)
            if (Inp(1,j)>1E-15) then
@@ -263,16 +265,16 @@ contains
 
               do i=i2,i1
                  Q_inp_inc = Q_in(k)/(grid%z_face(i1)-grid%z_face(i2)+grid%h(i))*grid%h(i)
-                 state%Q_inp(1,i) = state%Q_inp(1,i) + Q_inp_inc
-                 state%Q_inp(3,i) = state%Q_inp(3,i) + T_in*Q_inp_inc
-                 state%Q_inp(4,i) = state%Q_inp(4,i) + S_in*Q_inp_inc
+                 Q_inp(1,i) = Q_inp(1,i) + Q_inp_inc
+                 Q_inp(3,i) = Q_inp(3,i) + T_in*Q_inp_inc
+                 Q_inp(4,i) = Q_inp(4,i) + S_in*Q_inp_inc
               end do
            end if
         end do
 
-        state%Q_vert(1) = state%Q_inp(1,1) + state%Q_inp(2,1)
-        do i=2,grid%ubnd_vol
-           state%Q_vert(i) = state%Q_vert(i-1) + state%Q_inp(1,i) + state%Q_inp(2,i)
+        Q_vert(1) = Q_inp(1,1) + Q_inp(2,1)
+        do i=2,grid%ubnd_fce
+           Q_vert(i) = Q_vert(i-1) + Q_inp(1,i) + Q_inp(2,i)
         end do
       end associate
    end subroutine
@@ -295,31 +297,30 @@ contains
 
       associate (datum=>state%datum, &
                  idx=>state%model_step_counter, &
-                 Q_inp=>state%Q_inp, & ! Q_inp is the input at each depth for each time step, Q_vert is the integrated net water input
-                 Q_vert=>state%Q_vert, &
-                 grid=>self%grid, &
-                 ubnd_vol=>self%grid%ubnd_vol, &
-                 ubnd_fce=>self%grid%ubnd_fce)
+                 Q_inp=>state%Q_inp, & ! Q_inp is the input at each depth for each time step
+                 Q_vert=>state%Q_vert, & ! Q_vert is the integrated net water input
+                 grid=>self%grid)
 
          fname = ['inflow           ', 'outflow          ', 'input temperature', 'input salinity   ']
          fnum = [41, 42, 43, 44]
 
          ! FB 2016: Major revision to include surface inflow
-         ! Do this for inflow, outflow, temperature and salinity
-         do i = 1, 4
-            if (idx == 1) then ! First iteration
-               ! Allocate arrays if not already done, this saves memory compared to declaring with max_length_input_data
-               if (.not. allocated(self%z_Inp)) allocate (self%z_Inp(1:4, 1:state%nz_input)) ! Input depths
-               if (.not. allocated(self%Inp_read_start)) allocate (self%Inp_read_start(1:4, 1:state%nz_input))
-               if (.not. allocated(self%Inp_read_end)) allocate (self%Inp_read_end(1:4, 1:state%nz_input))
-               if (.not. allocated(self%Q_read_start)) allocate (self%Q_read_start(1:4, 1:state%nz_input))
-               if (.not. allocated(self%Q_read_end)) allocate (self%Q_read_end(1:4, 1:state%nz_input))               
-               if (.not. allocated(self%Qs_read_start)) allocate (self%Qs_read_start(1:4, 1:state%nz_input))
-               if (.not. allocated(self%Qs_read_end)) allocate (self%Qs_read_end(1:4, 1:state%nz_input))
-               if (.not. allocated(self%Q_start)) allocate (self%Q_start(1:4, 1:grid%nz_grid + 1)) ! Input interpolated on grid
-               if (.not. allocated(self%Q_end)) allocate (self%Q_end(1:4, 1:grid%nz_grid + 1)) ! Input interpolated on grid
-               if (.not. allocated(self%Qs_start)) allocate (self%Qs_start(1:4, 1:grid%nz_grid + 1)) ! Surface input interpolated on grid
-               if (.not. allocated(self%Qs_end)) allocate (self%Qs_end(1:4, 1:grid%nz_grid + 1)) ! Surface input interpolated on grid
+         do i = 1, 4 ! Do this for inflow, outflow, temperature and salinity
+            if (idx==1) then ! First iteration
+               if (i==1) then
+                  ! Allocate arrays if not already done, this saves memory compared to declaring with max_length_input_data
+                  allocate (self%z_Inp(1:4, 1:state%nz_input)) ! Input depths
+                  allocate (self%Inp_read_start(1:4, 1:state%nz_input))
+                  allocate (self%Inp_read_end(1:4, 1:state%nz_input))
+                  allocate (self%Q_read_start(1:4, 1:state%nz_input))
+                  allocate (self%Q_read_end(1:4, 1:state%nz_input))               
+                  allocate (self%Qs_read_start(1:4, 1:state%nz_input))
+                  allocate (self%Qs_read_end(1:4, 1:state%nz_input))
+                  allocate (self%Q_start(1:4, 1:grid%nz_grid+1)) ! Input interpolated on grid
+                  allocate (self%Q_end(1:4, 1:grid%nz_grid+1)) ! Input interpolated on grid
+                  allocate (self%Qs_start(1:4, 1:grid%nz_grid+1)) ! Surface input interpolated on grid
+                  allocate (self%Qs_end(1:4, 1:grid%nz_grid+1)) ! Surface input interpolated on grid
+               end if
 
                self%Qs_start(i, :) = 0.0_RK
                self%Qs_end(i, :) = 0.0_RK
@@ -357,6 +358,7 @@ contains
                   call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_start(i, :), self%nval_surface(i), self%Qs_start(i, :))
                end if
 
+
                ! Read second line and treatment of deep inflow
                read (fnum(i), *, end=7) self%tb_end(i), (self%Inp_read_end(i, j), j=1, self%nval(i))
                call Integrate(self%z_Inp(i, :), self%Inp_read_end(i, :), self%Q_read_end(i, :), self%nval_deep(i))
@@ -367,6 +369,7 @@ contains
                   call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))
                end if
                ! Add surface flow for both in- and outflow
+
 !                if (self%nval_surface(i) > 0) then
 !                   do j = 1, self%nval_surface(i)
 !                      self%depth_surfaceFlow(i, j) = self%z_Inp(i, self%nval_deep(i) - 1 + j)
@@ -393,6 +396,7 @@ contains
                ! Recalculate Q_end from deep inflows
                !call Integrate(self%z_Inp(i, :), self%Inp_read_end(i, :), Q_read_end(i, :), self%nval_deep(i))
                !call grid%interpolate_to_face_from_second(self%z_Inp(i, :), Q_read_end(i, :), self%nval_deep(i), self%Q_end(i, :))
+
                ! Add surface flow
 !                if (self%nval_surface(i) > 0) then
 !                   do j = 1, self%nval_surface(i)
@@ -433,6 +437,7 @@ contains
 !                         call self%surface_flow(self%Inp_read_end(i, self%nval_deep(i) - 1 + j), self%Q_end(i, :), self%depth_surfaceFlow(i, j), i)
 !                      end do
 !                   end if
+
                end do ! end do while
             end if
 
@@ -440,39 +445,39 @@ contains
             ! Note that Q_inp is on the face grid
             !self%Q_start(i,1)=0
             !self%Q_end(i,1)=0
-            do j = 1, ubnd_fce
+            do j = 1, grid%ubnd_fce
                Q_inp(i,j) = (self%Q_start(i,j) + self%Qs_start(i,j)) + (datum-self%tb_start(i)) &
                * (self%Q_end(i,j) + self%Qs_end(i,j) - self%Q_start(i,j) - self%Qs_start(i,j))/(self%tb_end(i)-self%tb_start(i))
             end do
             goto 11
 
-7           self%eof(i) = 1
-8           state%Q_inp(i,1:ubnd_fce) = self%Q_start(i,1:ubnd_fce) + self%Qs_start(i,1:ubnd_fce)     ! Set to closest available value
+ 7          self%eof(i) = 1
+ 8          Q_inp(i,1:grid%ubnd_fce) = self%Q_start(i,1:grid%ubnd_fce) + self%Qs_start(i,1:grid%ubnd_fce)     ! Set to closest available value
             goto 11
 
-9           write(6,*) 'No data found in ',trim(fname(i)),' file. Check number of depths. Values set to zero.'
+ 9          write(6,*) 'No data found in ',trim(fname(i)),' file. Check number of depths. Values set to zero.'
             self%eof(i) = 1
-            state%Q_inp(i, 1:ubnd_fce) = 0.0_RK
-            self%Q_start(i, 1:ubnd_fce) = 0.0_RK
-            self%Qs_start(i, 1:ubnd_fce) = 0.0_RK
-11          continue
+            Q_inp(i, 1:grid%ubnd_fce) = 0.0_RK
+            self%Q_start(i, 1:grid%ubnd_fce) = 0.0_RK
+            self%Qs_start(i, 1:grid%ubnd_fce) = 0.0_RK
+11        continue
+
          end do ! end do i=1,4
          ! Q_vert is the integrated difference between in- and outflow (starting at the lake bottom)
          ! Q_vert is located on the face grid, m^3/s
          Q_vert(1)=0
-         Q_vert(2:ubnd_fce) = Q_inp(1, 2:ubnd_fce) + Q_inp(2, 2:ubnd_fce)
+         Q_vert(2:grid%ubnd_fce) = Q_inp(1, 2:grid%ubnd_fce) + Q_inp(2, 2:grid%ubnd_fce)
 
          ! Set all Q to the differences (from the integrals)
          ! The new Q_inp is located on the volume grid, element 1 remains unchanged since element 1 is 0
          do i = 1, 4
             Q_inp(i, 1) = 0
-            do j = 1, ubnd_vol
+            do j = 1, grid%ubnd_vol
                Q_inp(i, j + 1) = Q_inp(i, j + 2) - Q_inp(i, j + 1)
             end do
-               Q_inp(i,ubnd_vol + 1) = 0
-               !write(6,*) Q_inp(i,ubnd_vol-5:ubnd_vol)
+               Q_inp(i,grid%ubnd_vol + 1) = 0
+               !write(6,*) Q_inp(i,grid%ubnd_vol-5:grid%ubnd_vol)
          end do
-
       end associate
    end subroutine
 
