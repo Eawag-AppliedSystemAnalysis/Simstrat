@@ -103,7 +103,6 @@ contains
                dV(i) = -top*abs(Q_vert(i+1))*state%V(i)
                dTemp(i) = -top*abs(Q_vert(i+1))*state%T(i)
                dS(i) = -top*abs(Q_vert(i+1))*state%S(i)
-
                if (i > 1 .and. Q_vert(i) > 0) then ! Advective flow into box i, from above
                   dU(i) = dU(i) + Q_vert(i)*state%U(i - 1)
                   dV(i) = dV(i) + Q_vert(i)*state%V(i - 1)
@@ -120,10 +119,9 @@ contains
 
             ! Add change to state variables
             ! dT = dT(vertical advection) + dT(inflow) + dT(negative outflow), units: °C*m^3/s
-            dTemp(1:ubnd_vol) = dTemp(1:ubnd_vol) + (state%Q_inp(3, 1:ubnd_vol) + state%Q_inp(2, 1:ubnd_vol)*state%T(1:ubnd_vol))
+            dTemp(1:ubnd_vol) = dTemp(1:ubnd_vol) + state%Q_inp(3, 1:ubnd_vol) + state%Q_inp(2, 1:ubnd_vol)*state%T(1:ubnd_vol)
             ! dS = dS(vertical advection) + dS(inflow) + dT(negative outflow), units: ‰*m^3/s
-            dS(1:ubnd_vol) = dS(1:ubnd_vol) + (state%Q_inp(4, 1:ubnd_vol) + state%Q_inp(2, 1:ubnd_vol)*state%S(1:ubnd_vol))
-
+            dS(1:ubnd_vol) = dS(1:ubnd_vol) + state%Q_inp(4, 1:ubnd_vol) + state%Q_inp(2, 1:ubnd_vol)*state%S(1:ubnd_vol)
             ! Add change to the state variable
             state%U(1:ubnd_vol) = state%U(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dU(1:ubnd_vol)
             state%V(1:ubnd_vol) = state%V(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dV(1:ubnd_vol)

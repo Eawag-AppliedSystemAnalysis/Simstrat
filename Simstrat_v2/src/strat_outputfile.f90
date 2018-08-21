@@ -93,8 +93,6 @@ contains
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
 
-      integer :: i, n_vars, n_depths
-
       self%sim_config => sim_config
       self%output_config => output_config
       self%grid => grid
@@ -325,7 +323,6 @@ end subroutine
    subroutine log_close(self)
       implicit none
       class(SimpleLogger), intent(inout) :: self
-
       integer :: i
       logical :: status_ok
       do i = 1, self%n_vars

@@ -47,7 +47,7 @@ contains
       class(TurbulenceModule) :: self
       class(ModelState) :: state
       class(ModelParam) :: param
-      real(RK), dimension(self%grid%length_fce) :: beta
+      !real(RK), dimension(self%grid%length_fce) :: beta
 
       call self%do_production(state)
 
