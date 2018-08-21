@@ -161,7 +161,7 @@ contains
 
                ! Total number of values to read
                self%nval(i) = self%nval_deep(i) + self%nval_surface(i)
-
+write(6,*) self%nval_surface(i), self%nval_deep(i), self%nval(i)
                ! Read input depths and convert coordinate system
                read (fnum(i), *, end=9) dummy, (self%z_Inp(i, j), j=1, self%nval(i))
 
@@ -196,7 +196,7 @@ contains
                   call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))
                end if
                ! Add surface flow for both in- and outflow
-
+!write(6,*) self%tb_start(i), self%tb_end(i)
 !                if (self%nval_surface(i) > 0) then
 !                   do j = 1, self%nval_surface(i)
 !                      self%depth_surfaceFlow(i, j) = self%z_Inp(i, self%nval_deep(i) - 1 + j)
@@ -279,12 +279,12 @@ contains
             goto 11
 
  7          self%eof(i) = 1
- 8          state%Q_inp(i,1:ubnd_fce) = self%Q_start(i,1:ubnd_fce) + self%Qs_start(i,1:ubnd_fce)     ! Set to closest available value
+ 8          Q_inp(i,1:ubnd_fce) = self%Q_start(i,1:ubnd_fce) + self%Qs_start(i,1:ubnd_fce)     ! Set to closest available value
             goto 11
 
  9          write(6,*) 'No data found in ',trim(fname(i)),' file. Check number of depths. Values set to zero.'
             self%eof(i) = 1
-            state%Q_inp(i, 1:ubnd_fce) = 0.0_RK
+            Q_inp(i, 1:ubnd_fce) = 0.0_RK
             self%Q_start(i, 1:ubnd_fce) = 0.0_RK
             self%Qs_start(i, 1:ubnd_fce) = 0.0_RK
             11        continue
@@ -294,16 +294,16 @@ contains
          ! Q_vert is located on the face grid, m^3/s
          Q_vert(1)=0
          Q_vert(2:ubnd_fce) = Q_inp(1, 2:ubnd_fce) + Q_inp(2, 2:ubnd_fce)
-
+!write(6,*) Q_vert(1), Q_inp(1,1), Q_inp(2,1)
          ! Set all Q to the differences (from the integrals)
          ! The new Q_inp is located on the volume grid, element 1 remains unchanged since element 1 is 0
          do i = 1, 4
-            Q_inp(i, 1) = 0
+            !Q_inp(i, 1) = 0
             do j = 1, ubnd_vol
-               Q_inp(i, j + 1) = Q_inp(i, j + 2) - Q_inp(i, j + 1)
+               Q_inp(i, j) = Q_inp(i, j + 1) - Q_inp(i, j)
             end do
                Q_inp(i,ubnd_vol + 1) = 0
-               !write(6,*) Q_inp(i,ubnd_vol-5:ubnd_vol)
+               !write(6,*) Q_inp(i,:)
          end do
 
       end associate

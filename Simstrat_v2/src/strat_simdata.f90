@@ -192,7 +192,7 @@ contains
       allocate (this%T(state_size))
       allocate (this%S(state_size))
       allocate (this%dS(state_size))
-      allocate (this%Q_inp(1:4, state_size))
+      allocate (this%Q_inp(1:4, state_size + 1))
       allocate (this%rho(state_size))
       allocate (this%avh(state_size))
 
