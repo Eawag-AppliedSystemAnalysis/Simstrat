@@ -382,8 +382,8 @@ contains
       class(StaggeredGrid), intent(in) :: self
       real(RK), dimension(:), intent(in) :: z, y
       real(RK), dimension(:), intent(out) :: yi
+
       integer, intent(in) :: num_z
-      real(RK), dimension(size(self%z_volume + 2)) :: z_vol_test
       call Interp(z, y, num_z, self%z_volume(1:self%nz_grid), yi, self%nz_grid)
    end subroutine
 
@@ -394,7 +394,7 @@ contains
       real(RK), dimension(:), intent(out) :: yi
 
       integer, intent(in) :: num_z
-      call Interp(z, y, num_z, self%z_face, yi, self%nz_grid + 1)
+      call Interp(z, y, num_z, self%z_face, yi, self%nz_grid)
    end subroutine
 
    subroutine grid_interpolate_to_face_from_second(self, z, y, num_z, yi)
@@ -413,10 +413,8 @@ contains
       real(RK), dimension(:), intent(out) :: yi
       integer, intent(in) :: num_zi
 
-      real(RK), dimension(:), allocatable :: z_volume_mod
+      real(RK), dimension(self%ubnd_vol) :: z_volume_mod
       integer :: i
-
-      allocate(z_volume_mod(self%ubnd_vol))
 
       ! Transform z_volume for interpolation on zout grid
       z_volume_mod(1) = self%z_face(1) - self%z_face(self%ubnd_fce)
@@ -426,8 +424,6 @@ contains
       z_volume_mod(self%ubnd_vol) = 0
 
       call Interp_nan(z_volume_mod(1:self%ubnd_vol), y(1:self%ubnd_vol), self%ubnd_vol, zi, yi, num_zi)
-
-      deallocate(z_volume_mod)
    end subroutine
 
    subroutine grid_interpolate_from_face(self, y, zi, yi, num_zi)
@@ -436,10 +432,8 @@ contains
       real(RK), dimension(:), intent(out) :: yi
       integer, intent(in) :: num_zi
 
-      real(RK), dimension(:), allocatable :: z_face_mod
+      real(RK), dimension(self%ubnd_fce) :: z_face_mod
       integer :: i
-
-      allocate(z_face_mod(self%ubnd_fce))
 
       ! Transform z_face for interpolation on zout grid
       do i = 1, self%ubnd_fce
@@ -447,8 +441,6 @@ contains
       end do
 
       call Interp_nan(z_face_mod(1:self%ubnd_fce), y(1:self%ubnd_fce), self%ubnd_fce, zi, yi, num_zi)
-
-      deallocate(z_face_mod)
    end subroutine
 
    ! Update all upper bounds and lengths

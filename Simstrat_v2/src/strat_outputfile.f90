@@ -288,10 +288,8 @@ contains
       class(InterpolatingLogger), intent(inout) :: self
       real(RK), intent(in) :: datum
       !workaround gfortran bug => cannot pass allocatable array to csv file
-      real(RK), dimension(:), allocatable :: values_on_zout
+      real(RK), dimension(self%n_depths) :: values_on_zout
       integer :: i
-
-      allocate (values_on_zout(self%n_depths))
 
       do i = 1, self%n_vars
         ! Write datum
@@ -313,8 +311,6 @@ contains
         ! Advance to next row
         call self%output_files(i)%next_row()
       end do
-
-      deallocate (values_on_zout)
 end subroutine
 
    !************************* Close ****************************
