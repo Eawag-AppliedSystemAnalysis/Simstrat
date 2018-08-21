@@ -125,7 +125,7 @@ contains
       real(RK) :: tau
       real(RK) :: A_s(8), A_e(8), A_cur(8) ! adopted for rain (8 positions, previus 7)
       real(RK) :: fu, Vap_wat, heat0, emissivity
-      real(RK) :: T_surf, T_atm, F_glob, Vap_atm, Cloud, precip
+      real(RK) :: T_surf, F_glob, Vap_atm, Cloud, precip
       real(RK) :: H_A, H_K, H_V, H_W
       save A_s, A_e
       associate (cfg=>self%cfg, param=>self%param)
@@ -171,7 +171,7 @@ contains
                call self%read (state%datum, A_s, A_e, A_cur, 5 + nval_offset, state%model_step_counter)
                state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
                state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
-               T_atm = A_cur(3)
+               state%T_atm = A_cur(3)
                if (state%ice_h > 0 .and. state%snow_h == 0) then !Ice
                F_glob = A_cur(4)*(1 - param%ice_albedo)      
                else if (state%ice_h > 0 .and. state%snow_h > 0) then !Snow
@@ -179,8 +179,7 @@ contains
                else !Water
                F_glob = A_cur(4)*(1 - param%albsw) 
                end if
-               Vap_atm = A_cur(5)
-               state%T_atm = T_atm  
+               Vap_atm = A_cur(5) 
                Cloud = 0.5
                if (cfg%use_filtered_wind) state%Wf = A_cur(6) !AG 2014
                if (cfg%snow_model == 1 .and. cfg%use_filtered_wind) then
@@ -193,7 +192,7 @@ contains
                call self%read (state%datum, A_s, A_e, A_cur, 6 + nval_offset, state%model_step_counter)
                state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
                state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
-               T_atm = A_cur(3)
+               state%T_atm = A_cur(3)
                if (state%ice_h > 0 .and. state%snow_h == 0) then !Ice
                F_glob = A_cur(4)*(1 - param%ice_albedo)      
                else if (state%ice_h > 0 .and. state%snow_h > 0) then !Snow
@@ -202,8 +201,7 @@ contains
                F_glob = A_cur(4)*(1 - param%albsw) 
                end if     
                Vap_atm = A_cur(5)
-               Cloud = A_cur(6)
-               state%T_atm = T_atm  
+               Cloud = A_cur(6) 
                if (Cloud < 0 .or. Cloud > 1) then
                   write (6, *) 'Cloudiness should always be between 0 and 1.'
                   stop
@@ -240,7 +238,7 @@ contains
                ! Wind function (Adams et al., 1990), changed by MS, June 2016
                ! Factor 0.6072 to account for changing wind height from 10 to 2 m
                ! Further evaluation of evaporation algorithm may be required.
-               fu = sqrt((2.7_RK*max(0.0_RK,(T_surf-T_atm)/(1-0.378_RK*Vap_atm/param%p_air))**0.333_RK)**2 + (0.6072_RK*3.1_RK*state%uv10)**2)
+               fu = sqrt((2.7_RK*max(0.0_RK,(T_surf-state%T_atm)/(1-0.378_RK*Vap_atm/param%p_air))**0.333_RK)**2 + (0.6072_RK*3.1_RK*state%uv10)**2)
                ! Wind function (Livingstone & Imboden 1989)
                !fu = 4.40_RK + 1.82_RK*state%uv10 + 0.26_RK*(T_surf - T_atm)
                !fu = 5.44+2.19*wind+0.24*(T_surf-T_atm)
@@ -253,9 +251,9 @@ contains
                ! H_A = 1.24*sig*(1-r_a)*(1+0.17*Cloud**2)*(Vap_atm/(273.15+T_atm))**(1./7)*(273.15+T_atm)**4
                ! Long-wave radiation according to Dilley and O'Brien
                ! see Flerchinger et al. (2009)
-               H_A = (1 - r_a)*((1 - 0.84_RK*Cloud)*(59.38_RK + 113.7_RK*((T_atm + 273.15_RK)/273.16_RK)**6&
-               &   + 96.96_RK*sqrt(465*Vap_atm/(T_atm + 273.15_RK)*0.04_RK))/5.67e-8_RK/ &
-               &   (T_atm + 273.15_RK)**4 + 0.84_RK*Cloud)*5.67e-8_RK*(T_atm + 273.15_RK)**4
+               H_A = (1 - r_a)*((1 - 0.84_RK*Cloud)*(59.38_RK + 113.7_RK*((state%T_atm + 273.15_RK)/273.16_RK)**6&
+               &   + 96.96_RK*sqrt(465*Vap_atm/(state%T_atm + 273.15_RK)*0.04_RK))/5.67e-8_RK/ &
+               &   (state%T_atm + 273.15_RK)**4 + 0.84_RK*Cloud)*5.67e-8_RK*(state%T_atm + 273.15_RK)**4
                H_A = H_A*param%p_radin ! Provided fitting factor p_radin (~1)
 
                ! Long-wave radiation from water body (black body) 
@@ -274,7 +272,7 @@ contains
                H_W = -emissivity*sig*(T_surf + 273.15_RK)**4
       
                ! Flux of sensible heat (convection)
-               H_K = -B0*fu*(T_surf - T_atm)
+               H_K = -B0*fu*(T_surf - state%T_atm)
       
                ! Flux of latent heat (evaporation, condensation)
                H_V = -fu*(Vap_wat - Vap_atm)
