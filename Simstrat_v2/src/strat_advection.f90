@@ -103,17 +103,19 @@ contains
                dV(i) = -top*abs(Q_vert(i+1))*state%V(i)
                dTemp(i) = -top*abs(Q_vert(i+1))*state%T(i)
                dS(i) = -top*abs(Q_vert(i+1))*state%S(i)
-               if (i > 1 .and. Q_vert(i) > 0) then ! Advective flow into box i, from above
+               if (i > 2 .and. Q_vert(i) > 0) then ! Advective flow into box i, from above
                   dU(i) = dU(i) + Q_vert(i)*state%U(i - 1)
                   dV(i) = dV(i) + Q_vert(i)*state%V(i - 1)
                   dTemp(i) = dTemp(i) + Q_vert(i)*state%T(i - 1)
                   dS(i) = dS(i) + Q_vert(i)*state%S(i - 1)
                end if
-               if (i < ubnd_vol .and. Q_vert(i + 2) < 0) then ! Advective flow into box i, from below
-                  dU(i) = dU(i) - Q_vert(i + 2)*state%U(i + 1)
-                  dV(i) = dV(i) - Q_vert(i + 2)*state%V(i + 1)
-                  dTemp(i) = dTemp(i) - Q_vert(i + 2)*state%T(i + 1)
-                  dS(i) = dS(i) - Q_vert(i + 2)*state%S(i + 1)
+               if (i < ubnd_vol) then
+                  if (Q_vert(i + 2) < 0) then ! Advective flow into box i, from below
+                     dU(i) = dU(i) - Q_vert(i + 2)*state%U(i + 1)
+                     dV(i) = dV(i) - Q_vert(i + 2)*state%V(i + 1)
+                     dTemp(i) = dTemp(i) - Q_vert(i + 2)*state%T(i + 1)
+                     dS(i) = dS(i) - Q_vert(i + 2)*state%S(i + 1)
+                  end if
                end if
             end do
 
@@ -206,7 +208,7 @@ contains
 
          ! extend grid by one (also updates ubnd_vol etc)
          call self%grid%grow(dh)
-
+         
          ! Update quantities in new grid element
          state%U(ubnd_vol) = state%U(ubnd_vol - 1)
          state%V(ubnd_vol) = state%V(ubnd_vol - 1)

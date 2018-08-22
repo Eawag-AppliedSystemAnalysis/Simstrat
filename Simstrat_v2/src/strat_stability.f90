@@ -46,8 +46,7 @@ contains
       implicit none
       class(StabilityModule) :: self
       class(ModelState) :: state
-      real(RK), dimension(self%grid%length_fce) :: beta
-
+      real(RK), dimension(self%grid%ubnd_fce) :: beta
       !Do buoyancy update (update NN)
       if (state%has_salinity) then
          if (state%has_salinity_grad) then
@@ -65,8 +64,7 @@ contains
       if (self%model_cfg%stability_func == 1) then
          call self%update_cmue_cn(state%cmue1, state%cmue2)
       else if (self%model_cfg%stability_func == 2) then
-
-         beta = state%NN(1:self%grid%ubnd_fce)*(state%k(1:self%grid%ubnd_fce)/state%eps(1:self%grid%ubnd_fce))**2
+         beta(1:self%grid%ubnd_fce) = state%NN(1:self%grid%ubnd_fce)*(state%k(1:self%grid%ubnd_fce)/state%eps(1:self%grid%ubnd_fce))**2
          !beta = state%NN*exp(2*(log(state%k)-log(state%eps)))
          beta(1) = 0
          beta(self%grid%ubnd_fce) = 0
@@ -131,7 +129,8 @@ contains
    subroutine stability_module_update_cmue_qe(self, beta, cmue1, cmue2, cde)
       implicit none
       class(StabilityModule) :: self
-      real(RK), dimension(:), intent(inout) ::beta, cmue1, cmue2
+      real(RK), dimension(:), intent(in) :: beta
+      real(RK), dimension(:), intent(inout) ::cmue1, cmue2
       real(RK) :: cde
       real(RK) :: gh, sm, sh
       integer :: i

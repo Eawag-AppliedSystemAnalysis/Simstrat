@@ -44,7 +44,7 @@ contains
          !!!!!!!! Precalculations !!!!!!!!
          if (self%cfg%pressure_gradients == 1) then
             integr = sum(self%var(1:ubnd_vol))
-            length = sqrt(grid%Az(ubnd_vol))
+            length = sqrt(grid%Az(ubnd_fce))
          else
             integr = 0
             length = 0

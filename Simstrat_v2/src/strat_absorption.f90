@@ -121,7 +121,7 @@ contains
 7        eof = 1
          if(state%datum>tb_start) write(6,*) 'Warning: last light attenuation date before simulation end time.'
 
-8        state%absorb = absorb_start(1:nz)           !Take first value of current interval
+8        state%absorb(1:nz) = absorb_start(1:nz)           !Take first value of current interval
          return
 
 9        write(6,*) 'Error reading light attenuation file (no data found).'
