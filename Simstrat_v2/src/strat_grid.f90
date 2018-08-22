@@ -319,14 +319,15 @@ contains
                  z_volume=>self%z_volume, &
                  ubnd_vol=>self%ubnd_vol, &
                  h=>self%h)
-         h(ubnd_vol + 1) = h(ubnd_vol)/2+dh
-         h(ubnd_vol) = h(ubnd_vol)/2
 
-         z_face(ubnd_fce+1) = z_face(ubnd_fce)+dh
-         z_face(ubnd_fce) = z_face(ubnd_fce)-h(ubnd_vol)/2
+         h(ubnd_vol + 1) = (h(ubnd_vol) + dh)/2
+         h(ubnd_vol) = (h(ubnd_vol) + dh)/2
 
-         z_volume(ubnd_vol+1)=z_volume(ubnd_vol)+h(ubnd_vol+1)/2
-         z_volume(ubnd_vol)=z_volume(ubnd_vol)-h(ubnd_vol+1)/2
+         z_face(ubnd_fce+1) = z_face(ubnd_fce) + dh
+         z_face(ubnd_fce) = z_face(ubnd_fce) + dh - h(ubnd_vol)
+
+         z_volume(ubnd_vol+1) = z_volume(ubnd_vol) + (h(ubnd_vol+1) + dh)/2
+         z_volume(ubnd_vol) = z_volume(ubnd_vol) - (h(ubnd_vol) - dh)/2
 
          ! update number of occupied cells
          self%nz_occupied = self%nz_occupied + 1
