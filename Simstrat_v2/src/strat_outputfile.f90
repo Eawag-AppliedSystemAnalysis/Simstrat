@@ -196,14 +196,14 @@ contains
       do i = 1, self%n_vars
          if (self%output_config%output_vars(i)%volume_grid) then
             !Variable on volume grid
-            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=grid%length_vol+1, status_ok=status_ok)
+            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=grid%nz_grid +1, status_ok=status_ok)
             call self%output_files(i)%add('')
-            call self%output_files(i)%add(grid%z_volume(1:grid%ubnd_vol), real_fmt='(F12.3)')
+            call self%output_files(i)%add(grid%z_volume(1:grid%nz_grid), real_fmt='(F12.3)')
          else if (self%output_config%output_vars(i)%face_grid) then
             ! Variable on face grid
-            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=grid%length_fce+1, status_ok=status_ok)
+            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=grid%nz_grid + 2, status_ok=status_ok)
             call self%output_files(i)%add('')
-            call self%output_files(i)%add(grid%z_face(1:grid%ubnd_fce), real_fmt='(F12.3)')
+            call self%output_files(i)%add(grid%z_face(1:grid%nz_grid + 1), real_fmt='(F12.3)')
          else  
             !Variable at surface
             call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=1 + 1, status_ok=status_ok)
@@ -262,16 +262,30 @@ contains
       !workaround gfortran bug => cannot pass allocatable array to csv file
       !real(RK), dimension(:), allocatable :: values, values_on_zout,test
       integer :: i
+      real(RK), dimension(self%grid%nz_grid + 1) :: values_out
 
       ! For each variable, write state
       do i = 1, self%n_vars
         ! Write datum
         call self%output_files(i)%add(datum, real_fmt='(F12.4)')
-        ! If on volume or faces grid
-        if (self%output_config%output_vars(i)%volume_grid .or. self%output_config%output_vars(i)%face_grid) then
+
+        ! If on volume grid
+        if (self%output_config%output_vars(i)%volume_grid) then
+           values_out(1:self%grid%nz_grid) = self%output_config%output_vars(i)%values
+           ! Assign nan to values out of grid
+           call assign_nan(values_out,self%grid%ubnd_vol,self%grid%nz_grid)
            ! Write state
-           call self%output_files(i)%add(self%output_config%output_vars(i)%values, real_fmt='(ES14.4)')   
+           call self%output_files(i)%add(values_out, real_fmt='(ES14.4)')
+
+           ! If on face grid  
+        else if (self%output_config%output_vars(i)%face_grid) then
+          values_out(1:self%grid%nz_grid + 1) = self%output_config%output_vars(i)%values
+           ! Assign nan to values out of grid
+           call assign_nan(values_out,self%grid%ubnd_fce,self%grid%nz_grid)
+           ! Write state
+           call self%output_files(i)%add(values_out, real_fmt='(ES14.4)')
         else
+
            ! If only value at surface
            call self%output_files(i)%add(self%output_config%output_vars(i)%values_surf, real_fmt='(ES14.4)')
         end if
@@ -298,6 +312,7 @@ contains
         if (self%output_config%output_vars(i)%volume_grid) then
           ! Interpolate state on volume grid
           call self%grid%interpolate_from_vol(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths)
+          ! Write state
           call self%output_files(i)%add(values_on_zout, real_fmt='(ES14.4)')
         else if (self%output_config%output_vars(i)%face_grid) then
           ! Interpolate state on face grid

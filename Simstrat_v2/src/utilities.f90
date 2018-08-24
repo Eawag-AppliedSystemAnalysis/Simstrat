@@ -110,6 +110,31 @@ contains
       return
    end
 
+      !Assign nan to values out of current grid
+   !####################################################################
+   pure subroutine Assign_nan(y, ubnd, ubnd_grid)
+      !####################################################################
+      use, intrinsic :: iso_fortran_env
+      use, intrinsic :: ieee_arithmetic
+      implicit none
+
+      real(RK), dimension(:), intent(out) :: y
+      integer, intent(in) :: ubnd, ubnd_grid
+
+      integer :: i
+
+      !Assign NaN if out of given grid
+      i = ubnd_grid
+      do while (i > ubnd)
+         y(i) = 0.0_RK
+         y(i) = ieee_value(y(i), ieee_quiet_nan) ! NaN
+         i = i - 1
+      end do
+
+      return
+   end subroutine Assign_nan
+
+
    pure function linspace(x0, xend, n, endpoint) result(x)
       implicit none
 
