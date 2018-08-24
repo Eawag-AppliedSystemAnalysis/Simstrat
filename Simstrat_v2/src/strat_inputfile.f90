@@ -268,7 +268,7 @@ contains
          else ! else, test for this config
             model%has_salinity = .false.
             model%has_salinity_grad = .false.
-            do i = 1, grid%nz_grid
+            do i = 1, grid%ubnd_vol
                if (model%S(i) /= 0) then
                   model%has_salinity = .true.
                   exit

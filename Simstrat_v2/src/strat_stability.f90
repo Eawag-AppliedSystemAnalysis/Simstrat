@@ -22,8 +22,8 @@ module strat_stability
       procedure, pass :: update => stability_module_update
       procedure, pass :: update_cmue_cn => stability_module_update_cmue_cn
       procedure, pass :: update_cmue_qe => stability_module_update_cmue_qe
-      !procedure, pass :: update_NN_no_sal => stability_module_update_NN_no_sal
-      !procedure, pass :: update_NN_no_sal_grad => stability_module_update_NN_no_sal_grad
+      procedure, pass :: update_NN_no_sal => stability_module_update_NN_no_sal
+      procedure, pass :: update_NN_no_sal_grad => stability_module_update_NN_no_sal_grad
       procedure, pass :: update_NN => stability_module_update_NN
 
    end type
@@ -52,12 +52,10 @@ contains
          if (state%has_salinity_grad) then
             call self%update_NN(state%T, state%S, state%rho, state%NN)
          else
-            write (*, *) "!!!! BUOYANCY NOT IMPLEMENTED FOR THIS CASE"
-            !    call self%update_NN_no_sal_grad(state%T, state%S, state%rho, state%NN)
+            call self%update_NN_no_sal_grad(state%T, state%S, state%NN)
          end if
       else ! salinity zero everywhere
-         write (*, *) "!!!! BUOYANCY NOT IMPLEMENTED FOR THIS CASE"
-         !call self%update_NN_no_sal(state%T, state%S, state%rho, state%NN)
+         call self%update_NN_no_sal(state%T, state%NN)
       end if
 
       !update cmue depending on selected stabilty function
@@ -75,9 +73,11 @@ contains
 
    end subroutine
 
+   ! Compute NN from T and salinity
    subroutine stability_module_update_NN(self, T, S, rho, NN)
       implicit none
       class(StabilityModule) :: self
+
       ! Global variables
       real(RK), dimension(:), intent(in) :: T, S
       real(RK), dimension(:), intent(inout) :: NN, rho
@@ -89,7 +89,7 @@ contains
 
       associate (grd=>self%grid)
 
-         do i = 1, grd%ubnd_fce - 1
+         do i = 2, grd%ubnd_fce - 1
             rho0t(i) = 0.9998395_RK + T(i)*(6.7914e-5_RK + T(i)*(-9.0894e-6_RK + T(i)* &
                                               (1.0171e-7_RK + T(i)*(-1.2846e-9_RK + T(i)*(1.1592e-11_RK + T(i)*(-5.0125e-14_RK))))))
             rho0st(i) = (8.181e-4_RK + T(i)*(-3.85e-6_RK + T(i)*(4.96e-8_RK)))*S(i)
@@ -104,6 +104,63 @@ contains
          NN(2:grd%ubnd_fce - 1) = grd%meanint(1:grd%ubnd_vol - 1)*(buoy(2:grd%ubnd_fce - 1) - buoy(1:grd%ubnd_fce - 2))
          NN(1) = NN(2)
          NN(grd%ubnd_fce) = NN(grd%ubnd_fce - 1)
+
+      end associate
+   end subroutine
+
+   ! Compute NN if there is no salinity
+   subroutine stability_module_update_NN_no_sal(self, T, NN)
+      implicit none
+      class(StabilityModule) :: self
+
+      ! Global variables
+      real(RK), dimension(:), intent(in) :: T
+      real(RK), dimension(:), intent(inout) :: NN
+
+      ! Local variables
+      real(RK) :: a(self%grid%length_fce)
+      integer :: i
+
+      associate (grid=>self%grid)
+
+         do i=2,grid%ubnd_fce - 1
+            a(i)= -68.0 + T(i)*(18.2091 + T(i)*(-0.30866 + T(i)*(5.3445e-3 + T(i)*(-6.0721e-5 + T(i)*(3.1441e-7)))))
+            a(i)= 1.0e-6*a(i)
+            NN(i)= g*a(i)*(grid%meanint(i)*(T(i) - T(i + 1)) + (T(i) + 273.15)/cp)
+         end do
+
+         ! Assign boundaries
+         NN(1) = NN(2)
+         NN(grid%ubnd_fce) = NN(grid%ubnd_fce - 1)
+
+      end associate
+   end subroutine
+
+      ! Compute NN if there is no salinity gradient
+   subroutine stability_module_update_NN_no_sal_grad(self, T, S, NN)
+      implicit none
+      class(StabilityModule) :: self
+
+      ! Global variables
+      real(RK), dimension(:), intent(in) :: T, S
+      real(RK), dimension(:), intent(inout) :: NN
+
+      ! Local variables
+      real(RK) :: a(self%grid%length_fce)
+      integer :: i
+
+      associate (grid=>self%grid)
+
+         do i=2,grid%ubnd_fce - 1
+               a(i)= -68.0 + T(i)*(18.2091 + T(i)*(-0.30866 + T(i)*(5.3445e-3 + T(i)*(-6.0721e-5 + T(i)*(3.1441e-7)))))
+               a(i)= a(i) + (4.599 + T(i)*(-0.1999 + T(i)*(2.79e-3)))*S(i)
+               a(i)= 1.0e-6*a(i)
+               NN(i)= g*a(i)*(grid%meanint(i)*(T(i) - T(i+1)) + (T(i) + 273.15)/cp)
+         end do
+
+         ! Assign boundaries
+         NN(1) = NN(2)
+         NN(grid%ubnd_fce) = NN(grid%ubnd_fce - 1)
 
       end associate
    end subroutine
