@@ -281,10 +281,25 @@ contains
       class(StaggeredGrid), intent(inout) :: self
       real(RK) :: dh
 
-      self%h(self%ubnd_vol) = self%h(self%ubnd_vol) + dh
-      self%z_volume(self%ubnd_vol) = self%z_volume(self%ubnd_vol) + 0.5_RK*dh
-      self%z_face(self%ubnd_fce) = self%z_face(self%ubnd_fce) + dh
+      associate (z_face=>self%z_face, &
+                  ubnd_fce=>self%ubnd_fce, &
+                  z_volume=>self%z_volume, &
+                  ubnd_vol=>self%ubnd_vol, &
+                  h=>self%h, &
+                  Az=>self%Az, &
+                  dAz=>self%dAz)
 
+      if (h(ubnd_vol) > h(ubnd_vol - 1)) then
+         Az(ubnd_fce) = Az(ubnd_fce) + dAz(ubnd_vol + 1)*dh
+      else
+         Az(ubnd_fce) = Az(ubnd_fce) + dAz(ubnd_vol)*dh
+      end if
+      
+      h(ubnd_vol) = h(ubnd_vol) + dh
+      z_volume(ubnd_vol) = z_volume(ubnd_vol) + 0.5_RK*dh
+      z_face(ubnd_fce) = z_face(ubnd_fce) + dh
+
+      end associate
    end subroutine
 
    !Shrink grid (mainly used by advection)
@@ -293,19 +308,28 @@ contains
       class(StaggeredGrid), intent(inout) :: self
       real(RK) :: dh
 
-      ! update grid
-      self%z_face(self%ubnd_fce - 1) = self%z_face(self%ubnd_fce) + dh
-      self%z_volume(self%ubnd_vol - 1) = 0.5_RK*(self%z_face(self%ubnd_fce - 1) + &
-                                                 self%z_face(self%ubnd_fce - 2))
+      associate (z_face=>self%z_face, &
+                  ubnd_fce=>self%ubnd_fce, &
+                  z_volume=>self%z_volume, &
+                  ubnd_vol=>self%ubnd_vol, &
+                  h=>self%h, &
+                  nz_occupied=>self%nz_occupied, &
+                  Az=>self%Az)
 
-      self%h(self%ubnd_vol - 1) = (self%z_face(self%ubnd_fce - 1) - &
-                                   self%z_face(self%ubnd_fce - 2))
+         ! update grid
+         z_face(ubnd_fce - 1) = z_face(ubnd_fce) + dh
+         z_volume(ubnd_vol - 1) = 0.5_RK*(z_face(ubnd_fce - 1) + z_face(ubnd_fce - 2))
 
-      ! update number of occupied cells
-      self%nz_occupied = self%nz_occupied - 1
-      ! update boundaries (ubnd_fce and ubnd_vol)
-      call self%update_nz()
+         Az(ubnd_fce - 1) = Az(ubnd_fce)
 
+         h(ubnd_vol - 1) = (z_face(ubnd_fce - 1) - z_face(ubnd_fce - 2))
+
+         ! update number of occupied cells
+         nz_occupied = nz_occupied - 1
+         ! update boundaries (ubnd_fce and ubnd_vol)
+         call self%update_nz()
+
+      end associate
    end subroutine
 
    !Grow grid (mainly used by advection)
@@ -318,19 +342,25 @@ contains
                  ubnd_fce=>self%ubnd_fce, &
                  z_volume=>self%z_volume, &
                  ubnd_vol=>self%ubnd_vol, &
-                 h=>self%h)
+                 h=>self%h, &
+                 Az=>self%Az, &
+                 dAz=>self%dAz, &
+                 nz_occupied=>self%nz_occupied)
 
          h(ubnd_vol + 1) = (h(ubnd_vol) + dh)/2
          h(ubnd_vol) = (h(ubnd_vol) + dh)/2
 
-         z_face(ubnd_fce+1) = z_face(ubnd_fce) + dh
+         z_face(ubnd_fce + 1) = z_face(ubnd_fce) + dh
          z_face(ubnd_fce) = z_face(ubnd_fce) + dh - h(ubnd_vol)
 
-         z_volume(ubnd_vol+1) = z_volume(ubnd_vol) + (h(ubnd_vol+1) + dh)/2
+         z_volume(ubnd_vol + 1) = z_volume(ubnd_vol) + (h(ubnd_vol + 1) + dh)/2
          z_volume(ubnd_vol) = z_volume(ubnd_vol) - (h(ubnd_vol) - dh)/2
 
+         Az(ubnd_fce) = Az(ubnd_fce - 1) + h(ubnd_vol)*dAz(ubnd_vol)
+         Az(ubnd_fce + 1) = Az(ubnd_fce) + h(ubnd_vol + 1)*dAz(ubnd_vol + 1)
+         write(6,*) 'grow'
          ! update number of occupied cells
-         self%nz_occupied = self%nz_occupied + 1
+         nz_occupied = nz_occupied + 1
 
          call self%update_nz()
 
