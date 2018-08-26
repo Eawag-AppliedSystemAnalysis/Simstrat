@@ -89,7 +89,7 @@ contains
 
       associate (grd=>self%grid)
 
-         do i = 2, grd%ubnd_fce - 1
+         do i = 1, grd%ubnd_fce - 1
             rho0t(i) = 0.9998395_RK + T(i)*(6.7914e-5_RK + T(i)*(-9.0894e-6_RK + T(i)* &
                                               (1.0171e-7_RK + T(i)*(-1.2846e-9_RK + T(i)*(1.1592e-11_RK + T(i)*(-5.0125e-14_RK))))))
             rho0st(i) = (8.181e-4_RK + T(i)*(-3.85e-6_RK + T(i)*(4.96e-8_RK)))*S(i)
