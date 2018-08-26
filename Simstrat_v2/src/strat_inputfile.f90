@@ -204,7 +204,7 @@ contains
          self%simdata%output_cfg%output_vars(17)%name = "Rad0"
          self%simdata%output_cfg%output_vars(17)%values_surf => self%simdata%model%rad0
          self%simdata%output_cfg%output_vars(17)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(1)%face_grid = .false.
+         self%simdata%output_cfg%output_vars(17)%face_grid = .false.
 
          self%simdata%output_cfg%output_vars(18)%name = "Ice_h"
          self%simdata%output_cfg%output_vars(18)%values_surf => self%simdata%model%ice_h
