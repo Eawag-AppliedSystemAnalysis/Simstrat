@@ -507,6 +507,10 @@ contains
          ! update actual filled z in grid
          call grid%update_depth(z_ini_depth)
 
+         ! Set initial lake level
+         grid%lake_level = grid%z_face(grid%nz_occupied)
+         grid%lake_level_old = grid%z_face(grid%nz_occupied)
+
          ! reverse arrays
          call reverse_in_place(z_read(1:num_read))
          z_read(1:num_read) = grid%z_zero - z_read(1:num_read)

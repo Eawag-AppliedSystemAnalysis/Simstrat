@@ -208,7 +208,6 @@ contains
       end do
       self%z_face(self%nz_grid + 1) = nint(1e6_RK*self%z_face(self%nz_grid + 1))/1e6_RK
 
-      !self%lake_level = self%z_face(self%nz_occupied)
       write (*, *) "Warning, nz_occupied not set yet"
    end subroutine grid_init_z_axes
 
@@ -221,10 +220,8 @@ contains
 
       num_read = size(config%A_read)
 
-      self%z_zero = config%z_A_read(1) ! z_zero is the uppermost depth (might be above zero)
+      self%z_zero = config%z_A_read(1) ! z_zero is the negative value of the lowest depth in the morphology file
 
-      self%lake_level = self%z_zero
-      self%lake_level_old = self%z_zero
       config%z_A_read = self%z_zero - config%z_A_read ! z-coordinate is positive upwards, zero point is at reservoir bottom
 
    end subroutine grid_init_morphology
@@ -358,7 +355,7 @@ contains
 
          Az(ubnd_fce) = Az(ubnd_fce - 1) + h(ubnd_vol)*dAz(ubnd_vol)
          Az(ubnd_fce + 1) = Az(ubnd_fce) + h(ubnd_vol + 1)*dAz(ubnd_vol + 1)
-         write(6,*) 'grow'
+
          ! update number of occupied cells
          nz_occupied = nz_occupied + 1
 
@@ -379,7 +376,8 @@ contains
                  z_face=>self%z_face, &
                  z_volume=>self%z_volume, &
                  h=>self%h, &
-                 z_zero=>self%z_zero)
+                 z_zero=>self%z_zero, &
+                 Az=>self%Az)
          do i = 1, nz_grid + 1
             if (z_face(i) >= (z_zero - new_depth)) then ! If above initial water level
                zmax = z_face(i)
@@ -390,8 +388,8 @@ contains
                !Adjust new volume center of cell i-1 (belonging to upper face i)
                z_volume(i - 1) = (z_face(i) + z_face(i - 1))/2
                h(i - 1) = z_face(i) - z_face(i - 1)
-               ! todo: Why is Az not updated?
-               !Az(i) = Az(i-1) + h(i)/(zmax-z_face(i-1))*(Az(i)-Az(i-1))
+
+               Az(i) = Az(i-1) + h(i - 1)/(zmax-z_face(i-1))*(Az(i)-Az(i-1))
                nz_occupied = i - 1
                if (h(nz_occupied) <= 0.5*h(nz_occupied - 1)) then ! If top box is too small
                   z_face(nz_occupied) = z_face(nz_occupied + 1) ! Combine the two upper boxes
