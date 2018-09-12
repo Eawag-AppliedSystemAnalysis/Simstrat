@@ -81,6 +81,7 @@ contains
       class(SimstratSimulationFactory) :: self
       type(csv_file) :: f
       logical :: status_ok
+      integer :: i
 
       associate (model=>self%simdata%model, &
                  output_cfg=>self%simdata%output_cfg)
@@ -97,6 +98,14 @@ contains
          call f%get(1, output_cfg%zout, status_ok)
          call f%destroy()
          call reverse_in_place(output_cfg%zout)
+
+         ! Check if depths are negative
+         do i = 1,size(output_cfg%zout)
+            if (output_cfg%zout(i)>0) then
+               call error('One or several output depths are above 0')
+               stop
+            end if
+         end do 
 
          ! Read output times
          call check_file_exists(output_cfg%toutName)
@@ -314,7 +323,7 @@ contains
          end do
 
 69       if(ictr==max_length_input_data) then
-            write(6,*) 'Only first ',max_length_input_data,' values of file read.'
+            write(6,*) '[WARNING] ','Only first ',max_length_input_data,' values of file read.'
          else 
             write(6,*) "--Grid file successfully read"
          end if
@@ -333,9 +342,26 @@ contains
          read (11, *) ! Skip header
          do i = 1, max_length_input_data ! Read depth and area
             read (11, *, end=86) z_tmp(i), A_tmp(i)
+
+            ! Check that the uppermost depth is not negative
+            if (i==1) then
+               if(z_tmp(i)<0) then
+                  call error('The uppermost depth in the morphology file is negative, it should be at least 0!')
+                  stop
+               end if
+            else
+            ! Check that depth and area are monotonous              
+               if (z_tmp(i)>z_tmp(i-1)) then
+                  call error('The depths of the morphology input file are not decreasing monotonously.')
+                  stop
+               else if(A_tmp(i)>A_tmp(i-1)) then
+                  call warn('The lake area increases with depth somewhere. Do you really want this?')
+               end if
+            end if
          end do
+
 86       if(i==max_length_input_data) then
-            write(6,*) 'Only first ',max_length_input_data,' values of file read.'
+            write(6,*) '[WARNING] ','Only first ',max_length_input_data,' values of file read.'
          else
             write(6,*) "--Morphology file successfully read"
          end if
@@ -492,10 +518,14 @@ contains
          read (13, *) ! Skip header
          do i = 1, max_length_input_data ! Read initial u,v,T, etc
             read (13, *, end=99) z_read(i), U_read(i), V_read(i), T_read(i), S_read(i), k_read(i), eps_read(i)
+            if (z_read(i)>0) then
+               call error('One or several input depths of initial conditions are positive.')
+               stop
+            end if
          end do
 99       num_read = i-1                               ! Number of valuInitNamees
          if (num_read < 1) then
-            write (6, *) 'Error reading initial conditions files (no data found).'
+            call error('Unable to read initial conditions files (no data found).')
             stop
          end if
          close (13)
@@ -522,7 +552,7 @@ contains
          call reverse_in_place(eps_read(1:num_read))
 
          if (num_read == 1) then
-            write (6, *) 'Only one row! Water column will be initially homogeneous.'
+            call warn('Only one row! Water column will be initially homogeneous.')
             model%U = U_read(1)
             model%V = V_read(1)
             model%T = T_read(1)
