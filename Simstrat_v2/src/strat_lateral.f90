@@ -342,7 +342,7 @@ contains
                   call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))
                end if
 
-               write(6,*) "--Input file successfully read: ",fname(i)
+               write(6,*) '[OK] ','Input file successfully read: ',fname(i)
             end if ! idx==1
 
 

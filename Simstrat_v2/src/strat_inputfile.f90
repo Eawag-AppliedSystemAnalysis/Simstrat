@@ -325,7 +325,7 @@ contains
 69       if(ictr==max_length_input_data) then
             write(6,*) '[WARNING] ','Only first ',max_length_input_data,' values of file read.'
          else 
-            write(6,*) "--Grid file successfully read"
+            call ok('Grid file successfully read')
          end if
          close (12)
 
@@ -363,7 +363,7 @@ contains
 86       if(i==max_length_input_data) then
             write(6,*) '[WARNING] ','Only first ',max_length_input_data,' values of file read.'
          else
-            write(6,*) "--Morphology file successfully read"
+            call ok('Morphology file successfully read')
          end if
          close (11)
 
@@ -527,7 +527,11 @@ contains
          if (num_read < 1) then
             call error('Unable to read initial conditions files (no data found).')
             stop
+         else if(num_read==max_length_input_data) then
+            write(6,*) '[ERROR] ','Only first ',max_length_input_data,' values of initial data file read.'
+            stop
          end if
+
          close (13)
          do i = 1, num_read
             z_read(i) = abs(z_read(i)) ! Make depths positive
@@ -571,7 +575,7 @@ contains
             call grid%interpolate_to_face(z_read, eps_read, num_read, model%eps)
          end if
 
-         write(6,*) "--Initial data file successfully read"
+         call ok('Initial data file successfully read')
 
       end associate
    end subroutine

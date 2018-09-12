@@ -87,7 +87,7 @@ contains
 
             !Read first values
             read (30, *, end=9) tb_start, (absorb_read_start(i), i=1, nval)
-            if (state%datum < tb_start) write (6, *) 'Warning: first light attenuation date after simulation start time.'
+            if (state%datum < tb_start) call warn('First light attenuation date after simulation start time.')
 
             !Interpolate absorb_read_start on z_absorb onto faces of grid
             call self%grid%interpolate_to_face(z_absorb, absorb_read_start, nval, absorb_start)
@@ -95,7 +95,7 @@ contains
             read (30, *, end=7) tb_end, (absorb_read_end(i), i=1, nval)
 
             ! Write to console that file was successfully read
-            write (6, *) "--Absorption input file successfully read"
+            call ok('Absorption input file successfully read')
             write(6,*)
             ! Do the same for absorb_read_end
             call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end)
@@ -119,12 +119,12 @@ contains
          return
 
 7        eof = 1
-         if(state%datum>tb_start) write(6,*) 'Warning: last light attenuation date before simulation end time.'
+         if(state%datum>tb_start) call warn('Last light attenuation date before simulation end time.')
 
 8        state%absorb(1:nz) = absorb_start(1:nz)           !Take first value of current interval
          return
 
-9        write(6,*) 'Error reading light attenuation file (no data found).'
+9        call error('Reading light attenuation file (no data found).')
          stop
       end associate
    end subroutine

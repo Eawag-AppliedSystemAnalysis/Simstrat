@@ -208,7 +208,7 @@ contains
       end do
       self%z_face(self%nz_grid + 1) = nint(1e6_RK*self%z_face(self%nz_grid + 1))/1e6_RK
 
-      write (*, *) "Warning, nz_occupied not set yet"
+      call warn('Warning, nz_occupied not set yet')
    end subroutine grid_init_z_axes
 
    ! Init morphology variables

@@ -156,7 +156,7 @@ contains
             if (int(output_config%n_timesteps_between_tout(i))==0) then
                 output_config%adjusted_timestep(i) = (output_config%tout(i) - tout_test(i-1))*86400
                 tout_test(i) = tout_test(i-1) + output_config%adjusted_timestep(i)
-                write(6,*) 'Warning: time interval for output is smaller than dt for iteration'
+                call warn('Time interval for output is smaller than dt for iteration')
             else
                 ! If number of timesteps > 0
                 output_config%adjusted_timestep(i) = ((output_config%tout(i) - tout_test(i-1))*86400)/int(output_config%n_timesteps_between_tout(i))
@@ -170,7 +170,7 @@ contains
       end if
 
       if (output_config%thinning_interval>1) write(6,*) 'Interval [days]: ',output_config%thinning_interval*sim_config%timestep/86400.
-      write(6,*) '--Output times successfully read'
+      call ok('Output times successfully read')
 
     call self%init_files(output_config, grid)
    end subroutine

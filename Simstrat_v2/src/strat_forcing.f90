@@ -42,7 +42,7 @@ contains
       self%grid => grid
       self%file = forcing_file
    
-      if(self%cfg%snow_model == 1) write(6,*) 'Warning: Snow module need precipitation input, control forcing file' 
+      if(self%cfg%snow_model == 1) call warn('Snow module need precipitation input, check forcing file.') 
       !If precipitation column is missing in forcing file, Simstrat will read dates as precipitation  	  
    end subroutine
 
@@ -76,11 +76,11 @@ contains
          read (20, *, end=9)
          read (20, *, end=9) tb_start, (A_s(i), i=1, nval)
          if (datum < tb_start) then
-            write (6, *) 'Warning: first forcing date after simulation start time. datum=', datum, " start=", tb_start
+            write(6,*) '[WARNING] ','First forcing date after simulation start time. datum=', datum,  'start=', tb_start
          end if
          read (20, *, end=7) tb_end, (A_e(i), i=1, nval)
 
-         write (6, *) "Forcing input file successfully read"
+         call ok("Forcing input file successfully read")
       end if
 
       if (datum <= tb_start .or. eof == 1) then !If datum before first date or end of file reached
@@ -98,13 +98,13 @@ contains
       return
 
   7   eof = 1
-      if(datum>tb_start) write(6,*) 'Warning: last forcing date before simulation end time.'
+      if(datum>tb_start) call warn('Last forcing date before simulation end time.')
 
 
   8   A_cur(1:nval) = A_s(1:nval)       !Take first value of current interval
       return
 
-  9   write(6,*) 'Error reading forcing file (no data found).'
+  9   call error('Unable to read forcing file (no data found).')
 
       stop
 
@@ -151,7 +151,7 @@ contains
 
          if (cfg%forcing_mode == 1) then
             if (cfg%ice_model == 1) then 
-              write(6,*) 'Error: Ice module not compatible with forcing mode 1, use 2 or 3.'
+              call error('Ice module not compatible with forcing mode 1, use 2 or 3.')
               stop
             end if
    
@@ -203,7 +203,7 @@ contains
                Vap_atm = A_cur(5)
                Cloud = A_cur(6) 
                if (Cloud < 0 .or. Cloud > 1) then
-                  write (6, *) 'Cloudiness should always be between 0 and 1.'
+                  call error('Cloudiness should always be between 0 and 1.')
                   stop
                end if
                if (cfg%use_filtered_wind) state%Wf = A_cur(7) !AG 2014
@@ -215,7 +215,7 @@ contains
 
             else if (cfg%forcing_mode == 4) then ! date,U10,V10,Hnet,Hsol
                if (cfg%ice_model == 1) then 
-                 write(6,*) 'Error: Ice module not compatible with forcing mode 4, use 2 or 3.'
+                 call error('Ice module not compatible with forcing mode 4, use 2 or 3.')
                  stop  
                end if
       
@@ -228,7 +228,7 @@ contains
                if (cfg%use_filtered_wind) state%Wf = A_cur(5) !AG 2014      
       
             else
-               write (6, *) 'Error: wrong forcing type (must be 1, 2, 3 or 4).'
+               call error('Wrong forcing type (must be 1, 2, 3 or 4).')
                stop
             end if
             state%uv10 = sqrt(state%u10**2 + state%v10**2) !AG 2014
