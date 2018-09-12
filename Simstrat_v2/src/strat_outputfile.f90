@@ -124,7 +124,7 @@ contains
       n_output_times = size(output_config%tout)
          ! If Simulation start larger than output times, abort.
         if (sim_config%start_datum > output_config%tout(1)) then
-            write(6,*) 'Error: simulation start time is larger than first output time'
+            call error('Simulation start time is larger than first output time.')
             stop
         end if
 
@@ -184,7 +184,7 @@ contains
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
 
-      logical :: status_ok
+      logical :: status_ok, exist_output_folder
       integer :: i
       self%n_depths = grid%length_fce
 
@@ -192,6 +192,16 @@ contains
       if (allocated(self%output_files)) deallocate (self%output_files)
       allocate (self%output_files(self%n_vars))
 
+      ! Check if output directory exists
+      inquire(file=output_config%PathOut//'/',exist=exist_output_folder)
+
+      ! Create output folder if it does not exist
+      if(.not.exist_output_folder) then
+        call warn('Result folder does not exist, results are stored in "Simstrat_Results"')
+        call execute_command_line('mkdir Simstrat_Results')
+        output_config%PathOut = 'Simstrat_Results'
+      end if
+      
       ! For each configured variable, create file and write header
       do i = 1, self%n_vars
          if (self%output_config%output_vars(i)%volume_grid) then
@@ -222,9 +232,19 @@ contains
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
 
-      logical :: status_ok
+      logical :: status_ok, exist_output_folder
       integer :: n_depths, i
       self%n_depths = size(output_config%zout)
+
+      ! Check if output directory exists
+      inquire(file=output_config%PathOut//'/',exist=exist_output_folder)
+
+      ! Create output folder if it does not exist
+      if(.not.exist_output_folder) then
+        call warn('Result folder does not exist, results are stored in "Simstrat_Results"')
+        call execute_command_line('mkdir Simstrat_Results')
+        output_config%PathOut = 'Simstrat_Results'
+      end if
 
       if (allocated(self%output_files)) deallocate (self%output_files)
       allocate (self%output_files(1:self%n_vars))
