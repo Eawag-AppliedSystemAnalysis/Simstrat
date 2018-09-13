@@ -4,4 +4,4 @@ if [ $(docker inspect -f '{{.State.Running}}' simstrat) = "false" ]; then
         docker start simstrat
 fi
 
-docker exec simstrat bash -c "cd /home/Simstrat/Simstrat_v2/; ./run.sh"
+docker exec -it simstrat bash

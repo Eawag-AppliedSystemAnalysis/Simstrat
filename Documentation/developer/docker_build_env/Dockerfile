@@ -15,4 +15,4 @@ WORKDIR /home/Simstrat
 # docker build -t simstrat:alpine .
 # docker create --name simstrat -it -v <pathToLocalGitRepoDirectory>:/home/Simstrat simstrat:alpine
 # docker start simstrat
-# docker exec -it simstrat sh
+# docker exec -it simstrat bash

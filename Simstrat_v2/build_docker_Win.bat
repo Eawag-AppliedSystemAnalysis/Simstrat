@@ -6,6 +6,6 @@ rem          echo 'simstrat container not running... I wake it up'
 rem          docker start simstrat
 rem  fi
 rem
-rem  docker exec simstrat sh -c "cd /home/Simstrat/Simstrat_v2/; ./build_linux.sh"
+rem  docker exec simstrat bash -c "cd /home/Simstrat/Simstrat_v2/; ./build_linux.sh"
 
 pause
