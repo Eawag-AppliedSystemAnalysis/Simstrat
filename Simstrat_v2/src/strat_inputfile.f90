@@ -616,7 +616,7 @@ contains
          nval_surface = 0
          read(line,*,end=8) nval_line(1)
          read(line,*,end=7) nval_line(1:2)
-6        nval_surface = nval_line(2)
+         nval_surface = nval_line(2)
 7        nval_deep = nval_line(1)
          nval(i) = nval_deep + nval_surface
          read (fnum(i), *, end=8) dummy, (z_Inp_dummy(j), j=1, nval(i)) ! Read input depths
