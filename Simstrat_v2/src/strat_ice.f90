@@ -59,9 +59,7 @@ module strat_ice
       implicit none
       class(IceModule)  :: self
       class(ModelState) :: state
-      class(ModelParam) :: param
-      real(RK) :: buoyancy_ice
-      real(RK) :: snow_weight   
+      class(ModelParam) :: param 
    
    !-------------------
    ! Below freezing
