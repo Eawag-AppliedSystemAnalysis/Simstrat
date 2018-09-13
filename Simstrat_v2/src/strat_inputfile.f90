@@ -41,7 +41,6 @@ contains
       class(SimstratSimulationFactory) :: self
       class(SimulationData), pointer, intent(out) :: simdata
       character(len=*) :: fname
-      logical :: file_exists
 
       !allocate model
       !if(associated(simdata)) deallocate(simdata)
@@ -400,7 +399,6 @@ contains
       character(kind=CK, len=:), allocatable          :: MorphName, InitName, ForcingName, AbsorpName
       character(kind=CK, len=:), allocatable          :: GridName, zoutName, toutName, PathOut
       character(kind=CK, len=:), allocatable          :: QinpName, QoutName, TinpName, SinpName
-      character(kind=CK, len=:), allocatable          :: stencil_type
 
       !model%ParName = ParName
       !check if inputfile SimstratModelexists
@@ -502,10 +500,7 @@ contains
       ! Local variables
       real(RK) :: z_read(self%simdata%model_cfg%max_length_input_data), U_read(self%simdata%model_cfg%max_length_input_data), V_read(self%simdata%model_cfg%max_length_input_data)
       real(RK) :: T_read(self%simdata%model_cfg%max_length_input_data), S_read(self%simdata%model_cfg%max_length_input_data), k_read(self%simdata%model_cfg%max_length_input_data), eps_read(self%simdata%model_cfg%max_length_input_data)
-
-      real(RK) :: z_ini(self%simdata%model_cfg%max_length_input_data)
-      real(RK) :: z_ini_depth, zmax
-
+      real(RK) :: z_ini_depth
       integer :: i, num_read
 
       associate (grid=>self%simdata%grid, &
