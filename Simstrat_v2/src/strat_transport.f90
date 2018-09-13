@@ -36,7 +36,6 @@ contains
       class(ModelState), intent(inout) :: state
       class(ModelParam), intent(inout) :: param
       real(RK), dimension(:) ::  sources, boundaries
-      integer :: i
       associate (grid=>self%grid, &
                  ubnd_fce=>self%grid%ubnd_fce, &
                  ubnd_vol=>self%grid%ubnd_vol)
