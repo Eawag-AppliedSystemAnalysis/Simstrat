@@ -99,11 +99,16 @@ contains
          call f%destroy()
          call reverse_in_place(output_cfg%zout)
 
-         ! Check if depths are negative
+         ! Check if depths are negative and monotonous
          do i = 1,size(output_cfg%zout)
             if (output_cfg%zout(i)>0) then
-               call error('One or several output depths are above 0')
+               call error('One or several output depths are above 0.')
                stop
+            else if (i>1) then
+               if (output_cfg%zout(i)<output_cfg%zout(i-1)) then
+                  call error('Output depths are not decreasing monotonously.')
+                  stop
+               end if
             end if
          end do 
 
