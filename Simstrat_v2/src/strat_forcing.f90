@@ -125,7 +125,7 @@ contains
       real(RK) :: tau
       real(RK) :: A_s(8), A_e(8), A_cur(8) ! adopted for rain (8 positions, previus 7)
       real(RK) :: fu, Vap_wat, heat0, emissivity
-      real(RK) :: T_surf, F_glob, Vap_atm, Cloud, precip
+      real(RK) :: T_surf, F_glob, Vap_atm, Cloud
       real(RK) :: H_A, H_K, H_V, H_W
       save A_s, A_e
       associate (cfg=>self%cfg, param=>self%param)
@@ -163,7 +163,8 @@ contains
             state%SST = A_cur(3) !Sea surface temperature
             state%rad0 = A_cur(4)*(1 - param%albsw)*(1 - param%beta_sol) ! MS: added beta_sol and albsw
             state%heat = 0.0_RK
-            state%T_atm = 0.0_RK    
+            state%T_atm = 0.0_RK
+            state%precip = 0.0_RK
             if (cfg%use_filtered_wind) state%Wf = A_cur(5) !AG 2014
    
          else if (cfg%forcing_mode >= 2) then
