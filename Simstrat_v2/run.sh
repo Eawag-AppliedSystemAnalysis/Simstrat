@@ -1,3 +1,4 @@
+#!/bin/bash
 cd testcase
-../bin/simstrat TestCase_1.par
-cd ..
+../bin/simstrat TestCase_LakeZurich.par
+cd -
