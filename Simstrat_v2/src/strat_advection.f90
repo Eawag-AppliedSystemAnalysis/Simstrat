@@ -169,7 +169,7 @@ contains
       class(AdvectionModule) :: self
       class(ModelState) :: state
       real(RK) :: dh
-      real(RK) :: w_a, w_b, k_norm
+      real(RK) :: w_a, w_b
       associate (ubnd_fce=>self%grid%ubnd_fce, ubnd_vol=>self%grid%ubnd_vol)
 
          ! New values of the state variables are weighted averages
