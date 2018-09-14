@@ -56,7 +56,6 @@ module strat_simdata
    type, public :: ModelConfig
       integer :: max_length_input_data
       logical :: couple_aed2
-      logical :: use_buffered_forcing
       integer :: turbulence_model
       integer :: stability_func
       integer :: flux_condition
@@ -68,8 +67,6 @@ module strat_simdata
       integer :: pressure_gradients
       logical :: salinity_transport
       integer :: disp_simulation
-      integer :: disp_diagnostic
-      integer :: data_averaging
       integer :: ice_model
       integer :: snow_model
    end type

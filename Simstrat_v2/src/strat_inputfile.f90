@@ -503,8 +503,6 @@ contains
          call par_file%get("ModelConfig.PressureGradients", model_cfg%pressure_gradients, found); call check_field(found, 'ModelConfig.PressureGradients', ParName)
          call par_file%get("ModelConfig.EnableSalinityTransport", model_cfg%salinity_transport, found); call check_field(found, 'ModelConfig.EnableSalinityTransport', ParName)
          call par_file%get("ModelConfig.DisplaySimulation", model_cfg%disp_simulation, found); call check_field(found, 'ModelConfig.DisplaySimulation', ParName)
-         call par_file%get("ModelConfig.DisplayDiagnose", model_cfg%disp_diagnostic, found); call check_field(found, 'ModelConfig.DisplayDiagnose', ParName)
-         call par_file%get("ModelConfig.DataAveraging", model_cfg%data_averaging, found); call check_field(found, 'ModelConfig.DataAveraging', ParName)
          call par_file%get("ModelConfig.IceModel", model_cfg%ice_model, found); call check_field(found, 'ModelConfig.IceModel', ParName)
          call par_file%get("ModelConfig.SnowModel", model_cfg%snow_model, found); call check_field(found, 'ModelConfig.SnowModel', ParName)
 

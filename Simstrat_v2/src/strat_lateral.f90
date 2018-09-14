@@ -103,7 +103,6 @@ contains
                allocate (self%Q_end(1:4,1:grid%nz_grid+1)) ! Input interpolated on grid
             end if
             
-            if(self%cfg%disp_diagnostic==2) write(6,*) 'Starting to read '//trim(fname(i))//' file...'
             self%eof(i) = 0
             !Skip first three rows (except for Qout)
             read(fnum(i),*,end=9)
