@@ -41,7 +41,8 @@ module strat_simdata
       logical :: write_to_file
       class(LogVariable), dimension(:), allocatable :: output_vars
 
-      integer :: thinning_interval
+      integer :: output_time_type, output_depth_type, thinning_interval
+      real(RK) :: depth_interval
    end type
 
    ! Simulation configuration

@@ -85,51 +85,63 @@ contains
       associate (model=>self%simdata%model, &
                  output_cfg=>self%simdata%output_cfg)
 
-         ! Read output depths
-         call check_file_exists(output_cfg%zoutName)
+         ! Read output depths from file if path is specified in parfile
+         if (output_cfg%output_depth_type == 7) then
+            call check_file_exists(output_cfg%zoutName)
 
-         call f%read (output_cfg%zoutName, header_row=1, status_ok=status_ok)
-         if (.not. status_ok) then
-            call error('Unable to read output depths: '//output_cfg%zoutName)
-            call f%destroy()
-            stop
-         end if
-         call f%get(1, output_cfg%zout, status_ok)
-         call f%destroy()
-         call reverse_in_place(output_cfg%zout)
-
-         ! Check if depths are negative and monotonous
-         do i = 1,size(output_cfg%zout)
-            if (output_cfg%zout(i)>0) then
-               call error('One or several output depths are above 0.')
+            call f%read (output_cfg%zoutName, header_row=1, status_ok=status_ok)
+            if (.not. status_ok) then
+               call error('Unable to read output depths: '//output_cfg%zoutName)
+               call f%destroy()
                stop
-            else if (i>1) then
-               if (output_cfg%zout(i)<output_cfg%zout(i-1)) then
-                  call error('Output depths are not decreasing monotonously.')
-                  stop
-               end if
             end if
-         end do 
-
-         ! Read output times
-         call check_file_exists(output_cfg%toutName)
-
-         call f%read (output_cfg%toutName, header_row=1, status_ok=status_ok)
-         if (.not. status_ok) then
-            call error('Unable to read output depths: '//output_cfg%toutName)
+            call f%get(1, output_cfg%zout, status_ok)
             call f%destroy()
-            stop
-         end if
-         call f%get(1, output_cfg%tout, status_ok)
-         call f%destroy()
 
-         ! Determine output mode: If only one element in tout, then this number is the thinning interval.
-         ! If there are more than one number in tout, these are the output times and thinning_interval is set to 0.
-         if (size(output_cfg%tout)==1) then
-            output_cfg%thinning_interval = int(output_cfg%tout(1))
-         else
-            output_cfg%thinning_interval = 0
-         endif
+            ! Decide whether an interval or a list of values is given
+            if(size(output_cfg%zout)==1) then
+               output_cfg%depth_interval = output_cfg%zout(1)
+            else
+               output_cfg%depth_interval = 0
+               call reverse_in_place(output_cfg%zout)
+
+               ! Check if depths are negative and monotonous
+               do i = 1,size(output_cfg%zout)
+                  if (output_cfg%zout(i)>0) then
+                     call error('One or several output depths are above 0.')
+                     stop
+                  else if (i>1) then
+                     if (output_cfg%zout(i)<output_cfg%zout(i-1)) then
+                        call error('Output depths are not decreasing monotonously.')
+                        stop
+                     end if
+                  end if
+               end do 
+
+            end if
+         end if
+
+         ! Read output times if path is specified in parfile
+         if (output_cfg%output_time_type == 7) then
+            call check_file_exists(output_cfg%toutName)
+
+            call f%read (output_cfg%toutName, header_row=1, status_ok=status_ok)
+            if (.not. status_ok) then
+               call error('Unable to read output depths: '//output_cfg%toutName)
+               call f%destroy()
+               stop
+            end if
+            call f%get(1, output_cfg%tout, status_ok)
+            call f%destroy()
+
+            ! Determine output mode: If only one element in tout, then this number is the thinning interval.
+            ! If there are more than one number in tout, these are the output times and thinning_interval is set to 0.
+            if (size(output_cfg%tout)==1) then
+               output_cfg%thinning_interval = int(output_cfg%tout(1))
+            else
+               output_cfg%thinning_interval = 0
+            endif
+         end if
 
          ! Define variables that should be written
          allocate (self%simdata%output_cfg%output_vars(20))
@@ -398,6 +410,7 @@ contains
 
       type(json_file) :: par_file
       logical :: found
+      integer :: n_children_dummy
 
       !gfortran cannot handle type bound allocatable character that are passed to subroutine as intent(out)
       !as a workaround we have to store the values in a local scope allocatable character
@@ -405,95 +418,130 @@ contains
       character(kind=CK, len=:), allocatable          :: GridName, zoutName, toutName, PathOut
       character(kind=CK, len=:), allocatable          :: QinpName, QoutName, TinpName, SinpName
 
-      !model%ParName = ParName
-      !check if inputfile SimstratModelexists
-      call check_file_exists(ParName)
+      associate (input_cfg=>self%simdata%input_cfg, &
+                 output_cfg=>self%simdata%output_cfg, &
+                 model_cfg=>self%simdata%model_cfg, &
+                 sim_cfg=>self%simdata%sim_cfg, &
+                 model_param=>self%simdata%model_param)
 
-      call par_file%initialize()
+         !model%ParName = ParName
+         !check if inputfile SimstratModelexists
+         call check_file_exists(ParName)
 
-      !load file or stop if fail
-      call par_file%load_file(filename=ParName)
-      if (par_file%failed()) then
-         call error('Could not read inputfile '//ParName)
-         stop
-      end if
+         call par_file%initialize()
 
-      !Names of Inputfile
-      call par_file%get('Input.Morphology', MorphName, found); self%simdata%input_cfg%MorphName = MorphName; call check_field(found, 'Input.Morphology', ParName)
-      call par_file%get('Input.Initial conditions', InitName, found); self%simdata%input_cfg%InitName = InitName; call check_field(found, 'Input.Initial conditions', ParName)
-      call par_file%get('Input.Forcing', ForcingName, found); self%simdata%input_cfg%ForcingName = ForcingName; call check_field(found, 'Input.Forcing', ParName)
-      call par_file%get('Input.Absorption', AbsorpName, found); self%simdata%input_cfg%AbsorpName = AbsorpName; call check_field(found, 'Input.Absorption', ParName)
-      call par_file%get('Input.Grid', GridName, found); self%simdata%input_cfg%GridName = GridName; call check_field(found, 'Input.Grid', ParName)
-      call par_file%get('Input.Inflow', QinpName, found); self%simdata%input_cfg%QinpName = QinpName; call check_field(found, 'Input.Inflow', ParName)
-      call par_file%get('Input.Outflow', QoutName, found); self%simdata%input_cfg%QoutName = QoutName; call check_field(found, 'Input.Outflow', ParName)
-      call par_file%get('Input.Inflow temperature', TinpName, found); self%simdata%input_cfg%TinpName = TinpName; call check_field(found, 'Input.Inflow temperature', ParName)
-      call par_file%get('Input.Inflow salinity', SinpName, found); self%simdata%input_cfg%SinpName = SinpName; call check_field(found, 'Input.Inflow salinity', ParName)
+         !load file or stop if fail
+         call par_file%load_file(filename=ParName)
+         if (par_file%failed()) then
+            call error('Could not read inputfile '//ParName)
+            stop
+         end if
 
-      !Output
-      call par_file%get('Output.Path', PathOut, found); self%simdata%output_cfg%PathOut = PathOut; call check_field(found, 'Output.Path', ParName)
-      call par_file%get('Output.Depths', zoutName, found); self%simdata%output_cfg%zoutName = zoutName; call check_field(found, 'Output.Depths', ParName)
-      call par_file%get('Output.Times', toutname, found); self%simdata%output_cfg%toutName = toutName; call check_field(found, 'Output.Times', ParName)
+         !Names of Inputfile
+         call par_file%get('Input.Morphology', MorphName, found); input_cfg%MorphName = MorphName; call check_field(found, 'Input.Morphology', ParName)
+         call par_file%get('Input.Initial conditions', InitName, found); input_cfg%InitName = InitName; call check_field(found, 'Input.Initial conditions', ParName)
+         call par_file%get('Input.Forcing', ForcingName, found); input_cfg%ForcingName = ForcingName; call check_field(found, 'Input.Forcing', ParName)
+         call par_file%get('Input.Absorption', AbsorpName, found); input_cfg%AbsorpName = AbsorpName; call check_field(found, 'Input.Absorption', ParName)
+         call par_file%get('Input.Grid', GridName, found); input_cfg%GridName = GridName; call check_field(found, 'Input.Grid', ParName)
+         call par_file%get('Input.Inflow', QinpName, found); input_cfg%QinpName = QinpName; call check_field(found, 'Input.Inflow', ParName)
+         call par_file%get('Input.Outflow', QoutName, found); input_cfg%QoutName = QoutName; call check_field(found, 'Input.Outflow', ParName)
+         call par_file%get('Input.Inflow temperature', TinpName, found); input_cfg%TinpName = TinpName; call check_field(found, 'Input.Inflow temperature', ParName)
+         call par_file%get('Input.Inflow salinity', SinpName, found); input_cfg%SinpName = SinpName; call check_field(found, 'Input.Inflow salinity', ParName)
 
-      !Model configuration
-      call par_file%get("ModelConfig.MaxLengthInputData", self%simdata%model_cfg%max_length_input_data, found);
-      if (.not. found) then
-         self%simdata%model_cfg%max_length_input_data = 1000
-         call warn('Variable "ModelConfig.MaxLengthInputData" is not set. Assume a value of 1000')
-      end if
-      call par_file%get("ModelConfig.CoupleAED2", self%simdata%model_cfg%couple_aed2, found);
-      if (.not. found) then
-         self%simdata%model_cfg%couple_aed2 = .false.
-         call warn('Variable "ModelConfig.CoupleAED2" is not set. Assume you do not want to couple simstrat with aed2.')
-      end if
-      call par_file%get("ModelConfig.TurbulenceModel", self%simdata%model_cfg%turbulence_model, found); call check_field(found, 'ModelConfig.TurbulenceModel', ParName)
-      call par_file%get("ModelConfig.StabilityFunction", self%simdata%model_cfg%stability_func, found); call check_field(found, 'ModelConfig.StabilityFunction', ParName)
-      call par_file%get("ModelConfig.FluxCondition", self%simdata%model_cfg%flux_condition, found); call check_field(found, 'ModelConfig.FluxCondition', ParName)
-      call par_file%get("ModelConfig.Forcing", self%simdata%model_cfg%forcing_mode, found); call check_field(found, 'ModelConfig.Forcing', ParName)
-      call par_file%get("ModelConfig.UseFilteredWind", self%simdata%model_cfg%use_filtered_wind, found); call check_field(found, 'ModelConfig.UseFilteredWind', ParName)
-      call par_file%get("ModelConfig.SeicheNormalization", self%simdata%model_cfg%seiche_normalization, found); call check_field(found, 'ModelConfig.SeicheNormalization', ParName)
-      call par_file%get("ModelConfig.WindDragModel", self%simdata%model_cfg%wind_drag_model, found); call check_field(found, 'ModelConfig.WindDragModel', ParName)
-      call par_file%get("ModelConfig.InflowPlacement", self%simdata%model_cfg%inflow_placement, found); call check_field(found, 'ModelConfig.InflowPlacement', ParName)
-      call par_file%get("ModelConfig.PressureGradients", self%simdata%model_cfg%pressure_gradients, found); call check_field(found, 'ModelConfig.PressureGradients', ParName)
-      call par_file%get("ModelConfig.EnableSalinityTransport", self%simdata%model_cfg%salinity_transport, found); call check_field(found, 'ModelConfig.EnableSalinityTransport', ParName)
-      call par_file%get("ModelConfig.DisplaySimulation", self%simdata%model_cfg%disp_simulation, found); call check_field(found, 'ModelConfig.DisplaySimulation', ParName)
-      call par_file%get("ModelConfig.DisplayDiagnose", self%simdata%model_cfg%disp_diagnostic, found); call check_field(found, 'ModelConfig.DisplayDiagnose', ParName)
-      call par_file%get("ModelConfig.DataAveraging", self%simdata%model_cfg%data_averaging, found); call check_field(found, 'ModelConfig.DataAveraging', ParName)
-      call par_file%get("ModelConfig.IceModel", self%simdata%model_cfg%ice_model, found); call check_field(found, 'ModelConfig.IceModel', ParName)
-      call par_file%get("ModelConfig.SnowModel", self%simdata%model_cfg%snow_model, found); call check_field(found, 'ModelConfig.SnowModel', ParName)
+         ! Path to output folder
+         call par_file%get('Output.Path', PathOut, found); output_cfg%PathOut = PathOut; call check_field(found, 'Output.Path', ParName)
+      
+         ! Output depths
+         ! Check type of input: string for path, array for depth list and integer for interval
+         call par_file%info('Output.Depths',found,output_cfg%output_depth_type,n_children_dummy)
 
-      !Model Parameter
-      call par_file%get("ModelParameters.lat", self%simdata%model_param%Lat, found); call check_field(found, 'ModelParameters.lat', ParName)
-      call par_file%get("ModelParameters.p_air", self%simdata%model_param%p_air, found); call check_field(found, 'ModelParameters.p_air', ParName)
-      call par_file%get("ModelParameters.a_seiche", self%simdata%model_param%a_seiche, found); call check_field(found, 'ModelParameters.a_seiche', ParName)
-      call par_file%get("ModelParameters.q_nn", self%simdata%model_param%q_NN, found); call check_field(found, 'ModelParameters.q_nn', ParName)
-      call par_file%get("ModelParameters.f_wind", self%simdata%model_param%f_wind, found); call check_field(found, 'ModelParameters.f_wind', ParName)
-      call par_file%get("ModelParameters.c10", self%simdata%model_param%C10_constant, found); call check_field(found, 'ModelParameters.c10', ParName)
-      call par_file%get("ModelParameters.cd", self%simdata%model_param%CD, found); call check_field(found, 'ModelParameters.cd', ParName)
-      call par_file%get("ModelParameters.hgeo", self%simdata%model_param%fgeo, found); call check_field(found, 'ModelParameters.hgeo', ParName)
-      call par_file%get("ModelParameters.k_min", self%simdata%model_param%k_min, found); call check_field(found, 'ModelParameters.k_min', ParName)
-      call par_file%get("ModelParameters.p_radin", self%simdata%model_param%p_radin, found); call check_field(found, 'ModelParameters.p_radin', ParName)
-      call par_file%get("ModelParameters.p_windf", self%simdata%model_param%p_windf, found); call check_field(found, 'ModelParameters.p_windf', ParName)
-      call par_file%get("ModelParameters.beta_sol", self%simdata%model_param%beta_sol, found); call check_field(found, 'ModelParameters.beta_sol', ParName)
-      call par_file%get("ModelParameters.beta_snowice", self%simdata%model_param%beta_snow_ice, found); call check_field(found, 'ModelParameters.beta_snowice', ParName)     
-      call par_file%get("ModelParameters.albsw", self%simdata%model_param%albsw, found); call check_field(found, 'ModelParameters.albsw', ParName)
-      call par_file%get("ModelParameters.ice_albedo", self%simdata%model_param%ice_albedo, found); call check_field(found, 'ModelParameters.ice_albedo', ParName)
-      call par_file%get("ModelParameters.snow_albedo", self%simdata%model_param%snow_albedo, found); call check_field(found, 'ModelParameters.snow_albedo', ParName)
-      call par_file%get("ModelParameters.freez_temp", self%simdata%model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_temp', ParName)
+         ! Treat different inputs
+         if (output_cfg%output_depth_type == 7) then ! Path name
+            call par_file%get('Output.Depths', zoutName, found); output_cfg%zoutName = zoutName; call check_field(found, 'Output.Depths', ParName)
+         else if (output_cfg%output_depth_type == 3) then ! Output depths are given
+            call par_file%get('Output.Depths', output_cfg%zout, found); call check_field(found, 'Output.Depths', ParName)
+            call reverse_in_place(output_cfg%zout)
+            output_cfg%depth_interval = 0
+         else if (output_cfg%output_depth_type == 5 .or. output_cfg%output_depth_type == 6) then ! Output interval is given
+            call par_file%get('Output.Depths', output_cfg%depth_interval, found); call check_field(found, 'Output.Depths', ParName)
+         end if
+
+         ! Output times
+         ! Check type of input: string for path, array for depth list and integer for interval
+         call par_file%info('Output.Times',found,output_cfg%output_time_type,n_children_dummy)
+
+         if (output_cfg%output_time_type == 7) then ! Path name
+            call par_file%get('Output.Times', toutName, found); output_cfg%toutName = toutName; call check_field(found, 'Output.Times', ParName)
+         else if (output_cfg%output_time_type == 3) then ! Output depths are given
+            call par_file%get('Output.Times', output_cfg%tout, found); call check_field(found, 'Output.Times', ParName)
+            output_cfg%thinning_interval = 0
+         else if (output_cfg%output_time_type == 5) then ! Output interval is given
+            call par_file%get('Output.Times', output_cfg%thinning_interval, found); call check_field(found, 'Output.Times', ParName)
+            allocate(output_cfg%tout(1))
+            output_cfg%tout(1) = output_cfg%thinning_interval
+         end if
+
+         !Model configuration
+         call par_file%get("ModelConfig.MaxLengthInputData", model_cfg%max_length_input_data, found);
+         if (.not. found) then
+            model_cfg%max_length_input_data = 1000
+            call warn('Variable "ModelConfig.MaxLengthInputData" is not set. Assume a value of 1000')
+         end if
+         call par_file%get("ModelConfig.CoupleAED2", self%simdata%model_cfg%couple_aed2, found);
+         if (.not. found) then
+            model_cfg%couple_aed2 = .false.
+            call warn('Variable "ModelConfig.CoupleAED2" is not set. Assume you do not want to couple simstrat with aed2.')
+         end if
+         call par_file%get("ModelConfig.TurbulenceModel", model_cfg%turbulence_model, found); call check_field(found, 'ModelConfig.TurbulenceModel', ParName)
+         call par_file%get("ModelConfig.StabilityFunction", model_cfg%stability_func, found); call check_field(found, 'ModelConfig.StabilityFunction', ParName)
+         call par_file%get("ModelConfig.FluxCondition", model_cfg%flux_condition, found); call check_field(found, 'ModelConfig.FluxCondition', ParName)
+         call par_file%get("ModelConfig.Forcing", model_cfg%forcing_mode, found); call check_field(found, 'ModelConfig.Forcing', ParName)
+         call par_file%get("ModelConfig.UseFilteredWind", model_cfg%use_filtered_wind, found); call check_field(found, 'ModelConfig.UseFilteredWind', ParName)
+         call par_file%get("ModelConfig.SeicheNormalization", model_cfg%seiche_normalization, found); call check_field(found, 'ModelConfig.SeicheNormalization', ParName)
+         call par_file%get("ModelConfig.WindDragModel", model_cfg%wind_drag_model, found); call check_field(found, 'ModelConfig.WindDragModel', ParName)
+         call par_file%get("ModelConfig.InflowPlacement", model_cfg%inflow_placement, found); call check_field(found, 'ModelConfig.InflowPlacement', ParName)
+         call par_file%get("ModelConfig.PressureGradients", model_cfg%pressure_gradients, found); call check_field(found, 'ModelConfig.PressureGradients', ParName)
+         call par_file%get("ModelConfig.EnableSalinityTransport", model_cfg%salinity_transport, found); call check_field(found, 'ModelConfig.EnableSalinityTransport', ParName)
+         call par_file%get("ModelConfig.DisplaySimulation", model_cfg%disp_simulation, found); call check_field(found, 'ModelConfig.DisplaySimulation', ParName)
+         call par_file%get("ModelConfig.DisplayDiagnose", model_cfg%disp_diagnostic, found); call check_field(found, 'ModelConfig.DisplayDiagnose', ParName)
+         call par_file%get("ModelConfig.DataAveraging", model_cfg%data_averaging, found); call check_field(found, 'ModelConfig.DataAveraging', ParName)
+         call par_file%get("ModelConfig.IceModel", model_cfg%ice_model, found); call check_field(found, 'ModelConfig.IceModel', ParName)
+         call par_file%get("ModelConfig.SnowModel", model_cfg%snow_model, found); call check_field(found, 'ModelConfig.SnowModel', ParName)
+
+         !Model Parameter
+         call par_file%get("ModelParameters.lat", model_param%Lat, found); call check_field(found, 'ModelParameters.lat', ParName)
+         call par_file%get("ModelParameters.p_air", model_param%p_air, found); call check_field(found, 'ModelParameters.p_air', ParName)
+         call par_file%get("ModelParameters.a_seiche", model_param%a_seiche, found); call check_field(found, 'ModelParameters.a_seiche', ParName)
+         call par_file%get("ModelParameters.q_nn", model_param%q_NN, found); call check_field(found, 'ModelParameters.q_nn', ParName)
+         call par_file%get("ModelParameters.f_wind", model_param%f_wind, found); call check_field(found, 'ModelParameters.f_wind', ParName)
+         call par_file%get("ModelParameters.c10", model_param%C10_constant, found); call check_field(found, 'ModelParameters.c10', ParName)
+         call par_file%get("ModelParameters.cd", model_param%CD, found); call check_field(found, 'ModelParameters.cd', ParName)
+         call par_file%get("ModelParameters.hgeo", model_param%fgeo, found); call check_field(found, 'ModelParameters.hgeo', ParName)
+         call par_file%get("ModelParameters.k_min", model_param%k_min, found); call check_field(found, 'ModelParameters.k_min', ParName)
+         call par_file%get("ModelParameters.p_radin", model_param%p_radin, found); call check_field(found, 'ModelParameters.p_radin', ParName)
+         call par_file%get("ModelParameters.p_windf", model_param%p_windf, found); call check_field(found, 'ModelParameters.p_windf', ParName)
+         call par_file%get("ModelParameters.beta_sol", model_param%beta_sol, found); call check_field(found, 'ModelParameters.beta_sol', ParName)
+         call par_file%get("ModelParameters.beta_snowice", model_param%beta_snow_ice, found); call check_field(found, 'ModelParameters.beta_snowice', ParName)     
+         call par_file%get("ModelParameters.albsw", model_param%albsw, found); call check_field(found, 'ModelParameters.albsw', ParName)
+         call par_file%get("ModelParameters.ice_albedo", model_param%ice_albedo, found); call check_field(found, 'ModelParameters.ice_albedo', ParName)
+         call par_file%get("ModelParameters.snow_albedo", model_param%snow_albedo, found); call check_field(found, 'ModelParameters.snow_albedo', ParName)
+         call par_file%get("ModelParameters.freez_temp", model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_temp', ParName)
    
-      !Simulation Parameter
-      call par_file%get("Simulation.Timestep s", self%simdata%sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep s', ParName)
-      call par_file%get("Simulation.Start d", self%simdata%sim_cfg%start_datum, found); call check_field(found, 'Simulation.Start d', ParName)
-      call par_file%get("Simulation.End d", self%simdata%sim_cfg%end_datum, found); call check_field(found, 'Simulation.End d', ParName)
+         !Simulation Parameter
+         call par_file%get("Simulation.Timestep s", sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep s', ParName)
+         call par_file%get("Simulation.Start d", sim_cfg%start_datum, found); call check_field(found, 'Simulation.Start d', ParName)
+         call par_file%get("Simulation.End d", sim_cfg%end_datum, found); call check_field(found, 'Simulation.End d', ParName)
 
-      call par_file%destroy()
+         call par_file%destroy()
 
-      !check validity of inputfile
-      !  if(.not.(simdata%model_cfg%disp_sim==1 .or. simdata%model_cfg%disp_sim==2 .or. simdata%model_cfg%disp_sim==3)) simdata%model_cfg%disp_sim=0
-      !  if(.not.(simdata%model_cfg%disp_dgn==1 .or. simdata%model_cfg%disp_dgn==2)) simdata%model_cfg%disp_dgn=0
+         !check validity of inputfile
+         !  if(.not.(simdata%model_cfg%disp_sim==1 .or. simdata%model_cfg%disp_sim==2 .or. simdata%model_cfg%disp_sim==3)) simdata%model_cfg%disp_sim=0
+         !  if(.not.(simdata%model_cfg%disp_dgn==1 .or. simdata%model_cfg%disp_dgn==2)) simdata%model_cfg%disp_dgn=0
 
-      !  if(simdata%model_cfg%disp_dgn/=0) then
-      call ok('Configuration: '//trim(ParName))
-      !  end if
+         !  if(simdata%model_cfg%disp_dgn/=0) then
+         call ok('Configuration: '//trim(ParName))
+         !  end if
+      end associate
 
    end subroutine read_json_par_file
 

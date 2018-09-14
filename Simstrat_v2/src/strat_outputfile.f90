@@ -172,6 +172,26 @@ contains
       if (output_config%thinning_interval>1) write(6,*) 'Interval [days]: ',output_config%thinning_interval*sim_config%timestep/86400.
       call ok('Output times successfully read')
 
+
+      ! If output depth interval is given
+      if (output_config%depth_interval > 0) then
+
+        ! Allocate zout
+        allocate(output_config%zout(ceiling(grid%max_depth/output_config%depth_interval)))
+
+        output_config%zout(1) = 0
+        i = 2
+
+        ! Add output depth every "output_config%depth_interval" meters until max_depth is reached
+        do while (grid%max_depth > (output_config%depth_interval - output_config%zout(i - 1)))
+          output_config%zout(i) = output_config%zout(i - 1) - output_config%depth_interval
+          i = i + 1
+        end do
+
+        call reverse_in_place(output_config%zout)
+      end if
+      call ok('Output depths successfully read')
+
     call self%init_files(output_config, grid)
    end subroutine
 
