@@ -258,7 +258,7 @@ contains
       class(StaggeredGrid), target :: grid
 
       logical :: status_ok, exist_output_folder
-      integer :: n_depths, i, ppos
+      integer :: i, ppos
       character(len=256) :: mkdirCmd, output_folder
 
       self%n_depths = size(output_config%zout)

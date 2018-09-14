@@ -10,7 +10,7 @@ if hash FoBiS.py 2>/dev/null; then
 
     echo "Building simstrat and dependencies..."
 
-    FoBiS.py build
+    FoBiS.py build -mode release-gnu
 
 
     #echo "Building test programs..."

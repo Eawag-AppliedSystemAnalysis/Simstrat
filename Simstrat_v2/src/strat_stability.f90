@@ -83,7 +83,7 @@ contains
       real(RK), dimension(:), intent(inout) :: NN, rho
 
       ! Local variables
-      real(RK) :: a(self%grid%length_fce), buoy(self%grid%length_fce)
+      real(RK) :: buoy(self%grid%length_fce)
       real(RK) :: rho0t(self%grid%length_fce), rho0st(self%grid%length_fce)
       integer :: i
 

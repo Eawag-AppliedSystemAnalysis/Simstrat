@@ -229,3 +229,7 @@ TSWLatexianTemp*
 
 # expex forward references with \gathertags
 *-tags.tex
+
+#doxygen files
+Documentation/developer/doxygen/**/*
+!Documentation/developer/doxygen/Doxyfile

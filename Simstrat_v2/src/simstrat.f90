@@ -135,7 +135,6 @@ program simstrat_main
 contains
 
    subroutine run_simulation()
-      integer :: i
       !call logger%log(0.0_RK) ! Write initial conditions
 
       ! Run simulation until end datum or until no more results are required by the output time file
