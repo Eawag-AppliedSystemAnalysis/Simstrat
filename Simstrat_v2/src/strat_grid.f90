@@ -29,7 +29,7 @@ module strat_grid
       real(RK), dimension(:), allocatable :: Az       ! Areas
       real(RK), dimension(:), allocatable :: dAz      ! Difference of areas
       real(RK), dimension(:), allocatable :: meanint  ! ?
-      real(RK) :: volume
+      real(RK) :: volume, h_old
 
       !Area factors
       real(RK), dimension(:), allocatable :: AreaFactor_1
@@ -144,45 +144,53 @@ contains
          self%nz_grid = config%nz_grid
 
          !Include top value if not included
-         if (config%grid_read(1) /= 0.) then
-            write (*, *) "Grid invalid - top value not included"
-            !Todo: check indexing of this code
-            !  self%nz_grid=self%nz_grid+1
-            !  do i=self%nz_grid,1,-1
-            !      config%grid_read(i)=config%grid_read(i-1)
-            !  end do
-            !  config%grid_read(1)=0.0_RK
+         if (config%grid_read(1) /= (config%max_depth - self%z_zero)) then
+            write(6,*) '[ERROR] ', 'Top value ', config%max_depth - self%z_zero, 'is not included in grid file!'
+            stop
+            !warn('Grid top value is smaller than in morphology file and added automatically '
+            !self%nz_grid=self%nz_grid + 1
+            !do i = self%nz_grid,1,-1
+            !   config%grid_read(i)=config%grid_read(i - 1)
+            !end do
+            !config%grid_read(1)=0.0_RK
          end if
 
          !If maxdepth grid larger than morphology
-         if (config%grid_read(self%nz_grid) > config%max_depth) then
-            write (*, *) "Grid invalid - maxdepth of grid larger than morphology"
-            !Todo: check indexing of this code
+         if (config%grid_read(self%nz_grid + 1) < -self%z_zero) then
+            write (6, *) '[ERROR] ', 'Grid invalid: maxdepth of grid larger than morphology!'
+            stop
             !do while ((config%grid_read(self%nz_grid)>config%depth).and.(self%nz_grid>0.))
             !    self%nz_grid=self%nz_grid-1
             !end do
          end if
 
          !Include bottom value if not included
-         if (config%grid_read(self%nz_grid) < config%max_depth) then
-            write (*, *) "Grid invalid - Bottom value not included"
-            !Todo: check indexing of this code
+         if (config%grid_read(self%nz_grid + 1) > -self%z_zero) then
+            write (*, *) '[ERROR] ', 'Bottom value', -self%z_zero, 'is not included in grid file!'
+            stop
             !self%nz_grid=self%nz_grid+1
             !config%grid_read(self%nz_grid)=config%depth
          end if
+
+         do i=2,self%nz_grid
+            if ((config%grid_read(i) - config%grid_read(i-1)) > 0) then
+               call error('Grid input values are not monotonously decreasing')
+               stop
+            end if
+         end do
       end if
 
       !Construct H
       allocate (self%h(0:self%nz_grid + 1))
       self%h(0) = 0 ! Note that h(0) has no physical meaning but helps with some calculations
-      self%h(self%nz_grid + 1) = 0 ! Note that h(0) has no physical meaning but helps with some calculations
+      self%h(self%nz_grid + 1) = 0 ! Note that h(nz_grid + 1) has no physical meaning but helps with some calculations
       if (config%equidistant_grid) then
          ! Equidistant grid
          self%h(1:self%nz_grid) = config%max_depth/self%nz_grid
       else
          ! Set up h according to configuration
-         do i = 1, self%nz_grid
-            self%h(1 + self%nz_grid - i) = config%grid_read(i) - config%grid_read(i - 1)
+         do i = 2, self%nz_grid + 1
+            self%h(2 + self%nz_grid - i) = config%grid_read(i - 1) - config%grid_read(i)
          end do
       end if
    end subroutine grid_init_grid_points
@@ -285,7 +293,7 @@ contains
                   Az=>self%Az, &
                   dAz=>self%dAz)
 
-      if (h(ubnd_vol) > h(ubnd_vol - 1)) then
+      if (h(ubnd_vol) > self%h_old) then
          Az(ubnd_fce) = Az(ubnd_fce) + dAz(ubnd_vol + 1)*dh
       else
          Az(ubnd_fce) = Az(ubnd_fce) + dAz(ubnd_vol)*dh
@@ -318,6 +326,7 @@ contains
 
          Az(ubnd_fce - 1) = Az(ubnd_fce)
 
+         self%h_old = h(ubnd_vol - 1)
          h(ubnd_vol - 1) = (z_face(ubnd_fce - 1) - z_face(ubnd_fce - 2))
 
          ! update number of occupied cells
@@ -345,6 +354,7 @@ contains
 
          h(ubnd_vol + 1) = (h(ubnd_vol) + dh)/2
          h(ubnd_vol) = (h(ubnd_vol) + dh)/2
+         self%h_old = h(ubnd_vol + 1)
 
          z_face(ubnd_fce + 1) = z_face(ubnd_fce) + dh
          z_face(ubnd_fce) = z_face(ubnd_fce) + dh - h(ubnd_vol)
@@ -390,10 +400,12 @@ contains
 
                Az(i) = Az(i-1) + h(i - 1)/(zmax-z_face(i-1))*(Az(i)-Az(i-1))
                nz_occupied = i - 1
+               self%h_old = h(nz_occupied)
                if (h(nz_occupied) <= 0.5*h(nz_occupied - 1)) then ! If top box is too small
                   z_face(nz_occupied) = z_face(nz_occupied + 1) ! Combine the two upper boxes
                   z_volume(nz_occupied - 1) = (z_face(nz_occupied) + z_face(nz_occupied - 1))/2
                   h(nz_occupied - 1) = h(nz_occupied) + h(nz_occupied - 1)
+                  self%h_old = h(nz_occupied - 1)
                   nz_occupied = nz_occupied - 1 ! Reduce number of boxes
                end if
                exit

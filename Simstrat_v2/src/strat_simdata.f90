@@ -19,6 +19,9 @@ module strat_simdata
       character(len=:), allocatable          :: QoutName
       character(len=:), allocatable          :: TinpName
       character(len=:), allocatable          :: SinpName
+      real(RK), dimension(:), allocatable    :: read_grid_array_from_json
+      real(RK) :: read_grid_value_from_json
+      integer :: grid_input_type
    end type
 
    ! Definition of a variable to log

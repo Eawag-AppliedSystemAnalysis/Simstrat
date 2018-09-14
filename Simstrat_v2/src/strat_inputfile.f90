@@ -325,32 +325,48 @@ contains
       type(GridConfig) :: grid_config
       real(RK), dimension(:) :: z_tmp(self%simdata%model_cfg%max_length_input_data)
       real(RK), dimension(:) :: A_tmp(self%simdata%model_cfg%max_length_input_data)
-      integer :: num_read, i, ictr
+      integer :: num_read, i
       associate (simdata=>self%simdata, &
                  max_length_input_data=>grid_config%max_length_input_data)
 
          grid_config%max_length_input_data = self%simdata%model_cfg%max_length_input_data
-         allocate (grid_config%grid_read(grid_config%max_length_input_data))
-         ! Read grid
-         open (12, status='old', file=simdata%input_cfg%GridName)
-         read (12, *)
-         do ictr = 1, max_length_input_data
-            read (12, *, end=69) grid_config%grid_read(ictr)
-         end do
 
-69       if(ictr==max_length_input_data) then
-            write(6,*) '[WARNING] ','Only first ',max_length_input_data,' values of file read.'
-         else 
-            call ok('Grid file successfully read')
-         end if
-         close (12)
+         if (simdata%input_cfg%grid_input_type == 7) then
+            allocate (grid_config%grid_read(grid_config%max_length_input_data))
+            ! Read grid
+            open (12, status='old', file=simdata%input_cfg%GridName)
+            read (12, *)
+            do i = 1, max_length_input_data
+               read (12, *, end=69) grid_config%grid_read(i)
+            end do
 
-         if (ictr == 2) then ! Constant spacing
-            grid_config%nz_grid = int(grid_config%grid_read(1))
-            grid_config%equidistant_grid = .TRUE.
-         else ! Variable spacing
-            grid_config%nz_grid = ictr
+69          if(i==max_length_input_data) then
+               write(6,*) '[WARNING] ','Only first ',max_length_input_data,' values of file read.'
+            else 
+               call ok('Grid file successfully read')
+            end if
+            close (12)
+
+            if (i == 2) then ! Constant spacing
+               grid_config%nz_grid = int(grid_config%grid_read(1))
+               grid_config%equidistant_grid = .TRUE.
+            else ! Variable spacing
+               grid_config%nz_grid = i - 2
+               grid_config%equidistant_grid = .FALSE.
+            end if
+
+         ! If grid was read from json
+         ! If an array of grid values is given
+         else if (simdata%input_cfg%grid_input_type == 3) then
+            grid_config%nz_grid = size(simdata%input_cfg%read_grid_array_from_json) - 1
             grid_config%equidistant_grid = .FALSE.
+            grid_config%grid_read = simdata%input_cfg%read_grid_array_from_json
+            call ok('Grid file successfully read')
+         ! If the spacing is given
+         else
+            grid_config%nz_grid = int(simdata%input_cfg%read_grid_value_from_json)
+            grid_config%equidistant_grid = .TRUE.
+            call ok('Grid file successfully read')
          end if
 
          ! Read Morphology
@@ -442,7 +458,20 @@ contains
          call par_file%get('Input.Initial conditions', InitName, found); input_cfg%InitName = InitName; call check_field(found, 'Input.Initial conditions', ParName)
          call par_file%get('Input.Forcing', ForcingName, found); input_cfg%ForcingName = ForcingName; call check_field(found, 'Input.Forcing', ParName)
          call par_file%get('Input.Absorption', AbsorpName, found); input_cfg%AbsorpName = AbsorpName; call check_field(found, 'Input.Absorption', ParName)
-         call par_file%get('Input.Grid', GridName, found); input_cfg%GridName = GridName; call check_field(found, 'Input.Grid', ParName)
+         
+         ! Grid information can also be included in par-file
+         ! Check type of json entry
+         call par_file%info('Input.Grid',found,input_cfg%grid_input_type,n_children_dummy)
+
+         if (input_cfg%grid_input_type == 7) then ! Path name
+            call par_file%get('Input.Grid', GridName, found); input_cfg%GridName = GridName; call check_field(found, 'Input.Grid', ParName)
+         else if (input_cfg%grid_input_type == 3) then ! Grid depths are given
+            call par_file%get('Input.Grid', input_cfg%read_grid_array_from_json, found); call check_field(found, 'Input.Grid', ParName)
+         else if (input_cfg%grid_input_type == 5 .or. input_cfg%grid_input_type == 6) then
+            call par_file%get('Input.Grid', input_cfg%read_grid_value_from_json, found); call check_field(found, 'Input.Grid', ParName)
+         end if
+
+
          call par_file%get('Input.Inflow', QinpName, found); input_cfg%QinpName = QinpName; call check_field(found, 'Input.Inflow', ParName)
          call par_file%get('Input.Outflow', QoutName, found); input_cfg%QoutName = QoutName; call check_field(found, 'Input.Outflow', ParName)
          call par_file%get('Input.Inflow temperature', TinpName, found); input_cfg%TinpName = TinpName; call check_field(found, 'Input.Inflow temperature', ParName)
