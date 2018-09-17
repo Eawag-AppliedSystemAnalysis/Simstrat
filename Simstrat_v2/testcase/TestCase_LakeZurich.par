@@ -14,6 +14,7 @@
   "Output" : {
     "Path"  : "TestCases_Results/",
     "Depths" : 1,
+    "OutputDepthReference" : 1,
     "Times"  : 96,
   },
 
@@ -29,15 +30,15 @@
     "WindDragModel"           : 3,
     "InflowPlacement"         : 0,
     "PressureGradients"       : 0,
-    "DisplaySimulation"       : 1,
     "IceModel"                : 0,
     "SnowModel"               : 0	
   },
 
   "Simulation" : {
-    "Timestep s" : 300,
-    "Start d"    : 35001,
-    "End d"      : 35731
+    "Timestep s"        : 300,
+    "Start d"           : 35001,
+    "End d"             : 35732,
+    "DisplaySimulation" : 1,
   },
 
   "ModelParameters" : {

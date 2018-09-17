@@ -54,6 +54,7 @@ module strat_simdata
       integer :: timestep
       real(RK) :: start_datum
       real(RK) :: end_datum
+      integer :: disp_simulation
    end type
 
    ! Model configuration (read from file)
@@ -70,7 +71,6 @@ module strat_simdata
       integer :: inflow_placement
       integer :: pressure_gradients
       logical :: salinity_transport
-      integer :: disp_simulation
       integer :: ice_model
       integer :: snow_model
    end type
