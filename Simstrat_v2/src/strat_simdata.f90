@@ -152,7 +152,7 @@ module strat_simdata
       real(RK), dimension(:), allocatable     :: fgeo_add
       logical :: has_advection
       integer :: nz_input
-      logical :: has_salinity_grad, has_salinity
+      !logical :: has_salinity_grad, has_salinity
 
    contains
       procedure, pass :: init => model_state_init

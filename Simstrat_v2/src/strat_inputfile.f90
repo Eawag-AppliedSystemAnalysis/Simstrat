@@ -287,28 +287,29 @@ contains
 
          ! Salinity control for buoyancy functions
          ! if salinity transport is enabled
-         if (model_cfg%salinity_transport) then
-            model%has_salinity = .true.
-            model%has_salinity_grad = .true.
-         else ! else, test for this config
-            model%has_salinity = .false.
-            model%has_salinity_grad = .false.
-            do i = 1, grid%ubnd_vol
-               if (model%S(i) /= 0) then
-                  model%has_salinity = .true.
-                  exit
-               end if
+         ! FB2018: commented out, see strat_stability module for explanation
+!          if (model_cfg%salinity_transport) then
+!             model%has_salinity = .true.
+!             model%has_salinity_grad = .true.
+!          else ! else, test for this config
+!             model%has_salinity = .false.
+!             model%has_salinity_grad = .false.
+!             do i = 1, grid%ubnd_vol
+!                if (model%S(i) /= 0) then
+!                   model%has_salinity = .true.
+!                   exit
+!                end if
 
-            end do
-            if (model%has_salinity) then
-               do i = 2, grid%nz_grid
-                  if (model%S(i) - model%S(i - 1) /= 0) then
-                     model%has_salinity_grad = .true.
-                     exit
-                  end if
-               end do
-            end if
-         end if
+!             end do
+!             if (model%has_salinity) then
+!                do i = 2, grid%nz_grid
+!                   if (model%S(i) - model%S(i - 1) /= 0) then
+!                      model%has_salinity_grad = .true.
+!                      exit
+!                   end if
+!                end do
+!             end if
+!          end if
 
          ! Set up timing
          model%datum = self%simdata%sim_cfg%start_datum
@@ -530,7 +531,7 @@ contains
          call par_file%get("ModelConfig.WindDragModel", model_cfg%wind_drag_model, found); call check_field(found, 'ModelConfig.WindDragModel', ParName)
          call par_file%get("ModelConfig.InflowPlacement", model_cfg%inflow_placement, found); call check_field(found, 'ModelConfig.InflowPlacement', ParName)
          call par_file%get("ModelConfig.PressureGradients", model_cfg%pressure_gradients, found); call check_field(found, 'ModelConfig.PressureGradients', ParName)
-         call par_file%get("ModelConfig.EnableSalinityTransport", model_cfg%salinity_transport, found); call check_field(found, 'ModelConfig.EnableSalinityTransport', ParName)
+         !call par_file%get("ModelConfig.EnableSalinityTransport", model_cfg%salinity_transport, found); call check_field(found, 'ModelConfig.EnableSalinityTransport', ParName)
          call par_file%get("ModelConfig.DisplaySimulation", model_cfg%disp_simulation, found); call check_field(found, 'ModelConfig.DisplaySimulation', ParName)
          call par_file%get("ModelConfig.IceModel", model_cfg%ice_model, found); call check_field(found, 'ModelConfig.IceModel', ParName)
          call par_file%get("ModelConfig.SnowModel", model_cfg%snow_model, found); call check_field(found, 'ModelConfig.SnowModel', ParName)

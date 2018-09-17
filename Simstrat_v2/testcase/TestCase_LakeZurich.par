@@ -1,7 +1,7 @@
 {
   "Input" : {
     "Initial conditions"  : "TestCase_LakeZurich/initcond_zuri_810107.dat",
-    "Grid"                : "TestCase_LakeZurich/Grid.dat",
+    "Grid"                : 137,
     "Morphology"          : "TestCase_LakeZurich/morph_zuri.dat",
     "Forcing"             : "TestCase_LakeZurich/forcing_lake_zurich_1981_2013_waedenswil_homogenized.dat3",
     "Absorption"          : "TestCase_LakeZurich/absorption_zh_1981_2013.dat",
@@ -29,7 +29,6 @@
     "WindDragModel"           : 3,
     "InflowPlacement"         : 0,
     "PressureGradients"       : 0,
-    "EnableSalinityTransport" : 1,
     "DisplaySimulation"       : 1,
     "IceModel"                : 0,
     "SnowModel"               : 0	
