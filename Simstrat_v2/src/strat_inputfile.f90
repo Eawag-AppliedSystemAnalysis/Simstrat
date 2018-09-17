@@ -261,7 +261,7 @@ contains
    subroutine setup_model(self)
       implicit none
       class(SimstratSimulationFactory) :: self
-      integer :: i
+      !integer :: i
       associate (simdata=>self%simdata, &
                  model_cfg=>self%simdata%model_cfg, &
                  model_param=>self%simdata%model_param, &
@@ -368,9 +368,13 @@ contains
          ! If grid was read from json
          ! If an array of grid values is given
          else if (simdata%input_cfg%grid_input_type == 3) then
+            ! Determine nz_grid from grid
             grid_config%nz_grid = size(simdata%input_cfg%read_grid_array_from_json) - 1
+            ! Set flag
             grid_config%equidistant_grid = .FALSE.
-            grid_config%grid_read = simdata%input_cfg%read_grid_array_from_json
+            ! Store json-read values in grid_read array to be compatible with rest of the code
+            allocate (grid_config%grid_read(grid_config%max_length_input_data))
+            grid_config%grid_read(1:grid_config%nz_grid + 1) = simdata%input_cfg%read_grid_array_from_json(1:grid_config%nz_grid + 1)
             call ok('Grid file successfully read')
          ! If the spacing is given
          else
