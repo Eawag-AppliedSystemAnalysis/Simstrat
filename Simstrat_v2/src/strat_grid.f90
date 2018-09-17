@@ -447,38 +447,48 @@ contains
       call Interp(z, y, num_z, self%z_face(2:self%nz_grid + 1), yi(2:self%nz_grid + 1), self%nz_grid)
    end subroutine
 
-   subroutine grid_interpolate_from_vol(self, y, zi, yi, num_zi)
+   subroutine grid_interpolate_from_vol(self, y, zi, yi, num_zi, output_depth_reference)
       class(StaggeredGrid), intent(in) :: self
       real(RK), dimension(:), intent(in) :: zi, y
       real(RK), dimension(:), intent(out) :: yi
-      integer, intent(in) :: num_zi
+      integer, intent(in) :: num_zi, output_depth_reference
 
       real(RK), dimension(self%ubnd_vol) :: z_volume_mod
       integer :: i
 
-      ! Transform z_volume for interpolation on zout grid
-      z_volume_mod(1) = self%z_face(1) - self%z_face(self%ubnd_fce)
-      do i = 2, self%ubnd_vol-1
-         z_volume_mod(i) = self%z_volume(i) - self%z_face(self%ubnd_fce)
-      end do
-      z_volume_mod(self%ubnd_vol) = 0
+      ! Transform z_volume for interpolation on zout grid depending on grid reference chosen in par-file
+      if (output_depth_reference == 1) then
+         z_volume_mod(1) = self%z_face(1)
+         z_volume_mod(2:self%ubnd_vol - 1) = self%z_volume(2:self%ubnd_vol - 1)
+         z_volume_mod(self%ubnd_vol) = self%z_face(self%ubnd_fce)
+      else if (output_depth_reference == 2) then
+         z_volume_mod(1) = self%z_face(1) - self%z_face(self%ubnd_fce)
+         do i = 2, self%ubnd_vol-1
+            z_volume_mod(i) = self%z_volume(i) - self%z_face(self%ubnd_fce)
+         end do
+         z_volume_mod(self%ubnd_vol) = 0
+      end if         
 
       call Interp_nan(z_volume_mod(1:self%ubnd_vol), y(1:self%ubnd_vol), self%ubnd_vol, zi, yi, num_zi)
    end subroutine
 
-   subroutine grid_interpolate_from_face(self, y, zi, yi, num_zi)
+   subroutine grid_interpolate_from_face(self, y, zi, yi, num_zi, output_depth_reference)
       class(StaggeredGrid), intent(in) :: self
       real(RK), dimension(:), intent(in) :: zi, y
       real(RK), dimension(:), intent(out) :: yi
-      integer, intent(in) :: num_zi
+      integer, intent(in) :: num_zi, output_depth_reference
 
       real(RK), dimension(self%ubnd_fce) :: z_face_mod
       integer :: i
 
-      ! Transform z_face for interpolation on zout grid
-      do i = 1, self%ubnd_fce
-         z_face_mod(i) = self%z_face(i) - self%z_face(self%ubnd_fce)
-      end do
+      ! Transform z_face for interpolation on zout grid depending on grid reference chosen in par-file
+      if (output_depth_reference == 1) then
+         z_face_mod(1:self%ubnd_fce) = self%z_face(1:self%ubnd_fce)
+      else if (output_depth_reference == 2) then
+         do i = 1, self%ubnd_fce
+            z_face_mod(i) = self%z_face(i) - self%z_face(self%ubnd_fce)
+         end do
+      end if
 
       call Interp_nan(z_face_mod(1:self%ubnd_fce), y(1:self%ubnd_fce), self%ubnd_fce, zi, yi, num_zi)
    end subroutine

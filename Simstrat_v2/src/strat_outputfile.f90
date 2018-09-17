@@ -177,18 +177,31 @@ contains
       if (output_config%depth_interval > 0) then
 
         ! Allocate zout
-        allocate(output_config%zout(ceiling(grid%max_depth/output_config%depth_interval)))
+        allocate(output_config%zout(ceiling(grid%max_depth/output_config%depth_interval + 1e-6)))
 
         output_config%zout(1) = 0
         i = 2
 
-        ! Add output depth every "output_config%depth_interval" meters until max_depth is reached
-        do while (grid%max_depth > (output_config%depth_interval - output_config%zout(i - 1)))
-          output_config%zout(i) = output_config%zout(i - 1) - output_config%depth_interval
-          i = i + 1
-        end do
+        if (output_config%output_depth_reference == 1) then
+          do while ((grid%max_depth + 1e-6) > (output_config%depth_interval + output_config%zout(i - 1)))
+            output_config%zout(i) = output_config%zout(i - 1) + output_config%depth_interval
+            i = i + 1
+          end do
+        else if (output_config%output_depth_reference == 2) then
 
-        call reverse_in_place(output_config%zout)
+          ! Add output depth every "output_config%depth_interval" meters until max_depth is reached
+          do while ((grid%max_depth + 1e-6) > (output_config%depth_interval - output_config%zout(i - 1)))
+            output_config%zout(i) = output_config%zout(i - 1) - output_config%depth_interval
+            i = i + 1
+          end do
+
+          call reverse_in_place(output_config%zout)
+
+        else if (output_config%depth_interval == 0) then
+          allocate(output_config%zout(size(output_config%zout_read)))
+          output_config%zout = output_config%zout_read
+        end if
+
       end if
       call ok('Output depths successfully read')
 
@@ -361,12 +374,12 @@ contains
         ! If on volume or faces grid
         if (self%output_config%output_vars(i)%volume_grid) then
           ! Interpolate state on volume grid
-          call self%grid%interpolate_from_vol(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths)
+          call self%grid%interpolate_from_vol(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
           ! Write state
           call self%output_files(i)%add(values_on_zout, real_fmt='(ES14.4)')
         else if (self%output_config%output_vars(i)%face_grid) then
           ! Interpolate state on face grid
-          call self%grid%interpolate_from_face(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths)
+          call self%grid%interpolate_from_face(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
           ! Write state
           call self%output_files(i)%add(values_on_zout, real_fmt='(ES14.4)')
         else

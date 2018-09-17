@@ -95,25 +95,34 @@ contains
                call f%destroy()
                stop
             end if
-            call f%get(1, output_cfg%zout, status_ok)
+            ! Values are read into array zout_read instead of zout to keep zout for the final output depths. For example,
+            ! zout_read will contain only one value here if the output frequency is given, but zout will contain the output
+            ! depths produced from this frequency.
+            call f%get(1, output_cfg%zout_read, status_ok)
             call f%destroy()
 
             ! Decide whether an interval or a list of values is given
-            if(size(output_cfg%zout)==1) then
-               output_cfg%depth_interval = output_cfg%zout(1)
+            if(size(output_cfg%zout_read)==1) then
+               output_cfg%depth_interval = output_cfg%zout_read(1)
             else
                output_cfg%depth_interval = 0
-               call reverse_in_place(output_cfg%zout)
+               if (output_cfg%output_depth_reference == 2) then
+                  call reverse_in_place(output_cfg%zout_read)
+               end if
 
-               ! Check if depths are negative and monotonous
-               do i = 1,size(output_cfg%zout)
-                  if (output_cfg%zout(i)>0) then
-                     call error('One or several output depths are above 0.')
-                     stop
-                  else if (i>1) then
-                     if (output_cfg%zout(i)<output_cfg%zout(i-1)) then
-                        call error('Output depths are not decreasing monotonously.')
-                        stop
+               ! Check if depths are monotonously in- or decreasing
+               do i = 1,size(output_cfg%zout_read)
+                  if (i>1) then
+                     if (output_cfg%output_depth_reference == 1) then
+                        if (output_cfg%zout_read(i) < output_cfg%zout_read(i-1)) then
+                           call error('Output depths are not increasing monotonously. Maybe you chose the wrong output depth reference?')
+                           stop
+                        end if
+                     else if (output_cfg%output_depth_reference == 2) then
+                        if (output_cfg%zout_read(i) < output_cfg%zout_read(i-1)) then
+                           call error('Output depths are not decreasing monotonously. Maybe you chose the wrong output depth reference?')
+                           stop
+                        end if
                      end if
                   end if
                end do 
@@ -480,18 +489,20 @@ contains
 
          ! Path to output folder
          call par_file%get('Output.Path', PathOut, found); output_cfg%PathOut = PathOut; call check_field(found, 'Output.Path', ParName)
-      
+         call par_file%get("Output.OutputDepthReference", output_cfg%output_depth_reference, found); call check_field(found, 'Output.OutputDepthReference', ParName)
+         
          ! Output depths
          ! Check type of input: string for path, array for depth list and integer for interval
          call par_file%info('Output.Depths',found,output_cfg%output_depth_type,n_children_dummy)
-
-         ! Treat different inputs
+         ! Treat different input possibilities for output depths
          if (output_cfg%output_depth_type == 7) then ! Path name
             call par_file%get('Output.Depths', zoutName, found); output_cfg%zoutName = zoutName; call check_field(found, 'Output.Depths', ParName)
+         
          else if (output_cfg%output_depth_type == 3) then ! Output depths are given
             call par_file%get('Output.Depths', output_cfg%zout, found); call check_field(found, 'Output.Depths', ParName)
-            call reverse_in_place(output_cfg%zout)
+            if (output_cfg%output_depth_reference == 2) call reverse_in_place(output_cfg%zout)
             output_cfg%depth_interval = 0
+         
          else if (output_cfg%output_depth_type == 5 .or. output_cfg%output_depth_type == 6) then ! Output interval is given
             call par_file%get('Output.Depths', output_cfg%depth_interval, found); call check_field(found, 'Output.Depths', ParName)
          end if
@@ -499,12 +510,14 @@ contains
          ! Output times
          ! Check type of input: string for path, array for depth list and integer for interval
          call par_file%info('Output.Times',found,output_cfg%output_time_type,n_children_dummy)
-
+         ! Treat different input possibilities for output times
          if (output_cfg%output_time_type == 7) then ! Path name
             call par_file%get('Output.Times', toutName, found); output_cfg%toutName = toutName; call check_field(found, 'Output.Times', ParName)
+         
          else if (output_cfg%output_time_type == 3) then ! Output depths are given
             call par_file%get('Output.Times', output_cfg%tout, found); call check_field(found, 'Output.Times', ParName)
             output_cfg%thinning_interval = 0
+         
          else if (output_cfg%output_time_type == 5) then ! Output interval is given
             call par_file%get('Output.Times', output_cfg%thinning_interval, found); call check_field(found, 'Output.Times', ParName)
             allocate(output_cfg%tout(1))
