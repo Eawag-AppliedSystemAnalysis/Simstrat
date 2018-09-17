@@ -542,7 +542,19 @@ contains
          call par_file%get("ModelParameters.a_seiche", model_param%a_seiche, found); call check_field(found, 'ModelParameters.a_seiche', ParName)
          call par_file%get("ModelParameters.q_nn", model_param%q_NN, found); call check_field(found, 'ModelParameters.q_nn', ParName)
          call par_file%get("ModelParameters.f_wind", model_param%f_wind, found); call check_field(found, 'ModelParameters.f_wind', ParName)
+         
+         ! C10 is a physical parameter on the order of e-3 if wind drag model is 1. Conversely, it is a calibration parameter
+         ! with a value around 1 for wind drag models 2 and 3. This fact can lead to confusion and thus we check for realistic
+         ! input values depending on the wind drag model chosen.
          call par_file%get("ModelParameters.c10", model_param%C10_constant, found); call check_field(found, 'ModelParameters.c10', ParName)
+         if (model_cfg%wind_drag_model == 1 .and. model_param%C10_constant > 0.1) then
+            call error('The input value of C10 is too high to be physically possible. Choose a lower value or change the wind drag model to 2 or 3 if you meant to use C10 as a calibration parameter.')
+            stop
+         else if (model_cfg%wind_drag_model > 1 .and. model_param%C10_constant < 0.1) then
+            call error('The input value of C10 is too low to serve as calibration parameter. Maybe you intended it as physical parameter but then you need to use wind drag model = 1.')
+            stop
+         end if
+
          call par_file%get("ModelParameters.cd", model_param%CD, found); call check_field(found, 'ModelParameters.cd', ParName)
          call par_file%get("ModelParameters.hgeo", model_param%fgeo, found); call check_field(found, 'ModelParameters.hgeo', ParName)
          call par_file%get("ModelParameters.k_min", model_param%k_min, found); call check_field(found, 'ModelParameters.k_min', ParName)
