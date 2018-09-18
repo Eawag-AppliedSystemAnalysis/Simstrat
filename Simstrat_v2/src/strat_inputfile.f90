@@ -723,9 +723,16 @@ contains
          read (fnum(i), *, end=8) ! Skip header (description of columns)
          read (fnum(i), "(A)", end=8) line ! Read number of input depths (static)
          nval_surface = 0
+         self%simdata%model%has_surface_inflow(i) = .FALSE.
+
+         ! Read one value, aborts and goes to line 8 if no value is present
          read(line,*,end=8) nval_line(1)
+
+         ! Read 2 values, aborts and goes to line 7 if only one value is present (no surface inflow)
          read(line,*,end=7) nval_line(1:2)
          nval_surface = nval_line(2)
+         self%simdata%model%has_surface_inflow(i) = .TRUE.
+
 7        nval_deep = nval_line(1)
          nval(i) = nval_deep + nval_surface
          read (fnum(i), *, end=8) dummy, (z_Inp_dummy(j), j=1, nval(i)) ! Read input depths
