@@ -208,22 +208,22 @@ contains
          self%simdata%output_cfg%output_vars(12)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(12)%face_grid = .true.
    
-         self%simdata%output_cfg%output_vars(13)%name = "H_A"
+         self%simdata%output_cfg%output_vars(13)%name = "HA"
          self%simdata%output_cfg%output_vars(13)%values_surf => self%simdata%model%ha
          self%simdata%output_cfg%output_vars(13)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(13)%face_grid = .false.
    
-         self%simdata%output_cfg%output_vars(14)%name = "H_W"
+         self%simdata%output_cfg%output_vars(14)%name = "HW"
          self%simdata%output_cfg%output_vars(14)%values_surf => self%simdata%model%hw
          self%simdata%output_cfg%output_vars(14)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(14)%face_grid = .false.
    
-         self%simdata%output_cfg%output_vars(15)%name = "H_K"
+         self%simdata%output_cfg%output_vars(15)%name = "HK"
          self%simdata%output_cfg%output_vars(15)%values_surf => self%simdata%model%hk
          self%simdata%output_cfg%output_vars(15)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(15)%face_grid = .false.
    
-         self%simdata%output_cfg%output_vars(16)%name = "H_V"
+         self%simdata%output_cfg%output_vars(16)%name = "HV"
          self%simdata%output_cfg%output_vars(16)%values_surf => self%simdata%model%hv
          self%simdata%output_cfg%output_vars(16)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(16)%face_grid = .false.
@@ -233,17 +233,17 @@ contains
          self%simdata%output_cfg%output_vars(17)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(17)%face_grid = .false.
 
-         self%simdata%output_cfg%output_vars(18)%name = "Ice_h"
+         self%simdata%output_cfg%output_vars(18)%name = "IceH"
          self%simdata%output_cfg%output_vars(18)%values_surf => self%simdata%model%ice_h
          self%simdata%output_cfg%output_vars(18)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(18)%face_grid = .false.
 
-         self%simdata%output_cfg%output_vars(19)%name = "Snow_h"
+         self%simdata%output_cfg%output_vars(19)%name = "SnowH"
          self%simdata%output_cfg%output_vars(19)%values_surf => self%simdata%model%snow_h
          self%simdata%output_cfg%output_vars(19)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(19)%face_grid = .false.  
 
-         self%simdata%output_cfg%output_vars(20)%name = "Water_depth"
+         self%simdata%output_cfg%output_vars(20)%name = "WaterH"
          self%simdata%output_cfg%output_vars(20)%values_surf => self%simdata%grid%lake_level
          self%simdata%output_cfg%output_vars(20)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(20)%face_grid = .false.  
