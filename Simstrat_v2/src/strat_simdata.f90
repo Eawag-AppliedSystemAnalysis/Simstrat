@@ -37,6 +37,7 @@ module strat_simdata
       character(len=:), allocatable :: PathOut
       character(len=:), allocatable :: zoutName
       character(len=:), allocatable :: toutName
+      character(len=:), allocatable :: output_depth_reference
       real(RK), dimension(:), allocatable :: zout, zout_read
       real(RK), dimension(:), allocatable :: tout
       real(RK), dimension(:), allocatable :: n_timesteps_between_tout
@@ -45,7 +46,6 @@ module strat_simdata
       class(LogVariable), dimension(:), allocatable :: output_vars
 
       integer :: output_time_type, output_depth_type, thinning_interval
-      integer :: output_depth_reference
       real(RK) :: depth_interval
    end type
 

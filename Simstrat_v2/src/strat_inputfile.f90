@@ -106,23 +106,16 @@ contains
                output_cfg%depth_interval = output_cfg%zout_read(1)
             else
                output_cfg%depth_interval = 0
-               if (output_cfg%output_depth_reference == 2) then
+               if (output_cfg%output_depth_reference == 'surface') then
                   call reverse_in_place(output_cfg%zout_read)
                end if
 
                ! Check if depths are monotonously in- or decreasing
                do i = 1,size(output_cfg%zout_read)
                   if (i>1) then
-                     if (output_cfg%output_depth_reference == 1) then
-                        if (output_cfg%zout_read(i) < output_cfg%zout_read(i-1)) then
-                           call error('Output depths are not increasing monotonously. Maybe you chose the wrong output depth reference?')
-                           stop
-                        end if
-                     else if (output_cfg%output_depth_reference == 2) then
-                        if (output_cfg%zout_read(i) < output_cfg%zout_read(i-1)) then
-                           call error('Output depths are not decreasing monotonously. Maybe you chose the wrong output depth reference?')
-                           stop
-                        end if
+                     if (output_cfg%zout_read(i) < output_cfg%zout_read(i-1)) then
+                        call error('Output depths are not monotonous. Maybe you chose the wrong output depth reference?')
+                        stop
                      end if
                   end if
                end do 
@@ -493,8 +486,13 @@ contains
 
          ! Path to output folder
          call par_file%get('Output.Path', PathOut, found); output_cfg%PathOut = PathOut; call check_field(found, 'Output.Path', ParName)
+         ! Output depth reference
          call par_file%get("Output.OutputDepthReference", output_cfg%output_depth_reference, found); call check_field(found, 'Output.OutputDepthReference', ParName)
-         
+         if (.not.(output_cfg%output_depth_reference == 'surface' .or. output_cfg%output_depth_reference == 'bottom')) then
+            call error('Invalid output depth reference in par-file')
+            stop
+         end if
+
          ! Output depths
          ! Check type of input: string for path, array for depth list and integer for interval
          call par_file%info('Output.Depths',found,output_cfg%output_depth_type,n_children_dummy)
@@ -504,7 +502,7 @@ contains
          
          else if (output_cfg%output_depth_type == 3) then ! Output depths are given
             call par_file%get('Output.Depths', output_cfg%zout, found); call check_field(found, 'Output.Depths', ParName)
-            if (output_cfg%output_depth_reference == 2) call reverse_in_place(output_cfg%zout)
+            if (output_cfg%output_depth_reference == 'surface') call reverse_in_place(output_cfg%zout)
             output_cfg%depth_interval = 0
          
          else if (output_cfg%output_depth_type == 5 .or. output_cfg%output_depth_type == 6) then ! Output interval is given

@@ -182,13 +182,13 @@ contains
         output_config%zout(1) = 0
         i = 2
 
-        if (output_config%output_depth_reference == 1) then
+        if (output_config%output_depth_reference == 'bottom') then
           do while ((grid%max_depth + 1e-6) > (output_config%depth_interval + output_config%zout(i - 1)))
             output_config%zout(i) = output_config%zout(i - 1) + output_config%depth_interval
             i = i + 1
           end do
-        else if (output_config%output_depth_reference == 2) then
-
+          
+        else if (output_config%output_depth_reference == 'surface') then
           ! Add output depth every "output_config%depth_interval" meters until max_depth is reached
           do while ((grid%max_depth + 1e-6) > (output_config%depth_interval - output_config%zout(i - 1)))
             output_config%zout(i) = output_config%zout(i - 1) - output_config%depth_interval

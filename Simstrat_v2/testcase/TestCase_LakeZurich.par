@@ -14,8 +14,8 @@
   "Output" : {
     "Path"  : "TestCases_Results/",
     "Depths" : 1,
-    "OutputDepthReference" : 1,
-    "Times"  : 96,
+    "OutputDepthReference" : "surface",
+    "Times"  : 96
   },
 
   "ModelConfig" : {
@@ -38,7 +38,7 @@
     "Timestep s"        : 300,
     "Start d"           : 35001,
     "End d"             : 35732,
-    "DisplaySimulation" : 1,
+    "DisplaySimulation" : 1
   },
 
   "ModelParameters" : {

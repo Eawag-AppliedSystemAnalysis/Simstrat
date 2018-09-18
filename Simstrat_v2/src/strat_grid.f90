@@ -451,17 +451,18 @@ contains
       class(StaggeredGrid), intent(in) :: self
       real(RK), dimension(:), intent(in) :: zi, y
       real(RK), dimension(:), intent(out) :: yi
-      integer, intent(in) :: num_zi, output_depth_reference
+      integer, intent(in) :: num_zi
+      character(len=:), allocatable :: output_depth_reference
 
       real(RK), dimension(self%ubnd_vol) :: z_volume_mod
       integer :: i
 
       ! Transform z_volume for interpolation on zout grid depending on grid reference chosen in par-file
-      if (output_depth_reference == 1) then
+      if (output_depth_reference == 'bottom') then
          z_volume_mod(1) = self%z_face(1)
          z_volume_mod(2:self%ubnd_vol - 1) = self%z_volume(2:self%ubnd_vol - 1)
          z_volume_mod(self%ubnd_vol) = self%z_face(self%ubnd_fce)
-      else if (output_depth_reference == 2) then
+      else if (output_depth_reference == 'surface') then
          z_volume_mod(1) = self%z_face(1) - self%z_face(self%ubnd_fce)
          do i = 2, self%ubnd_vol-1
             z_volume_mod(i) = self%z_volume(i) - self%z_face(self%ubnd_fce)
@@ -476,15 +477,16 @@ contains
       class(StaggeredGrid), intent(in) :: self
       real(RK), dimension(:), intent(in) :: zi, y
       real(RK), dimension(:), intent(out) :: yi
-      integer, intent(in) :: num_zi, output_depth_reference
+      integer, intent(in) :: num_zi
+      character(len=:), allocatable :: output_depth_reference
 
       real(RK), dimension(self%ubnd_fce) :: z_face_mod
       integer :: i
 
       ! Transform z_face for interpolation on zout grid depending on grid reference chosen in par-file
-      if (output_depth_reference == 1) then
+      if (output_depth_reference == 'bottom') then
          z_face_mod(1:self%ubnd_fce) = self%z_face(1:self%ubnd_fce)
-      else if (output_depth_reference == 2) then
+      else if (output_depth_reference == 'surface') then
          do i = 1, self%ubnd_fce
             z_face_mod(i) = self%z_face(i) - self%z_face(self%ubnd_fce)
          end do
