@@ -146,7 +146,7 @@ contains
          end if
 
          ! Define variables that should be written
-         allocate (self%simdata%output_cfg%output_vars(20))
+         allocate (self%simdata%output_cfg%output_vars(21))
 
          self%simdata%output_cfg%output_vars(1)%name = "V"
          self%simdata%output_cfg%output_vars(1)%values => self%simdata%model%V
@@ -247,6 +247,12 @@ contains
          self%simdata%output_cfg%output_vars(20)%values_surf => self%simdata%grid%lake_level
          self%simdata%output_cfg%output_vars(20)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(20)%face_grid = .false.  
+
+         self%simdata%output_cfg%output_vars(21)%name = "Qvert"
+         self%simdata%output_cfg%output_vars(21)%values => self%simdata%model%Q_vert
+         self%simdata%output_cfg%output_vars(21)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(21)%face_grid = .true.  
+ 
       end associate
    end subroutine
 
