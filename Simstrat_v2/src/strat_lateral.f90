@@ -151,15 +151,10 @@ contains
             if (i==2) then
               call Integrate(self%z_Inp(i,:),self%Inp_read_start(i,:),self%Q_read_start(i,:),self%nval_deep(i))
               call grid%interpolate_to_face_from_second(self%z_Inp(i,:),self%Q_read_start(i,:),self%nval_deep(i),self%Q_start(i,:))
-             write(6,*) self%z_inp(i,:)
-write(6,*) self%Q_read_start(i,:)
-             write(6,*) grid%z_face(ubnd_fce-10:ubnd_fce)
-             write(6,*) self%Q_start(i,ubnd_fce-10:ubnd_fce)
               ! If there is surface outflow
               if (state%has_surface_inflow(i)) then
                 call Integrate(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Inp_read_start(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_start(i, :), self%nval_surface(i))
                 call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_start(i, :), self%nval_surface(i), self%Qs_start(i, :))
-
               end if
             end if
 
