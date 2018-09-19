@@ -67,10 +67,9 @@ contains
       end associate
    end subroutine
 
-   subroutine temp_var_post_solve(self, state, param)
+   subroutine temp_var_post_solve(self, state)
       class(TempModelVar), intent(inout) :: self
       class(ModelState), intent(inout) :: state
-      class(ModelParam), intent(inout) :: param
 
       if (self%cfg%forcing_mode==1) then
          state%T(self%grid%ubnd_vol) = state%SST

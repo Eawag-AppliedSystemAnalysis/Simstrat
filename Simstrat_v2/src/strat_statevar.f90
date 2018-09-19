@@ -67,7 +67,7 @@ contains
       call self%solver%solve(lower_diag, main_diag, upper_diag, rhs, self%var, self%ubnd)
 
       ! Do post processing (e.g. set boundary values)
-      call self%post_solve(state, param)
+      call self%post_solve(state)
 
    end subroutine
 
@@ -80,10 +80,9 @@ contains
     end subroutine
 
     ! Generic interface for method that does post solve processing
-   subroutine generic_var_post_solve(self, state, param)
+   subroutine generic_var_post_solve(self, state)
       class(ModelVariable), intent(inout) :: self
       class(ModelState), intent(inout) :: state
-      class(ModelParam), intent(inout) :: param
    end subroutine
 
 end module strat_statevar
