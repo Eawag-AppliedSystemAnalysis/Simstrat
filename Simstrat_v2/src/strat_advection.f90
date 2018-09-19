@@ -137,25 +137,21 @@ contains
             state%S(ubnd_vol) = state%S(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh_i(t_i))
 
             ! Adjust boxes (Horrible if/else construction - replace!)
-            if (dh == 0) then ! If volume does not change, return
-               return
-            else if ((dh + top_z) >= grid%max_depth) then ! If surface level reached
-               if (.not. (top_z == grid%max_depth)) then
+            if (t_i == 1) then
+               if (dh == 0) then ! If volume does not change, return
+                  return
+               else if ((dh + top_z) >= grid%max_depth) then ! If surface level reached
+                  return
+               else if (((dh_i(t_i) + top_h) > h_div_2) .and. &
+                        ((dh_i(t_i) + top_h) < (h_mult_2))) then ! and top box<2*lower box
                   call grid%modify_top_box(dh_i(t_i))
                   return
-               else
-                  return
-               end if
-
-            else if (((dh_i(t_i) + top_h) > h_div_2) .and. &
-                     ((dh_i(t_i) + top_h) < (h_mult_2))) then ! and top box<2*lower box
-               call grid%modify_top_box(dh_i(t_i))
-               return
-            else if (t_i == 1 .and. (dh + top_h) <= h_div_2) then ! If top box<=0.5*lower box, merge 2 boxes
-               call self%merge_box(state, dh_i(t_i))
-            else if (t_i == 1 .and. (dh + top_h) >= h_mult_2) then ! If top box>=2*lower box, add one box
-               call self%add_box(state, dh_i(t_i))
-            end if ! dh==0
+               else if (t_i == 1 .and. (dh + top_h) <= h_div_2) then ! If top box<=0.5*lower box, merge 2 boxes
+                  call self%merge_box(state, dh_i(t_i))
+               else if (t_i == 1 .and. (dh + top_h) >= h_mult_2) then ! If top box>=2*lower box, add one box
+                  call self%add_box(state, dh_i(t_i))
+               end if ! dh==0
+            end if
 
          end do !end do t_i=1,2
       end associate

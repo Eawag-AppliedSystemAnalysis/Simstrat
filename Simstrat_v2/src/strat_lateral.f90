@@ -292,7 +292,8 @@ contains
                  end do
                  i2 = k
                  do i1=k,ubnd_vol !extend upwards
-                    if((i1==ubnd_vol).or.(grid%z_volume(i1+1)>(grid%z_volume(k)+h_in(k)))) exit
+                    if(i1==ubnd_vol) exit
+                    if(grid%z_volume(i1+1)>(grid%z_volume(k)+h_in(k))) exit
                  end do
               else if (g_red<0) then !Inflow rises
                  do while ((rho_in<state%rho(k)).and.(k<ubnd_vol))
@@ -306,7 +307,8 @@ contains
                  end do
                  i1 = k
                  do i2=k,1,-1 !extend downwards
-                    if((i2==1).or.(grid%z_volume(i2-1)<(grid%z_volume(k)-h_in(k)))) exit
+                    if(i2==1) exit
+                    if(grid%z_volume(i2-1)<(grid%z_volume(k)-h_in(k))) exit
                  end do
               end if
 
