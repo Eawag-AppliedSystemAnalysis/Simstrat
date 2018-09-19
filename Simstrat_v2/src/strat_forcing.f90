@@ -42,7 +42,7 @@ contains
       self%grid => grid
       self%file = forcing_file
    
-      if(self%cfg%snow_model == 1) write(6,*) 'Warning: Snow module need precipitation input, control forcing file' 
+      if(self%cfg%snow_model == 1) call warn('Snow module need precipitation input, check forcing file.') 
       !If precipitation column is missing in forcing file, Simstrat will read dates as precipitation  	  
    end subroutine
 
@@ -76,11 +76,11 @@ contains
          read (20, *, end=9)
          read (20, *, end=9) tb_start, (A_s(i), i=1, nval)
          if (datum < tb_start) then
-            write (6, *) 'Warning: first forcing date after simulation start time. datum=', datum, " start=", tb_start
+            write(6,*) '[WARNING] ','First forcing date after simulation start time. datum=', datum,  'start=', tb_start
          end if
          read (20, *, end=7) tb_end, (A_e(i), i=1, nval)
 
-         write (6, *) "Forcing input file successfully read"
+         call ok("Forcing input file successfully read")
       end if
 
       if (datum <= tb_start .or. eof == 1) then !If datum before first date or end of file reached
@@ -98,13 +98,13 @@ contains
       return
 
   7   eof = 1
-      if(datum>tb_start) write(6,*) 'Warning: last forcing date before simulation end time.'
+      if(datum>tb_start) call warn('Last forcing date before simulation end time.')
 
 
   8   A_cur(1:nval) = A_s(1:nval)       !Take first value of current interval
       return
 
-  9   write(6,*) 'Error reading forcing file (no data found).'
+  9   call error('Unable to read forcing file (no data found).')
 
       stop
 
@@ -125,7 +125,7 @@ contains
       real(RK) :: tau
       real(RK) :: A_s(8), A_e(8), A_cur(8) ! adopted for rain (8 positions, previus 7)
       real(RK) :: fu, Vap_wat, heat0, emissivity
-      real(RK) :: T_surf, F_glob, Vap_atm, Cloud, precip
+      real(RK) :: T_surf, F_glob, Vap_atm, Cloud
       real(RK) :: H_A, H_K, H_V, H_W
       save A_s, A_e
       associate (cfg=>self%cfg, param=>self%param)
@@ -151,7 +151,7 @@ contains
 
          if (cfg%forcing_mode == 1) then
             if (cfg%ice_model == 1) then 
-              write(6,*) 'Error: Ice module not compatible with forcing mode 1, use 2 or 3.'
+              call error('Ice module not compatible with forcing mode 1, use 2 or 3.')
               stop
             end if
    
@@ -163,7 +163,8 @@ contains
             state%SST = A_cur(3) !Sea surface temperature
             state%rad0 = A_cur(4)*(1 - param%albsw)*(1 - param%beta_sol) ! MS: added beta_sol and albsw
             state%heat = 0.0_RK
-            state%T_atm = 0.0_RK    
+            state%T_atm = 0.0_RK
+            state%precip = 0.0_RK
             if (cfg%use_filtered_wind) state%Wf = A_cur(5) !AG 2014
    
          else if (cfg%forcing_mode >= 2) then
@@ -203,7 +204,7 @@ contains
                Vap_atm = A_cur(5)
                Cloud = A_cur(6) 
                if (Cloud < 0 .or. Cloud > 1) then
-                  write (6, *) 'Cloudiness should always be between 0 and 1.'
+                  call error('Cloudiness should always be between 0 and 1.')
                   stop
                end if
                if (cfg%use_filtered_wind) state%Wf = A_cur(7) !AG 2014
@@ -215,7 +216,7 @@ contains
 
             else if (cfg%forcing_mode == 4) then ! date,U10,V10,Hnet,Hsol
                if (cfg%ice_model == 1) then 
-                 write(6,*) 'Error: Ice module not compatible with forcing mode 4, use 2 or 3.'
+                 call error('Ice module not compatible with forcing mode 4, use 2 or 3.')
                  stop  
                end if
       
@@ -225,10 +226,30 @@ contains
                heat0 = A_cur(3) !MS 2014
                F_glob = A_cur(4)*(1 - param%albsw)
                state%T_atm = 0.0_RK       
-               if (cfg%use_filtered_wind) state%Wf = A_cur(5) !AG 2014      
-      
+               if (cfg%use_filtered_wind) state%Wf = A_cur(5) !AG 2014    
+            !UK added forcing mode with incomming long-wave radiation instead of cloudiness
+            else if (cfg%forcing_mode == 5) then ! date,U10,V10,Tatm,Hsol,Vap,ILWR
+               call self%read (state%datum, A_s, A_e, A_cur, 6 + nval_offset, state%model_step_counter)
+               state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
+               state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
+               state%T_atm = A_cur(3)
+               if (state%ice_h > 0 .and. state%snow_h == 0) then !Ice
+               F_glob = A_cur(4)*(1 - param%ice_albedo)
+               else if (state%ice_h > 0 .and. state%snow_h > 0) then !Snow
+               F_glob = A_cur(4)*(1 - param%snow_albedo)
+               else !Water
+               F_glob = A_cur(4)*(1 - param%albsw)
+               end if
+               Vap_atm = A_cur(5)
+               H_A = A_cur(6)
+               if (cfg%use_filtered_wind) state%Wf = A_cur(7) !AG 2014
+               if (cfg%snow_model == 1 .and. cfg%use_filtered_wind) then
+               state%precip = A_cur(8)
+               else if (cfg%snow_model == 1) then
+               state%precip = A_cur(7)
+               end if
             else
-               write (6, *) 'Error: wrong forcing type (must be 1, 2, 3 or 4).'
+               call error('Wrong forcing type (must be 1, 2, 3, 4 or 5).')
                stop
             end if
             state%uv10 = sqrt(state%u10**2 + state%v10**2) !AG 2014
@@ -251,9 +272,14 @@ contains
                ! H_A = 1.24*sig*(1-r_a)*(1+0.17*Cloud**2)*(Vap_atm/(273.15+T_atm))**(1./7)*(273.15+T_atm)**4
                ! Long-wave radiation according to Dilley and O'Brien
                ! see Flerchinger et al. (2009)
+               ! UK changed to read from file if forcing_mode=5
+               if (cfg%forcing_mode /= 5) then
                H_A = (1 - r_a)*((1 - 0.84_RK*Cloud)*(59.38_RK + 113.7_RK*((state%T_atm + 273.15_RK)/273.16_RK)**6&
                &   + 96.96_RK*sqrt(465*Vap_atm/(state%T_atm + 273.15_RK)*0.04_RK))/5.67e-8_RK/ &
                &   (state%T_atm + 273.15_RK)**4 + 0.84_RK*Cloud)*5.67e-8_RK*(state%T_atm + 273.15_RK)**4
+               else
+               H_A = H_A
+               end if
                H_A = H_A*param%p_radin ! Provided fitting factor p_radin (~1)
 
                ! Long-wave radiation from water body (black body) 

@@ -1,7 +1,7 @@
 {
   "Input" : {
     "Initial conditions"  : "TestCase_LakeZurich/initcond_zuri_810107.dat",
-    "Grid"                : "TestCase_LakeZurich/Grid.dat",
+    "Grid"                : 137,
     "Morphology"          : "TestCase_LakeZurich/morph_zuri.dat",
     "Forcing"             : "TestCase_LakeZurich/forcing_lake_zurich_1981_2013_waedenswil_homogenized.dat3",
     "Absorption"          : "TestCase_LakeZurich/absorption_zh_1981_2013.dat",
@@ -13,15 +13,14 @@
 
   "Output" : {
     "Path"  : "TestCases_Results/",
-    "Depths" : "TestCase_LakeZurich/Output_depth.dat",
-    "Times"  : "TestCase_LakeZurich/Output_time.dat",
+    "Depths" : 1,
+    "OutputDepthReference" : "surface",
+    "Times"  : 96
   },
 
   "ModelConfig" : {
     "MaxLengthInputData"      : 1000,
-    "StencilType"             : "implicit euler",
     "CoupleAED2"              : false,
-    "UseBufferedForcing"      : false,
     "TurbulenceModel"         : 1,
     "StabilityFunction"       : 2,
     "FluxCondition"           : 1,
@@ -31,18 +30,15 @@
     "WindDragModel"           : 3,
     "InflowPlacement"         : 0,
     "PressureGradients"       : 0,
-    "EnableSalinityTransport" : 1,
-    "DisplaySimulation"       : 1,
-    "DisplayDiagnose"         : 3,
-    "DataAveraging"           : 10,
-    "IceModel"                : 1,
+    "IceModel"                : 0,
     "SnowModel"               : 0	
   },
 
   "Simulation" : {
-    "Timestep s" : 300,
-    "Start d"    : 35001,
-    "End d"      : 35731
+    "Timestep s"        : 300,
+    "Start d"           : 35001,
+    "End d"             : 35732,
+    "DisplaySimulation" : 1
   },
 
   "ModelParameters" : {

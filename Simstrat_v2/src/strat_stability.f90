@@ -42,21 +42,24 @@ contains
    end subroutine
 
    ! Update state variables
+   ! FB 2018: The same update_NN function is used independently of the presence of a salinity gradient or not (or even
+   ! salinity or not). Reason: There is no clear reason why to treat these cases differently (the different treatments
+   ! are a relict fromt the original code of Gerrit Goudsmit)
    subroutine stability_module_update(self, state)
       implicit none
       class(StabilityModule) :: self
       class(ModelState) :: state
       real(RK), dimension(self%grid%ubnd_fce) :: beta
       !Do buoyancy update (update NN)
-      if (state%has_salinity) then
-         if (state%has_salinity_grad) then
+      !if (state%has_salinity) then
+      !   if (state%has_salinity_grad) then
             call self%update_NN(state%T, state%S, state%rho, state%NN)
-         else
-            call self%update_NN_no_sal_grad(state%T, state%S, state%NN)
-         end if
-      else ! salinity zero everywhere
-         call self%update_NN_no_sal(state%T, state%NN)
-      end if
+      !   else
+      !      call self%update_NN_no_sal_grad(state%T, state%S, state%NN)
+      !   end if
+      !else ! salinity zero everywhere
+      !   call self%update_NN_no_sal(state%T, state%NN)
+      !end if
 
       !update cmue depending on selected stabilty function
       if (self%model_cfg%stability_func == 1) then
@@ -83,7 +86,7 @@ contains
       real(RK), dimension(:), intent(inout) :: NN, rho
 
       ! Local variables
-      real(RK) :: a(self%grid%length_fce), buoy(self%grid%length_fce)
+      real(RK) :: buoy(self%grid%length_fce)
       real(RK) :: rho0t(self%grid%length_fce), rho0st(self%grid%length_fce)
       integer :: i
 

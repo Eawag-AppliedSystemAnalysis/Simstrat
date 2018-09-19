@@ -36,7 +36,6 @@ contains
       real(RK), dimension(:) ::  sources, boundaries
       real(RK) :: rhs_0, rhs_ubnd
       real(RK) :: pminus(2:self%grid%ubnd_fce - 1), pplus(2:self%grid%ubnd_fce - 1), Prod, Buoy, Diss
-
       integer :: i
       associate (grid=>self%grid, &
                  ubnd_fce=>self%grid%ubnd_fce, &
@@ -94,10 +93,10 @@ contains
    end subroutine
 
    ! Updates variable boundaries after solve has been executed
-   subroutine k_var_post_solve(self, state, param)
+   subroutine k_var_post_solve(self, state)
       class(KModelVar), intent(inout) :: self
       class(ModelState), intent(inout) :: state
-      class(ModelParam), intent(inout) :: param
+
       integer :: i
       associate (grid=>self%grid, &
                  ubnd_fce=>self%grid%ubnd_fce, &
@@ -201,10 +200,9 @@ contains
    end subroutine
 
 
-   subroutine eps_var_post_solve(self, state, param)
+   subroutine eps_var_post_solve(self, state)
       class(EpsModelVar), intent(inout) :: self
       class(ModelState), intent(inout) :: state
-      class(ModelParam), intent(inout) :: param
       integer :: i
       real(RK) ::epslim
       associate (grid=>self%grid, &

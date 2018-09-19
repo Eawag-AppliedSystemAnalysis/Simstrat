@@ -19,6 +19,9 @@ module strat_simdata
       character(len=:), allocatable          :: QoutName
       character(len=:), allocatable          :: TinpName
       character(len=:), allocatable          :: SinpName
+      real(RK), dimension(:), allocatable    :: read_grid_array_from_json
+      real(RK) :: read_grid_value_from_json
+      integer :: grid_input_type
    end type
 
    ! Definition of a variable to log
@@ -34,14 +37,16 @@ module strat_simdata
       character(len=:), allocatable :: PathOut
       character(len=:), allocatable :: zoutName
       character(len=:), allocatable :: toutName
-      real(RK), dimension(:), allocatable :: zout
+      character(len=:), allocatable :: output_depth_reference
+      real(RK), dimension(:), allocatable :: zout, zout_read
       real(RK), dimension(:), allocatable :: tout
       real(RK), dimension(:), allocatable :: n_timesteps_between_tout
       real(RK), dimension(:), allocatable :: adjusted_timestep
       logical :: write_to_file
       class(LogVariable), dimension(:), allocatable :: output_vars
 
-      integer :: thinning_interval
+      integer :: output_time_type, output_depth_type, thinning_interval
+      real(RK) :: depth_interval
    end type
 
    ! Simulation configuration
@@ -49,13 +54,13 @@ module strat_simdata
       integer :: timestep
       real(RK) :: start_datum
       real(RK) :: end_datum
+      integer :: disp_simulation
    end type
 
    ! Model configuration (read from file)
    type, public :: ModelConfig
       integer :: max_length_input_data
       logical :: couple_aed2
-      logical :: use_buffered_forcing
       integer :: turbulence_model
       integer :: stability_func
       integer :: flux_condition
@@ -66,9 +71,6 @@ module strat_simdata
       integer :: inflow_placement
       integer :: pressure_gradients
       logical :: salinity_transport
-      integer :: disp_simulation
-      integer :: disp_diagnostic
-      integer :: data_averaging
       integer :: ice_model
       integer :: snow_model
    end type
@@ -150,8 +152,9 @@ module strat_simdata
       real(RK) ::  fsed
       real(RK), dimension(:), allocatable     :: fgeo_add
       logical :: has_advection
+      logical, dimension(1:4) :: has_surface_input, has_deep_input
       integer :: nz_input
-      logical :: has_salinity_grad, has_salinity
+      !logical :: has_salinity_grad, has_salinity
 
    contains
       procedure, pass :: init => model_state_init

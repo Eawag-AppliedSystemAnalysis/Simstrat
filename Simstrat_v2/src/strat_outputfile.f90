@@ -124,7 +124,7 @@ contains
       n_output_times = size(output_config%tout)
          ! If Simulation start larger than output times, abort.
         if (sim_config%start_datum > output_config%tout(1)) then
-            write(6,*) 'Error: simulation start time is larger than first output time'
+            call error('Simulation start time is larger than first output time.')
             stop
         end if
 
@@ -156,7 +156,7 @@ contains
             if (int(output_config%n_timesteps_between_tout(i))==0) then
                 output_config%adjusted_timestep(i) = (output_config%tout(i) - tout_test(i-1))*86400
                 tout_test(i) = tout_test(i-1) + output_config%adjusted_timestep(i)
-                write(6,*) 'Warning: time interval for output is smaller than dt for iteration'
+                call warn('Time interval for output is smaller than dt for iteration')
             else
                 ! If number of timesteps > 0
                 output_config%adjusted_timestep(i) = ((output_config%tout(i) - tout_test(i-1))*86400)/int(output_config%n_timesteps_between_tout(i))
@@ -170,7 +170,39 @@ contains
       end if
 
       if (output_config%thinning_interval>1) write(6,*) 'Interval [days]: ',output_config%thinning_interval*sim_config%timestep/86400.
-      write(6,*) '--Output times successfully read'
+      call ok('Output times successfully read')
+
+
+      ! If output depth interval is given
+      if (output_config%depth_interval > 0) then
+
+        ! Allocate zout
+        allocate(output_config%zout(ceiling(grid%max_depth/output_config%depth_interval + 1e-6)))
+
+        output_config%zout(1) = 0
+        i = 2
+
+        if (output_config%output_depth_reference == 'bottom') then
+          do while ((grid%max_depth + 1e-6) > (output_config%depth_interval + output_config%zout(i - 1)))
+            output_config%zout(i) = output_config%zout(i - 1) + output_config%depth_interval
+            i = i + 1
+          end do
+          
+        else if (output_config%output_depth_reference == 'surface') then
+          ! Add output depth every "output_config%depth_interval" meters until max_depth is reached
+          do while ((grid%max_depth + 1e-6) > (output_config%depth_interval - output_config%zout(i - 1)))
+            output_config%zout(i) = output_config%zout(i - 1) - output_config%depth_interval
+            i = i + 1
+          end do
+
+          call reverse_in_place(output_config%zout)
+        end if
+
+      else if (output_config%depth_interval == 0) then
+        allocate(output_config%zout(size(output_config%zout_read)))
+        output_config%zout = output_config%zout_read
+      end if
+      call ok('Output depths successfully read')
 
     call self%init_files(output_config, grid)
    end subroutine
@@ -184,13 +216,28 @@ contains
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
 
-      logical :: status_ok
-      integer :: i
+      logical :: status_ok, exist_output_folder
+      integer :: i, ppos
+      character(len=256) :: mkdirCmd, output_folder
+
       self%n_depths = grid%length_fce
 
       ! Allocate output files
       if (allocated(self%output_files)) deallocate (self%output_files)
       allocate (self%output_files(self%n_vars))
+
+      ! Check if output directory exists
+      inquire(file=output_config%PathOut//'/',exist=exist_output_folder)
+
+      ! Create output folder if it does not exist
+      if(.not.exist_output_folder) then
+        call warn('Result folder does not exist, create folder...')
+        ppos = scan(trim(output_config%PathOut),"/", BACK= .true.)
+        if ( ppos > 0 ) output_folder = output_config%PathOut(1:ppos - 1)
+        mkdirCmd = 'mkdir '//trim(output_folder)
+        write(6,*) mkdirCmd
+        call execute_command_line(mkdirCmd)
+      end if
 
       ! For each configured variable, create file and write header
       do i = 1, self%n_vars
@@ -222,9 +269,24 @@ contains
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
 
-      logical :: status_ok
-      integer :: n_depths, i
+      logical :: status_ok, exist_output_folder
+      integer :: i, ppos
+      character(len=256) :: mkdirCmd, output_folder
+
       self%n_depths = size(output_config%zout)
+
+      ! Check if output directory exists
+      inquire(file=output_config%PathOut//'/',exist=exist_output_folder)
+
+      ! Create output folder if it does not exist
+      if(.not.exist_output_folder) then
+        call warn('Result folder does not exist, create folder...')
+        ppos = scan(trim(output_config%PathOut),"/", BACK= .true.)
+        if ( ppos > 0 ) output_folder = output_config%PathOut(1:ppos - 1)
+        mkdirCmd = 'mkdir '//trim(output_folder)
+        write(6,*) mkdirCmd
+        call execute_command_line(mkdirCmd)
+      end if
 
       if (allocated(self%output_files)) deallocate (self%output_files)
       allocate (self%output_files(1:self%n_vars))
@@ -311,12 +373,12 @@ contains
         ! If on volume or faces grid
         if (self%output_config%output_vars(i)%volume_grid) then
           ! Interpolate state on volume grid
-          call self%grid%interpolate_from_vol(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths)
+          call self%grid%interpolate_from_vol(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
           ! Write state
           call self%output_files(i)%add(values_on_zout, real_fmt='(ES14.4)')
         else if (self%output_config%output_vars(i)%face_grid) then
           ! Interpolate state on face grid
-          call self%grid%interpolate_from_face(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths)
+          call self%grid%interpolate_from_face(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
           ! Write state
           call self%output_files(i)%add(values_on_zout, real_fmt='(ES14.4)')
         else

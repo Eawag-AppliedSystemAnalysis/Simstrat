@@ -74,7 +74,6 @@ contains
       class(ModelState) :: state
    
       ! Local Declarations
-      real(RK) :: Q_read_start(1:4,1:state%nz_input), Q_read_end(1:4,1:state%nz_input) ! Integrated outflow
       real(RK) :: Inp(1:4,1:state%nz_input)
       real(RK) :: dummy
       real(RK) :: Q_in(1:self%grid%ubnd_vol), h_in(1:self%grid%ubnd_vol)
@@ -88,71 +87,156 @@ contains
                  idx=>state%model_step_counter, &
                  Q_inp=>state%Q_inp, & ! Q_inp is the input at each depth for each time step
                  Q_vert=>state%Q_vert, & ! Q_vert is the integrated net water input
-                 grid=>self%grid)
+                 grid=>self%grid, &
+                 ubnd_vol=>self%grid%ubnd_vol, &
+                 ubnd_fce=>self%grid%ubnd_fce)
         
         fname = ['inflow           ','outflow          ','input temperature','input salinity   ']
         fnum = [41,42,43,44]
         do i=1,4
           if (idx==1) then
             if (i==1) then
-               ! Allocate arrays if not already done, this saves memory compared to declaring with max_length_input_data
-               allocate (self%z_Inp(1:4,1:state%nz_input)) ! Input depths
-               allocate (self%Inp_read_start(1:4,1:state%nz_input))
-               allocate (self%Inp_read_end(1:4,1:state%nz_input))
-               allocate (self%Q_start(1:4,1:grid%nz_grid+1)) ! Input interpolated on grid
-               allocate (self%Q_end(1:4,1:grid%nz_grid+1)) ! Input interpolated on grid
+              ! Allocate arrays if not already done, this saves memory compared to declaring with max_length_input_data
+              allocate (self%z_Inp(1:4,1:state%nz_input)) ! Input depths
+              allocate (self%Inp_read_start(1:4,1:state%nz_input))
+              allocate (self%Inp_read_end(1:4,1:state%nz_input))
+              allocate (self%Q_read_start(1:4, 1:state%nz_input)) ! Integrated input
+              allocate (self%Q_read_end(1:4, 1:state%nz_input)) ! Integrated input           
+              allocate (self%Qs_read_start(1:4,1:state%nz_input))  ! Integrated surface input
+              allocate (self%Qs_read_end(1:4,1:state%nz_input))  ! Integrated surface input
+              allocate (self%Q_start(1:4,1:grid%nz_grid + 1)) ! Input interpolated on grid
+              allocate (self%Q_end(1:4,1:grid%nz_grid + 1)) ! Input interpolated on grid
+              allocate (self%Qs_start(1:4,1:grid%nz_grid + 1)) ! Surface input interpolated on grid
+              allocate (self%Qs_end(1:4,1:grid%nz_grid + 1)) ! Surface input interpolated on grid
             end if
-            
-            if(self%cfg%disp_diagnostic==2) write(6,*) 'Starting to read '//trim(fname(i))//' file...'
+  
+            ! Default values
+            self%Q_start(2,:) = 0.0_RK
+            self%Q_end(2,:) = 0.0_RK
+            self%Qs_start(2,:) = 0.0_RK
+            self%Qs_end(2,:) = 0.0_RK
+
             self%eof(i) = 0
             !Skip first three rows (except for Qout)
             read(fnum(i),*,end=9)
-            read(fnum(i),*,end=9) self%nval(i)
-            read(fnum(i),*,end=9) dummy, (self%z_Inp(i,j),j=1,self%nval(i))
-            self%z_Inp(i,1:self%nval(i)) = grid%z_zero + self%z_Inp(i,1:self%nval(i))
+            if (i==2 .and. state%has_surface_input(i)) then
+              read(fnum(i), *, end=9) self%nval_deep(i), self%nval_surface(i)
+              ! Total number of values to read
+              self%nval(i) = self%nval_deep(i) + self%nval_surface(i)
+              read(fnum(i),*,end=9) dummy, (self%z_Inp(i,j),j=1,self%nval(i))
+              self%z_Inp(i,1:self%nval_deep(i)) = grid%z_zero + self%z_Inp(i,1:self%nval_deep(i))
+              ! Convert surface input depths
+              self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)) = grid%lake_level + self%z_Inp(i, self%nval_deep(i) + 1 :self%nval(i))
+            else
+              read(fnum(i),*,end=9) self%nval_deep(i)
+              ! Total number of values to read
+              self%nval(i) = self%nval_deep(i)
+              read(fnum(i),*,end=9) dummy, (self%z_Inp(i,j),j=1,self%nval(i))
+              self%z_Inp(i,1:self%nval(i)) = grid%z_zero + self%z_Inp(i,1:self%nval(i))
+            end if
+
             if (i==2 .and. self%nval(i)>1) then
-               if (any(self%z_Inp(i,2:self%nval(i))<=self%z_Inp(i,1:(self%nval(i)-1)))) then
-                  write(6,*) 'Error: outflow depths in ',trim(fname(i)),' file must be strictly increasing.'
-                  stop
-               end if
+               !if (any(self%z_Inp(i,2:self%nval(i))<=self%z_Inp(i,1:(self%nval(i)-1)))) then
+               !   write(6,*) '[ERROR] ','Outflow depths in ',trim(fname(i)),' file must be strictly increasing.'
+               !   stop
+               !end if
             end if
             if (i==3 .or. i==4) then
                if (any(self%z_Inp(i,1:self%nval(i))/=self%z_Inp(1,1:self%nval(i)))) then
-                  write(6,*) 'Error: inflow depths in ',trim(fname(i)),' file must match the ones in inflow file.'
+                  write(6,*) '[ERROR] ','Inflow depths in ',trim(fname(i)),' file must match the ones in inflow file.'
                   stop
                end if
             end if
+
             !Read first values
             read(fnum(i),*,end=9) self%tb_start(i),(self%Inp_read_start(i,j),j=1,self%nval(i))
-            if(i==2) call Integrate(self%z_Inp(i,:),self%Inp_read_start(i,:),Q_read_start(i,:),self%nval(i))
-            if(i==2) call grid%interpolate_to_face_from_second(self%z_Inp(i,:),Q_read_start(i,:),self%nval(i),self%Q_start(i,:))
+            if (i==2) then
+              if (state%has_deep_input(i)) then
+                call Integrate(self%z_Inp(i,:),self%Inp_read_start(i,:),self%Q_read_start(i,:),self%nval_deep(i))
+                call grid%interpolate_to_face_from_second(self%z_Inp(i,:),self%Q_read_start(i,:),self%nval_deep(i),self%Q_start(i,:))
+              end if
+              ! If there is surface outflow
+              if (state%has_surface_input(i)) then
+                call Integrate(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Inp_read_start(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_start(i, :), self%nval_surface(i))
+                call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_start(i, :), self%nval_surface(i), self%Qs_start(i, :))
+              end if
+            end if
+
+            ! Read next line
             read(fnum(i),*,end=7) self%tb_end(i),(self%Inp_read_end(i,j),j=1,self%nval(i))
-            if(i==2) call Integrate(self%z_Inp(i,:),self%Inp_read_end(i,:),Q_read_end(i,:),self%nval(i))
-            if(i==2) call grid%interpolate_to_face_from_second(self%z_Inp(i,:),Q_read_end(i,:),self%nval(i),self%Q_end(i,:))
-          end if
+            if (i==2) then
+              if (state%has_deep_input(i)) then
+                call Integrate(self%z_Inp(i,:),self%Inp_read_end(i,:),self%Q_read_end(i,:),self%nval_deep(i))
+                call grid%interpolate_to_face_from_second(self%z_Inp(i,:),self%Q_read_end(i,:),self%nval_deep(i),self%Q_end(i,:))
+              end if
+
+              ! If there is surface outflow
+              if (state%has_surface_input(i)) then
+                call Integrate(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Inp_read_end(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i))
+                call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))
+              end if
+            end if
+            write(6,*) '[OK] ','Input file successfully read: ',fname(i)
+          end if ! if idx
+
+          ! If lake level changes and if there is surface inflow, adjust inflow depth to keep them at the surface
+          ! Only for output since input is gravity driven
+          if (i==2) then
+            if ((.not. grid%lake_level == grid%lake_level_old) .and. state%has_surface_input(i)) then
+
+              ! Readjust surface input depths
+              self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)) = self%z_Inp(i, self%nval_deep(i) + 1 :self%nval(i)) - grid%lake_level_old + grid%lake_level
+
+              ! Adjust surface inflow to new lake level
+              if (state%has_deep_input(i)) then     
+                call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_start(i, :), self%nval_surface(i), self%Qs_start(i, :))
+                call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))               
+              end if
+
+            end if ! end if not lake_level...
+          end if ! i==2
+
 
           if ((datum<=self%tb_start(i)).or.(self%eof(i)==1)) then    ! if datum before first date or end of file reached
              goto 8
           else
              do while (.not.((datum>=self%tb_start(i)).and.(datum<=self%tb_end(i)))) ! do until datum between dates
                 self%tb_start(i) = self%tb_end(i)             ! move one step in time
-                if(i/=2) self%Inp_read_start(i,:) = self%Inp_read_end(i,:)
-                if(i==2) self%Q_start(i,:) = self%Q_end(i,:)
+                if (i==2) then
+                  self%Q_start(i, :) = self%Q_end(i, :)
+                  self%Qs_start(i, :) = self%Qs_end(i, :)
+                  self%Qs_read_start(i, :) = self%Qs_read_end(i, :)
+                else
+                  self%Inp_read_start(i,:) = self%Inp_read_end(i,:)
+                end if
+
+                ! Read next line
                 read(fnum(i),*,end=7) self%tb_end(i),(self%Inp_read_end(i,j),j=1,self%nval(i))
-                if(i==2) call Integrate(self%z_Inp(i,:),self%Inp_read_end(i,:),Q_read_end(i,:),self%nval(i))
-                if(i==2) call grid%interpolate_to_face_from_second(self%z_Inp(i,:),Q_read_end(i,:),self%nval(i),self%Q_end(i,:))
+                if (i==2) then
+                  if (state%has_deep_input(i)) then
+                    call Integrate(self%z_Inp(i,:),self%Inp_read_end(i,:),self%Q_read_end(i,:),self%nval_deep(i))
+                    call grid%interpolate_to_face_from_second(self%z_Inp(i,:),self%Q_read_end(i,:),self%nval_deep(i),self%Q_end(i,:))
+                  end if
+
+                  if (state%has_surface_input(i)) then
+                    call Integrate(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Inp_read_end(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i))
+                    call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))
+                  end if
+                end if
              end do
+
              !Linearly interpolate value at correct datum
              if (i/=2) then
                Inp(i,1:self%nval(i)) = self%Inp_read_start(i,1:self%nval(i)) +&
                       (datum-self%tb_start(i)) * (self%Inp_read_end(i,1:self%nval(i))-self%Inp_read_start(i,1:self%nval(i)))/(self%tb_end(i)-self%tb_start(i))
              else
                 if(self%tb_end(i)<=self%tb_start(i)) then
-                  write(6,*) 'Error: dates in ',trim(fname(i)),' file must always be increasing.'
+                  write(6,*) '[ERROR] ','Dates in ',trim(fname(i)),' file must always be increasing.'
                   stop
                 end if
-                do j=1,grid%ubnd_vol
-                   Q_inp(i,j) = self%Q_start(i,j) + (datum-self%tb_start(i)) * (self%Q_end(i,j)-self%Q_start(i,j))/(self%tb_end(i)-self%tb_start(i))
+                do j=1,ubnd_fce
+                  Q_inp(i,j) = (self%Q_start(i,j) + self%Qs_start(i,j)) + (datum-self%tb_start(i)) &
+                  * (self%Q_end(i,j) + self%Qs_end(i,j) - self%Q_start(i,j) - self%Qs_start(i,j))/(self%tb_end(i)-self%tb_start(i))
                 end do
              end if
           end if
@@ -160,29 +244,32 @@ contains
 
 7         self%eof(i) = 1
 8         if(i/=2) Inp(i,:) = self%Inp_read_start(i,:) ! Set to closest available value
-          if(i==2) Q_inp(i,1:grid%ubnd_vol) = self%Q_start(i,1:grid%ubnd_vol) ! Set to closest available value
+          if(i==2) Q_inp(i,1:ubnd_vol) = self%Q_start(i,1:ubnd_vol) ! Set to closest available value
           goto 11
 
-9         write(6,*) 'No data found in ',trim(fname(i)),' file. Check number of depths. Values set to zero.'
+9         write(6,*) '[WARNING] ','No data found in ',trim(fname(i)),' file. Check number of depths. Values set to zero.'
           self%eof(i) = 1
           if(i/=2) Inp(i,1:self%nval(i)) = 0.0_RK
           if(i/=2) self%Inp_read_start(i,1) = 0.0_RK
-          if(i==2) Q_inp(i,1:grid%ubnd_vol) = 0.0_RK
-          if(i==2) self%Q_start(i,1:grid%ubnd_fce) = 0.0_RK
+          if(i==2) Q_inp(i,1:ubnd_vol) = 0.0_RK
+          if(i==2) self%Q_start(i,1:ubnd_fce) = 0.0_RK
+          if(i==2) self%Qs_start(i,1:ubnd_fce) = 0.0_RK
 
 11        continue
         end do      ! end do i=1,4
 
         !Set Qout to the differences (from the integrals)
-        do j=1,grid%ubnd_vol-1
-           Q_inp(2,grid%ubnd_vol-j+1) = Q_inp(2,grid%ubnd_vol-j+1)-Q_inp(2,grid%ubnd_vol-j)
+        do j = 1, ubnd_vol
+          Q_inp(2, j) = Q_inp(2, j + 1) - Q_inp(2, j)
         end do
+        Q_inp(2,ubnd_vol + 1) = 0
+
         Q_inp(1,:) = 0
         Q_inp(3:4,:) = 0
 
-        do j=1,self%nval(1)
+        do j=1,self%nval_deep(1)
            if (Inp(1,j)>1E-15) then
-              k=grid%ubnd_vol
+              k=ubnd_vol
               do while (grid%z_volume(k)>self%z_Inp(1,j))
                k=k-1
               end do
@@ -214,11 +301,12 @@ contains
                     k=k-1
                  end do
                  i2 = k
-                 do i1=k,grid%ubnd_vol !extend upwards
-                    if((i1==grid%ubnd_vol).or.(grid%z_volume(i1+1)>(grid%z_volume(k)+h_in(k)))) exit
+                 do i1=k,ubnd_vol !extend upwards
+                    if(i1==ubnd_vol) exit
+                    if(grid%z_volume(i1+1)>(grid%z_volume(k)+h_in(k))) exit
                  end do
               else if (g_red<0) then !Inflow rises
-                 do while ((rho_in<state%rho(k)).and.(k<grid%ubnd_vol))
+                 do while ((rho_in<state%rho(k)).and.(k<ubnd_vol))
                     h_in(k+1) = 1.2*E*(grid%z_volume(k+1)-grid%z_volume(k))/sin(slope) + h_in(k)
                     Q_in(k+1) = Q_in(k)*(h_in(k+1)/h_in(k))**(5./3.)
                     Q_inp(2,k) = Q_inp(2,k) - (Q_in(k+1)-Q_in(k))
@@ -229,7 +317,8 @@ contains
                  end do
                  i1 = k
                  do i2=k,1,-1 !extend downwards
-                    if((i2==1).or.(grid%z_volume(i2-1)<(grid%z_volume(k)-h_in(k)))) exit
+                    if(i2==1) exit
+                    if(grid%z_volume(i2-1)<(grid%z_volume(k)-h_in(k))) exit
                  end do
               end if
 
@@ -242,15 +331,14 @@ contains
            end if
         end do
 
-        Q_vert(1) = Q_inp(1,1) + Q_inp(2,1)
-        do i=2,grid%ubnd_fce
+        Q_vert(1) = 0!Q_inp(1,1) + Q_inp(2,1)
+        do i=2,ubnd_fce
            Q_vert(i) = Q_vert(i-1) + Q_inp(1,i) + Q_inp(2,i)
         end do
       end associate
    end subroutine
 
    ! "Normal" Implementation
-   ! Note that this method has been taken from old simstrat and needs refactoring
    subroutine lateral_update(self, state)
       implicit none
       class(LateralModule) :: self
@@ -293,7 +381,9 @@ contains
                   allocate (self%Qs_end(1:4, 1:grid%nz_grid+1)) ! Surface input interpolated on grid
                end if
 
-               ! Default value of surface inflow
+               ! Default values
+               self%Q_start(i,:) = 0.0_RK
+               self%Q_end(i,:) = 0.0_RK
                self%Qs_start(i, :) = 0.0_RK
                self%Qs_end(i, :) = 0.0_RK
 
@@ -301,30 +391,40 @@ contains
                self%eof(i) = 0
                read (fnum(i), *, end=9) ! Skip first row: description of columns
 
-               ! Read number of deep and surface inflows
-               read (fnum(i), *, end=9) self%nval_deep(i), self%nval_surface(i)
-
-               ! Total number of values to read
-               self%nval(i) = self%nval_deep(i) + self%nval_surface(i)
+               if (state%has_surface_input(i)) then
+                ! Read number of deep and surface inflows
+                read (fnum(i), *, end=9) self%nval_deep(i), self%nval_surface(i)
+                ! Total number of values to read
+                self%nval(i) = self%nval_deep(i) + self%nval_surface(i)
+              else
+                read (fnum(i), *, end=9) self%nval_deep(i)
+                ! Total number of values to read
+                self%nval(i) = self%nval_deep(i)
+              end if
 
                ! Read input depths
                read (fnum(i), *, end=9) dummy, (self%z_Inp(i, j), j=1, self%nval(i))
 
                ! Convert input depths
                self%z_Inp(i, 1:self%nval_deep(i)) = grid%z_zero + self%z_Inp(i, 1:self%nval_deep(i))
-               ! Convert surface input depths
-               self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)) = grid%lake_level + self%z_Inp(i, self%nval_deep(i) + 1 :self%nval(i))
+
+               if (state%has_surface_input(i)) then
+                ! Convert surface input depths
+                self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)) = grid%lake_level + self%z_Inp(i, self%nval_deep(i) + 1 :self%nval(i))
+              end if
 
                ! Read first input line
                read (fnum(i), *, end=9) self%tb_start(i), (self%Inp_read_start(i, j), j=1, self%nval(i))
 
-               ! Cumulative integration of input
-               call Integrate(self%z_Inp(i, :), self%Inp_read_start(i, :), self%Q_read_start(i, :), self%nval_deep(i))
-               ! Interpolation on face grid
-               call grid%interpolate_to_face_from_second(self%z_Inp(i, :), self%Q_read_start(i, :), self%nval_deep(i), self%Q_start(i, :))
+              if (state%has_deep_input(i)) then
+                ! Cumulative integration of input
+                call Integrate(self%z_Inp(i, :), self%Inp_read_start(i, :), self%Q_read_start(i, :), self%nval_deep(i))
+                ! Interpolation on face grid
+                call grid%interpolate_to_face_from_second(self%z_Inp(i, :), self%Q_read_start(i, :), self%nval_deep(i), self%Q_start(i, :))
+              end if
 
                ! If there is surface input, integrate and interpolate
-               if (self%nval_surface(i)>0) then
+               if (state%has_surface_input(i)) then
                   call Integrate(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Inp_read_start(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_start(i, :), self%nval_surface(i))
                   call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_start(i, :), self%nval_surface(i), self%Qs_start(i, :))
                end if
@@ -332,29 +432,30 @@ contains
 
                ! Read second line and treatment of deep inflow
                read (fnum(i), *, end=7) self%tb_end(i), (self%Inp_read_end(i, j), j=1, self%nval(i))
-               call Integrate(self%z_Inp(i, :), self%Inp_read_end(i, :), self%Q_read_end(i, :), self%nval_deep(i))
-               call grid%interpolate_to_face_from_second(self%z_Inp(i, :), self%Q_read_end(i, :), self%nval_deep(i), self%Q_end(i, :))
-
+              if (state%has_deep_input(i)) then
+                call Integrate(self%z_Inp(i, :), self%Inp_read_end(i, :), self%Q_read_end(i, :), self%nval_deep(i))
+                call grid%interpolate_to_face_from_second(self%z_Inp(i, :), self%Q_read_end(i, :), self%nval_deep(i), self%Q_end(i, :))
+              end if
                ! If there is surface input, integrate and interpolate
-               if (self%nval_surface(i)>0) then
+               if (state%has_surface_input(i)) then
                   call Integrate(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Inp_read_end(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i))
                   call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))
                end if
 
-               write(6,*) "--Input file successfully read: ",fname(i)
+               write(6,*) '[OK] ','Input file successfully read: ',fname(i)
             end if ! idx==1
 
 
 
             ! If lake level changes and if there is surface inflow, adjust inflow depth to keep them at the surface
-            if ((.not. grid%lake_level == grid%lake_level_old) .and. (self%nval_surface(i) > 0)) then
+            if ((.not. grid%lake_level == grid%lake_level_old) .and. (state%has_surface_input(i))) then
 
-            ! Readjust surface input depths
-            self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)) = self%z_Inp(i, self%nval_deep(i) + 1 :self%nval(i)) - grid%lake_level_old + grid%lake_level
+              ! Readjust surface input depths
+              self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)) = self%z_Inp(i, self%nval_deep(i) + 1 :self%nval(i)) - grid%lake_level_old + grid%lake_level
 
-            ! Adjust surface inflow to new lake level        
-            call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_start(i, :), self%nval_surface(i), self%Qs_start(i, :))
-            call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))               
+              ! Adjust surface inflow to new lake level        
+              call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_start(i, :), self%nval_surface(i), self%Qs_start(i, :))
+              call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))               
 
             end if ! end if not lake_level...
 
@@ -372,10 +473,12 @@ contains
 
                   read (fnum(i), *, end=7) self%tb_end(i), (self%Inp_read_end(i, j), j=1, self%nval(i))
 
-                  call Integrate(self%z_Inp(i, :), self%Inp_read_end(i, :), self%Q_read_end(i, :), self%nval_deep(i))
-                  call grid%interpolate_to_face_from_second(self%z_Inp(i, :), self%Q_read_end(i, :), self%nval_deep(i), self%Q_end(i, :))
+                  if (state%has_deep_input(i)) then
+                    call Integrate(self%z_Inp(i, :), self%Inp_read_end(i, :), self%Q_read_end(i, :), self%nval_deep(i))
+                    call grid%interpolate_to_face_from_second(self%z_Inp(i, :), self%Q_read_end(i, :), self%nval_deep(i), self%Q_end(i, :))
+                  end if
 
-                  if (self%nval_surface(i)>0) then
+                  if (state%has_surface_input(i)) then
                      call Integrate(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Inp_read_end(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i))
                      call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))
                   end if
@@ -395,7 +498,7 @@ contains
             goto 11
 
             ! If no data available
- 9          write(6,*) 'No data found in ',trim(fname(i)),' file. Check number of depths. Values set to zero.'
+ 9          write(6,*) '[WARNING] ','No data found in ',trim(fname(i)),' file. Check number of depths. Values set to zero.'
             self%eof(i) = 1
             Q_inp(i, 1:ubnd_fce) = 0.0_RK
             self%Q_start(i, 1:ubnd_fce) = 0.0_RK

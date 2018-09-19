@@ -36,7 +36,6 @@ contains
       real(RK) :: integr, length
       real(RK), dimension(:) ::  sources, boundaries
       real(RK), dimension(size(self%var)) ::  uv_norm
-      integer :: i
       associate (grid=>self%grid, &
                  ubnd_fce=>self%grid%ubnd_fce, &
                  ubnd_vol=>self%grid%ubnd_vol)

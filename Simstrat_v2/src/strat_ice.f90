@@ -62,9 +62,7 @@ module strat_ice
       implicit none
       class(IceModule)  :: self
       class(ModelState) :: state
-      class(ModelParam) :: param
-      real(RK) :: buoyancy_ice
-      real(RK) :: snow_weight   
+      class(ModelParam) :: param 
    
    !-------------------
    ! Below freezing
@@ -80,7 +78,7 @@ module strat_ice
    end if
    !Snow fall addition onto ice     
    if (self%model_cfg%snow_model == 1 .and. param%Freez_Temp >= state%T_atm .and. state%ice_h > 0 .and. state%precip > 0) then
-       call self%do_snow_build(state, param) 
+       call self%do_snow_build(state) 
    end if   
    
   !------------------ 
@@ -237,11 +235,10 @@ module strat_ice
  end subroutine
  
  ! Snow layer buildup
- subroutine snow_build(self, state, param)
+ subroutine snow_build(self, state)
       implicit none   
       class(IceModule) :: self
-      class(ModelState) :: state
-      class(ModelParam) :: param  
+      class(ModelState) :: state 
       real(RK) :: snow_h_new
       real(RK) :: T0
       real(RK) :: C1   

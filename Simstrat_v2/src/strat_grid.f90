@@ -29,7 +29,7 @@ module strat_grid
       real(RK), dimension(:), allocatable :: Az       ! Areas
       real(RK), dimension(:), allocatable :: dAz      ! Difference of areas
       real(RK), dimension(:), allocatable :: meanint  ! ?
-      real(RK) :: volume
+      real(RK) :: volume, h_old
 
       !Area factors
       real(RK), dimension(:), allocatable :: AreaFactor_1
@@ -144,45 +144,53 @@ contains
          self%nz_grid = config%nz_grid
 
          !Include top value if not included
-         if (config%grid_read(1) /= 0.) then
-            write (*, *) "Grid invalid - top value not included"
-            !Todo: check indexing of this code
-            !  self%nz_grid=self%nz_grid+1
-            !  do i=self%nz_grid,1,-1
-            !      config%grid_read(i)=config%grid_read(i-1)
-            !  end do
-            !  config%grid_read(1)=0.0_RK
+         if (config%grid_read(1) /= (config%max_depth - self%z_zero)) then
+            write(6,*) '[ERROR] ', 'Top value ', config%max_depth - self%z_zero, 'is not included in grid file!'
+            stop
+            !warn('Grid top value is smaller than in morphology file and added automatically '
+            !self%nz_grid=self%nz_grid + 1
+            !do i = self%nz_grid,1,-1
+            !   config%grid_read(i)=config%grid_read(i - 1)
+            !end do
+            !config%grid_read(1)=0.0_RK
          end if
 
          !If maxdepth grid larger than morphology
-         if (config%grid_read(self%nz_grid) > config%max_depth) then
-            write (*, *) "Grid invalid - maxdepth of grid larger than morphology"
-            !Todo: check indexing of this code
+         if (config%grid_read(self%nz_grid + 1) < -self%z_zero) then
+            write (6, *) '[ERROR] ', 'Grid invalid: maxdepth of grid larger than morphology!'
+            stop
             !do while ((config%grid_read(self%nz_grid)>config%depth).and.(self%nz_grid>0.))
             !    self%nz_grid=self%nz_grid-1
             !end do
          end if
 
          !Include bottom value if not included
-         if (config%grid_read(self%nz_grid) < config%max_depth) then
-            write (*, *) "Grid invalid - Bottom value not included"
-            !Todo: check indexing of this code
+         if (config%grid_read(self%nz_grid + 1) > -self%z_zero) then
+            write (*, *) '[ERROR] ', 'Bottom value', -self%z_zero, 'is not included in grid file!'
+            stop
             !self%nz_grid=self%nz_grid+1
             !config%grid_read(self%nz_grid)=config%depth
          end if
+
+         do i=2,self%nz_grid
+            if ((config%grid_read(i) - config%grid_read(i-1)) > 0) then
+               call error('Grid input values are not monotonously decreasing')
+               stop
+            end if
+         end do
       end if
 
       !Construct H
       allocate (self%h(0:self%nz_grid + 1))
       self%h(0) = 0 ! Note that h(0) has no physical meaning but helps with some calculations
-      self%h(self%nz_grid + 1) = 0 ! Note that h(0) has no physical meaning but helps with some calculations
+      self%h(self%nz_grid + 1) = 0 ! Note that h(nz_grid + 1) has no physical meaning but helps with some calculations
       if (config%equidistant_grid) then
          ! Equidistant grid
          self%h(1:self%nz_grid) = config%max_depth/self%nz_grid
       else
          ! Set up h according to configuration
-         do i = 1, self%nz_grid
-            self%h(1 + self%nz_grid - i) = config%grid_read(i) - config%grid_read(i - 1)
+         do i = 2, self%nz_grid + 1
+            self%h(2 + self%nz_grid - i) = config%grid_read(i - 1) - config%grid_read(i)
          end do
       end if
    end subroutine grid_init_grid_points
@@ -208,8 +216,6 @@ contains
       end do
       self%z_face(self%nz_grid + 1) = nint(1e6_RK*self%z_face(self%nz_grid + 1))/1e6_RK
 
-      !self%lake_level = self%z_face(self%nz_occupied)
-      write (*, *) "Warning, nz_occupied not set yet"
    end subroutine grid_init_z_axes
 
    ! Init morphology variables
@@ -221,10 +227,8 @@ contains
 
       num_read = size(config%A_read)
 
-      self%z_zero = config%z_A_read(1) ! z_zero is the uppermost depth (might be above zero)
+      self%z_zero = config%z_A_read(1) ! z_zero is the negative value of the lowest depth in the morphology file
 
-      self%lake_level = self%z_zero
-      self%lake_level_old = self%z_zero
       config%z_A_read = self%z_zero - config%z_A_read ! z-coordinate is positive upwards, zero point is at reservoir bottom
 
    end subroutine grid_init_morphology
@@ -261,9 +265,9 @@ contains
          !todo: Verify array indexes and boundaries (especially h)
          self%AreaFactor_1(1:nz) = -4*Az(1:nz)/(h(1:nz) + h(0:nz - 1))/h(1:nz)/(Az(2:nz + 1) + Az(1:nz))
          self%AreaFactor_2(1:nz) = -4*Az(2:nz + 1)/(h(1:nz) + h(2:nz + 1))/h(1:nz)/(Az(2:nz + 1) + Az(1:nz))
-         self%AreaFactor_k1(1:nz - 1) = -(Az(2:nz) + Az(1:nz - 1))/(h(1:nz - 1) + h(2:nz))/h(2:nz)/Az(2:nz)
+         self%AreaFactor_k1(1:nz - 1) = -(Az(2:nz) + Az(1:nz - 1))/(h(1:nz - 1) + h(2:nz))/h(1:nz - 1)/Az(2:nz)
          self%AreaFactor_k1(nz) = 0
-         self%AreaFactor_k2(1:nz - 1) = -(Az(2:nz) + Az(3:nz + 1))/(h(1:nz - 1) + h(2:nz))/h(1:nz - 1)/Az(2:nz)
+         self%AreaFactor_k2(1:nz - 1) = -(Az(2:nz) + Az(3:nz + 1))/(h(1:nz - 1) + h(2:nz))/h(2:nz)/Az(2:nz)
          self%AreaFactor_k2(nz) = 0
          self%AreaFactor_eps(1:nz - 1) = 0.5_RK*((Az(2:nz) - Az(1:nz - 1))/h(1:nz - 1) + (Az(3:nz + 1) - Az(2:nz))/h(2:nz))/Az(2:nz)
          self%AreaFactor_eps(nz) = 0
@@ -289,7 +293,7 @@ contains
                   Az=>self%Az, &
                   dAz=>self%dAz)
 
-      if (h(ubnd_vol) > h(ubnd_vol - 1)) then
+      if (h(ubnd_vol) > self%h_old) then
          Az(ubnd_fce) = Az(ubnd_fce) + dAz(ubnd_vol + 1)*dh
       else
          Az(ubnd_fce) = Az(ubnd_fce) + dAz(ubnd_vol)*dh
@@ -322,6 +326,7 @@ contains
 
          Az(ubnd_fce - 1) = Az(ubnd_fce)
 
+         self%h_old = h(ubnd_vol - 1)
          h(ubnd_vol - 1) = (z_face(ubnd_fce - 1) - z_face(ubnd_fce - 2))
 
          ! update number of occupied cells
@@ -349,6 +354,7 @@ contains
 
          h(ubnd_vol + 1) = (h(ubnd_vol) + dh)/2
          h(ubnd_vol) = (h(ubnd_vol) + dh)/2
+         self%h_old = h(ubnd_vol + 1)
 
          z_face(ubnd_fce + 1) = z_face(ubnd_fce) + dh
          z_face(ubnd_fce) = z_face(ubnd_fce) + dh - h(ubnd_vol)
@@ -358,7 +364,7 @@ contains
 
          Az(ubnd_fce) = Az(ubnd_fce - 1) + h(ubnd_vol)*dAz(ubnd_vol)
          Az(ubnd_fce + 1) = Az(ubnd_fce) + h(ubnd_vol + 1)*dAz(ubnd_vol + 1)
-         write(6,*) 'grow'
+
          ! update number of occupied cells
          nz_occupied = nz_occupied + 1
 
@@ -379,7 +385,8 @@ contains
                  z_face=>self%z_face, &
                  z_volume=>self%z_volume, &
                  h=>self%h, &
-                 z_zero=>self%z_zero)
+                 z_zero=>self%z_zero, &
+                 Az=>self%Az)
          do i = 1, nz_grid + 1
             if (z_face(i) >= (z_zero - new_depth)) then ! If above initial water level
                zmax = z_face(i)
@@ -390,13 +397,15 @@ contains
                !Adjust new volume center of cell i-1 (belonging to upper face i)
                z_volume(i - 1) = (z_face(i) + z_face(i - 1))/2
                h(i - 1) = z_face(i) - z_face(i - 1)
-               ! todo: Why is Az not updated?
-               !Az(i) = Az(i-1) + h(i)/(zmax-z_face(i-1))*(Az(i)-Az(i-1))
+
+               Az(i) = Az(i-1) + h(i - 1)/(zmax-z_face(i-1))*(Az(i)-Az(i-1))
                nz_occupied = i - 1
+               self%h_old = h(nz_occupied)
                if (h(nz_occupied) <= 0.5*h(nz_occupied - 1)) then ! If top box is too small
                   z_face(nz_occupied) = z_face(nz_occupied + 1) ! Combine the two upper boxes
                   z_volume(nz_occupied - 1) = (z_face(nz_occupied) + z_face(nz_occupied - 1))/2
                   h(nz_occupied - 1) = h(nz_occupied) + h(nz_occupied - 1)
+                  self%h_old = h(nz_occupied - 1)
                   nz_occupied = nz_occupied - 1 ! Reduce number of boxes
                end if
                exit
@@ -438,38 +447,50 @@ contains
       call Interp(z, y, num_z, self%z_face(2:self%nz_grid + 1), yi(2:self%nz_grid + 1), self%nz_grid)
    end subroutine
 
-   subroutine grid_interpolate_from_vol(self, y, zi, yi, num_zi)
+   subroutine grid_interpolate_from_vol(self, y, zi, yi, num_zi, output_depth_reference)
       class(StaggeredGrid), intent(in) :: self
       real(RK), dimension(:), intent(in) :: zi, y
       real(RK), dimension(:), intent(out) :: yi
       integer, intent(in) :: num_zi
+      character(len=:), allocatable :: output_depth_reference
 
       real(RK), dimension(self%ubnd_vol) :: z_volume_mod
       integer :: i
 
-      ! Transform z_volume for interpolation on zout grid
-      z_volume_mod(1) = self%z_face(1) - self%z_face(self%ubnd_fce)
-      do i = 2, self%ubnd_vol-1
-         z_volume_mod(i) = self%z_volume(i) - self%z_face(self%ubnd_fce)
-      end do
-      z_volume_mod(self%ubnd_vol) = 0
+      ! Transform z_volume for interpolation on zout grid depending on grid reference chosen in par-file
+      if (output_depth_reference == 'bottom') then
+         z_volume_mod(1) = self%z_face(1)
+         z_volume_mod(2:self%ubnd_vol - 1) = self%z_volume(2:self%ubnd_vol - 1)
+         z_volume_mod(self%ubnd_vol) = self%z_face(self%ubnd_fce)
+      else if (output_depth_reference == 'surface') then
+         z_volume_mod(1) = self%z_face(1) - self%z_face(self%ubnd_fce)
+         do i = 2, self%ubnd_vol-1
+            z_volume_mod(i) = self%z_volume(i) - self%z_face(self%ubnd_fce)
+         end do
+         z_volume_mod(self%ubnd_vol) = 0
+      end if         
 
       call Interp_nan(z_volume_mod(1:self%ubnd_vol), y(1:self%ubnd_vol), self%ubnd_vol, zi, yi, num_zi)
    end subroutine
 
-   subroutine grid_interpolate_from_face(self, y, zi, yi, num_zi)
+   subroutine grid_interpolate_from_face(self, y, zi, yi, num_zi, output_depth_reference)
       class(StaggeredGrid), intent(in) :: self
       real(RK), dimension(:), intent(in) :: zi, y
       real(RK), dimension(:), intent(out) :: yi
       integer, intent(in) :: num_zi
+      character(len=:), allocatable :: output_depth_reference
 
       real(RK), dimension(self%ubnd_fce) :: z_face_mod
       integer :: i
 
-      ! Transform z_face for interpolation on zout grid
-      do i = 1, self%ubnd_fce
-         z_face_mod(i) = self%z_face(i) - self%z_face(self%ubnd_fce)
-      end do
+      ! Transform z_face for interpolation on zout grid depending on grid reference chosen in par-file
+      if (output_depth_reference == 'bottom') then
+         z_face_mod(1:self%ubnd_fce) = self%z_face(1:self%ubnd_fce)
+      else if (output_depth_reference == 'surface') then
+         do i = 1, self%ubnd_fce
+            z_face_mod(i) = self%z_face(i) - self%z_face(self%ubnd_fce)
+         end do
+      end if
 
       call Interp_nan(z_face_mod(1:self%ubnd_fce), y(1:self%ubnd_fce), self%ubnd_fce, zi, yi, num_zi)
    end subroutine
