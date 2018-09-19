@@ -42,7 +42,7 @@ contains
       self%grid => grid
       self%file = forcing_file
    
-      if(self%cfg%snow_model == 1) call warn('Snow module need precipitation input, check forcing file.') 
+      if(self%cfg%snow_model == 1) call warn('Snow module needs precipitation input, be sure the forcing file contains it (last column).') 
       !If precipitation column is missing in forcing file, Simstrat will read dates as precipitation  	  
    end subroutine
 
