@@ -109,10 +109,10 @@ contains
               allocate (self%Qs_start(1:4,1:grid%nz_grid + 1)) ! Surface input interpolated on grid
               allocate (self%Qs_end(1:4,1:grid%nz_grid + 1)) ! Surface input interpolated on grid
             end if
-            
+  
             ! Default value of surface inflow
-            self%Qs_start = 0.0_RK
-            self%Qs_end = 0.0_RK
+            self%Qs_start(2,:) = 0.0_RK
+            self%Qs_end(2,:) = 0.0_RK
 
             self%eof(i) = 0
             !Skip first three rows (except for Qout)
@@ -243,6 +243,7 @@ contains
           if(i/=2) self%Inp_read_start(i,1) = 0.0_RK
           if(i==2) Q_inp(i,1:ubnd_vol) = 0.0_RK
           if(i==2) self%Q_start(i,1:ubnd_fce) = 0.0_RK
+          if(i==2) self%Qs_start(i,1:ubnd_fce) = 0.0_RK
 
 11        continue
         end do      ! end do i=1,4

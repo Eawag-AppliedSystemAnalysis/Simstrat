@@ -719,6 +719,7 @@ contains
 
       fnum = [41, 42, 43, 44]
       if_adv = 0
+      nval = 0
       do i = 1, 4
          read (fnum(i), *, end=8) ! Skip header (description of columns)
          read (fnum(i), "(A)", end=8) line ! Read number of input depths (static)
@@ -731,7 +732,9 @@ contains
          ! Read 2 values, aborts and goes to line 7 if only one value is present (no surface inflow)
          read(line,*,end=7) nval_line(1:2)
          nval_surface = nval_line(2)
-         self%simdata%model%has_surface_inflow(i) = .TRUE.
+         if (nval_surface > 0) then
+            self%simdata%model%has_surface_inflow(i) = .TRUE.
+         end if
 
 7        nval_deep = nval_line(1)
          nval(i) = nval_deep + nval_surface
@@ -746,9 +749,8 @@ contains
          call warn('Advection is turned off since the input files were found to be empty. Check if you use the right line feed (\n) if they are not empty.')
       else
          self%simdata%model%has_advection = .TRUE.
+         self%simdata%model%nz_input = maxval(nval)
       end if
-
-      self%simdata%model%nz_input = maxval(nval)
 
       return
    end subroutine check_advection
