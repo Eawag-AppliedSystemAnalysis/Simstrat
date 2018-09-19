@@ -1,9 +1,12 @@
 !------------!
 ! Ice module
-! Done according to:
+! Following:
 ! Saloranta, T. M., & Andersen, T. (2007). 
 ! MyLake—A multi-year lake simulation model code suitable for uncertainty and sensitivity analysis simulations.
 ! Ecological Modelling, 207(1), 45–60.
+! And
+! Yen (1981)
+! Review of thermal properties of snow, ice and sea ice
 module strat_ice
    use strat_forcing
    use strat_consts
@@ -132,18 +135,12 @@ module strat_ice
      ! set surface temperature to freezing point
      state%T(self%grid%ubnd_vol) = param%Freez_Temp ![°C]
    
-     !Ice temp eq 17 in Saloranta, T. M., & Andersen, T. (2007). 
+     !Ice temp eq 17 in Saloranta et al. (2007). 
      state%ice_temp = 0 ![°C]
-       
-      !write (*, *) 'Ice Formation'
-      !write (*,'(A,F8.6)') 'First cell height :', self%grid%h(self%grid%ubnd_vol) 
-      !write (*,'(A,F8.6)') 'First ice depth :', state%ice_h
-      !write (*,'(A,F8.6)') 'Air temp :', state%T_atm   
-      !write (*, *) ''
      
   else   !When ice cover exist
 
-    !Snow and ice insulating effect eq 17 and 18
+    !Snow and ice insulating effect eq 17 and 18 Saloranta et al. (2007). 
     P_ice = 1 / (10 * state%ice_h)
    
     if (self%model_cfg%snow_model == 1) then
@@ -154,37 +151,23 @@ module strat_ice
    
     P = max(P_snow,P_ice)
    
-     !Ice temp eq 17 in Saloranta, T. M., & Andersen, T. (2007). 
+     !Ice temp eq 17 in Saloranta et al. (2007). 
     state%ice_temp = (P*param%freez_temp + state%T_atm)/(1 + P)
-   
    
      !snow ice formation, if wheight of snow exeeds ice buoyancy
      if (self%model_cfg%snow_model == 1 .and. state%snow_h > 0) then
         snow_weight = state%snow_h * state%snow_dens*1*1 !kg
         buoyancy_ice = state%ice_h*1*1 * (rho_0 - ice_dens) !kg
-        !write (*,'(A,F8.6)') 'Snow wheight :', snow_weight 
-        !write (*,'(A,F8.6)') 'Buoyancy ice :', buoyancy_ice 
-
         if (snow_weight > buoyancy_ice) then
           snow_height_ice_mass = (snow_weight - buoyancy_ice)
   
           state%snow_h = state%snow_h - snow_height_ice_mass/state%snow_dens
           state%ice_h  = state%ice_h  + snow_height_ice_mass/ice_dens
-          !write (*, *) 'Snow ice forming'
-          !write (*,'(A,F8.6)') 'Snow ice hight       :', snow_height_ice_mass/ice_dens 
-          !write (*,'(A,F8.6)') 'snow height lost     :', snow_height_ice_mass/state%snow_dens    
-          !snow_weight = state%snow_h * state%snow_dens*1*1 !kg
-          !buoyancy_ice = state%ice_h*1*1 * (rho_0 - ice_dens) !kg
-          !write (*,'(A,F8.6)') 'ice hight new   :', state%ice_h 
-          !write (*,'(A,F8.6)') 'snow height new :', state%snow_h 
-          !write (*,'(A,F12.6)') 'Snow wheight :', snow_weight 
-          !write (*,'(A,F12.6)') 'Buoyancy ice :', buoyancy_ice    
-   
       end if   
      end if
    
    
-    !Ice thickness eq. 16 in Saloranta, T. M., & Andersen, T. (2007).
+    !Ice thickness eq. 16 in Saloranta et al. (2007). 
     state%ice_h = sqrt(state%ice_h**2 + (2*k_ice)/(ice_dens * l_h) * (param%freez_temp - state%ice_temp) * state%dt) 
 
    !Heating of first water cell might melt ice from below, put back first cell to freez temp., and melt ice from below
@@ -205,16 +188,6 @@ module strat_ice
        state%snow_dens = rho_s_0
        state%snow_h = 0
       end if     
-
-      !write (*, *) 'Ice Expending'
-      !write (*,'(A,F8.6)') 'Ice height : ', state%ice_h
-      !write (*,'(A,F7.3)') 'Air temp   : ', state%T_atm
-      !write (*,'(A,F10.3)') 'Heat Normal  : ' , state%heat
-      !write (*,'(A,F10.3)') 'Heat IceSnow : ' , state%heat_snow_ice    
-      !write (*,'(A,F10.6)') 'Melt height water  : ' , MeltHeight2     
-      !write (*,'(A,F10.3)') 'Melt energy water  : ' , Melt_energy2   
-      !write (*, *) ''
-   
   end if 
  end subroutine
 
@@ -228,10 +201,7 @@ module strat_ice
       real(RK) :: Melt_energy1
       real(RK) :: Melt_energy2
       real(RK) :: MeltHeight1
-      real(RK) :: MeltHeight2
-
-      !write (*,'(A,F8.6)') 'Ice height start     : ' , state%ice_h
-   
+      real(RK) :: MeltHeight2  
    
       !Melt Ice from atmosphere
       Melt_energy1 = state%heat_snow_ice * state%dt * 1 * 1 ![W/m2] * [s] * [m2] = [J]
@@ -264,18 +234,6 @@ module strat_ice
     
       !set ice temp to freez point 
       state%ice_temp = 0 ![°C]
-     
-      !write (*, *) 'Ice Melting'
-      !write (*,'(A,F8.6)') 'Ice height          : ' , state%ice_h
-      !write (*,'(A,F10.6)') 'Melt height air    : ' , MeltHeight1   
-      !write (*,'(A,F10.6)') 'Melt height water  : ' , MeltHeight2     
-      !write (*,'(A,F10.6)') 'Snow Height        : ' , state%snow_h    
-      !write (*,'(A,F7.3)') 'Air temp            : ' , state%T_atm  
-      !write (*,'(A,F10.3)') 'Melt energy air    : ' , Melt_energy1
-      !write (*,'(A,F10.3)') 'Melt energy water  : ' , Melt_energy2   
-      !write (*,'(A,F10.3)') 'Heat Normal        : ' , state%heat
-      !write (*,'(A,F10.3)') 'Heat IceSnow       : ' , state%heat_snow_ice    
-      !write (*, *) ''
  end subroutine
  
  ! Snow layer buildup
@@ -288,13 +246,12 @@ module strat_ice
       real(RK) :: T0
       real(RK) :: C1   
       T0 = 273
-      C1 = 3.2 / 3600 ! compresion [m/sec], initaly [m/h], mean from Yen 1981 page 5
-
+      C1 = 3.2 / 3600 ! compresion [m/sec], initaly [m/h], mean from Yen (1981) page 5
 
         !calculate new snow height
         snow_h_new = (state%precip / 3600 *state%dt) * (rho_0 / rho_s_0) !go from m/h to m/s and increas volume from water to snow
 
-        !calculate snow density due to compresion of snow layer, Yen 1981 Review of thermal properties of ice and sea ice, eq. 9
+        !calculate snow density due to compresion of snow layer, Yen (1981) eq. 9
         state%snow_dens = state%snow_dens + (snow_h_new * rho_s_0) * C1 * exp(-0.08 * (T0 - (state%snow_temp + T0))) * state%dt 
  
         !Add the two layers density togethere 
@@ -307,17 +264,9 @@ module strat_ice
        state%snow_h = state%snow_h + snow_h_new
       
        !snow temp
-       state%snow_temp = state%t_atm
-       !state%snow_temp = state%snow_temp + (1/cp_s) * (1/state%snow_dens)/(state%snow_h*1*1) * state%heat_snow_ice * state%dt*1*1
-       !1/[J/kg/°C] * 1/[kg/m3]/[m3] * [W/m2]*[s]*[m2] = [J°C]/[J] = [°C]
-
-       !write (*, *) 'Snow layer build-up'    
-       !write (*,'(A,F10.6)') 'Snow Height       : ' , state%snow_h  
-       !write (*,'(A,F10.6)') 'precipitation     : ' , state%precip  
-       !write (*,'(A,F12.2)') 'Snow Temp         : ' , state%snow_temp
-       !write (*,'(A,F12.2)') 'Snow Dens         : ' , state%snow_dens     
-       !write (*,'(A,F12.2)') 'Heat Flux         : ' , state%heat_snow_ice  
-    
+       !state%snow_temp = state%t_atm 
+       state%snow_temp = state%snow_temp + (1/cp_s) * (state%snow_h/state%snow_dens) * state%heat_snow_ice * state%dt
+       ![kg °C]/[J] * [m]/[kg/m3] * [W/m2]*[s] = [J°C]/[J] = [°C]  
  end subroutine
  
  
@@ -365,7 +314,6 @@ module strat_ice
            MeltHeightIce = 0
         end if    
   
-  
      !Heating of first water cell might melt ice from below, put back first cell to freez temp., and melt ice from below
       Melt_energy2 = (state%T(self%grid%ubnd_vol) - param%freez_temp)  * cp * (self%grid%h(self%grid%ubnd_vol) * rho_0)  ![J/kg/K]*[K]*[kg] = [J] 
       MeltHeight2 = Melt_energy2 / l_h / (ice_dens * 1 * 1) ![J] / [J/kg] / [kg/m3] / [m2] = [m]  
@@ -379,23 +327,15 @@ module strat_ice
      ! New ice hight
       state%ice_h = state%ice_h - MeltHeight2 - MeltHeightIce! [m] 
    
-   ! if melting larger than ice height, put remaining energy to water and set ice/snow to zero
+     ! if melting larger than ice height, put remaining energy to water and set ice/snow to zero
       if (state%ice_h < 0) then
        state%heat = state%heat + (l_h * ice_dens * (-1 * state%ice_h) / state%dt)![J/kg] * [kg/m3] * [m] / [s] = [J/sm2] = [W/m2]
        state%ice_h = 0
        state%snow_dens = rho_s_0
        state%snow_h = 0
-      end if     
-
-      !write (*, *) 'Snow Melting'
-      !write (*,'(A,F10.6)') 'Snow Height       : ' , state%snow_h  
-      !write (*,'(A,F12.2)') 'Snow Temp         : ' , state%snow_temp
-      !write (*,'(A,F12.2)') 'Snow Dens         : ' , state%snow_dens     
-      !write (*,'(A,F12.2)') 'Heat Flux         : ' , state%heat_snow_ice  
-      !write (*,'(A,F8.6)') 'Ice height : ', state%ice_h
-      !write (*,'(A,F7.3)') 'Air temp   : ', state%T_atm   
+      end if      
+ 
  end subroutine
 
- 
 end module
 
