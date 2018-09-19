@@ -196,12 +196,11 @@ contains
           end do
 
           call reverse_in_place(output_config%zout)
-
-        else if (output_config%depth_interval == 0) then
-          allocate(output_config%zout(size(output_config%zout_read)))
-          output_config%zout = output_config%zout_read
         end if
 
+      else if (output_config%depth_interval == 0) then
+        allocate(output_config%zout(size(output_config%zout_read)))
+        output_config%zout = output_config%zout_read
       end if
       call ok('Output depths successfully read')
 
