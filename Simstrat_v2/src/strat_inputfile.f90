@@ -743,6 +743,7 @@ contains
 
       if (if_adv == 4) then   ! if all input files are empty
          self%simdata%model%has_advection = .FALSE.
+         call warn('Advection is turned off since the input files were found to be empty. Check if you use the right line feed (\n) if they are not empty.')
       else
          self%simdata%model%has_advection = .TRUE.
       end if
