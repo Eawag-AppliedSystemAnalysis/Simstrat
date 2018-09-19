@@ -509,7 +509,7 @@ contains
          else if (output_cfg%output_depth_type == 3) then ! Output depths are given
             call par_file%get('Output.Depths', output_cfg%zout_read, found); call check_field(found, 'Output.Depths', ParName)
             if (output_cfg%output_depth_reference == 'surface') then
-               call reverse_in_place(output_cfg%zout)
+               call reverse_in_place(output_cfg%zout_read)
             end if
             output_cfg%depth_interval = 0
          
