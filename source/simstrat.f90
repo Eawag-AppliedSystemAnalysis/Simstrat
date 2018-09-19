@@ -94,7 +94,7 @@ subroutine simstrat_simulation()
     double precision k(0:xli),ko(0:xli) !Turbulent kinetic energy (TKE) [J/kg]
     double precision eps(0:xli),L(0:xli) !TKE dissipation rate [W/kg]
     double precision num(0:xli),nuh(0:xli) !Turbulent viscosity (momentum) and diffusivity (temperature)
-    double precision P(0:xli),B(0:xli),NN(0:xli) !Shear stress production [W/kg], buoyancy production [W/kg], Brunt-Väisälä frequency [s-2]
+    double precision P(0:xli),B(0:xli),NN(0:xli) !Shear stress production [W/kg], buoyancy production [W/kg], Brunt-VÃ¤isÃ¤lÃ¤ frequency [s-2]
     double precision dS(0:xli) !Source/sink for salinity
     double precision cmue1(0:xli),cmue2(0:xli) !Model constants
     double precision rho(0:xli) !density
@@ -159,13 +159,13 @@ subroutine simstrat_simulation()
             open(80+j,access='SEQUENTIAL',action='WRITE',status='unknown',FORM='formatted',&
                       file=trim(PathOut)//trim(filelst(j))//'_out.dat')
             if (j/=13) then
-                write(80+j,'(I10,$)'), 1
+                write(80+j,'(I10,$)') 1
                 do i=0,nsave
                     write(80+j,'(F12.3,$)') zsave(i)-z_zero
                 end do
-                write(80+j,'(A12,$)'), 'NaN'
+                write(80+j,'(A12,$)') 'NaN'
             else
-                write(93,'(I10,I12,$)'), 1, 1
+                write(93,'(I10,I12,$)') 1, 1
             end if
         end do
         call write_text(datum,U,V,T,S,k,eps,nuh,B,P,NN,P_Seiche,E_Seiche,zu(0:xl),zk(0:xl),Qvert)
@@ -496,7 +496,7 @@ subroutine Temperature(nuh,rad0,rad,h,T,heat,SST,ga1,form_1,form_2)
 
     ! Calculation
     !Radiation reaching each layer
-    rad(xl) = rad0/rho_0/cp ![°C*m/s]
+    rad(xl) = rad0/rho_0/cp ![Â°C*m/s]
     do i=xl-1,0,-1
         rad(i) = rad(i+1)*exp(-h(i)*ga1(xl-i)) !Attenuated by absorption
     end do
@@ -932,7 +932,7 @@ subroutine Advection(Qvert,Q_inp,U,V,T,S,k,eps,zu,zk,h,Az)
     double precision U(0:xli), V(0:xli), T(0:xli), S(0:xli)
     double precision k(0:xli), eps(0:xli)
     double precision Qvert(0:xli) ! Vertical advection [m3/s]
-    double precision Q_inp(1:4,0:xli) ! Inflow [m3/s], Outflow [m3/s], T-input [°C*m3/s], S-input [‰*m3/s]
+    double precision Q_inp(1:4,0:xli) ! Inflow [m3/s], Outflow [m3/s], T-input [Â°C*m3/s], S-input [Â‰*m3/s]
 
     double precision dh, dhi(1:2)      ! depth differences
     double precision dti(1:2)          ! first and second time step
@@ -964,38 +964,39 @@ subroutine Advection(Qvert,Q_inp,U,V,T,S,k,eps,zu,zk,h,Az)
 
         do i=1,xl
             if (i==xl .and. Qvert(i)>0) then
-                top = 0
-            else
-                top = 1
+                dU(i) = 0
+                dV(i) = 0
+                dTemp(i) = 0
+                dS(i) = 0
+            else ! Advective flow out of box i, always negative
+                dU(i)    = -abs(Qvert(i))*U(i)
+                dV(i)    = -abs(Qvert(i))*V(i)
+                dTemp(i) = -abs(Qvert(i))*T(i)
+                dS(i)    = -abs(Qvert(i))*S(i)
             end if
-            ! Advective flow out of box i, always negative
-            dU(i)    = -top*abs(form_adv(i)*Qvert(i))*U(i)
-            dV(i)    = -top*abs(form_adv(i)*Qvert(i))*V(i)
-            dTemp(i) = -top*abs(form_adv(i)*Qvert(i))*T(i)
-            dS(i)    = -top*abs(form_adv(i)*Qvert(i))*S(i)
             if (i>1 .and. Qvert(i-1)>0) then       ! Advective flow into box i, from above
-                dU(i)    = dU(i) + form_adv(i)*Qvert(i-1)*U(i-1)
-                dV(i)    = dV(i) + form_adv(i)*Qvert(i-1)*V(i-1)
-                dTemp(i) = dTemp(i) + form_adv(i)*Qvert(i-1)*T(i-1)
-                dS(i)    = dS(i) + form_adv(i)*Qvert(i-1)*S(i-1)
+                dU(i)    = dU(i) + Qvert(i-1)*U(i-1)
+                dV(i)    = dV(i) + Qvert(i-1)*V(i-1)
+                dTemp(i) = dTemp(i) + Qvert(i-1)*T(i-1)
+                dS(i)    = dS(i) + Qvert(i-1)*S(i-1)
             end if
             if (i<xl .and. Qvert(i+1)<0) then      ! Advective flow into box i, from below
-                dU(i)    = dU(i) - form_adv(i)*Qvert(i+1)*U(i+1)
-                dV(i)    = dV(i) - form_adv(i)*Qvert(i+1)*V(i+1)
-                dTemp(i) = dTemp(i) - form_adv(i)*Qvert(i+1)*T(i+1)
-                dS(i)    = dS(i) - form_adv(i)*Qvert(i+1)*S(i+1)
+                dU(i)    = dU(i) - Qvert(i+1)*U(i+1)
+                dV(i)    = dV(i) - Qvert(i+1)*V(i+1)
+                dTemp(i) = dTemp(i) - Qvert(i+1)*T(i+1)
+                dS(i)    = dS(i) - Qvert(i+1)*S(i+1)
             end if
         end do
 
         ! Inflow and outflow
-        dTemp(1:xl) = dTemp(1:xl) + form_adv(1:xl)*(Q_inp(3,1:xl)+Q_inp(2,1:xl)*T(1:xl))
-        dS(1:xl) = dS(1:xl) + form_adv(1:xl)*(Q_inp(4,1:xl)+Q_inp(2,1:xl)*S(1:xl))
+        dTemp(1:xl) = dTemp(1:xl) + Q_inp(3,1:xl) + Q_inp(2,1:xl)*T(1:xl)
+        dS(1:xl) = dS(1:xl) + Q_inp(4,1:xl) + Q_inp(2,1:xl)*S(1:xl)
 
         ! Take first time step
-        U(1:xl) = U(1:xl) + dU(1:xl)
-        V(1:xl) = V(1:xl) + dV(1:xl)
-        T(1:xl) = T(1:xl) + dTemp(1:xl)
-        S(1:xl) = S(1:xl) + dS(1:xl)
+        U(1:xl) = U(1:xl) + form_adv(1:xl)*dU(1:xl)
+        V(1:xl) = V(1:xl) + form_adv(1:xl)*dV(1:xl)
+        T(1:xl) = T(1:xl) + form_adv(1:xl)*dTemp(1:xl)
+        S(1:xl) = S(1:xl) + form_adv(1:xl)*dS(1:xl)
 
         ! Variation of variables due to change in volume
         U(xl) = U(xl)*h(xl)/(h(xl)+dhi(ti))
@@ -1010,7 +1011,7 @@ subroutine Advection(Qvert,Q_inp,U,V,T,S,k,eps,zu,zk,h,Az)
                 h(xl) = h(xl) + dhi(1)                      ! New thickness of top box
                 zu(xl) = zu(xl) + dhi(1)/2                  ! New centre coordinate of top box
                 zk(xl) = zk(xl) + dhi(1)                    ! New surface coordinate of top box
-                return                                      ! No change in volume (overflow)
+                !return                                     ! No change in volume (overflow)
             else if (((dh+h(xl))>h(xl-1)/2) .and.&   ! If top box>0.5*lower box
                      ((dh+h(xl))<2*h(xl-1))) then    ! and top box<2*lower box
                 h(xl) = h(xl) + dhi(1)                      ! New thickness of top box
@@ -1032,12 +1033,13 @@ subroutine Advection(Qvert,Q_inp,U,V,T,S,k,eps,zu,zk,h,Az)
                 !dh(2) = Qvert(xl)/Az(xl)*dt(2) !(also equal to dh*dt2/dt)
                 call Form()
             else                                     ! If top box>=2*lower box
-                h(xl+1)   = h(xl)/2 + dh   ! AG 2014 (added +dh)
-                h(xl)     = h(xl)/2
-                zk(xl+1)  = zk(xl) + dh    ! AG 2014 (added +dh)
-                zk(xl)    = zk(xl) - h(xl)/2
-                zu(xl+1)  = zu(xl) + h(xl+1)/2
-                zu(xl)    = zu(xl) - h(xl+1)/2
+			! AG 2014, FB 2018: corrections
+                h(xl+1)   = (h(xl) + dh)/2
+                h(xl)     = (h(xl) + dh)/2
+                zk(xl+1)  = zk(xl) + dh
+                zk(xl)    = zk(xl) - h(xl) + dh
+                zu(xl+1)  = zu(xl) + (h(xl) + dh)/2
+                zu(xl)    = zu(xl) - (h(xl) - dh)/2
                 U(xl+1)   = U(xl)
                 V(xl+1)   = V(xl)
                 T(xl+1)   = T(xl)
@@ -1079,8 +1081,8 @@ subroutine Form()
 
     form_1(1:xl) = -4*Az(0:xl-1)/(h(1:xl)+h(0:xl-1))/h(1:xl)/(Az(1:xl)+Az(0:xl-1))
     form_2(1:xl) = -4*Az(1:xl)/(h(1:xl)+h(2:xl+1))/h(1:xl)/(Az(1:xl)+Az(0:xl-1))
-    form_k1(1:xl-1) = -(Az(1:xl-1)+Az(2:xl))/(h(1:xl-1)+h(2:xl))/h(2:xl)/Az(1:xl-1)
-    form_k2(1:xl-1) = -(Az(1:xl-1)+Az(0:xl-2))/(h(1:xl-1)+h(2:xl))/h(1:xl-1)/Az(1:xl-1)
+    form_k1(1:xl-1) = -(Az(1:xl-1)+Az(0:xl-2))/(h(1:xl-1)+h(2:xl))/h(1:xl-1)/Az(1:xl-1)
+    form_k2(1:xl-1) = -(Az(1:xl-1)+Az(2:xl))/(h(1:xl-1)+h(2:xl))/h(2:xl)/Az(1:xl-1)
     form_beps(1:xl-1) = 0.5*((Az(1:xl-1)-Az(0:xl-2))/h(1:xl-1)+(Az(2:xl)-Az(1:xl-1))/h(2:xl))/Az(1:xl-1)
 
     meanint(0:xl-1) = 2./(h(0:xl-1)+h(1:xl))
@@ -1533,7 +1535,7 @@ subroutine write_text(datum,U,V,T,S,k,eps,nuh,B,P,NN,P_Seiche,E_Seiche,zu,zk,Qve
     call write_text_var(datum,zext,P_Seiche,92)
     write(93,*)
     write(93,'(F10.4,$)') datum
-    write(93,'(ES12.4,$)') E_Seiche
+    write(93,'(ES12.3E3,$)') E_Seiche
 
     return
 end
@@ -1548,13 +1550,13 @@ subroutine write_text_var(datum,zext,var,fid)
     double precision xs(0:nsave+1)
     integer i,fid
 
-    call Interp_nan(zext,var,xl-1,zsave,xs,nsave)
+    call Interp(zext,var,xl-1,zsave,xs,nsave)
     xs(nsave+1) = var(xl) !Surface value
 
     write(fid,*)
     write(fid,'(F10.4,$)') datum
     do i=0,nsave+1
-        write(fid,'(ES12.4,$)') xs(i)
+        write(fid,'(ES12.3E3,$)') xs(i)
     end do
 
     return

@@ -393,7 +393,7 @@ subroutine InitCond()
     zini_depth = zini(0)                     ! Initial depth (top-most)
 
     do i=0,xli
-        if (zk(i) >= (z_zero-zini_depth)) then    ! If above initial water level
+        if (zk(i) >= (z_zero-zini_depth) .or. i==xli) then    ! If above initial water level
             zmax = zk(i)
             zk(i)= z_zero-zini_depth
             zu(i)= (zk(i)+zk(i-1))/2
