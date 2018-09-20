@@ -493,7 +493,7 @@ contains
          ! Output depth reference
          call par_file%get("Output.OutputDepthReference", output_cfg%output_depth_reference, found); call check_field(found, 'Output.OutputDepthReference', ParName)
          if (.not.(output_cfg%output_depth_reference == 'surface' .or. output_cfg%output_depth_reference == 'bottom')) then
-            call error('Invalid output depth reference in par-file')
+            call error('Invalid field "Output.OutputDepthReference" in par-file.')
             stop
          end if
 
@@ -511,6 +511,9 @@ contains
             output_cfg%depth_interval = 0
          else if (output_cfg%output_depth_type == 5 .or. output_cfg%output_depth_type == 6) then ! Output interval is given
             call par_file%get('Output.Depths', output_cfg%depth_interval, found); call check_field(found, 'Output.Depths', ParName)
+         else
+            call error('Invalid field "Output.Depths" in par-file.')
+            stop
          end if
 
          ! Output times
@@ -526,6 +529,9 @@ contains
             call par_file%get('Output.Times', output_cfg%thinning_interval, found); call check_field(found, 'Output.Times', ParName)
             allocate(output_cfg%tout(1))
             output_cfg%tout(1) = output_cfg%thinning_interval
+         else
+            call error('Invalid field "Output.Times" in par-file.')
+            stop
          end if
 
          !Model configuration
