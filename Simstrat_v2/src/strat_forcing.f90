@@ -1,8 +1,8 @@
 !     +---------------------------------------------------------------+
 !     |  Forcing module
-!     |  - Adjusted heat fluxs to snow and ice covered lake
+!     |  - Adjusted heat fluxes to snow- and ice-covered lake
 !     |  - Reads forcing file and updates state
-!     |  - Updates coriolis force terms
+!     |  - Updates Coriolis force terms
 !     +---------------------------------------------------------------+
 
 module strat_forcing
