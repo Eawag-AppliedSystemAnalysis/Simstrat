@@ -515,6 +515,9 @@ contains
          
          else if (output_cfg%output_depth_type == 5 .or. output_cfg%output_depth_type == 6) then ! Output interval is given
             call par_file%get('Output.Depths', output_cfg%depth_interval, found); call check_field(found, 'Output.Depths', ParName)
+         
+         else
+            call error('Output depths could not be read from par-file')
          end if
 
          ! Output times
@@ -528,10 +531,16 @@ contains
             call par_file%get('Output.Times', output_cfg%tout, found); call check_field(found, 'Output.Times', ParName)
             output_cfg%thinning_interval = 0
          
-         else if (output_cfg%output_time_type == 5) then ! Output interval is given
-            call par_file%get('Output.Times', output_cfg%thinning_interval, found); call check_field(found, 'Output.Times', ParName)
+         else if (output_cfg%output_time_type == 5 .or. output_cfg%output_time_type == 6) then ! Output interval is given
+            call par_file%get('Output.Times', output_cfg%thinning_interval_read, found); call check_field(found, 'Output.Times', ParName)
+            output_cfg%thinning_interval = int(output_cfg%thinning_interval_read)
+            
+            ! This code is needed for line 141 in simstrat.f90. Not very elegant.. might change in the future.
             allocate(output_cfg%tout(1))
             output_cfg%tout(1) = output_cfg%thinning_interval
+
+         else
+            call error('Output times could not be read from par-file')
          end if
 
          !Model configuration

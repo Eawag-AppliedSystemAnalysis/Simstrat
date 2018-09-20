@@ -46,7 +46,8 @@ module strat_simdata
       class(LogVariable), dimension(:), allocatable :: output_vars
 
       integer :: output_time_type, output_depth_type, thinning_interval
-      real(RK) :: depth_interval
+      real(RK) :: depth_interval, thinning_interval_read ! thinning_interval_read is a real to make sure that also values
+      ! like 72.0 can be read (which are interpreted as a double)
    end type
 
    ! Simulation configuration
