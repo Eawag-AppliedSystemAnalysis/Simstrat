@@ -22,8 +22,6 @@ module strat_stability
       procedure, pass :: update => stability_module_update
       procedure, pass :: update_cmue_cn => stability_module_update_cmue_cn
       procedure, pass :: update_cmue_qe => stability_module_update_cmue_qe
-      procedure, pass :: update_NN_no_sal => stability_module_update_NN_no_sal
-      procedure, pass :: update_NN_no_sal_grad => stability_module_update_NN_no_sal_grad
       procedure, pass :: update_NN => stability_module_update_NN
 
    end type
@@ -50,23 +48,17 @@ contains
       class(StabilityModule) :: self
       class(ModelState) :: state
       real(RK), dimension(self%grid%ubnd_fce) :: beta
+
       !Do buoyancy update (update NN)
-      !if (state%has_salinity) then
-      !   if (state%has_salinity_grad) then
-            call self%update_NN(state%T, state%S, state%rho, state%NN)
-      !   else
-      !      call self%update_NN_no_sal_grad(state%T, state%S, state%NN)
-      !   end if
-      !else ! salinity zero everywhere
-      !   call self%update_NN_no_sal(state%T, state%NN)
-      !end if
+      call self%update_NN(state%T, state%S, state%rho, state%NN)
 
       !update cmue depending on selected stabilty function
       if (self%model_cfg%stability_func == 1) then
          call self%update_cmue_cn(state%cmue1, state%cmue2)
+
       else if (self%model_cfg%stability_func == 2) then
          beta(1:self%grid%ubnd_fce) = state%NN(1:self%grid%ubnd_fce)*(state%k(1:self%grid%ubnd_fce)/state%eps(1:self%grid%ubnd_fce))**2
-         !beta = state%NN*exp(2*(log(state%k)-log(state%eps)))
+
          beta(1) = 0
          beta(self%grid%ubnd_fce) = 0
 
@@ -97,9 +89,6 @@ contains
                                               (1.0171e-7_RK + T(i)*(-1.2846e-9_RK + T(i)*(1.1592e-11_RK + T(i)*(-5.0125e-14_RK))))))
             rho0st(i) = (8.181e-4_RK + T(i)*(-3.85e-6_RK + T(i)*(4.96e-8_RK)))*S(i)
             rho(i) = rho_0*(rho0t(i) + rho0st(i))
-            !if (fc/=0) then
-            !    rho(i) = rho0t(i)*(1-fc)+fc*rho(i)
-            !end
 
             buoy(i) = -g*(rho(i) - rho_0)/rho_0
          end do
@@ -107,63 +96,6 @@ contains
          NN(2:grd%ubnd_fce - 1) = grd%meanint(1:grd%ubnd_vol - 1)*(buoy(2:grd%ubnd_fce - 1) - buoy(1:grd%ubnd_fce - 2))
          NN(1) = NN(2)
          NN(grd%ubnd_fce) = NN(grd%ubnd_fce - 1)
-
-      end associate
-   end subroutine
-
-   ! Compute NN if there is no salinity
-   subroutine stability_module_update_NN_no_sal(self, T, NN)
-      implicit none
-      class(StabilityModule) :: self
-
-      ! Global variables
-      real(RK), dimension(:), intent(in) :: T
-      real(RK), dimension(:), intent(inout) :: NN
-
-      ! Local variables
-      real(RK) :: a(self%grid%length_fce)
-      integer :: i
-
-      associate (grid=>self%grid)
-
-         do i=2,grid%ubnd_fce - 1
-            a(i)= -68.0 + T(i)*(18.2091 + T(i)*(-0.30866 + T(i)*(5.3445e-3 + T(i)*(-6.0721e-5 + T(i)*(3.1441e-7)))))
-            a(i)= 1.0e-6*a(i)
-            NN(i)= g*a(i)*(grid%meanint(i)*(T(i) - T(i + 1)) + (T(i) + 273.15)/cp)
-         end do
-
-         ! Assign boundaries
-         NN(1) = NN(2)
-         NN(grid%ubnd_fce) = NN(grid%ubnd_fce - 1)
-
-      end associate
-   end subroutine
-
-      ! Compute NN if there is no salinity gradient
-   subroutine stability_module_update_NN_no_sal_grad(self, T, S, NN)
-      implicit none
-      class(StabilityModule) :: self
-
-      ! Global variables
-      real(RK), dimension(:), intent(in) :: T, S
-      real(RK), dimension(:), intent(inout) :: NN
-
-      ! Local variables
-      real(RK) :: a(self%grid%length_fce)
-      integer :: i
-
-      associate (grid=>self%grid)
-
-         do i=2,grid%ubnd_fce - 1
-               a(i)= -68.0 + T(i)*(18.2091 + T(i)*(-0.30866 + T(i)*(5.3445e-3 + T(i)*(-6.0721e-5 + T(i)*(3.1441e-7)))))
-               a(i)= a(i) + (4.599 + T(i)*(-0.1999 + T(i)*(2.79e-3)))*S(i)
-               a(i)= 1.0e-6*a(i)
-               NN(i)= g*a(i)*(grid%meanint(i)*(T(i) - T(i+1)) + (T(i) + 273.15)/cp)
-         end do
-
-         ! Assign boundaries
-         NN(1) = NN(2)
-         NN(grid%ubnd_fce) = NN(grid%ubnd_fce - 1)
 
       end associate
    end subroutine
