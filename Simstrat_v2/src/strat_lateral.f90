@@ -111,10 +111,10 @@ contains
             end if
   
             ! Default values
-            self%Q_start(2,:) = 0.0_RK
-            self%Q_end(2,:) = 0.0_RK
-            self%Qs_start(2,:) = 0.0_RK
-            self%Qs_end(2,:) = 0.0_RK
+            self%Q_start(i,:) = 0.0_RK
+            self%Q_end(i,:) = 0.0_RK
+            self%Qs_start(i,:) = 0.0_RK
+            self%Qs_end(i,:) = 0.0_RK
 
             self%eof(i) = 0
             !Skip first three rows (except for Qout)
@@ -188,7 +188,7 @@ contains
               self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)) = self%z_Inp(i, self%nval_deep(i) + 1 :self%nval(i)) - grid%lake_level_old + grid%lake_level
 
               ! Adjust surface inflow to new lake level
-              if (state%has_deep_input(i)) then     
+              if (state%has_surface_input(i)) then     
                 call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_start(i, :), self%nval_surface(i), self%Qs_start(i, :))
                 call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))               
               end if
@@ -331,7 +331,7 @@ contains
            end if
         end do
 
-        Q_vert(1) = 0!Q_inp(1,1) + Q_inp(2,1)
+        Q_vert(1) = Q_inp(1,1) + Q_inp(2,1)
         do i=2,ubnd_fce
            Q_vert(i) = Q_vert(i-1) + Q_inp(1,i) + Q_inp(2,i)
         end do

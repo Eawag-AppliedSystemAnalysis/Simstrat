@@ -103,14 +103,14 @@ contains
                dV(i) = -top*abs(Q_vert(i+1))*state%V(i)
                dTemp(i) = -top*abs(Q_vert(i+1))*state%T(i)
                dS(i) = -top*abs(Q_vert(i+1))*state%S(i)
-               if (i > 2 .and. Q_vert(i) > 0) then ! Advective flow into box i, from above
+               if (i > 2 .and. Q_vert(i) > 0) then ! Advective flow into box i, from below
                   dU(i) = dU(i) + Q_vert(i)*state%U(i - 1)
                   dV(i) = dV(i) + Q_vert(i)*state%V(i - 1)
                   dTemp(i) = dTemp(i) + Q_vert(i)*state%T(i - 1)
                   dS(i) = dS(i) + Q_vert(i)*state%S(i - 1)
                end if
                if (i < ubnd_vol) then
-                  if (Q_vert(i + 2) < 0) then ! Advective flow into box i, from below
+                  if (Q_vert(i + 2) < 0) then ! Advective flow into box i, from above
                      dU(i) = dU(i) - Q_vert(i + 2)*state%U(i + 1)
                      dV(i) = dV(i) - Q_vert(i + 2)*state%V(i + 1)
                      dTemp(i) = dTemp(i) - Q_vert(i + 2)*state%T(i + 1)
@@ -141,6 +141,7 @@ contains
                if (dh == 0) then ! If volume does not change, return
                   return
                else if ((dh + top_z) >= grid%max_depth) then ! If surface level reached
+                  call grid%modify_top_box(grid%max_depth - top_z)
                   return
                else if (((dh_i(t_i) + top_h) > h_div_2) .and. &
                         ((dh_i(t_i) + top_h) < (h_mult_2))) then ! and top box<2*lower box
