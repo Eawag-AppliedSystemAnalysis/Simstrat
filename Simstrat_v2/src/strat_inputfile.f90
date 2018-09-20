@@ -484,18 +484,16 @@ contains
             call par_file%get('Input.Grid', input_cfg%read_grid_value_from_json, found); call check_field(found, 'Input.Grid', ParName)
          end if
 
-
          call par_file%get('Input.Inflow', QinpName, found); input_cfg%QinpName = QinpName; call check_field(found, 'Input.Inflow', ParName)
          call par_file%get('Input.Outflow', QoutName, found); input_cfg%QoutName = QoutName; call check_field(found, 'Input.Outflow', ParName)
          call par_file%get('Input.Inflow temperature', TinpName, found); input_cfg%TinpName = TinpName; call check_field(found, 'Input.Inflow temperature', ParName)
          call par_file%get('Input.Inflow salinity', SinpName, found); input_cfg%SinpName = SinpName; call check_field(found, 'Input.Inflow salinity', ParName)
-
          ! Path to output folder
          call par_file%get('Output.Path', PathOut, found); output_cfg%PathOut = PathOut; call check_field(found, 'Output.Path', ParName)
          ! Output depth reference
          call par_file%get("Output.OutputDepthReference", output_cfg%output_depth_reference, found); call check_field(found, 'Output.OutputDepthReference', ParName)
          if (.not.(output_cfg%output_depth_reference == 'surface' .or. output_cfg%output_depth_reference == 'bottom')) then
-            call error('Invalid output depth reference in par-file')
+            call error('Invalid field "Output.OutputDepthReference" in par-file.')
             stop
          end if
 
@@ -505,19 +503,18 @@ contains
          ! Treat different input possibilities for output depths
          if (output_cfg%output_depth_type == 7) then ! Path name
             call par_file%get('Output.Depths', zoutName, found); output_cfg%zoutName = zoutName; call check_field(found, 'Output.Depths', ParName)
-         
          else if (output_cfg%output_depth_type == 3) then ! Output depths are given
             call par_file%get('Output.Depths', output_cfg%zout_read, found); call check_field(found, 'Output.Depths', ParName)
             if (output_cfg%output_depth_reference == 'surface') then
                call reverse_in_place(output_cfg%zout_read)
             end if
             output_cfg%depth_interval = 0
-         
          else if (output_cfg%output_depth_type == 5 .or. output_cfg%output_depth_type == 6) then ! Output interval is given
             call par_file%get('Output.Depths', output_cfg%depth_interval, found); call check_field(found, 'Output.Depths', ParName)
-         
+
          else
-            call error('Output depths could not be read from par-file')
+            call error('Invalid field "Output.Depths" in par-file.')
+            stop
          end if
 
          ! Output times
@@ -526,7 +523,6 @@ contains
          ! Treat different input possibilities for output times
          if (output_cfg%output_time_type == 7) then ! Path name
             call par_file%get('Output.Times', toutName, found); output_cfg%toutName = toutName; call check_field(found, 'Output.Times', ParName)
-         
          else if (output_cfg%output_time_type == 3) then ! Output depths are given
             call par_file%get('Output.Times', output_cfg%tout, found); call check_field(found, 'Output.Times', ParName)
             output_cfg%thinning_interval = 0
@@ -540,7 +536,8 @@ contains
             output_cfg%tout(1) = output_cfg%thinning_interval
 
          else
-            call error('Output times could not be read from par-file')
+            call error('Invalid field "Output.Times" in par-file.')
+            stop
          end if
 
          !Model configuration
