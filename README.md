@@ -19,13 +19,13 @@ Simstrat is a one-dimensional physical lake model for the simulation of stratifi
 - Updated documentation including numerical scheme
 
 ## Run Simstrat
-Pre-built binaries are available in the [prebuild folder](prebuild).
+Pre-built binaries are available [here](prebuilt).
 
 ## Compile Simstrat
 
 ### Compile using Docker
-A complete compile work flow using a docker container is now available in the
-[Docker folder](doc/developer/docker_build_env).
+A complete compile work flow using a docker container is now available
+[here](misc/docker_build_env).
 
 ## Compile manually
 
