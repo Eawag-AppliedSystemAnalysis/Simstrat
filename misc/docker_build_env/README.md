@@ -9,7 +9,7 @@ git clone https://github.com/Eawag-AppliedSystemAnalysis/Simstrat.git
 ### Setup the Docker container
 1. Install the [_docker_](https://www.docker.com/
 ) engine, as explained for [MacOS](https://docs.docker.com/docker-for-mac/), [Ubuntu](https://docs.docker.com/install/linux/docker-ce/ubuntu/), or [Windows](https://docs.docker.com/docker-for-windows/) users. If you use Windows 7, you can use the [Docker Toolbox](https://docs.docker.com/toolbox/toolbox_install_windows/).
-2. I prepared a ready-to-use *Dockerfile* with all the needed packages, so open the terminal (or run the docker toolbox) and navigate to the folder `Simstrat/doc/developer/docker_build_env` where the Dockerfile (and this README) is located.
+2. I prepared a ready-to-use *Dockerfile* with all the needed packages, so open the terminal (or run the docker toolbox) and navigate to the folder `Simstrat/misc/docker_build_env` where the Dockerfile (and this README) is located.
 3. WATCH OUT! For Linux and (maybe) MacOS users: by default _docker engine_ requires root privileges, i.e. you have to type `sudo` in front of each of the following commands. If you wish to avoid this, you can follow this [guidelines](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user).
 4. Build the docker image using the given Dockerfile
 
