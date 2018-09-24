@@ -20,7 +20,7 @@ git checkout simstrat2beta
 4. Build the docker image using the given Dockerfile
 
     ~~~bash
-    docker docker build -t simstrat:alpine .
+    docker build -t simstrat:alpine .
     ~~~
 
 5. Create the actual docker container (that makes use of the image you just created), remebering to provide the `<pathToLocalGitRepoDirectory>`:
@@ -55,4 +55,4 @@ Jump into the correct branch folder and simply execute the shell/batch script:
 -  `./build_docker.sh` (or `./build_docker_Win.bat`) to build the program from a Linux (Win) host,
 -  `./run_docker.sh` (or `./run_docker_Win.bat`) to run the Zurichsee testcase.
 
-Enjoy your GLM simulations!
+Enjoy your Simstrat simulations!
