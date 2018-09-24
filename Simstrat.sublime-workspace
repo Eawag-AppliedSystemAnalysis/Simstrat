@@ -1,0 +1,260 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"SetInput",
+				"SetInputData"
+			],
+			[
+				"vtk",
+				"vtk_Z"
+			],
+			[
+				"ran",
+				"range\trange"
+			],
+			[
+				"Z",
+				"Z_min"
+			],
+			[
+				"is",
+				"isMorphoSim"
+			],
+			[
+				"Ce",
+				"CellsAll"
+			],
+			[
+				"h5",
+				"h5f"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "Documentation/developer/doxygen/Doxyfile",
+			"settings":
+			{
+				"buffer_size": 107527,
+				"line_ending": "Unix"
+			}
+		}
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"console":
+	{
+		"height": 0.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/home/vanzodav/REPOSITORY/Simstrat",
+		"/home/vanzodav/REPOSITORY/Simstrat/Documentation",
+		"/home/vanzodav/REPOSITORY/Simstrat/Documentation/developer",
+		"/home/vanzodav/REPOSITORY/Simstrat/Documentation/developer/doxygen",
+		"/home/vanzodav/REPOSITORY/Simstrat/Simstrat_v2"
+	],
+	"file_history":
+	[
+		"/home/vanzodav/OWNCLOUD/4_ECOENET/EcoENet/ISE_18_workshop/questionnaire_responses/text_Q5to10.txt",
+		"/home/vanzodav/OWNCLOUD/4_ECOENET/EcoENet/ISE_18_workshop/questionnaire_responses/wordcounts.txt",
+		"/home/vanzodav/.cache/evolution/tmp/evolution-vanzodav-B1rRAn/wordcounts.txt",
+		"/home/vanzodav/OWNCLOUD/newviznote.txt",
+		"/home/vanzodav/POLYBOX/PERSONAL/credenziali_varie/japansim.txt",
+		"/home/vanzodav/Desktop/Ugrid.py",
+		"/home/vanzodav/REPOSITORY/BASEMENT-OP2/tests/benchmarks/2_malpasset_dam_break/run.sh",
+		"/home/vanzodav/REPOSITORY/BASEMENT-OP2/tests/benchmarks/2_malpasset_dam_break/run.json",
+		"/home/vanzodav/REPOSITORY/BASEMENT-OP2/tests/benchmarks/1_circular_dam_break/run.sh",
+		"/home/vanzodav/REPOSITORY/BASEMENT-OP2/tests/11_Malpasset_benchmark/A_preliminary/input/run.json",
+		"/home/vanzodav/REPOSITORY/BASEMENT-OP2/tests/11_Malpasset_benchmark/A_preliminary/testdef",
+		"/home/vanzodav/REPOSITORY/BASEMENT-OP2/tests/11_Malpasset_benchmark/A_preliminary/run/run.output",
+		"/home/vanzodav/REPOSITORY/BASEMENT-OP2/tests/xdmf_paraview_results.py",
+		"/home/vanzodav/REPOSITORY/BASEMENT-OP2/src/setup/Setup.cpp",
+		"/home/vanzodav/REPOSITORY/BASEMENT-OP2/src/main_setup.cpp",
+		"/home/vanzodav/REPOSITORY/BASEMENT-OP2/tests/11_Malpasset_benchmark/A_preliminary/README.md",
+		"/mnt/DATAdisk/DATA/1_BASEMENT_projects/BM3_Malpasset/0_mesh_generation/malpasset_benchmark/MALPASSETmesh.2dm",
+		"/mnt/DATAdisk/DATA/1_BASEMENT_projects/BM3_Malpasset/0_mesh_generation/domain.csv",
+		"/mnt/DATAdisk/DATA/1_BASEMENT_projects/BM3_Malpasset/0_mesh_generation/visualizer.py",
+		"/mnt/DATAdisk/DATA/1_BASEMENT_projects/BM3_Malpasset/0_mesh_generation/malpasset_benchmark/pocMALPASSET.2dm"
+	],
+	"find":
+	{
+		"height": 47.0
+	},
+	"find_in_files":
+	{
+		"height": 125.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"simstrat"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 0,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "Documentation/developer/doxygen/Doxyfile",
+					"semi_transient": true,
+					"settings":
+					{
+						"buffer_size": 107527,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1490,
+								1498
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Text/Plain text.tmLanguage",
+							"tab_size": 5,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 531.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 35.0
+	},
+	"input":
+	{
+		"height": 0.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "",
+	"project": "Simstrat.sublime-project",
+	"replace":
+	{
+		"height": 66.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 500.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 380.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 328.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}

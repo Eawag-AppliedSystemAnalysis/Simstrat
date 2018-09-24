@@ -5,9 +5,9 @@
 *.mod
 
 ## Folders
-Simstrat_v2/bin/
-Simstrat_v2/lib/json_fortran/bin/
-Simstrat_v2/lib/csv_fortran/bin/
+build/
+lib/json_fortran/build/
+lib/csv_fortran/build/
 
 #Latex gitignores:
 ## Core latex/pdflatex auxiliary files:
@@ -231,5 +231,5 @@ TSWLatexianTemp*
 *-tags.tex
 
 #doxygen files
-Documentation/developer/doxygen/**/*
-!Documentation/developer/doxygen/Doxyfile
+doc/developer/doxygen/**/*
+!doc/developer/doxygen/Doxyfile
