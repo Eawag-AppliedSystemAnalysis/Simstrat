@@ -233,3 +233,6 @@ TSWLatexianTemp*
 #doxygen files
 doc/developer/doxygen/**/*
 !doc/developer/doxygen/Doxyfile
+
+#Sublime files
+*.sublime*
