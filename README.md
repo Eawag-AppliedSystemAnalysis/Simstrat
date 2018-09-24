@@ -17,6 +17,10 @@ Year: 2016
 [Version 1.6](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/releases/tag/V1.6)
 Year: 2018
 
+[Version 1.8](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/releases/tag/V1.8)
+Bug fixes, last version before release of version 2.0
+Year: September 2018
+
 ## Compile Simstrat
 
 1. Download the simstrat source code of a specific simstrat version using the link above or clone the current master branch:
