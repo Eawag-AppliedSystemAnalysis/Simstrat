@@ -6,24 +6,18 @@ Clone the repository:
 git clone https://github.com/Eawag-AppliedSystemAnalysis/Simstrat.git
 ~~~
 
-NB: currently this feature is in the development branch `simstrat2beta`, so (before the release) jump into the branch with:
-
-~~~bash
-git checkout simstrat2beta
-~~~
-
 ### Setup the Docker container
 1. Install the [_docker_](https://www.docker.com/
-) engine, as explained for [MacOS](https://docs.docker.com/docker-for-mac/), [Ubuntu](https://docs.docker.com/install/linux/docker-ce/ubuntu/), or [Windows](https://docs.docker.com/docker-for-windows/) users.
-2. I prepared a ready-to-use *Dockerfile* with all the needed packages, so open the terminal (or run the docker toolbox) and navigate to the folder `Simstrat/Documentation/developer/docker_build_env` where the Dockerfile (and this README) is located.
-3. WATCH! For Linux and (maybe) MacOS users: by default _docker engine_ requires root privileges, i.e. you have to type `sudo` in front of each of the following commands. If you wish to avoid this, you can follow this [guidelines](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user).
+) engine, as explained for [MacOS](https://docs.docker.com/docker-for-mac/), [Ubuntu](https://docs.docker.com/install/linux/docker-ce/ubuntu/), or [Windows](https://docs.docker.com/docker-for-windows/) users. If you use Windows 7, you can use the [Docker Toolbox](https://docs.docker.com/toolbox/toolbox_install_windows/).
+2. I prepared a ready-to-use *Dockerfile* with all the needed packages, so open the terminal (or run the docker toolbox) and navigate to the folder `Simstrat/doc/developer/docker_build_env` where the Dockerfile (and this README) is located.
+3. WATCH OUT! For Linux and (maybe) MacOS users: by default _docker engine_ requires root privileges, i.e. you have to type `sudo` in front of each of the following commands. If you wish to avoid this, you can follow this [guidelines](https://docs.docker.com/install/linux/linux-postinstall/#manage-docker-as-a-non-root-user).
 4. Build the docker image using the given Dockerfile
 
     ~~~bash
     docker build -t simstrat:alpine .
     ~~~
 
-5. Create the actual docker container (that makes use of the image you just created), remebering to provide the `<pathToLocalGitRepoDirectory>`:
+5. Create the actual docker container (that makes use of the image you just created), remembering to provide the `<pathToLocalGitRepoDirectory>`. Be aware of [case sensitivity under Windows 7/Docker Toolbox](https://github.com/moby/moby/issues/28660).
 
     ~~~bash
     docker create --name simstrat -it -v <pathToLocalGitRepoDirectory>:/home/Simstrat simstrat:alpine
@@ -47,12 +41,7 @@ git checkout simstrat2beta
 
 ### Build and run Simstrat inside the docker container
 Jump into the correct branch folder and simply execute the shell script:
--  `./build_linux.sh` to build the program,
--  `./run.sh` to run the Zurichsee testcase.
-
-### Build and run Simstrat from your hosting system:
-Jump into the correct branch folder and simply execute the shell/batch script:
--  `./build_docker.sh` (or `./build_docker_Win.bat`) to build the program from a Linux (Win) host,
--  `./run_docker.sh` (or `./run_docker_Win.bat`) to run the Zurichsee testcase.
+-  `./build.sh` to build the program,
+-  `./run_testcase.sh` to run the Zurichsee testcase.
 
 Enjoy your Simstrat simulations!
