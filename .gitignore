@@ -4,8 +4,15 @@
 *.log
 *.mod
 
-## Folders
-build/
+## Building stuff
+bin/*
+!bin/README.md
+
+build/**/*
+!build/README.md
+!build/build.sh
+!build/fobos
+
 lib/json_fortran/build/
 lib/csv_fortran/build/
 
@@ -233,6 +240,10 @@ TSWLatexianTemp*
 #doxygen files
 doc/developer/doxygen/**/*
 !doc/developer/doxygen/Doxyfile
+
+#ford file
+doc/developer/ford/**/*
+!doc/developer/ford/ford_projectfile.md
 
 #Sublime files
 *.sublime*

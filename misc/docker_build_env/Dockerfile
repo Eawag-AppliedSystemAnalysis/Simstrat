@@ -5,7 +5,7 @@ MAINTAINER SURF Team "davide.vanzo@eawag.ch"
 RUN apk update && apk add gfortran \
 	musl-dev bash python py-pip doxygen git
 
-RUN pip install FoBiS.py pygooglechart
+RUN pip install FoBiS.py ford pygooglechart
 
 # root dir
 RUN mkdir /home/Simstrat
