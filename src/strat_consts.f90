@@ -1,6 +1,6 @@
-!     +---------------------------------------------------------------+
+!<    +---------------------------------------------------------------+
 !     |  Constants....
-!     +---------------------------------------------------------------+
+!<    +---------------------------------------------------------------+
 
   module strat_consts
      use strat_kinds
@@ -23,19 +23,19 @@
      real(RK)                :: k_min = 1.0e-9_RK ! Min value allowed for turbulent kinetic energy (read from file!?->useless here)
      real(RK), parameter     :: eps_min = 1.0e-30_RK ! Min value allowed for TKE dissipation
      real(RK), parameter     :: avh_min = 1.0e-8_RK ! Min value allowed for turbulent viscosity at boundaries
-  
+
 !   *** Ice Parameters
      real(RK), parameter     :: k_ice = 2.22 ! Thermal conductivity ice at 0°C WaterTemp (W K-1 m-1) 
      real(RK), parameter     :: k_snow = 0.2 ! Thermal conductivity snow at 0°C WaterTemp (W K-1 m-1)   
      real(RK), parameter     :: l_h = 3.3355e+2*1e+3! Latent heat of freezing, convert J g-1 to J kg-1 (latest unit used) 
      real(RK), parameter     :: ice_dens = 9.162e+2 !ice density kg m-3
      real(RK), parameter     :: rho_s_0 = 250_RK ! New snowfall density [kg/m3]
-     real(RK), parameter     :: rho_s_max = 450.0_RK ! maximum (wet) snow dens [kg/m3] 
-     real(RK), parameter     :: cp_s = 2090 ! Mean snow heat capacity (-5°C) [J/kg/K] 
+     real(RK), parameter     :: rho_s_max = 450.0_RK ! maximum (wet) snow dens [kg/m3]
+     real(RK), parameter     :: cp_s = 2090 ! Mean snow heat capacity (-5°C) [J/kg/K]
      real(RK), parameter     :: emiss_water = 0.97 ! Emissivity water
      real(RK), parameter     :: emiss_ice = 0.97   ! Emissivity ice
      !Emissivity snow range from 0.8 to 0.9 depending on snow density in strat_forcing.f90
-  
+
 !   *** Parameters for k-eps model ***
      real(RK), parameter     :: ce1 = 1.44_RK
      real(RK), parameter     :: ce2 = 1.92_RK

@@ -1,7 +1,7 @@
-!     +---------------------------------------------------------------+
+!<    +---------------------------------------------------------------+
 !     |  Absorption module
 !     |  - reads and processes absorption input file
-!     +---------------------------------------------------------------+
+!<    +---------------------------------------------------------------+
 
 module strat_absorption
    use strat_kinds
@@ -32,6 +32,8 @@ module strat_absorption
 contains
 
    subroutine absorption_init(self, model_config, model_param, absorption_file, grid)
+   !! initialize absorption
+
       implicit none
       class(AbsorptionModule) :: self
       class(StaggeredGrid), target :: grid
@@ -52,6 +54,7 @@ contains
    end subroutine
 
    subroutine absorption_update(self, state)
+   !! update absorption
       implicit none
       class(AbsorptionModule) :: self
       class(ModelState) :: state

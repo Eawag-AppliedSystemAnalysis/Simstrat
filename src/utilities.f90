@@ -1,6 +1,6 @@
-!     +---------------------------------------------------------------+
+!<    +---------------------------------------------------------------+
 !     | Generic utilities that are used throughout the code
-!     +---------------------------------------------------------------+
+!<    +---------------------------------------------------------------+
 
 
 module utilities
@@ -13,10 +13,8 @@ module utilities
 
 contains
 
-   !Interpolation of yi on grid zi (based on the given y on grid z)
-   !####################################################################
+   !> Interpolation of yi on grid zi (based on the given y on grid z)
    subroutine Interp(z, y, num_z, zi, yi, num_zi)
-      !####################################################################
       implicit none
       real(RK), dimension(:), intent(in) :: z, y, zi
       real(RK), dimension(:), intent(out) :: yi

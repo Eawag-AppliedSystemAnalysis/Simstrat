@@ -1,11 +1,11 @@
-!     +---------------------------------------------------------------+
+!<    +---------------------------------------------------------------+
 !     |  Lateral module
 !     |     Reads and processes inflows/outflows such that
 !     |     Advection can be calculated in the next step
 !     |     There are at least two different implementations possible:
 !     |         - LateralRhoModule : Inflow plunges according to density
 !     |         - LateralModule:     Inflow affects layer as configured in file
-!     +---------------------------------------------------------------+
+!<    +---------------------------------------------------------------+
 
 
 module strat_lateral

@@ -1,7 +1,7 @@
-!     +---------------------------------------------------------------+
+!<    +---------------------------------------------------------------+
 !     | Implementation of a statevar for a generic transport variable
 !     | At the moment used for S, but could be used for any other biogeochemical type
-!     +---------------------------------------------------------------+
+!<    +---------------------------------------------------------------+
 
 
 module strat_transport

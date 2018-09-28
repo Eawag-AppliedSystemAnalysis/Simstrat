@@ -1,7 +1,7 @@
-!     +---------------------------------------------------------------+
-!     |  Simstrat model for simulation of                             |
-!     |  vertical transport in lakes and reservoirs                   |
-!     +---------------------------------------------------------------+
+!<  +---------------------------------------------------------------+
+!     Simstrat model for simulation of
+!     vertical transport in lakes and reservoirs
+!<  +---------------------------------------------------------------+
 
 program simstrat_main
    use strat_kinds
@@ -18,7 +18,7 @@ program simstrat_main
    use strat_discretization
    use strat_keps
    use strat_turbulence
-   use strat_ice     
+   use strat_ice
    use strat_transport
    use strat_absorption
    use strat_advection
@@ -43,7 +43,7 @@ program simstrat_main
    type(EpsModelVar) :: mod_eps
    type(TransportModVar) :: mod_s
    type(TurbulenceModule) :: mod_turbulence
-   type(IceModule) :: mod_ice   
+   type(IceModule) :: mod_ice
    type(AbsorptionModule) :: mod_absorption
    type(AdvectionModule) :: mod_advection
    type(LateralModule), target :: mod_lateral_normal
@@ -135,6 +135,8 @@ program simstrat_main
 contains
 
    subroutine run_simulation()
+      !! run the marching time loop
+
       !call logger%log(0.0_RK) ! Write initial conditions
 
       ! Run simulation until end datum or until no more results are required by the output time file
@@ -232,15 +234,15 @@ contains
          ! Solve k & eps
          call mod_k%update(simdata%model, simdata%model_param)
          call mod_eps%update(simdata%model, simdata%model_param)
-		 
-         ! Update ice 
-         if (simdata%model_cfg%ice_model == 1) then 
-            call mod_ice%update(simdata%model, simdata%model_param)   
-         end if      
-		 
+
+         ! Update ice
+         if (simdata%model_cfg%ice_model == 1) then
+            call mod_ice%update(simdata%model, simdata%model_param)
+         end if
+
          ! Call logger to write files
          if (simdata%output_cfg%write_to_file) then
-            call logger%log(simdata%model%datum)               
+            call logger%log(simdata%model%datum)
          end if
 
          ! ***********************************
@@ -257,7 +259,7 @@ contains
             write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%lake_level, &
             simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
          end if
-         
+
       end do
 
       if (simdata%sim_cfg%disp_simulation/=0) then

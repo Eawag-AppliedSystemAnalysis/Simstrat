@@ -1,7 +1,7 @@
-!     +---------------------------------------------------------------+
+!<    +---------------------------------------------------------------+
 !     | Grid module
 !     |  - Contains class to store, use and modify the grid
-!     +---------------------------------------------------------------+
+!<    +---------------------------------------------------------------+
 
 
 module strat_grid
@@ -37,7 +37,7 @@ module strat_grid
       real(RK), dimension(:), allocatable :: AreaFactor_k1
       real(RK), dimension(:), allocatable :: AreaFactor_k2
       real(RK), dimension(:), allocatable :: AreaFactor_eps
-      
+
       integer :: nz_grid      ! Number of allocated grid cells
       integer :: nz_occupied  ! number of grid cells in use as per current lake depth
       integer :: max_length_input_data  ! Hard limit of grid cells for reading files of unknnown length etc
@@ -272,7 +272,7 @@ contains
          self%AreaFactor_eps(1:nz - 1) = 0.5_RK*((Az(2:nz) - Az(1:nz - 1))/h(1:nz - 1) + (Az(3:nz + 1) - Az(2:nz))/h(2:nz))/Az(2:nz)
          self%AreaFactor_eps(nz) = 0
          self%meanint(1:nz) = 2.0_RK/(h(1:nz) + h(2:nz + 1))
-         
+
          self%volume = 0
          do i = 1, nz
             self%volume = self%volume + 0.5_RK*h(i)*(Az(i) + Az(i + 1))
@@ -298,7 +298,7 @@ contains
       else
          Az(ubnd_fce) = Az(ubnd_fce) + dAz(ubnd_vol)*dh
       end if
-      
+
       h(ubnd_vol) = h(ubnd_vol) + dh
       z_volume(ubnd_vol) = z_volume(ubnd_vol) + 0.5_RK*dh
       z_face(ubnd_fce) = z_face(ubnd_fce) + dh
@@ -468,7 +468,7 @@ contains
             z_volume_mod(i) = self%z_volume(i) - self%z_face(self%ubnd_fce)
          end do
          z_volume_mod(self%ubnd_vol) = 0
-      end if         
+      end if
 
       call Interp_nan(z_volume_mod(1:self%ubnd_vol), y(1:self%ubnd_vol), self%ubnd_vol, zi, yi, num_zi)
    end subroutine

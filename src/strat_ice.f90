@@ -1,42 +1,43 @@
-!------------!
-! Ice module
-! Following:
-! Saloranta, T. M., & Andersen, T. (2007). 
-! MyLake—A multi-year lake simulation model code suitable for uncertainty and sensitivity analysis simulations.
-! Ecological Modelling, 207(1), 45–60.
-! And
-! Yen (1981)
-! Review of thermal properties of snow, ice and sea ice
+!<    +---------------------------------------------------------------+
+!      Ice module
+!      Following:
+!      Saloranta, T. M., & Andersen, T. (2007).
+!      MyLake—A multi-year lake simulation model code suitable for uncertainty and sensitivity analysis simulations.
+!      Ecological Modelling, 207(1), 45–60.
+!      And
+!      Yen (1981)
+!      Review of thermal properties of snow, ice and sea ice
+!<    +---------------------------------------------------------------+
 module strat_ice
    use strat_forcing
    use strat_consts
-   use strat_simdata 
+   use strat_simdata
    use strat_grid
    implicit none
    private
-   
+
    !Common Types
-   type, public :: IceModule  
+   type, public :: IceModule
       class(ModelConfig), pointer :: model_cfg
-      class(ModelParam), pointer :: model_param  
-      class(StaggeredGrid), pointer :: grid  
-   
-   
+      class(ModelParam), pointer :: model_param
+      class(StaggeredGrid), pointer :: grid
+
+
    contains
- ! to initial and run the ice mudule with subrutins
-      procedure, pass :: init => ice_module_init  
+      ! to initial and run the ice mudule with subrutins
+      procedure, pass :: init => ice_module_init
       procedure, pass :: update => ice_module_update
-   
-   ! the model itself
+
+      ! the model itself
       procedure, pass :: do_ice_freezing => ice_formation
-      procedure, pass :: do_ice_melting  => ice_melting 
-      procedure, pass :: do_snow_melting => snow_melting 
-      procedure, pass :: do_snow_build => snow_build 
-   
-   end type   
+      procedure, pass :: do_ice_melting  => ice_melting
+      procedure, pass :: do_snow_melting => snow_melting
+      procedure, pass :: do_snow_build => snow_build
+
+   end type
    contains
-   
-   
+
+
    ! Initiate ice model
  subroutine ice_module_init(self, model_cfg, model_param, grid)
    !only used in start up of model
@@ -44,16 +45,16 @@ module strat_ice
       class(IceModule) :: self
       class(ModelConfig), target :: model_cfg
       class(ModelParam), target :: model_param
-      class(StaggeredGrid), target :: grid  
+      class(StaggeredGrid), target :: grid
 
-     
+
         self%model_cfg => model_cfg
         self%model_param => model_param
         self%grid => grid
 
 
  end subroutine
-   
+
    !subroutine ice_module_update(self, state, param, grid)
  subroutine ice_module_update(self, state, param)
 
@@ -63,51 +64,51 @@ module strat_ice
       class(IceModule)  :: self
       class(ModelState) :: state
       class(ModelParam) :: param 
-   
+
    !-------------------
    ! Below freezing
    !-------------------
    if (param%Freez_Temp >= state%T(self%grid%ubnd_vol) .and. param%Freez_Temp >= state%T_atm) then
     !Ice expending (air temp & water temp less then Freez_Temp)
-     call self%do_ice_freezing(state, param) 
-   else if (state%ice_h > 0 .and. param%Freez_Temp >= state%T_atm) then 
+     call self%do_ice_freezing(state, param)
+   else if (state%ice_h > 0 .and. param%Freez_Temp >= state%T_atm) then
      !If ice exist and temperature under ice is larger than freez temp. Set surface temp to freez point and iniate ice formation
      !set surface temperature to freezing point
      state%T(self%grid%ubnd_vol) = param%Freez_Temp ![°C]
-     call self%do_ice_freezing(state, param)   
+     call self%do_ice_freezing(state, param)
    end if
-   !Snow fall addition onto ice     
+   !Snow fall addition onto ice
    if (self%model_cfg%snow_model == 1 .and. param%Freez_Temp >= state%T_atm .and. state%ice_h > 0 .and. state%precip > 0) then
-       call self%do_snow_build(state) 
-   end if   
-   
-  !------------------ 
+       call self%do_snow_build(state)
+   end if
+
+  !------------------
   ! Above freezing
   !-------------------
-   if (param%Freez_Temp < state%T_atm .and. state%ice_h > 0) then 
-     !Melt snow    
+   if (param%Freez_Temp < state%T_atm .and. state%ice_h > 0) then
+     !Melt snow
      if (state%snow_h > 0 .and. self%model_cfg%snow_model == 1) then
-      call self%do_snow_melting(state, param)  
-     !Melt ice after all snow is gone 
+      call self%do_snow_melting(state, param)
+     !Melt ice after all snow is gone
      else if (state%snow_h == 0) then
       call self%do_ice_melting(state, param)
      end if
-   end if   
+   end if
 
  end subroutine
-   
-   
-   
+
+
+
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ! The Ice Model
 
 ! Ice formation and growth
  subroutine ice_formation(self, state, param)
-      implicit none   
+      implicit none
       class(IceModule), intent(inout)  :: self
       class(ModelState), intent(inout) :: state
       class(ModelParam), intent(inout) :: param
-      
+
       ! Define variables only used in ice_model
       real(RK) :: P
       real(RK) :: P_ice

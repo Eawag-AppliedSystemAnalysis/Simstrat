@@ -1,8 +1,8 @@
-!     +---------------------------------------------------------------+
+!<    +---------------------------------------------------------------+
 !     |  Advection module
 !     |  - Based on already read in/outflows, calculates Advection
 !     |  - Might grow or shrink grid (methods merge/add_box)
-!     +---------------------------------------------------------------+
+!<    +---------------------------------------------------------------+
 
 module strat_advection
    use strat_kinds
@@ -205,7 +205,7 @@ contains
 
          ! extend grid by one (also updates ubnd_vol etc)
          call self%grid%grow(dh)
-         
+
          ! Update quantities in new grid element
          state%U(ubnd_vol) = state%U(ubnd_vol - 1)
          state%V(ubnd_vol) = state%V(ubnd_vol - 1)

@@ -1,9 +1,9 @@
-!     +---------------------------------------------------------------+
+!<    +---------------------------------------------------------------+
 !     |  Interface and implementation for discretization methods
 !     |  - Currently, there are two impelmentations:
 !     |  - EulerIDiscretizationMFQ: Euler implicit discretization for Mean Flow Quantities
 !     |  - EulerIDiscretizationKEPS: Euler Implicit discretization for k and epsilon
-!     +---------------------------------------------------------------+
+!<    +---------------------------------------------------------------+
 
 module strat_discretization
    use strat_kinds
@@ -53,7 +53,7 @@ contains
       real(RK), dimension(:), intent(inout) :: var, sources, boundaries, lower_diag, upper_diag, main_diag, rhs, nu
       real(RK), intent(inout) :: dt
       integer :: n
-      
+
       n=self%grid%ubnd_vol
 
       ! Build diagonals

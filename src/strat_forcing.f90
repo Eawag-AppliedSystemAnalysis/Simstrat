@@ -1,9 +1,9 @@
-!     +---------------------------------------------------------------+
+!<    +---------------------------------------------------------------+
 !     |  Forcing module
 !     |  - Adjusted heat fluxes to snow- and ice-covered lake
 !     |  - Reads forcing file and updates state
 !     |  - Updates Coriolis force terms
-!     +---------------------------------------------------------------+
+!<    +---------------------------------------------------------------+
 
 module strat_forcing
    use strat_kinds
@@ -41,7 +41,7 @@ contains
       self%param => model_param
       self%grid => grid
       self%file = forcing_file
-   
+
       if(self%cfg%snow_model == 1) call warn('Snow module need precipitation input, check forcing file.') 
       !If precipitation column is missing in forcing file, Simstrat will read dates as precipitation  	  
    end subroutine
@@ -133,11 +133,11 @@ contains
       if(state%snow_h <= 0.000001 .and. state%ice_h >= 0.000001) then
          T_surf = state%ice_temp
       else if (state%snow_h > 0.000001 .and. state%ice_h >= 0.000001) then
-         T_surf = state%snow_temp   
-      else 
+         T_surf = state%snow_temp
+      else
          T_surf = state%T(self%grid%ubnd_vol)
       end if
-   
+
          ! number of values to read, depending on filtered wind and precipitation
          if (cfg%use_filtered_wind .and. cfg%ice_model == 0) then
             nval_offset = 1
@@ -154,7 +154,7 @@ contains
               call error('Ice module not compatible with forcing mode 1, use 2 or 3.')
               stop
             end if
-   
+
             call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%model_step_counter)
             call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%model_step_counter)
             state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
@@ -166,7 +166,7 @@ contains
             state%T_atm = 0.0_RK
             state%precip = 0.0_RK
             if (cfg%use_filtered_wind) state%Wf = A_cur(5) !AG 2014
-   
+
          else if (cfg%forcing_mode >= 2) then
             if (cfg%forcing_mode == 2) then ! date, U,V,Tatm,Hsol,Vap
                call self%read (state%datum, A_s, A_e, A_cur, 5 + nval_offset, state%model_step_counter)
@@ -174,18 +174,18 @@ contains
                state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
                state%T_atm = A_cur(3)
                if (state%ice_h > 0 .and. state%snow_h == 0) then !Ice
-               F_glob = A_cur(4)*(1 - param%ice_albedo)      
+               F_glob = A_cur(4)*(1 - param%ice_albedo)
                else if (state%ice_h > 0 .and. state%snow_h > 0) then !Snow
-               F_glob = A_cur(4)*(1 - param%snow_albedo)     
+               F_glob = A_cur(4)*(1 - param%snow_albedo)
                else !Water
-               F_glob = A_cur(4)*(1 - param%albsw) 
+               F_glob = A_cur(4)*(1 - param%albsw)
                end if
-               Vap_atm = A_cur(5) 
+               Vap_atm = A_cur(5)
                Cloud = 0.5
                if (cfg%use_filtered_wind) state%Wf = A_cur(6) !AG 2014
                if (cfg%snow_model == 1 .and. cfg%use_filtered_wind) then
                  state%precip = A_cur(7)
-               else if (cfg%snow_model == 1) then 
+               else if (cfg%snow_model == 1) then
                  state%precip = A_cur(6)
                end if
 
@@ -195,14 +195,14 @@ contains
                state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
                state%T_atm = A_cur(3)
                if (state%ice_h > 0 .and. state%snow_h == 0) then !Ice
-               F_glob = A_cur(4)*(1 - param%ice_albedo)      
+               F_glob = A_cur(4)*(1 - param%ice_albedo)
                else if (state%ice_h > 0 .and. state%snow_h > 0) then !Snow
-               F_glob = A_cur(4)*(1 - param%snow_albedo)     
+               F_glob = A_cur(4)*(1 - param%snow_albedo)
                else !Water
-               F_glob = A_cur(4)*(1 - param%albsw) 
-               end if     
+               F_glob = A_cur(4)*(1 - param%albsw)
+               end if
                Vap_atm = A_cur(5)
-               Cloud = A_cur(6) 
+               Cloud = A_cur(6)
                if (Cloud < 0 .or. Cloud > 1) then
                   call error('Cloudiness should always be between 0 and 1.')
                   stop
@@ -211,22 +211,22 @@ contains
                if (cfg%snow_model == 1 .and. cfg%use_filtered_wind) then
                 state%precip = A_cur(8)
                else if (cfg%snow_model == 1) then
-                state%precip = A_cur(7)     
+                state%precip = A_cur(7)
                end if
 
             else if (cfg%forcing_mode == 4) then ! date,U10,V10,Hnet,Hsol
-               if (cfg%ice_model == 1) then 
+               if (cfg%ice_model == 1) then
                  call error('Ice module not compatible with forcing mode 4, use 2 or 3.')
-                 stop  
+                 stop
                end if
-      
+
                call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%model_step_counter)
                state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
                state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
                heat0 = A_cur(3) !MS 2014
                F_glob = A_cur(4)*(1 - param%albsw)
-               state%T_atm = 0.0_RK       
-               if (cfg%use_filtered_wind) state%Wf = A_cur(5) !AG 2014    
+               state%T_atm = 0.0_RK
+               if (cfg%use_filtered_wind) state%Wf = A_cur(5) !AG 2014
             !UK added forcing mode with incomming long-wave radiation instead of cloudiness
             else if (cfg%forcing_mode == 5) then ! date,U10,V10,Tatm,Hsol,Vap,ILWR
                call self%read (state%datum, A_s, A_e, A_cur, 6 + nval_offset, state%model_step_counter)
@@ -282,27 +282,27 @@ contains
                end if
                H_A = H_A*param%p_radin ! Provided fitting factor p_radin (~1)
 
-               ! Long-wave radiation from water body (black body) 
+               ! Long-wave radiation from water body (black body)
                ! following:
-               ! Leppäranta, M. (2010). Modelling the Formation and Decay of Lake Ice. 
+               ! Leppäranta, M. (2010). Modelling the Formation and Decay of Lake Ice.
                ! In G. George (Ed.), The Impact of Climate Change on European Lakes (pp. 63–83). 
                ! Dordrecht: Springer Netherlands. https://doi.org/10.1007/978-90-481-2945-4_5
-               if (state%ice_h > 0 .and. state%snow_h == 0) then !Ice Cover  
+               if (state%ice_h > 0 .and. state%snow_h == 0) then !Ice Cover
                emissivity = emiss_ice
-               else if (state%ice_h > 0 .and. state%snow_h > 0) then !Snow Cover  
-               !varies from 0.8 to 0.9 depending on snow density      
+               else if (state%ice_h > 0 .and. state%snow_h > 0) then !Snow Cover
+               !varies from 0.8 to 0.9 depending on snow density
                emissivity = 5.0e-4_RK * state%snow_dens + 6.75e-1_RK
                else ! Free Water
                emissivity = emiss_water
-               end if     
+               end if
                H_W = -emissivity*sig*(T_surf + 273.15_RK)**4
-      
+
                ! Flux of sensible heat (convection)
                H_K = -B0*fu*(T_surf - state%T_atm)
-      
+
                ! Flux of latent heat (evaporation, condensation)
                H_V = -fu*(Vap_wat - Vap_atm)
-        
+
                ! Heat fluxes save
                ! Ice light penetration and wind blocking added 2018 by Love Raaman
                if (state%ice_h > 0 .and. state%snow_h == 0) then !Ice Cover
@@ -315,9 +315,9 @@ contains
                ! Supress wind turbulence with wind lid (heat flux affected by wind still active on snow and ice)
                state%u10 = 0
                state%v10 = 0
-               state%uv10 = 0      
+               state%uv10 = 0
                else if (state%ice_h > 0 .and. state%snow_h > 0) then !Snow Cover
-               ! Global heat flux (positive: air to water, negative: water to air) 
+               ! Global heat flux (positive: air to water, negative: water to air)
                ! Heat enters first water cell, heat_snow_ice into the ice or snow layer
                state%heat = 0 + 0 + 0 + 0 + F_glob * param%beta_sol * (1 - param%beta_snow_ice)  !Heat first layer, LRV added beta_snow_ice   
                state%heat_snow_ice = H_A + H_W + H_K + H_V + F_glob*param%beta_snow_ice !Heat snow and/or ice; LRV added beta_snow_ice
@@ -328,12 +328,12 @@ contains
                state%v10 = 0
                state%uv10 = 0
                else ! Free Water
-               ! Global heat flux (positive: air to water, negative: water to air) 
+               ! Global heat flux (positive: air to water, negative: water to air)
                state%heat = H_A + H_W + H_K + H_V + F_glob * param%beta_sol !MS: added term with beta_sol      
-               state%heat_snow_ice = 0 + 0 + 0 + 0 + 0   
+               state%heat_snow_ice = 0 + 0 + 0 + 0 + 0
                ! Removal of solar short-wave radiation absorbed in first water cell
                state%rad0 = F_glob * (1 - param%beta_sol) !MS: added beta_sol
-               end if 
+               end if
                 ! save for output, not used in calculations
                 state%ha = H_A
                 state%hw = H_W
