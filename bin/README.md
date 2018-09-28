@@ -1,1 +1,1 @@
-# Executables
+# Simstrat build artifacts

@@ -7,6 +7,12 @@ cd $(dirname $0)
 
 usage() {
     str=$'\nUsage: '
+    str+=$0
+    str+=$' [-m <string>] [-c] [-d]\n\n'
+    str+=$'  -m <string>  compile mode: release (default), debug\n'
+    str+=$'  -c           clean previous compiling files before building\n'
+    str+=$'  -d           generate code documentation with FORD after building\n'
+    str+=$' in case of no arguments, "./build.sh -m release" is called\n'
     echo "$str" 1>&2
     exit 1
 }

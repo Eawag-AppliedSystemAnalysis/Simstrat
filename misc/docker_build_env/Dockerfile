@@ -3,7 +3,7 @@ MAINTAINER SURF Team "davide.vanzo@eawag.ch"
 
 # get the tools we need
 RUN apk update && apk add gfortran \
-	musl-dev bash python py-pip doxygen git
+	musl-dev bash python py-pip doxygen git graphviz
 
 RUN pip install FoBiS.py ford pygooglechart
 
