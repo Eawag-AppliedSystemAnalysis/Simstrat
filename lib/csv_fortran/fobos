@@ -1,0 +1,32 @@
+[modes]
+modes = release-gnu release-intel
+
+[release-gnu]
+compiler=Gnu
+cflags=-c -O2 -ffree-line-length-none -static-libgcc -static-libgfortran
+mod_dir=./
+obj_dir=./
+build_dir=./build/
+src=./src/
+colors=False
+quiet=False
+target=csv_module.F90
+output=libcsv.a
+mklib=static
+log=True
+
+[release-intel]
+compiler=intel
+cflags=-c -O3
+preproc=-fpp
+modsw=-module=
+mod_dir=./
+obj_dir=./
+build_dir=build
+src=./src/
+colors=False
+quiet=False
+target=csv_module.F90
+output=libcsv.a
+mklib=static
+log=True

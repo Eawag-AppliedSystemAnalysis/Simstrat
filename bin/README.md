@@ -1,0 +1,1 @@
+# Simstrat build artifacts
