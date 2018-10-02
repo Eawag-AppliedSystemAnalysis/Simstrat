@@ -1,0 +1,3 @@
+[submodule "lib/libaed2"]
+	path = lib/libaed2
+	url = git@github.com:AquaticEcoDynamics/libaed2.git
