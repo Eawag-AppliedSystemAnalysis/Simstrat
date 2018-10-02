@@ -31,7 +31,7 @@ git submodule update
 
 If new commits (of the submodules) are pushed to our project, everybody should keep their local submodules clones up-to-date with
 
-~~~ bash
+~~~bash
 git submodule update
 ~~~
 
