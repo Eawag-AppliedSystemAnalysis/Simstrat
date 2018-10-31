@@ -1,0 +1,55 @@
+{
+  "Input" : {
+    "Initial conditions"  : "TestCase_LakeZurich/initcond_zuri_810107.dat",
+    "Grid"                : "TestCase_LakeZurich/Grid.dat",
+    "Morphology"          : "TestCase_LakeZurich/morph_zuri.dat",
+    "Forcing"             : "TestCase_LakeZurich/forcing_lake_zurich_1981_2013_waedenswil_homogenized.dat3",
+    "Absorption"          : "TestCase_LakeZurich/absorption_zh_1981_2013.dat",
+    "Inflow"              : "TestCase_LakeZurich/Qinp.dat",
+    "Outflow"             : "TestCase_LakeZurich/Qout.dat",
+    "Inflow temperature"  : "TestCase_LakeZurich/Tinp.dat",
+    "Inflow salinity"     : "TestCase_LakeZurich/Sinp.dat"
+  },
+  "Output" : {
+    "Path"  : "TestCases_Results/",
+    "Depths" : 1,
+    "Times"  : 96,
+    "OutputDepthReference": "surface"
+  },
+  "ModelConfig" : {
+    "MaxLengthInputData"      : 1000,
+    "CoupleAED2"              : false,
+    "TurbulenceModel"         : 1,
+    "StabilityFunction"       : 2,
+    "FluxCondition"           : 1,
+    "Forcing"                 : 3,
+    "UseFilteredWind"         : false,
+    "SeicheNormalization"     : 2,
+    "WindDragModel"           : 3,
+    "InflowPlacement"         : 0,
+    "PressureGradients"       : 0,
+    "IceModel"                : 0,
+    "SnowModel"               : 0	
+  },
+  "Simulation" : {
+    "Timestep s"        : 300,
+    "Start d"           : 35001,
+    "End d"             : 35732,
+    "DisplaySimulation" : 0
+  },
+  "ModelParameters" : {
+    "lat"           : 47.3,
+    "p_air"         : 960,
+    "a_seiche"      : 0.0011046,
+    "q_nn"          : 0.75,
+    "f_wind"        : 1.6423,
+    "c10"           : 1,
+    "cd"            : 0.002,
+    "hgeo"          : 0.1,
+    "k_min"         : 1e-30,
+    "p_radin"       : 1.1978,
+    "p_windf"       : 1,
+    "beta_sol"      : 0.35,
+    "albsw"         : 0.08
+  }
+}
