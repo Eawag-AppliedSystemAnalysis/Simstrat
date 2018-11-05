@@ -91,14 +91,15 @@ module strat_simdata
       real(RK) :: p_radin
       real(RK) :: p_windf
       real(RK) :: beta_sol 
-      real(RK) :: radin_ice   
-      real(RK) :: beta_snow
-      real(RK) :: beta_snowice
-      real(RK) :: beta_ice
+      real(RK) :: p_albedo   
+      real(RK) :: lambda_snow
+      real(RK) :: lambda_snowice
+      real(RK) :: lambda_ice
       real(RK) :: ice_albedo 
       real(RK) :: snowice_albedo   
       real(RK) :: snow_albedo   
       real(RK) :: freez_temp 
+      real(RK) :: snow_temp    
       real(RK) :: albsw   
    end type
 
@@ -143,9 +144,8 @@ module strat_simdata
       real(RK), allocatable :: snow_h ! Snow layer height [m]
       real(RK), allocatable :: ice_h ! Ice layer height [m]   
       real(RK), allocatable :: snowice_h ! Snowice layer height [m]      
-      real(RK) :: snow_dens ! On ice snow density [kg m-3]   
+      real(RK) :: snow_dens ! snow density [kg m-3]   
       real(RK) :: ice_temp ! Ice density [kg m-3]
-      real(RK) :: snow_temp ! Ice density [kg m-3]
       real(RK) :: precip ! precipiation in water eqvivalent hight [m] 
    
       !For saving heatflux 
@@ -262,7 +262,6 @@ contains
       this%ice_h = 0.0_RK
       this%snowice_h = 0.0_RK   
       this%ice_temp = 0.0_RK 
-      this%snow_temp = 0.0_RK
       this%snow_dens = rho_s_0
       this%precip = 0.0_RK
 

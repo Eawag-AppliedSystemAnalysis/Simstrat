@@ -83,7 +83,7 @@ module strat_ice
      call self%do_ice_freezing(state, param)  
    end if
    !Snow fall addition onto ice     
-   if (self%model_cfg%snow_model == 1 .and. param%Freez_Temp >= state%T_atm .and. (state%ice_h + state%snowice_h) > 0 .and. state%precip > 0) then
+   if (self%model_cfg%snow_model == 1 .and. param%snow_temp >= state%T_atm .and. (state%ice_h + state%snowice_h) > 0 .and. state%precip > 0) then
     call self%do_snow_build(state) 
    end if    
 
@@ -191,8 +191,7 @@ module strat_ice
       class(IceModule) :: self
       class(ModelState) :: state 
       real(RK) :: snow_h_new
-      real(RK) :: T0, Ws, ChangSnowDens
-      T0 = 273 ![°K]
+      real(RK) :: Ws, ChangSnowDens
    
       !calculate new snow height
       snow_h_new = (state%precip / 3600) * state%dt * (rho_0 / rho_s_0) !go from m/h to m/s and increas volume from water to snow
@@ -201,8 +200,6 @@ module strat_ice
       Ws = (snow_h_new * rho_s_0) / (rho_0 * 1 * 1)  ![m water eqvivialent]
       ! compression Yen (1981) eq. 7
       ChangSnowDens = state%snow_dens * C01 * Ws * exp(-C02 * state%snow_dens) * state%dt 
-      ! Compression including temperature effect Yen (1981) eq. 9
-      ! ChangSnowDens = state%snow_dens * C01 * Ws * exp(-C02 * state%snow_dens) * exp(-0.08 * (T0 - (state%snow_temp + T0))) * state%dt 
       ! compress old snow layer
       state%snow_h = state%snow_h * (state%snow_dens /(state%snow_dens + ChangSnowDens))
      
@@ -219,11 +216,7 @@ module strat_ice
         if (state%snow_dens > rho_s_max) then 
            state%snow_dens = rho_s_max 
         end if  
-      
-     !update snow temp
-     !state%snow_temp = state%t_atm 
-     state%snow_temp = state%snow_temp + (1/cp_s) * (state%snow_h/state%snow_dens) * state%heat_snow * state%dt
-     ![kg °C]/[J] * [m]/[kg/m3] * [W/m2]*[s] = [J°C]/[J] = [°C]  
+        
  end subroutine
   
 ! %%%%%%%%%%%%%%%%%%%%

@@ -175,11 +175,11 @@ contains
                state%T_atm = A_cur(3)
       
                if (state%ice_h > 0 .and. state%snowice_h == 0 .and. state%snow_h == 0) then !Ice
-               F_glob = (A_cur(4)*(1 - param%ice_albedo)) * param%radin_ice
+               F_glob = (A_cur(4)*(1 - param%ice_albedo)) * param%p_albedo
                else if (state%snowice_h > 0 .and. state%snow_h == 0) then !Snowice
-               F_glob = (A_cur(4)*(1 - param%snowice_albedo)) * param%radin_ice   
+               F_glob = (A_cur(4)*(1 - param%snowice_albedo)) * param%p_albedo   
                else if (state%snow_h > 0) then !Snow
-               F_glob = (A_cur(4)*(1 - param%snow_albedo)) * param%radin_ice
+               F_glob = (A_cur(4)*(1 - param%snow_albedo)) * param%p_albedo
                else !Water
                F_glob = A_cur(4)*(1 - param%albsw)
                end if 
@@ -200,11 +200,11 @@ contains
                state%T_atm = A_cur(3)
 
                if (state%ice_h > 0 .and. state%snowice_h == 0 .and. state%snow_h == 0) then !Ice                
-               F_glob = (A_cur(4)*(1 - param%ice_albedo)) * param%radin_ice
+               F_glob = (A_cur(4)*(1 - param%ice_albedo)) * param%p_albedo
                else if (state%snowice_h > 0 .and. state%snow_h == 0) then !Snowice
-                F_glob = (A_cur(4)*(1 - param%snowice_albedo)) * param%radin_ice     
+                F_glob = (A_cur(4)*(1 - param%snowice_albedo)) * param%p_albedo     
                else if (state%snow_h > 0) then !Snow
-                F_glob = (A_cur(4)*(1 - param%snow_albedo)) * param%radin_ice
+                F_glob = (A_cur(4)*(1 - param%snow_albedo)) * param%p_albedo
                else !Water
                 F_glob = A_cur(4)*(1 - param%albsw)
                end if  
@@ -245,11 +245,11 @@ contains
                state%T_atm = A_cur(3)
       
                if (state%ice_h > 0 .and. state%snowice_h == 0 .and. state%snow_h == 0) then !Ice
-               F_glob = (A_cur(4)*(1 - param%ice_albedo)) * param%radin_ice
+               F_glob = (A_cur(4)*(1 - param%ice_albedo)) * param%p_albedo
                else if (state%snowice_h > 0 .and. state%snow_h == 0) then !Snowice
-               F_glob = (A_cur(4)*(1 - param%snowice_albedo)) * param%radin_ice     
+               F_glob = (A_cur(4)*(1 - param%snowice_albedo)) * param%p_albedo     
                else if (state%snow_h > 0) then !Snow
-               F_glob = (A_cur(4)*(1 - param%snow_albedo)) * param%radin_ice
+               F_glob = (A_cur(4)*(1 - param%snow_albedo)) * param%p_albedo
                else !Water
                F_glob = A_cur(4)*(1 - param%albsw)
                end if
@@ -349,18 +349,18 @@ contains
                   H_tot = 0
                  end if
      
-                ! Global heat flux (positive: air to water, negative: water to air) !MS: added beta_sol ; LRV added beta_snow_ice
+                ! Global heat flux (positive: air to water, negative: water to air) !MS: added beta_sol ; LRV added lambda_snow_ice
                 ! Leppäranta, M. (2014), Eq. 6.12
                 ! Removal of solar short-wave radiation absorbed in snow, snowice, ice and first water cell (works also when x_h = 0)  
-                 state%heat = F_glob * exp(-param%beta_snow*state%snow_h -param%beta_snowice*state%snowice_h -param%beta_ice*state%ice_h) * param%beta_sol
-                 state%rad0 = F_glob * exp(-param%beta_snow*state%snow_h -param%beta_snowice*state%snowice_h -param%beta_ice*state%ice_h) * (1 - param%beta_sol)      
+                 state%heat = F_glob * exp(-param%lambda_snow*state%snow_h -param%lambda_snowice*state%snowice_h -param%lambda_ice*state%ice_h) * param%beta_sol
+                 state%rad0 = F_glob * exp(-param%lambda_snow*state%snow_h -param%lambda_snowice*state%snowice_h -param%lambda_ice*state%ice_h) * (1 - param%beta_sol)      
 
                !Heat flux into snow, ice or snowice layer.
                ! Light absorption each layer
                ! Leppäranta, M. (2014), Eq. 6.12    
-               F_snow    = F_glob - F_glob * exp(-param%beta_snow*state%snow_h)
-               F_snowice = F_glob * exp(-param%beta_snow*state%snow_h) - F_glob * exp(-param%beta_snow*state%snow_h -param%beta_snowice*state%snowice_h)
-               F_ice     = F_glob * exp(-param%beta_snow*state%snow_h -param%beta_snowice*state%snowice_h) - F_glob * exp(-param%beta_snow*state%snow_h -param%beta_snowice*state%snowice_h -param%beta_ice*state%ice_h)            
+               F_snow    = F_glob - F_glob * exp(-param%lambda_snow*state%snow_h)
+               F_snowice = F_glob * exp(-param%lambda_snow*state%snow_h) - F_glob * exp(-param%lambda_snow*state%snow_h -param%lambda_snowice*state%snowice_h)
+               F_ice     = F_glob * exp(-param%lambda_snow*state%snow_h -param%lambda_snowice*state%snowice_h) - F_glob * exp(-param%lambda_snow*state%snow_h -param%lambda_snowice*state%snowice_h -param%lambda_ice*state%ice_h)            
                if (F_snow < 0 .or. F_snowice < 0 .or. F_ice < 0 .or. state%heat < 0 .or. state%rad0 < 0) then
                  call error('Negative heat flux not alowed for melting')
                  stop
