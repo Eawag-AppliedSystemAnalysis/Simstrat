@@ -444,7 +444,8 @@ contains
 
       type(json_file) :: par_file
       logical :: found
-      integer :: n_children_dummy
+      integer :: n_children_dummy, i
+      integer :: index_bs
 
       !gfortran cannot handle type bound allocatable character that are passed to subroutine as intent(out)
       !as a workaround we have to store the values in a local scope allocatable character
@@ -493,8 +494,24 @@ contains
          call par_file%get('Input.Outflow', QoutName, found); input_cfg%QoutName = QoutName; call check_field(found, 'Input.Outflow', ParName)
          call par_file%get('Input.Inflow temperature', TinpName, found); input_cfg%TinpName = TinpName; call check_field(found, 'Input.Inflow temperature', ParName)
          call par_file%get('Input.Inflow salinity', SinpName, found); input_cfg%SinpName = SinpName; call check_field(found, 'Input.Inflow salinity', ParName)
+         
          ! Path to output folder
-         call par_file%get('Output.Path', PathOut, found); output_cfg%PathOut = PathOut; call check_field(found, 'Output.Path', ParName)
+         call par_file%get('Output.Path', PathOut, found); call check_field(found, 'Output.Path', ParName)
+
+         ! Transform backslashes to slash
+         do while(scan(PathOut,'\')>0)
+            index_bs = scan(PathOut,'\')
+            PathOut(index_bs:index_bs) = '/'
+         end do
+
+         ! Remove trailing slashes at the end
+         if (len(PathOut) == scan(trim(PathOut),"/", BACK= .true.)) then
+            output_cfg%PathOut = PathOut(1:len(PathOut) - 1)
+         else
+            output_cfg%PathOut = trim(PathOut)
+         end if
+
+
          ! Output depth reference
          call par_file%get("Output.OutputDepthReference", output_cfg%output_depth_reference, found); call check_field(found, 'Output.OutputDepthReference', ParName)
          if (.not.(output_cfg%output_depth_reference == 'surface' .or. output_cfg%output_depth_reference == 'bottom')) then
