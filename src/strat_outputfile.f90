@@ -227,15 +227,12 @@ contains
       allocate (self%output_files(self%n_vars))
 
       ! Check if output directory exists
-      inquire(file=output_config%PathOut//'/',exist=exist_output_folder)
+      inquire(file=output_config%PathOut,exist=exist_output_folder)
 
       ! Create output folder if it does not exist
       if(.not.exist_output_folder) then
         call warn('Result folder does not exist, create folder...')
-        ppos = scan(trim(output_config%PathOut),"/", BACK= .true.)
-        if ( ppos > 0 ) output_folder = output_config%PathOut(1:ppos - 1)
-        mkdirCmd = 'mkdir '//trim(output_folder)
-        write(6,*) mkdirCmd
+        mkdirCmd = 'mkdir '//trim(output_config%PathOut)
         call execute_command_line(mkdirCmd)
       end if
 
@@ -276,15 +273,12 @@ contains
       self%n_depths = size(output_config%zout)
 
       ! Check if output directory exists
-      inquire(file=output_config%PathOut//'/',exist=exist_output_folder)
+      inquire(file=output_config%PathOut,exist=exist_output_folder)
 
       ! Create output folder if it does not exist
       if(.not.exist_output_folder) then
         call warn('Result folder does not exist, create folder...')
-        ppos = scan(trim(output_config%PathOut),"/", BACK= .true.)
-        if ( ppos > 0 ) output_folder = output_config%PathOut(1:ppos - 1)
-        mkdirCmd = 'mkdir '//trim(output_folder)
-        write(6,*) mkdirCmd
+        mkdirCmd = 'mkdir '//trim(output_config%PathOut)
         call execute_command_line(mkdirCmd)
       end if
 
