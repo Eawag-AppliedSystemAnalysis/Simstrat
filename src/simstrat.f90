@@ -22,6 +22,7 @@ program simstrat_main
    use strat_transport
    use strat_absorption
    use strat_advection
+   use simstrat_aed2
    use strat_lateral
    use, intrinsic :: ieee_arithmetic
 
@@ -46,6 +47,7 @@ program simstrat_main
    type(IceModule) :: mod_ice
    type(AbsorptionModule) :: mod_absorption
    type(AdvectionModule) :: mod_advection
+   type(SimstratAED2) :: mod_aed2
    type(LateralModule), target :: mod_lateral_normal
    type(LateralRhoModule), target :: mod_lateral_rho
    class(GenericLateralModule), pointer :: mod_lateral
@@ -98,6 +100,11 @@ program simstrat_main
       call mod_lateral%init(simdata%model_cfg, &
                            simdata%model_param, &
                            simdata%grid)
+   end if
+
+   ! Initialize biochemical model "AED2" if used
+   if (simdata%model_cfg%couple_aed2) then
+      call mod_aed2%init(simdata%aed2_cfg)
    end if
 
    ! Setup logger
@@ -238,6 +245,11 @@ contains
          ! Update ice
          if (simdata%model_cfg%ice_model == 1) then
             call mod_ice%update(simdata%model, simdata%model_param)
+         end if
+
+         ! Update biogeochemistry
+         if (simdata%model_cfg%couple_aed2) then
+            call mod_aed2%update(simdata%aed2_cfg)
          end if
 
          ! Call logger to write files

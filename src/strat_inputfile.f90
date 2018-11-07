@@ -450,6 +450,7 @@ contains
       associate (input_cfg=>self%simdata%input_cfg, &
                  output_cfg=>self%simdata%output_cfg, &
                  model_cfg=>self%simdata%model_cfg, &
+                 aed2_cfg=>self%simdata%aed2_cfg, &
                  sim_cfg=>self%simdata%sim_cfg, &
                  model_param=>self%simdata%model_param)
 
@@ -546,7 +547,7 @@ contains
             model_cfg%max_length_input_data = 1000
             call warn('Variable "ModelConfig.MaxLengthInputData" is not set. Assume a value of 1000')
          end if
-         call par_file%get("ModelConfig.CoupleAED2", self%simdata%model_cfg%couple_aed2, found);
+         call par_file%get("ModelConfig.CoupleAED2", model_cfg%couple_aed2,found);
          if (.not. found) then
             model_cfg%couple_aed2 = .false.
             call warn('Variable "ModelConfig.CoupleAED2" is not set. Assume you do not want to couple simstrat with aed2.')
@@ -563,6 +564,10 @@ contains
          !call par_file%get("ModelConfig.EnableSalinityTransport", model_cfg%salinity_transport, found); call check_field(found, 'ModelConfig.EnableSalinityTransport', ParName)
          call par_file%get("ModelConfig.IceModel", model_cfg%ice_model, found); call check_field(found, 'ModelConfig.IceModel', ParName)
          call par_file%get("ModelConfig.SnowModel", model_cfg%snow_model, found); call check_field(found, 'ModelConfig.SnowModel', ParName)
+
+         ! AED2 configuration (or another biogeochemical model if implemented)
+         call par_file%get("AED2Config.AED2ConfigFile", aed2_cfg%aed2_config_file,found); call check_field(found, 'AED2Config.AED2ConfigFile', ParName)
+         call par_file%get("AED2Config.SplitFactor", aed2_cfg%split_factor,found); call check_field(found, 'AED2Config.SplitFactor', ParName)
 
          !Model Parameter
          call par_file%get("ModelParameters.lat", model_param%Lat, found); call check_field(found, 'ModelParameters.lat', ParName)
@@ -589,12 +594,15 @@ contains
          call par_file%get("ModelParameters.p_radin", model_param%p_radin, found); call check_field(found, 'ModelParameters.p_radin', ParName)
          call par_file%get("ModelParameters.p_windf", model_param%p_windf, found); call check_field(found, 'ModelParameters.p_windf', ParName)
          call par_file%get("ModelParameters.beta_sol", model_param%beta_sol, found); call check_field(found, 'ModelParameters.beta_sol', ParName)
-         call par_file%get("ModelParameters.beta_snowice", model_param%beta_snow_ice, found); call check_field(found, 'ModelParameters.beta_snowice', ParName)     
-         call par_file%get("ModelParameters.albsw", model_param%albsw, found); call check_field(found, 'ModelParameters.albsw', ParName)
-         call par_file%get("ModelParameters.ice_albedo", model_param%ice_albedo, found); call check_field(found, 'ModelParameters.ice_albedo', ParName)
-         call par_file%get("ModelParameters.snow_albedo", model_param%snow_albedo, found); call check_field(found, 'ModelParameters.snow_albedo', ParName)
-         call par_file%get("ModelParameters.freez_temp", model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_temp', ParName)
-   
+         
+         if (model_cfg%ice_model==1) then
+            call par_file%get("ModelParameters.beta_snowice", model_param%beta_snow_ice, found); call check_field(found, 'ModelParameters.beta_snowice', ParName)     
+            call par_file%get("ModelParameters.albsw", model_param%albsw, found); call check_field(found, 'ModelParameters.albsw', ParName)
+            call par_file%get("ModelParameters.ice_albedo", model_param%ice_albedo, found); call check_field(found, 'ModelParameters.ice_albedo', ParName)
+            call par_file%get("ModelParameters.snow_albedo", model_param%snow_albedo, found); call check_field(found, 'ModelParameters.snow_albedo', ParName)
+            call par_file%get("ModelParameters.freez_temp", model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_temp', ParName)
+         end if
+
          !Simulation Parameter
          call par_file%get("Simulation.Timestep s", sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep s', ParName)
          call par_file%get("Simulation.Start d", sim_cfg%start_datum, found); call check_field(found, 'Simulation.Start d', ParName)

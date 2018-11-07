@@ -1,0 +1,29 @@
+&aed2_models
+    models =
+       !-->  NUTRIENT/CHEMISTRY modules  <--!
+             'aed2_sedflux',               !core module   
+             'aed2_tracer',                !core module
+             'aed2_oxygen',                !core module 
+             'aed2_carbon',                !core module
+             'aed2_silica',                !core module 
+             'aed2_nitrogen',              !core module
+             'aed2_phosphorus',            !core module 
+             'aed2_organic_matter',        !core module 
+        !off 'aed2_seddiagenesis',         !plus module
+        !-->  BIOLOGY modules  <--!
+             'aed2_phytoplankton',         !core module
+             'aed2_zooplankton',           !core module
+             'aed2_macrophyte',            !plus module 
+        !off 'aed2_macroalgae',            !plus module
+        !off 'aed2_bivalve',               !plus module
+        !off 'aed2_pathogens',             !plus module
+        !-->  RIPARIAN modules  <--!
+        !off 'aed2_geochemistry',          !plus module
+        !off 'aed2_land',                  !plus module
+        !off 'aed2_soilbgc',               !plus module
+        !off 'aed2_vegetation',            !plus module
+        !off 'aed2_ass',                   !plus module
+        !-->  SUMMARY modules  <--!
+             'aed2_totals',                !core module
+             'aed2_habitat'                !plus module
+/

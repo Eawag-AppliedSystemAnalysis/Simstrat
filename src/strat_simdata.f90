@@ -76,6 +76,12 @@ module strat_simdata
       integer :: snow_model
    end type
 
+   ! AED2 configuration (read from file)
+   type, public :: AED2Config
+      character(len=:), allocatable :: aed2_config_file
+      integer :: split_factor
+   end type
+
    ! Model params (read from file)
    type, public :: ModelParam
       real(RK) :: Lat
@@ -167,6 +173,7 @@ module strat_simdata
       type(OutputConfig), public  :: output_cfg
       type(SimConfig), public     :: sim_cfg
       type(ModelConfig), public   :: model_cfg
+      type(AED2Config), public    :: aed2_cfg
       type(ModelParam), public    :: model_param
       type(ModelState), public    :: model
       type(StaggeredGrid), public :: grid

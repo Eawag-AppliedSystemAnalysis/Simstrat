@@ -1,7 +1,7 @@
 {
   "Input" : {
     "Initial conditions"  : "TestCase_LakeZurich/initcond_zuri_810107.dat",
-    "Grid"                : 137,
+    "Grid"                : "TestCase_LakeZurich/Grid.dat",
     "Morphology"          : "TestCase_LakeZurich/morph_zuri.dat",
     "Forcing"             : "TestCase_LakeZurich/forcing_lake_zurich_1981_2013_waedenswil_homogenized.dat3",
     "Absorption"          : "TestCase_LakeZurich/absorption_zh_1981_2013.dat",
@@ -10,17 +10,15 @@
     "Inflow temperature"  : "TestCase_LakeZurich/Tinp.dat",
     "Inflow salinity"     : "TestCase_LakeZurich/Sinp.dat"
   },
-
   "Output" : {
     "Path"  : "TestCases_Results/",
     "Depths" : 1,
-    "OutputDepthReference" : "surface",
-    "Times"  : 96
+    "Times"  : 96,
+    "OutputDepthReference": "surface"
   },
-
   "ModelConfig" : {
     "MaxLengthInputData"      : 1000,
-    "CoupleAED2"              : false,
+    "CoupleAED2"              : true,
     "TurbulenceModel"         : 1,
     "StabilityFunction"       : 2,
     "FluxCondition"           : 1,
@@ -33,14 +31,16 @@
     "IceModel"                : 0,
     "SnowModel"               : 0	
   },
-
+  "AED2Config" : {
+    "AED2ConfigFile"          : "aed2.nml",
+    "SplitFactor"             : 1
+  },
   "Simulation" : {
     "Timestep s"        : 300,
     "Start d"           : 35001,
     "End d"             : 35732,
-    "DisplaySimulation" : 1
+    "DisplaySimulation" : 0
   },
-
   "ModelParameters" : {
     "lat"           : 47.3,
     "p_air"         : 960,
@@ -54,10 +54,6 @@
     "p_radin"       : 1.1978,
     "p_windf"       : 1,
     "beta_sol"      : 0.35,
-    "beta_snowice" : 0.40,	
-    "albsw"         : 0.08,
-    "ice_albedo"    : 0.30,
-    "snow_albedo"   : 0.77,
-    "freez_temp"    : 0.05	
+    "albsw"         : 0.08
   }
 }
