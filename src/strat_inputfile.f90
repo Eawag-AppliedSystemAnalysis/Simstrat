@@ -444,8 +444,7 @@ contains
 
       type(json_file) :: par_file
       logical :: found
-      integer :: n_children_dummy, i
-      integer :: index_bs
+      integer :: n_children_dummy
 
       !gfortran cannot handle type bound allocatable character that are passed to subroutine as intent(out)
       !as a workaround we have to store the values in a local scope allocatable character
@@ -494,24 +493,8 @@ contains
          call par_file%get('Input.Outflow', QoutName, found); input_cfg%QoutName = QoutName; call check_field(found, 'Input.Outflow', ParName)
          call par_file%get('Input.Inflow temperature', TinpName, found); input_cfg%TinpName = TinpName; call check_field(found, 'Input.Inflow temperature', ParName)
          call par_file%get('Input.Inflow salinity', SinpName, found); input_cfg%SinpName = SinpName; call check_field(found, 'Input.Inflow salinity', ParName)
-         
          ! Path to output folder
-         call par_file%get('Output.Path', PathOut, found); call check_field(found, 'Output.Path', ParName)
-
-         ! Transform backslashes to slash
-         do while(scan(PathOut,'\')>0)
-            index_bs = scan(PathOut,'\')
-            PathOut(index_bs:index_bs) = '/'
-         end do
-
-         ! Remove trailing slashes at the end
-         if (len(PathOut) == scan(trim(PathOut),"/", BACK= .true.)) then
-            output_cfg%PathOut = PathOut(1:len(PathOut) - 1)
-         else
-            output_cfg%PathOut = trim(PathOut)
-         end if
-
-
+         call par_file%get('Output.Path', PathOut, found); output_cfg%PathOut = PathOut; call check_field(found, 'Output.Path', ParName)
          ! Output depth reference
          call par_file%get("Output.OutputDepthReference", output_cfg%output_depth_reference, found); call check_field(found, 'Output.OutputDepthReference', ParName)
          if (.not.(output_cfg%output_depth_reference == 'surface' .or. output_cfg%output_depth_reference == 'bottom')) then
@@ -612,14 +595,15 @@ contains
          call par_file%get("ModelParameters.p_windf", model_param%p_windf, found); call check_field(found, 'ModelParameters.p_windf', ParName)
          call par_file%get("ModelParameters.beta_sol", model_param%beta_sol, found); call check_field(found, 'ModelParameters.beta_sol', ParName)             
          if (model_cfg%ice_model == 1) then    
-           call par_file%get("ModelParameters.radin_ice", model_param%radin_ice, found); call check_field(found, 'ModelParameters.radin_ice', ParName)   
-           call par_file%get("ModelParameters.beta_snow", model_param%beta_snow, found); call check_field(found, 'ModelParameters.beta_snow', ParName)     
-           call par_file%get("ModelParameters.beta_snowice", model_param%beta_snowice, found); call check_field(found, 'ModelParameters.beta_snowice', ParName)     
-           call par_file%get("ModelParameters.beta_ice", model_param%beta_ice, found); call check_field(found, 'ModelParameters.beta_ice', ParName)
+           call par_file%get("ModelParameters.p_albedo", model_param%p_albedo, found); call check_field(found, 'ModelParameters.p_albedo', ParName)   
+           call par_file%get("ModelParameters.lambda_snow", model_param%lambda_snow, found); call check_field(found, 'ModelParameters.lambda_snow', ParName)     
+           call par_file%get("ModelParameters.lam_snowice", model_param%lambda_snowice, found); call check_field(found, 'ModelParameters.lam_snowice', ParName)     
+           call par_file%get("ModelParameters.lambda_ice", model_param%lambda_ice, found); call check_field(found, 'ModelParameters.lambda_ice', ParName)
            call par_file%get("ModelParameters.ice_albedo", model_param%ice_albedo, found); call check_field(found, 'ModelParameters.ice_albedo', ParName)
            call par_file%get("ModelParameters.snowice_alb", model_param%snowice_albedo, found); call check_field(found, 'ModelParameters.snowice_alb', ParName)         
            call par_file%get("ModelParameters.snow_albedo", model_param%snow_albedo, found); call check_field(found, 'ModelParameters.snow_albedo', ParName)
            call par_file%get("ModelParameters.freez_temp", model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_temp', ParName)
+           call par_file%get("ModelParameters.snow_temp", model_param%snow_temp, found); call check_field(found, 'ModelParameters.snow_temp', ParName)
          end if      
          call par_file%get("ModelParameters.albsw", model_param%albsw, found); call check_field(found, 'ModelParameters.albsw', ParName)
 
