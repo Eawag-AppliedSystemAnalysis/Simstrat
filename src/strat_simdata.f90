@@ -80,6 +80,7 @@ module strat_simdata
    type, public :: AED2Config
       character(len=:), allocatable :: aed2_config_file
       integer :: split_factor
+      logical :: particle_mobility, bioshade_feedback
    end type
 
    ! Model params (read from file)

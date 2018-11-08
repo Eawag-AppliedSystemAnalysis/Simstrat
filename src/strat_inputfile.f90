@@ -568,6 +568,8 @@ contains
          ! AED2 configuration (or another biogeochemical model if implemented)
          call par_file%get("AED2Config.AED2ConfigFile", aed2_cfg%aed2_config_file,found); call check_field(found, 'AED2Config.AED2ConfigFile', ParName)
          call par_file%get("AED2Config.SplitFactor", aed2_cfg%split_factor,found); call check_field(found, 'AED2Config.SplitFactor', ParName)
+         call par_file%get("AED2Config.ParticleMobility", aed2_cfg%particle_mobility,found); call check_field(found, 'AED2Config.ParticleMobility', ParName)
+         call par_file%get("AED2Config.BioshadeFeedback", aed2_cfg%bioshade_feedback,found); call check_field(found, 'AED2Config.BioshadeFeedback', ParName)
 
          !Model Parameter
          call par_file%get("ModelParameters.lat", model_param%Lat, found); call check_field(found, 'ModelParameters.lat', ParName)

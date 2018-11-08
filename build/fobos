@@ -20,6 +20,26 @@ cflags=-c -O2 -std=f2008 -ffree-line-length-none
 lflags=-static-libgcc -static-libgfortran -static
 build_dir=.
 src=../src/
+libs = ../lib/libaed2/obj/aed2_bio_utils.o
+	   ../lib/libaed2/obj/aed2_carbon.o
+	   ../lib/libaed2/obj/aed2_chlorophylla.o
+	   ../lib/libaed2/obj/aed2_common.o
+	   ../lib/libaed2/obj/aed2_core.o
+	   ../lib/libaed2/obj/aed2_csv_reader.o
+	   ../lib/libaed2/obj/aed2_nitrogen.o
+	   ../lib/libaed2/obj/aed2_organic_matter.o
+	   ../lib/libaed2/obj/aed2_oxygen.o
+	   ../lib/libaed2/obj/aed2_phosphorus.o
+	   ../lib/libaed2/obj/aed2_phytoplankton.o
+	   ../lib/libaed2/obj/aed2_sedflux.o
+	   ../lib/libaed2/obj/aed2_silica.o
+	   ../lib/libaed2/obj/aed2_totals.o
+	   ../lib/libaed2/obj/aed2_tracer.o
+	   ../lib/libaed2/obj/aed2_util.o
+	   ../lib/libaed2/obj/aed2_zoop_utils.o
+	   ../lib/libaed2/obj/aed2_zooplankton.o
+	   ../lib/libaed2/obj/ufz_oxygen.o
+include = ../lib/libaed2/mod/
 colors=False
 quiet=False
 target=simstrat.f90
