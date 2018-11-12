@@ -16,12 +16,24 @@ module simstrat_aed2
       class(AED2Config), pointer :: aed2_cfg
       class(StaggeredGrid), pointer :: grid
 
+      real(RK),allocatable,dimension(:) :: lKw    !# background light attenuation (m**-1)
+
       !# Arrays for state and diagnostic variables
       real(RK),allocatable,dimension(:,:) :: cc !# water quality array: nlayers, nvars
       real(RK),allocatable,dimension(:,:) :: cc_diag
       real(RK),allocatable,dimension(:) :: cc_diag_hz
       real(RK),allocatable,dimension(:) :: tss
       real(RK),allocatable,dimension(:) :: sed_zones
+
+      !# Arrays for work, vertical movement, and cross-boundary fluxes
+      real(RK),allocatable,dimension(:,:) :: ws
+      real(RK),allocatable,dimension(:)   :: total
+      real(RK),allocatable,dimension(:)   :: local
+      real(RK),allocatable,dimension(:) :: dz
+
+      !# Arrays for environmental variables not supplied externally.
+      real(RK),allocatable,dimension(:) :: par, pres
+      real(RK),allocatable,dimension(:) :: uva, uvb, nir
 
       character(len=48),allocatable :: names(:)
       character(len=48),allocatable :: bennames(:)
@@ -51,7 +63,7 @@ contains
 
       character(len=64) :: models(64)
       namelist /aed2_models/ models
-      integer i, j, status
+      integer i, j, status, rc
 
       self%grid => grid
       self%aed2_cfg => aed2_cfg
@@ -101,72 +113,120 @@ contains
 
          !# names = grab the names from info
          allocate(self%names(n_vars),stat=status)
-         if (status /= 0) STOP 'allocate_memory(): Error allocating (names)'
+         if (status /= 0) stop 'allocate_memory(): Error allocating (names)'
          allocate(self%bennames(n_vars_ben),stat=status)
-         if (status /= 0) STOP 'allocate_memory(): Error allocating (bennames)'
+         if (status /= 0) stop 'allocate_memory(): Error allocating (bennames)'
 
          !# Now that we know how many vars we need, we can allocate space for them
          allocate(self%cc(grid%nz_grid, (n_vars + n_vars_ben)),stat=status)
          if (status /= 0) stop 'allocate_memory(): Error allocating (CC)'
-         self%cc = 0.         !# initialise to zero
+         self%cc = 0.         !# initialise to zeroFarc
 
          allocate(self%min_((n_vars + n_vars_ben)))
          allocate(self%max_((n_vars + n_vars_ben)))
          print "(5X,'Configured variables to simulate:')"
 
          j = 0
-         DO i=1,self%n_aed2_vars
-            IF ( aed2_get_var(i, tvar) ) THEN
-               IF ( .NOT. (tvar%sheet .OR. tvar%diag .OR. tvar%extern) ) THEN
+         do i=1,self%n_aed2_vars
+            if ( aed2_get_var(i, tvar) ) then
+               if ( .not. (tvar%sheet .or. tvar%diag .or. tvar%extern) ) then
                   j = j + 1
-                  self%names(j) = TRIM(tvar%name)
+                  self%names(j) = trim(tvar%name)
                   self%min_(j) = tvar%minimum
                   self%max_(j) = tvar%maximum
-                  print *,"     S(",j,") AED2 pelagic(3D) variable: ", TRIM(self%names(j))
-            ENDIF
-         ENDIF
-      ENDDO
+                  print *,"     S(",j,") AED2 pelagic(3D) variable: ", trim(self%names(j))
+            end if
+         end if
+      end do
 
       j = 0
-      DO i=1,n_aed2_vars
-         IF ( aed2_get_var(i, tvar) ) THEN
-               IF ( tvar%sheet .AND. .NOT. (tvar%diag .OR. tvar%extern) ) THEN
+      do i=1,n_aed2_vars
+         if ( aed2_get_var(i, tvar) ) then
+               if ( tvar%sheet .and. .not. (tvar%diag .or. tvar%extern) ) then
                   j = j + 1
-                  self%bennames(j) = TRIM(tvar%name)
+                  self%bennames(j) = trim(tvar%name)
                   self%min_(n_vars+j) = tvar%minimum
                   self%max_(n_vars+j) = tvar%maximum
-                  print *,"     B(",j,") AED2 benthic(2D) variable: ", TRIM(self%bennames(j))
-               ENDIF
-            ENDIF
-         ENDDO
+                  print *,"     B(",j,") AED2 benthic(2D) variable: ", trim(self%bennames(j))
+               end if
+            end if
+         end do
 
          j = 0
-         DO i=1,n_aed2_vars
-            IF ( aed2_get_var(i, tvar) ) THEN
-               IF ( tvar%diag ) THEN
-                  IF ( .NOT.  tvar%sheet ) THEN
+         do i=1,n_aed2_vars
+            if ( aed2_get_var(i, tvar) ) then
+               if ( tvar%diag ) then
+                  if ( .not.  tvar%sheet ) then
                      j = j + 1
-                     print *,"     D(",j,") AED2 diagnostic 3Dvariable: ", TRIM(tvar%name)
-                  ENDIF
-               ENDIF
-            ENDIF
-         ENDDO
+                     print *,"     D(",j,") AED2 diagnostic 3Dvariable: ", trim(tvar%name)
+                  end if
+               end if
+            end if
+         end do
 
          j = 0
-         DO i=1,n_aed2_vars
-            IF ( aed2_get_var(i, tvar) ) then
-               IF ( tvar%diag ) then
-                  IF (tvar%sheet ) then
+         do i=1,n_aed2_vars
+            if ( aed2_get_var(i, tvar) ) then
+               if ( tvar%diag ) then
+                  if (tvar%sheet ) then
                      j = j + 1
-                     print *,"     D(",j,") AED2 diagnostic 2Dvariable: ", TRIM(tvar%name)
-                  endif
-               endif
-            endif
+                     print *,"     D(",j,") AED2 diagnostic 2Dvariable: ", trim(tvar%name)
+                  end if
+               end if
+            end if
          enddo
 
-      !  ALLOCATE(column(n_aed2_vars))
          allocate(self%externalid(n_aed2_vars))
 
+         !# Allocate diagnostic variable array and set all values to zero.
+         !# (needed because time-integrated/averaged variables will increment rather than set the array)
+         allocate(self%cc_diag(grid%nz_grid, n_vars_diag),stat=rc)
+         if (rc /= 0) stop 'allocate_memory(): Error allocating (cc_diag)'
+         self%cc_diag = zero_
+
+         !# Allocate diagnostic variable array and set all values to zero.
+         !# (needed because time-integrated/averaged variables will increment rather than set the array)
+         allocate(self%cc_diag_hz(n_vars_diag_sheet),stat=rc)
+         if (rc /= 0) stop 'allocate_memory(): Error allocating (cc_diag_hz)'
+         self%cc_diag_hz = zero_
+
+         !# Allocate array with vertical movement rates (m/s, positive for upwards),
+         !# and set these to the values provided by the model.
+         allocate(self%ws(grid%nz_grid, n_vars),stat=rc)
+         if (rc /= 0) stop 'allocate_memory(): Error allocating (ws)'
+         self%ws = zero_
+
+         !# Allocate array for photosynthetically active radiation (PAR).
+         !# This will be calculated internally during each time step.
+         allocate(self%par(grid%nz_grid),stat=rc)
+         if (rc /= 0) stop 'allocate_memory(): Error allocating (par)'
+         self%par = zero_
+
+         allocate(self%nir(grid%nz_grid),stat=rc)
+         if (rc /= 0) stop 'allocate_memory(): Error allocating (nir)'
+         self%nir = zero_
+         allocate(self%uva(grid%nz_grid),stat=rc)
+         if (rc /= 0) stop 'allocate_memory(): Error allocating (uva)'
+         self%uva = zero_
+         allocate(self%uvb(grid%nz_grid),stat=rc)
+         if (rc /= 0) stop 'allocate_memory(): Error allocating (uvb)'
+         self%uvb = zero_
+
+         allocate(self%dz(grid%nz_grid),stat=rc)
+         self%dz = zero_
+
+         !# Allocate array for local pressure.
+         !# This will be calculated [approximated] from layer depths internally
+         !# during each time step.
+         allocate(self%pres(grid%nz_grid),stat=rc)
+         if (rc /= 0) stop 'allocate_memory(): Error allocating (pres)'
+         self%pres = zero_
+
+         allocate(self%tss(grid%nz_grid),stat=rc)
+         if (rc /= 0) stop 'allocate_memory(): Error allocating (tss)'
+         self%tss = zero_
+
+         write(*,"(/,5X,'----------  AED2 config : end  ----------',/)")
       end associate
    end subroutine
 
@@ -221,25 +281,25 @@ contains
             case ( 'taub' )        ; tvar%found = .true.
             case ( 'lake_depth' )  ; tvar%found = .true.
             case ( 'layer_area' )  ; tvar%found = .true.
-            case default ; call error("ERROR: external variable "//TRIM(tvar%name)//" not found.")
+            case default ; call error("ERROR: external variable "//trim(tvar%name)//" not found.")
          end select
       elseif ( tvar%diag ) then  !# Diagnostic variable
          if ( tvar%sheet ) then
             sd = sd + 1
          else
             d = d + 1
-         endif
+         end if
       else    !# state variable
          if ( tvar%sheet ) then
             sv = sv + 1
          else
             v = v + 1
-         endif
-      endif
+         end if
+      end if
       if ( .not. tvar%found ) then
-         call error("Undefined variable " //TRIM(tvar%name))
+         call error("Undefined variable " //trim(tvar%name))
          err_count = err_count + 1
-      endif
+      end if
    enddo
 
    if ( self%n_vars < v ) print *,"More vars than expected",v,self%n_vars
