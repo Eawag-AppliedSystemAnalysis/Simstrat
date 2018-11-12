@@ -1,7 +1,7 @@
 {
   "Input" : {
     "Initial conditions"  : "TestCase_LakeZurich/initcond_zuri_810107.dat",
-    "Grid"                : "TestCase_LakeZurich/Grid.dat",
+    "Grid"                : 137,
     "Morphology"          : "TestCase_LakeZurich/morph_zuri.dat",
     "Forcing"             : "TestCase_LakeZurich/forcing_lake_zurich_1981_2013_waedenswil_homogenized.dat3",
     "Absorption"          : "TestCase_LakeZurich/absorption_zh_1981_2013.dat",
@@ -40,8 +40,8 @@
   "Simulation" : {
     "Timestep s"        : 300,
     "Start d"           : 35001,
-    "End d"             : 35732,
-    "DisplaySimulation" : 0
+    "End d"             : 35002,
+    "DisplaySimulation" : 1
   },
   "ModelParameters" : {
     "lat"           : 47.3,
@@ -56,6 +56,10 @@
     "p_radin"       : 1.1978,
     "p_windf"       : 1,
     "beta_sol"      : 0.35,
-    "albsw"         : 0.08
+    "beta_snowice"  : 0.40,  
+    "albsw"         : 0.08,
+    "ice_albedo"    : 0.30,
+    "snow_albedo"   : 0.77,
+    "freez_temp"    : 0.05  
   }
 }

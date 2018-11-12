@@ -597,13 +597,13 @@ contains
          call par_file%get("ModelParameters.p_windf", model_param%p_windf, found); call check_field(found, 'ModelParameters.p_windf', ParName)
          call par_file%get("ModelParameters.beta_sol", model_param%beta_sol, found); call check_field(found, 'ModelParameters.beta_sol', ParName)
          
-         if (model_cfg%ice_model==1) then
+         !if (model_cfg%ice_model==1) then
             call par_file%get("ModelParameters.beta_snowice", model_param%beta_snow_ice, found); call check_field(found, 'ModelParameters.beta_snowice', ParName)     
             call par_file%get("ModelParameters.albsw", model_param%albsw, found); call check_field(found, 'ModelParameters.albsw', ParName)
             call par_file%get("ModelParameters.ice_albedo", model_param%ice_albedo, found); call check_field(found, 'ModelParameters.ice_albedo', ParName)
             call par_file%get("ModelParameters.snow_albedo", model_param%snow_albedo, found); call check_field(found, 'ModelParameters.snow_albedo', ParName)
             call par_file%get("ModelParameters.freez_temp", model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_temp', ParName)
-         end if
+         !end if
 
          !Simulation Parameter
          call par_file%get("Simulation.Timestep s", sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep s', ParName)
