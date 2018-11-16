@@ -104,7 +104,7 @@ program simstrat_main
 
    ! Initialize biochemical model "AED2" if used
    if (simdata%model_cfg%couple_aed2) then
-      call mod_aed2%init(simdata%aed2_cfg, simdata%grid)
+      call mod_aed2%init(simdata%grid, simdata%aed2_cfg)
    end if
 
    ! Setup logger
@@ -195,7 +195,11 @@ contains
          call mod_forcing%update(simdata%model)
 
          ! Update absorption
-         call mod_absorption%update(simdata%model)
+         if (.not. simdata%aed2_cfg%bioshade_feedback) then
+            call mod_absorption%update(simdata%model)
+         !else
+         !   call mod_aed2%update_absorption(simdata%model, simdata%grid, simdata%aed2_cfg)
+         end if
 
          ! Update physics
          call mod_stability%update(simdata%model)
@@ -249,7 +253,7 @@ contains
 
          ! Update biogeochemistry
          if (simdata%model_cfg%couple_aed2) then
-            call mod_aed2%update(simdata%aed2_cfg)
+            call mod_aed2%update(simdata%model)
          end if
 
          ! Call logger to write files

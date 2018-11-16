@@ -48,8 +48,8 @@ contains
 
       ! Allocate arrays (used to be "save" variables)
       allocate (self%z_absorb(grid%max_length_input_data))
-      allocate (self%absorb_start(grid%nz_grid))
-      allocate (self%absorb_end(grid%nz_grid))
+      allocate (self%absorb_start(grid%nz_grid + 1))
+      allocate (self%absorb_end(grid%nz_grid + 1))
 
    end subroutine
 
@@ -93,7 +93,7 @@ contains
             if (state%datum < tb_start) call warn('First light attenuation date after simulation start time.')
 
             !Interpolate absorb_read_start on z_absorb onto faces of grid
-            call self%grid%interpolate_to_face(z_absorb, absorb_read_start, nval, absorb_start)
+            call self%grid%interpolate_to_face(z_absorb, absorb_read_start, nval, absorb_start(1:nz + 1))
 
             read (30, *, end=7) tb_end, (absorb_read_end(i), i=1, nval)
 
@@ -101,7 +101,7 @@ contains
             call ok('Absorption input file successfully read')
             write(6,*)
             ! Do the same for absorb_read_end
-            call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end)
+            call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end(1:nz + 1))
 
          end if
 
@@ -110,14 +110,16 @@ contains
          else
             do while (state%datum > tb_end) !Move to appropriate interval to get correct value
                tb_start = tb_end
-               absorb_start(1:nz) = absorb_end(1:nz)
+               absorb_start(1:nz + 1) = absorb_end(1:nz + 1)
                !Read next value
                read (30, *, end=7) tb_end, (absorb_read_end(i), i=1, nval)
-               call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end)
+               call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end(1:nz + 1))
             end do
             !Linearly interpolate value at correct datum (for all depths)
-            state%absorb(1:nz) = absorb_start(1:nz) + (state%datum - tb_start)*(absorb_end(1:nz) &
-                                 - absorb_start(1:nz))/(tb_end - tb_start)
+            state%absorb(1:nz + 1) = absorb_start(1:nz + 1) + (state%datum - tb_start)*(absorb_end(1:nz + 1) &
+                                 - absorb_start(1:nz + 1))/(tb_end - tb_start)
+            !write(6,*) size(self%grid%z_face), size(state%absorb(1:nz + 1)), nz+1, size(state%absorb_vol(1:nz))
+            call self%grid%interpolate_to_vol(self%grid%z_face,state%absorb(1:nz + 1),nz + 1,state%absorb_vol(1:nz + 1))
          end if
          return
 

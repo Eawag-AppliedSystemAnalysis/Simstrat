@@ -570,6 +570,7 @@ contains
          call par_file%get("AED2Config.SplitFactor", aed2_cfg%split_factor,found); call check_field(found, 'AED2Config.SplitFactor', ParName)
          call par_file%get("AED2Config.ParticleMobility", aed2_cfg%particle_mobility,found); call check_field(found, 'AED2Config.ParticleMobility', ParName)
          call par_file%get("AED2Config.BioshadeFeedback", aed2_cfg%bioshade_feedback,found); call check_field(found, 'AED2Config.BioshadeFeedback', ParName)
+         call par_file%get("AED2Config.BackgroundExtinction", aed2_cfg%background_extinction,found); call check_field(found, 'AED2Config.BackgroundExtinction', ParName)
 
          !Model Parameter
          call par_file%get("ModelParameters.lat", model_param%Lat, found); call check_field(found, 'ModelParameters.lat', ParName)

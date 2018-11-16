@@ -81,6 +81,7 @@ module strat_simdata
       character(len=:), allocatable :: aed2_config_file
       integer :: split_factor
       logical :: particle_mobility, bioshade_feedback
+      real(RK) :: background_extinction
    end type
 
    ! Model params (read from file)
@@ -130,7 +131,7 @@ module strat_simdata
       real(RK) :: E_Seiche
       real(RK) :: gamma ! Proportionality constant for loss of seiche energy
 
-      real(RK), dimension(:), allocatable :: absorb ! Absorption coeff [m-1]
+      real(RK), dimension(:), allocatable :: absorb, absorb_vol ! Absorption coeff [m-1]
       real(RK) :: u10, v10, uv10, Wf ! Wind speeds, wind factor
       real(RK) :: u_taub, drag, u_taus ! Drag
       real(RK) :: tx, ty ! Shear stress
@@ -138,7 +139,7 @@ module strat_simdata
       real(RK) :: SST, heat , heat_snow_ice! Sea surface temperature and heat flux
       !real(RK) :: rad0 ! Solar radiation at surface
       real(RK) :: T_atm ! Air temp at surface   
-      real(RK), dimension(:), allocatable :: rad ! Solar radiation (in water)
+      real(RK), dimension(:), allocatable :: rad, rad_vol ! Solar radiation (in water)
       real(RK), dimension(:), allocatable :: Q_vert ! Vertical exchange between boxes
 
       ! Snow and Ice
@@ -222,7 +223,9 @@ contains
       allocate (this%P_Seiche(state_size + 1))
 
       allocate (this%absorb(state_size + 1))
+      allocate (this%absorb_vol(state_size))
       allocate (this%rad(state_size + 1))
+      allocate (this%rad_vol(state_size))
       allocate (this%Q_vert(state_size + 1))
 
       allocate (this%snow_h) 
@@ -256,7 +259,9 @@ contains
       this%P_Seiche = 0.0_RK
 
       this%absorb = 0.0_RK
+      this%absorb_vol = 0.0_RK
       this%rad = 0.0_RK
+      this%rad_vol = 0.0_RK
       this%Q_vert = 0.0_RK
     
       this%snow_h = 0.0_RK

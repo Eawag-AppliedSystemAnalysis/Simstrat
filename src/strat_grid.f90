@@ -26,7 +26,7 @@ module strat_grid
       real(RK), dimension(:), allocatable :: h        ! Box height
       real(RK), dimension(:), allocatable :: z_face   ! Holds z-values of faces
       real(RK), dimension(:), allocatable :: z_volume ! Holds z-values of volume centers
-      real(RK), dimension(:), allocatable :: Az       ! Areas
+      real(RK), dimension(:), allocatable :: Az, Az_vol       ! Areas, Areas on volume grid (needed or AED2)
       real(RK), dimension(:), allocatable :: dAz      ! Difference of areas
       real(RK), dimension(:), allocatable :: meanint  ! ?
       real(RK) :: volume, h_old
@@ -115,6 +115,7 @@ contains
 
          allocate (self%z_face(nz_grid + 1)) ! Depth axis with faceer border of boxes
          allocate (self%Az(nz_grid + 1)) ! Az is defined on the faces
+         allocate (self%Az_vol(nz_grid)) ! Az_vol is defined on volume grid
          allocate (self%dAz(nz_grid)) ! dAz is the difference between Az and thus defined on the volume
 
          ! Area factors used in calculations
@@ -240,11 +241,18 @@ contains
       class(GridConfig), intent(inout) :: config
 
       integer :: num_read
-      associate (nz_grid=>self%nz_grid, dAz=>self%dAz, z_face=>self%z_face, Az=>self%Az)
+      associate (nz_grid=>self%nz_grid, &
+                 dAz=>self%dAz, &
+                 z_face=>self%z_face, &
+                 Az=>self%Az, &
+                 Az_vol=>self%Az_vol)
+
          num_read = size(config%A_read)
 
          ! Interpolate area (A) at all depths (z_face)
          call Interp(config%z_A_read, config%A_read, num_read, self%z_face, Az, nz_grid + 1)
+         ! Interpolate area on volume grid (needed for AED2)
+         call Interp(config%z_A_read, config%A_read, num_read, self%z_volume, Az_vol, nz_grid)
 
          ! Compute area derivative (= projected sediment area over layer thickness)
          dAz(1:nz_grid) = (Az(2:nz_grid + 1) - Az(1:nz_grid))/(z_face(2:nz_grid + 1) - z_face(1:nz_grid))
@@ -291,6 +299,7 @@ contains
                   ubnd_vol=>self%ubnd_vol, &
                   h=>self%h, &
                   Az=>self%Az, &
+                  Az_vol=>self%Az_vol, &
                   dAz=>self%dAz)
 
       if (h(ubnd_vol) > self%h_old) then
@@ -298,6 +307,8 @@ contains
       else
          Az(ubnd_fce) = Az(ubnd_fce) + dAz(ubnd_vol)*dh
       end if
+
+      Az_vol = Az_vol(ubnd_vol) + dAz(ubnd_vol)*dh
 
       h(ubnd_vol) = h(ubnd_vol) + dh
       z_volume(ubnd_vol) = z_volume(ubnd_vol) + 0.5_RK*dh
@@ -318,13 +329,15 @@ contains
                   ubnd_vol=>self%ubnd_vol, &
                   h=>self%h, &
                   nz_occupied=>self%nz_occupied, &
-                  Az=>self%Az)
+                  Az=>self%Az, &
+                  Az_vol=>self%Az_vol)
 
          ! update grid
          z_face(ubnd_fce - 1) = z_face(ubnd_fce) + dh
          z_volume(ubnd_vol - 1) = 0.5_RK*(z_face(ubnd_fce - 1) + z_face(ubnd_fce - 2))
 
          Az(ubnd_fce - 1) = Az(ubnd_fce)
+         Az_vol(ubnd_vol - 1) = Az_vol(ubnd_vol)
 
          self%h_old = h(ubnd_vol - 1)
          h(ubnd_vol - 1) = (z_face(ubnd_fce - 1) - z_face(ubnd_fce - 2))
@@ -349,6 +362,7 @@ contains
                  ubnd_vol=>self%ubnd_vol, &
                  h=>self%h, &
                  Az=>self%Az, &
+                 Az_vol=>self%Az_vol, &
                  dAz=>self%dAz, &
                  nz_occupied=>self%nz_occupied)
 
@@ -364,6 +378,9 @@ contains
 
          Az(ubnd_fce) = Az(ubnd_fce - 1) + h(ubnd_vol)*dAz(ubnd_vol)
          Az(ubnd_fce + 1) = Az(ubnd_fce) + h(ubnd_vol + 1)*dAz(ubnd_vol + 1)
+
+         Az_vol(ubnd_vol - 1) = (Az(ubnd_fce - 1) + Az(ubnd_fce - 2))/2
+         Az_vol(ubnd_vol) = (Az(ubnd_fce) + Az(ubnd_fce - 1))/2
 
          ! update number of occupied cells
          nz_occupied = nz_occupied + 1

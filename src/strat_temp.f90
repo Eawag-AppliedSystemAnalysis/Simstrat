@@ -41,9 +41,12 @@ contains
             state%rad(i) = state%rad(i + 1)*exp(-grid%h(i)*(state%absorb(ubnd_fce - i)+state%absorb(ubnd_fce + 1 - i))/2) !Attenuated by absorption
          end do
 
+         ! Needed for AED2
+         state%rad_vol(1:ubnd_vol) = state%rad(2:ubnd_fce) - state%rad(1:ubnd_fce - 1)
+
          !!!!!!!! Define sources !!!!!!!!
          ! Add Hsol Term to sources (Eq 1, Goudsmit(2002))
-         sources(1:ubnd_vol) = (state%rad(2:ubnd_fce) - state%rad(1:ubnd_fce - 1))/grid%h(1:ubnd_vol)
+         sources(1:ubnd_vol) = state%rad_vol(1:ubnd_vol)/grid%h(1:ubnd_vol)
 
          ! Set boundary heat flux at surface (Eq 25, Goudsmit(2002))
          sources(ubnd_vol) = sources(ubnd_vol) + state%heat/rho_0/cp/grid%h(ubnd_vol)
