@@ -79,9 +79,15 @@ module strat_simdata
    ! AED2 configuration (read from file)
    type, public :: AED2Config
       character(len=:), allocatable :: aed2_config_file
+      character(len=:), allocatable :: path_aed2_ini
       integer :: split_factor
-      logical :: particle_mobility, bioshade_feedback
+      logical :: particle_mobility
+      logical :: bioshade_feedback
       real(RK) :: background_extinction
+      logical :: repair_state
+      integer :: benthic_mode
+      integer :: n_zones
+      real(RK), dimension(:), allocatable :: zone_heights
    end type
 
    ! Model params (read from file)

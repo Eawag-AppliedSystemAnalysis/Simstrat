@@ -54,7 +54,7 @@ contains
    !####################################################################
    pure subroutine Interp_nan(z, y, num_z, zi, yi, num_zi)
       !####################################################################
-      use, intrinsic :: iso_fortran_env
+      !use, intrinsic :: iso_fortran_env
       use, intrinsic :: ieee_arithmetic
       implicit none
 
@@ -112,7 +112,7 @@ contains
    !####################################################################
    pure subroutine Assign_nan(y, ubnd, ubnd_grid)
       !####################################################################
-      use, intrinsic :: iso_fortran_env
+      !use, intrinsic :: iso_fortran_env
       use, intrinsic :: ieee_arithmetic
       implicit none
 

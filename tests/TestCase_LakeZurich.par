@@ -33,10 +33,15 @@
   },
   "AED2Config" : {
     "AED2ConfigFile"          : "aed2.nml",
+    "PathAED2ini"             : "/",
     "SplitFactor"             : 1,
     "ParticleMobility"        : 0,
     "BioshadeFeedback"        : 0,
     "BackgroundExtinction"    : 0.2,
+    "RepairState"             : 1,
+    "BenthicMode"             : 0,
+    "NZones"                  : 1,
+    "ZoneHeights"             : [1,2,3]
   },
   "Simulation" : {
     "Timestep s"        : 300,
