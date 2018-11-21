@@ -92,7 +92,7 @@ module strat_ice
   !-------------------
    if (param%Freez_Temp < state%T_atm .and. (state%ice_h + state%snowice_h) > 0) then 
      !Melt snow    
-     if (state%snow_h > 0 .and. self%model_cfg%snow_model == 1) then
+     if (state%snow_h > 0 .and. param%snow_temp < state%T_atm .and. self%model_cfg%snow_model == 1) then
       call self%do_snow_melting(state, param) 
      end if 
      !Melt ice from above

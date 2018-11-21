@@ -1,7 +1,6 @@
 !     +---------------------------------------------------------------+
 !     |  Constants....
 !     +---------------------------------------------------------------+
-
   module strat_consts
      use strat_kinds
      implicit none
@@ -18,7 +17,9 @@
      real(RK), parameter     :: rho_0 = 1000_RK ! Mean freshwater density (seawater: 1023) [kg/m3]
      real(RK), parameter     :: cp = 4182_RK ! Mean freshwater heat capacity (seawater: 3992) [J/kg/K]
      real(RK), parameter     :: cp_air = 1005_RK ! Mean air heat capacity [J/kg/K]
-
+     real(RK), parameter     :: albsw = 0.08_RK ! albedo fresh water   
+     real(RK), parameter     :: beta_sol = 0.35_RK ! parameter determin absoption in first grid cell [-]
+  
     ! *** Further parameters controlling water dynamic ***
      real(RK), parameter     :: Prndtl = 0.8_RK ! Prandtl number for air??
      real(RK)                :: k_min = 1.0e-9_RK ! Min value allowed for turbulent kinetic energy (read from file!?->useless here)
@@ -45,7 +46,13 @@
      real(RK), parameter     :: Ha_c = 0.18_RK !Longwave emision parameter, Matti Leppäranta 2009 
      real(RK), parameter     :: Hk_CH = 1.5e-3_RK !convectiv bulk exchange coefficient, Matti Leppäranta 2009 and Gill 1982
      real(RK), parameter     :: Hv_CE = 1.5e-3_RK !latent bulk exchange coefficient, Matti Leppäranta 2009 and Gill 1982
-
+     real(RK), parameter     :: lambda_snow = 24_RK ! lambda (light absorption) snow [m-1]
+     real(RK), parameter     :: lambda_snowice = 3_RK ! lambda (light absorption) white ice [m-1] 
+     real(RK), parameter     :: lambda_ice = 1_RK ! lambda (light absorption) black ice [m-1]
+     real(RK), parameter     :: ice_albedo = 0.25_RK ! Albedo black ice
+     real(RK), parameter     :: snowice_albedo = 0.35_RK ! Albedo white ice
+     real(RK), parameter     :: snow_albedo = 0.7_RK ! Albedo snow
+ 
     ! *** Parameters for k-eps model ***
      real(RK), parameter     :: ce1 = 1.44_RK
      real(RK), parameter     :: ce2 = 1.92_RK
@@ -53,7 +60,6 @@
      real(RK), parameter     :: sig_k = 1.0_RK
      real(RK)                :: sig_e = 1.3_RK
      real(RK), parameter     :: cmue = 0.09_RK
-
      real(RK), parameter     :: r_a = 0.03_RK ! Ratio of reflected to total long-wave iradiance
      real(RK), parameter     :: B0 = 0.61_RK ! Bowen constant
      real(RK), parameter     :: sig = 5.67e-8_RK ! Stefan-Boltzmann constant [W/m2/K4]

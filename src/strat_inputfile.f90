@@ -608,19 +608,11 @@ contains
          call par_file%get("ModelParameters.k_min", model_param%k_min, found); call check_field(found, 'ModelParameters.k_min', ParName)
          call par_file%get("ModelParameters.p_radin", model_param%p_radin, found); call check_field(found, 'ModelParameters.p_radin', ParName)
          call par_file%get("ModelParameters.p_windf", model_param%p_windf, found); call check_field(found, 'ModelParameters.p_windf', ParName)
-         call par_file%get("ModelParameters.beta_sol", model_param%beta_sol, found); call check_field(found, 'ModelParameters.beta_sol', ParName)             
          if (model_cfg%ice_model == 1) then    
            call par_file%get("ModelParameters.p_albedo", model_param%p_albedo, found); call check_field(found, 'ModelParameters.p_albedo', ParName)   
-           call par_file%get("ModelParameters.lambda_snow", model_param%lambda_snow, found); call check_field(found, 'ModelParameters.lambda_snow', ParName)     
-           call par_file%get("ModelParameters.lam_snowice", model_param%lambda_snowice, found); call check_field(found, 'ModelParameters.lam_snowice', ParName)     
-           call par_file%get("ModelParameters.lambda_ice", model_param%lambda_ice, found); call check_field(found, 'ModelParameters.lambda_ice', ParName)
-           call par_file%get("ModelParameters.ice_albedo", model_param%ice_albedo, found); call check_field(found, 'ModelParameters.ice_albedo', ParName)
-           call par_file%get("ModelParameters.snowice_alb", model_param%snowice_albedo, found); call check_field(found, 'ModelParameters.snowice_alb', ParName)         
-           call par_file%get("ModelParameters.snow_albedo", model_param%snow_albedo, found); call check_field(found, 'ModelParameters.snow_albedo', ParName)
            call par_file%get("ModelParameters.freez_temp", model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_temp', ParName)
            call par_file%get("ModelParameters.snow_temp", model_param%snow_temp, found); call check_field(found, 'ModelParameters.snow_temp', ParName)
          end if      
-         call par_file%get("ModelParameters.albsw", model_param%albsw, found); call check_field(found, 'ModelParameters.albsw', ParName)
 
          !Simulation Parameter
          call par_file%get("Simulation.Timestep s", sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep s', ParName)

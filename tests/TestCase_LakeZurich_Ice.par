@@ -49,16 +49,8 @@
     "k_min"         : 1e-30,
     "p_radin"       : 1.1978,
     "p_windf"       : 1,
-    "beta_sol"      : 0.35,
     "p_albedo"      : 1,
-    "lambda_snow"   : 25,
-    "lam_snowice"   : 3,
-    "lambda_ice"    : 1,
-    "ice_albedo"    : 0.3,
-    "snowice_alb"   : 0.4,
-    "snow_albedo"   : 0.7,
-    "freez_temp"    : 0.05,
-    "snow_temp"     : 2,	
-    "albsw"         : 0.08
+    "freez_temp"    : 0.00,
+    "snow_temp"     : 1	
   }
 }
