@@ -23,10 +23,11 @@ module strat_grid
 
    ! StaggeredGrid implementation
    type, public :: StaggeredGrid
-      real(RK), dimension(:), allocatable :: h        ! Box height
+      real(RK), dimension(:), pointer     :: h        ! Box height
       real(RK), dimension(:), allocatable :: z_face   ! Holds z-values of faces
-      real(RK), dimension(:), allocatable :: z_volume ! Holds z-values of volume centers
-      real(RK), dimension(:), allocatable :: Az, Az_vol       ! Areas, Areas on volume grid (needed or AED2)
+      real(RK), dimension(:), pointer     :: z_volume ! Holds z-values of volume centers
+      real(RK), dimension(:), allocatable :: Az       ! Areas
+      real(RK), dimension(:), pointer     :: Az_vol   ! Areas on volume grid (needed or AED2)
       real(RK), dimension(:), allocatable :: dAz      ! Difference of areas
       real(RK), dimension(:), allocatable :: meanint  ! ?
       real(RK) :: volume, h_old
@@ -44,7 +45,8 @@ module strat_grid
 
       integer :: ubnd_vol, ubnd_fce, length_vol, length_fce   ! Upper and lenght for volume (vol) and face(fce) grids
       real(RK) :: z_zero
-      real(RK) :: lake_level, lake_level_old
+      real(RK), pointer :: lake_level ! pointer attribute is needed for AED2
+      real(RK) :: lake_level_old
       real(RK) :: max_depth
 
    contains

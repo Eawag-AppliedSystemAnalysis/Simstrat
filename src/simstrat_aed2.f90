@@ -19,11 +19,16 @@ module simstrat_aed2
       real(RK),allocatable,dimension(:) :: lKw    !# background light attenuation (m**-1)
 
       !# Arrays for state and diagnostic variables
-      real(RK),allocatable,dimension(:,:) :: cc !# water quality array: nlayers, nvars
-      real(RK),allocatable,dimension(:,:) :: cc_diag
-      real(RK),allocatable,dimension(:) :: cc_diag_hz
-      real(RK),allocatable,dimension(:) :: tss
-      real(RK),allocatable,dimension(:) :: sed_zones
+      real(RK),pointer,dimension(:,:) :: cc !# water quality array: nlayers, nvars
+      real(RK),pointer,dimension(:,:) :: cc_diag
+      real(RK),pointer,dimension(:) :: cc_diag_hz
+      real(RK),pointer,dimension(:) :: tss
+      real(RK),pointer,dimension(:) :: sed_zones
+
+      real(RK),pointer,dimension(:) :: flux_atm
+      real(RK),pointer,dimension(:) :: flux_ben
+      real(RK),pointer,dimension(:,:) :: flux_pel
+      real(RK),pointer,dimension(:,:) :: flux_zone
 
       !# Arrays for work, vertical movement, and cross-boundary fluxes
       real(RK),allocatable,dimension(:,:) :: ws
@@ -32,11 +37,10 @@ module simstrat_aed2
       !real(RK),allocatable,dimension(:) :: dz
 
       !# Arrays for environmental variables not supplied externally.
-      real(RK),allocatable,dimension(:) :: par, pres
-      real(RK),allocatable,dimension(:) :: uva, uvb, nir
+      real(RK),pointer,dimension(:) :: par, pres
+      real(RK),pointer,dimension(:) :: uva, uvb, nir
 
          !# External variables
-      real(RK) :: dt, dt_eff   ! External and internal time steps
       integer  :: w_adv_ctr    ! Scheme for vertical advection (0 if not used)
       real(RK),pointer,dimension(:) :: rad, z, salt, temp, rho, area
       real(RK),pointer,dimension(:) :: extc_coef, layer_stress
@@ -133,6 +137,12 @@ contains
          if (status /= 0) stop 'allocate_memory(): Error allocating (CC)'
          self%cc = 0.         !# initialise to zeroFarc
 
+
+         allocate(self%flux_atm(self%n_vars + self%n_vars_ben),stat=status)
+         allocate(self%flux_ben(self%n_vars + self%n_vars_ben),stat=status)
+         allocate(self%flux_pel(self%grid%nz_occupied, self%n_vars + self%n_vars_ben),stat=status)
+         allocate(self%flux_zone(self%aed2_cfg%n_zones, self%n_vars + self%n_vars_ben),stat=status)
+
          allocate(self%min_((n_vars + n_vars_ben)))
          allocate(self%max_((n_vars + n_vars_ben)))
          print "(5X,'Configured variables to simulate:')"
@@ -195,15 +205,12 @@ contains
             if ( .not.  aed2_get_var(av, tvar) ) stop "Error getting variable info"
             if ( .not. ( tvar%extern .or. tvar%diag) ) then  !# neither global nor diagnostic variable
                if ( tvar%sheet ) then
-                  !AED2_InitCondition(self%cc(:, nvars + sv), tvar%name, tvar%initial)
                   sv = sv + 1
-                  self%cc(:, n_vars+sv) = tvar%initial
-                  write(6,*) 'sheet', tvar%name, tvar%initial
+                  call AED2_InitCondition(self, self%cc(:, n_vars + sv), tvar%name, tvar%initial)
+                  !self%cc(:, n_vars+sv) = tvar%initial
                else
                   v = v + 1
                   call AED2_InitCondition(self, self%cc(:, v), tvar%name, tvar%initial)
-                  write(6,*) tvar%name, tvar%initial
-
                end if
             end if
          end do
@@ -269,15 +276,12 @@ contains
 
       ! Local variables
       type (aed2_column_t) :: column(self%n_aed2_vars), column_sed(self%n_aed2_vars)
-      real(RK) :: flux_ben(self%n_vars + self%n_vars_ben), flux_atm(self%n_vars + self%n_vars_ben)
-      real(RK) :: flux(self%grid%nz_occupied, self%n_vars + self%n_vars_ben)
-      real(RK) :: flux_zone(self%aed2_cfg%n_zones, self%n_vars + self%n_vars_ben)
       integer :: v, split, lev
 
       !# Calculate local pressure
       self%pres(1:self%grid%ubnd_vol) = -self%grid%z_volume(1:self%grid%ubnd_vol)
 
-      call define_column(self, state, column, self%grid%nz_occupied, self%cc, self%cc_diag, self%cc_diag_hz, flux, flux_atm, flux_ben)
+      call define_column(self, state, column)
       !if (benthic_mode .GT. 1) call define_sed_column(column_sed, n_zones, flux, flux_atm, flux_ben)
 
       ! If sediment layers are simulated
@@ -297,14 +301,34 @@ contains
          self%uva(:) = (self%par(:)/0.45) * 0.035
          self%uvb(:) = (self%par(:)/0.45) * 0.005
 
-         !call calculate_fluxes(self, state, column, column_sed, self%aed2_cfg%n_zones, flux(:,:), flux_atm, flux_ben, flux_zone(:,:))
+         call calculate_fluxes(self, state, column, column_sed, self%aed2_cfg%n_zones)
 
          ! Update the water column layers
          do v = 1, self%n_vars
             do lev = 1, self%grid%nz_occupied
-               !cc(lev, v) = cc(lev, v) + dt_eff*flux(lev, v)
+               self%cc(lev, v) = self%cc(lev, v) + state%dt/self%aed2_cfg%split_factor*self%flux_pel(lev, v)
             end do
          end do
+
+!       ! Now update benthic variables, depending on whether zones are simulated
+!       IF ( benthic_mode .GT. 1 ) THEN
+!          ! Loop through benthic state variables to update their mass
+!          DO v = n_vars+1, n_vars+n_vars_ben
+!             ! Loop through each sediment zone
+!             DO lev = 1, n_zones
+!                ! Update the main cc_sed data array with the
+!                z_cc(lev, v) = z_cc(lev, v)+ dt_eff*flux_zone(lev, v)
+!             ENDDO
+!          ENDDO
+!       ELSE
+!          DO v = n_vars+1, n_vars+n_vars_ben
+!             cc(1, v) = cc(1, v) + dt_eff*flux_ben(v)
+!          ENDDO
+!       ENDIF
+
+!       ! If simulating sediment zones, distribute cc-sed benthic properties back
+!       !  into main cc array, mainly for plotting
+!       IF ( benthic_mode .GT. 1 ) CALL copy_from_zone(cc, cc_diag, cc_diag_hz, wlev)
 
       end do
 
@@ -409,7 +433,7 @@ contains
 
    end subroutine
 
-   SUBROUTINE define_column(self, state, column, top, cc, cc_diag, cc_diag_hz, flux_pel, flux_atm, flux_ben)
+   SUBROUTINE define_column(self, state, column)
    !-------------------------------------------------------------------------------
    ! Set up the current column pointers
    !-------------------------------------------------------------------------------
@@ -417,22 +441,11 @@ contains
       class(SimstratAED2) :: self
       class(ModelState) :: state
       type (aed2_column_t), intent(inout) :: column(:)
-      integer, intent(in)  :: top
-      real(RK), intent(in) :: cc(:,:)       !# (n_layers, n_vars)
-      real(RK), intent(in) :: cc_diag(:,:)  !# (n_layers, n_vars)
-      real(RK), intent(in) :: cc_diag_hz(:)
-      real(RK), intent(inout) :: flux_pel(:,:) !# (n_layers, n_vars)
-      real(RK), intent(inout) :: flux_atm(:)   !# (n_vars)
-      real(RK), intent(inout) :: flux_ben(:)   !# (n_vars)
    !
    !LOCALS
       integer :: av !, i
       integer :: v, d, sv, sd, ev
       type(aed2_variable_t), pointer :: tvar
-      real(RK), target :: extern_target(self%grid%nz_grid), extern_target_fce(self%grid%nz_grid + 1)
-      real(RK), target :: extern_target_sheet
-      real(RK), target :: cc_target(self%grid%nz_grid), flux_pel_target(self%grid%nz_occupied)
-      real(RK), target :: flux_atm_target, flux_ben_target
    !-------------------------------------------------------------------------------
    !BEGIN
       v = 0 ; d = 0; sv = 0; sd = 0 ; ev = 0
@@ -442,65 +455,52 @@ contains
          if ( tvar%extern ) then !# global variable
             ev = ev + 1
             select case (tvar%name)
-               case ( 'temperature' ) ; extern_target = state%T; column(av)%cell => extern_target;
-               case ( 'salinity' )    ; extern_target = state%S; column(av)%cell => extern_target;
-               case ( 'density' )     ; extern_target = state%rho; column(av)%cell => extern_target
-               case ( 'layer_ht' )    ; extern_target = self%grid%h(1:self%grid%nz_grid); column(av)%cell => extern_target
-               case ( 'extc_coef' )   ; extern_target = state%absorb_vol; column(av)%cell => extern_target
-               case ( 'tss' )         ; extern_target = self%tss; column(av)%cell => extern_target
-               case ( 'par' )         ; extern_target = self%par; column(av)%cell => extern_target
-               case ( 'nir' )         ; extern_target = self%nir; column(av)%cell => extern_target
-               case ( 'uva' )         ; extern_target = self%uva; column(av)%cell => extern_target
-               case ( 'uvb' )         ; extern_target = self%uvb; column(av)%cell => extern_target
-               case ( 'pressure' )    ; extern_target = self%pres; column(av)%cell => extern_target
-               case ( 'depth' )       ; extern_target = self%grid%z_volume; column(av)%cell => extern_target
-               case ( 'sed_zone' )    ; extern_target_sheet = self%sed_zones(1); column(av)%cell_sheet => extern_target_sheet
-               case ( 'wind_speed' )  ; extern_target_sheet = state%uv10; column(av)%cell_sheet => extern_target_sheet
-               case ( 'par_sf' )      ; extern_target_sheet = state%rad0; column(av)%cell_sheet => extern_target_sheet
-               case ( 'taub' )        ; extern_target_sheet = state%u_taub; column(av)%cell_sheet => extern_target_sheet
-               case ( 'lake_depth' )  ; extern_target_sheet = self%grid%z_face(self%grid%ubnd_fce); column(av)%cell_sheet => extern_target_sheet
-               case ( 'layer_area' )  ; extern_target = self%grid%Az_vol; column(av)%cell => extern_target
+               case ( 'temperature' ) ; column(av)%cell => state%T
+               case ( 'salinity' )    ; column(av)%cell => state%S
+               case ( 'density' )     ; column(av)%cell => state%rho
+               case ( 'layer_ht' )    ; column(av)%cell => self%grid%h(1:self%grid%nz_occupied)
+               case ( 'extc_coef' )   ; column(av)%cell => state%absorb_vol
+               case ( 'tss' )         ; column(av)%cell => self%tss
+               case ( 'par' )         ; column(av)%cell => self%par
+               case ( 'nir' )         ; column(av)%cell => self%nir
+               case ( 'uva' )         ; column(av)%cell => self%uva
+               case ( 'uvb' )         ; column(av)%cell => self%uvb
+               case ( 'pressure' )    ; column(av)%cell => self%pres
+               case ( 'depth' )       ; column(av)%cell => self%grid%z_volume
+               case ( 'sed_zone' )    ; column(av)%cell_sheet => self%sed_zones(1)
+               case ( 'wind_speed' )  ; column(av)%cell_sheet => state%uv10
+               case ( 'par_sf' )      ; column(av)%cell_sheet => state%rad0
+               case ( 'taub' )        ; column(av)%cell_sheet => state%u_taub
+               case ( 'lake_depth' )  ; column(av)%cell_sheet => self%grid%lake_level
+               case ( 'layer_area' )  ; column(av)%cell => self%grid%Az_vol
                case default ; call error("External variable "//TRIM(tvar%name)//" not found.")
             end select
          elseif ( tvar%diag ) then  !# Diagnostic variable
             if ( tvar%sheet ) then
                sd = sd + 1
-               extern_target_sheet = cc_diag_hz(sd)
-               column(av)%cell_sheet => extern_target_sheet
+               column(av)%cell_sheet => self%cc_diag_hz(sd)
             else
                d = d + 1
-               extern_target = cc_diag(:,d)
-               column(av)%cell => extern_target
+               column(av)%cell => self%cc_diag(:,d)
             end if
          else    !# state variable
             if ( tvar%sheet ) then
                sv = sv + 1
                if ( tvar%bot ) then
-                  extern_target_sheet = cc(1, self%n_vars + sv)
-                  column(av)%cell_sheet => extern_target_sheet
+                  column(av)%cell_sheet => self%cc(1, self%n_vars + sv)
    !            print *,'av',av,sv
                elseif ( tvar%top ) then
-                  extern_target_sheet = cc(top, self%n_vars + sv)
-                  column(av)%cell_sheet => extern_target_sheet
+                  column(av)%cell_sheet => self%cc(self%grid%nz_occupied, self%n_vars + sv)
                endif
 
-               flux_ben_target = flux_ben(self%n_vars + sv)
-               flux_atm_target = flux_atm(self%n_vars + sv)
-
-               column(av)%flux_ben => flux_ben_target
-               column(av)%flux_atm => flux_atm_target
+               column(av)%flux_ben => self%flux_ben(self%n_vars + sv)
+               column(av)%flux_atm => self%flux_atm(self%n_vars + sv)
             else
                v = v + 1
-               cc_target = cc(:,v)
-               flux_atm_target = flux_atm(v)
-               flux_pel_target = flux_pel(:,v)
-               flux_ben_target = flux_ben(v)
-
-
-               column(av)%cell => cc_target
-               column(av)%flux_atm => flux_atm_target
-               column(av)%flux_pel => flux_pel_target
-               column(av)%flux_ben => flux_ben_target
+               column(av)%cell => self%cc(:,v)
+               column(av)%flux_atm => self%flux_atm(v)
+               column(av)%flux_pel => self%flux_pel(:,v)
+               column(av)%flux_ben => self%flux_ben(v)
             end if
          end if
       end do
@@ -542,7 +542,7 @@ contains
       end do
    END SUBROUTINE check_states
 
-   SUBROUTINE calculate_fluxes(self, state, column, column_sed, nsed, flux_pel, flux_atm, flux_ben, flux_zon)
+   SUBROUTINE calculate_fluxes(self, state, column, column_sed, nsed)
    !-------------------------------------------------------------------------------
    ! Checks the current values of all state variables and repairs these
    !-------------------------------------------------------------------------------
@@ -554,10 +554,6 @@ contains
       type (aed2_column_t), intent(inout) :: column(:)
       type (aed2_column_t), intent(inout) :: column_sed(:)
       integer, intent(in) :: nsed
-      real(RK), intent(inout) :: flux_pel(:,:) !# (wlev, n_vars)
-      real(RK), intent(inout) :: flux_atm(:)   !# (n_vars)
-      real(RK), intent(inout) :: flux_ben(:)   !# (n_vars)
-      real(RK), intent(inout) :: flux_zon(:,:) !# (n_zones)
    !
    !LOCALS
       integer :: lev,zon,v_start,v_end,av,sv,sd
@@ -568,9 +564,9 @@ contains
       type(aed2_variable_t),pointer :: tvar
    !-------------------------------------------------------------------------------
    !BEGIN
-      flux_pel = zero_
-      flux_atm = zero_
-      flux_ben = zero_
+      self%flux_pel = zero_
+      self%flux_atm = zero_
+      self%flux_ben = zero_
 
       !# Start with calculating all flux terms for rhs in mass/m3/s
       !# Includes (1) benthic flux, (2) surface exchange and (3) water column kinetics
@@ -671,7 +667,7 @@ contains
          !# Limit flux out of bottom layers to concentration of that layer
          !# i.e. don't flux out more than is there
          !# & distribute bottom flux into pelagic over bottom box (i.e., divide by layer height).
-         flux_pel(1, :) = max(-1.0 * self%cc(1, :), flux_pel(1, :)/self%grid%h(1))
+         self%flux_pel(1, :) = max(-1.0 * self%cc(1, :), self%flux_pel(1, :)/self%grid%h(1))
 
          if ( self%aed2_cfg%benthic_mode .EQ. 1 ) then
             do lev=2,self%grid%nz_occupied
@@ -682,8 +678,8 @@ contains
                !# i.e. don't flux out more than is there
                !# & distribute bottom flux into pelagic over bottom box (i.e., divide by layer height).
                !# scaled to proportion of area that is "bottom"
-               flux_pel(lev, :) = max(-1.0 * self%cc(lev, :), flux_pel(lev, :)/self%grid%h(lev))
-               flux_pel(lev, :) = flux_pel(lev, :) * (self%grid%Az_vol(lev) - self%grid%Az_vol(lev - 1))/self%grid%Az(lev)
+               self%flux_pel(lev, :) = max(-1.0 * self%cc(lev, :), self%flux_pel(lev, :)/self%grid%h(lev))
+               self%flux_pel(lev, :) = self%flux_pel(lev, :) * (self%grid%Az_vol(lev) - self%grid%Az_vol(lev - 1))/self%grid%Az_vol(lev)
             end do
          end if
       end if
@@ -694,7 +690,7 @@ contains
          call aed2_calculate_surface(column, self%grid%nz_occupied)
 
          !# Distribute the fluxes into pelagic surface layer
-         flux_pel(self%grid%nz_occupied, :) = flux_pel(self%grid%nz_occupied, :) + flux_atm(:)/self%grid%h(self%grid%nz_occupied)
+         self%flux_pel(self%grid%nz_occupied, :) = self%flux_pel(self%grid%nz_occupied, :) + self%flux_atm(:)/self%grid%h(self%grid%nz_occupied)
       end if
 
       !# (3) WATER COLUMN KINETICS
@@ -725,7 +721,7 @@ contains
         do i=1,self%grid%max_length_input_data                             ! Read initial values
             read(14,*,end=9) z_read(i),var_read(i)
         end do
-    9   nval = i                               ! Number of values
+    9   nval = i - 1                               ! Number of values
         if (nval<0) then
             write(6,*) 'Error reading ', trim(varname), ' initial conditions file (no data found).'
             stop
@@ -736,10 +732,9 @@ contains
         end do
         z_read_depth = z_read(1)                     ! Initial depth (top-most)
 
-        do i=1,nval
-            z_read(nval + 1 - i) = self%grid%z_zero - z_read(i)
-            var_read(nval + 1 - i) = var_read(i)
-        end do
+        call reverse_in_place(z_read(1:nval))
+        z_read(1:nval) = self%grid%z_zero - z_read(1:nval)
+        call reverse_in_place(var_read(1:nval))
 
         if (nval==1) then
             write(6,*) '      Only one row! Water column will be initially homogeneous.'

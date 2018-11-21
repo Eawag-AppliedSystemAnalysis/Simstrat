@@ -120,10 +120,10 @@ module strat_simdata
       ! Variables located on z_cent grid
       ! Note that for these variables the value at 0 z.b. U(0) is not used
       real(RK), dimension(:), allocatable :: U, V ! Water velocities [m/s]
-      real(RK), dimension(:), allocatable :: T, S ! Temperature [°C], Salinity [‰]
+      real(RK), dimension(:), pointer :: T, S ! Temperature [°C], Salinity [‰]
       real(RK), dimension(:), allocatable :: dS ! Source/sink for salinity
       real(RK), dimension(:, :), allocatable :: Q_inp ! Horizontal inflow [m^3/s]
-      real(RK), dimension(:), allocatable :: rho ! Water density [kg/m^3]
+      real(RK), dimension(:), pointer :: rho ! Water density [kg/m^3]
    
       ! Variables located on z_upp grid
       real(RK), dimension(:), allocatable :: k, ko ! Turbulent kinetic energy (TKE) [J/kg]
@@ -137,9 +137,12 @@ module strat_simdata
       real(RK) :: E_Seiche
       real(RK) :: gamma ! Proportionality constant for loss of seiche energy
 
-      real(RK), dimension(:), allocatable :: absorb, absorb_vol ! Absorption coeff [m-1]
-      real(RK) :: u10, v10, uv10, Wf ! Wind speeds, wind factor
-      real(RK) :: u_taub, drag, u_taus ! Drag
+      real(RK), dimension(:), allocatable :: absorb ! Absorption coeff [m-1]
+      real(RK), dimension(:), pointer :: absorb_vol ! Absorption coeff on vol grid [m-1]
+      real(RK) :: u10, v10, Wf ! Wind speeds, wind factor
+      real(RK), pointer :: uv10 ! pointer attribute needed for AED2
+      real(RK) :: drag, u_taus ! Drag
+      real(RK), pointer :: u_taub ! pointer attribute needed for AED2
       real(RK) :: tx, ty ! Shear stress
       real(RK) :: C10 ! Wind drag coefficient
       real(RK) :: SST, heat , heat_snow_ice! Sea surface temperature and heat flux
@@ -161,7 +164,7 @@ module strat_simdata
       real(RK), allocatable :: hw ! Outgoing long wave [W m-2]
       real(RK), allocatable :: hk ! Sensible flux [W m-2]
       real(RK), allocatable :: hv ! Latent heat [W m-2]
-      real(RK), allocatable :: rad0 !  Solar radiation at surface  [W m-2]
+      real(RK), pointer :: rad0 !  Solar radiation at surface  [W m-2]
    
       real(RK) :: cde, cm0
       real(RK) ::  fsed
@@ -279,8 +282,14 @@ contains
       this%hw = 0.0_RK
       this%hk = 0.0_RK 
       this%hv = 0.0_RK 
-      this%rad0 = 0.0_RK   
-   
+      this%rad0 = 0.0_RK
+
+      ! init pointers
+      allocate(this%uv10)
+      this%uv10 = 0.0_RK
+      allocate(this%u_taub)
+      this%u_taub = 0.0_RK
+
    end subroutine
 
 end module strat_simdata

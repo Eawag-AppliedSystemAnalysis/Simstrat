@@ -33,7 +33,7 @@
   },
   "AED2Config" : {
     "AED2ConfigFile"          : "aed2.nml",
-    "PathAED2ini"             : "/",
+    "PathAED2ini"             : "./",
     "SplitFactor"             : 1,
     "ParticleMobility"        : 0,
     "BioshadeFeedback"        : 0,
