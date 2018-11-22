@@ -28,8 +28,8 @@
     "WindDragModel"           : 3,
     "InflowPlacement"         : 0,
     "PressureGradients"       : 0,
-    "IceModel"                : 0,
-    "SnowModel"               : 0	
+    "IceModel"                : 1,
+    "SnowModel"               : 1	
   },
   "Simulation" : {
     "Timestep s"        : 300,
@@ -48,6 +48,9 @@
     "hgeo"          : 0.1,
     "k_min"         : 1e-30,
     "p_radin"       : 1.1978,
-    "p_windf"       : 1
+    "p_windf"       : 1,
+    "p_albedo"      : 1,
+    "freez_temp"    : 0.00,
+    "snow_temp"     : 1	
   }
 }

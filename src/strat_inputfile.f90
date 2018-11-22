@@ -1,8 +1,8 @@
-!<    +---------------------------------------------------------------+
+!     +---------------------------------------------------------------+
 !     | Inputfile  module
 !     |  - Reads configuration and initial conditions
 !     |  - Sets up simulation data structure!
-!<    +---------------------------------------------------------------+
+!     +---------------------------------------------------------------+
 
 module strat_inputfile
    use strat_kinds
@@ -146,7 +146,7 @@ contains
          end if
 
          ! Define variables that should be written
-         allocate (self%simdata%output_cfg%output_vars(21))
+         allocate (self%simdata%output_cfg%output_vars(22))
 
          self%simdata%output_cfg%output_vars(1)%name = "V"
          self%simdata%output_cfg%output_vars(1)%values => self%simdata%model%V
@@ -252,6 +252,11 @@ contains
          self%simdata%output_cfg%output_vars(21)%values => self%simdata%model%Q_vert
          self%simdata%output_cfg%output_vars(21)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(21)%face_grid = .true.  
+   
+         self%simdata%output_cfg%output_vars(22)%name = "SnowIceH"
+         self%simdata%output_cfg%output_vars(22)%values_surf => self%simdata%model%snowice_h
+         self%simdata%output_cfg%output_vars(22)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(22)%face_grid = .false.   
  
       end associate
    end subroutine
@@ -439,7 +444,7 @@ contains
 
       type(json_file) :: par_file
       logical :: found
-      integer :: n_children_dummy
+      integer :: n_children_dummy, i, index_bs
 
       !gfortran cannot handle type bound allocatable character that are passed to subroutine as intent(out)
       !as a workaround we have to store the values in a local scope allocatable character
@@ -488,8 +493,23 @@ contains
          call par_file%get('Input.Outflow', QoutName, found); input_cfg%QoutName = QoutName; call check_field(found, 'Input.Outflow', ParName)
          call par_file%get('Input.Inflow temperature', TinpName, found); input_cfg%TinpName = TinpName; call check_field(found, 'Input.Inflow temperature', ParName)
          call par_file%get('Input.Inflow salinity', SinpName, found); input_cfg%SinpName = SinpName; call check_field(found, 'Input.Inflow salinity', ParName)
+
          ! Path to output folder
-         call par_file%get('Output.Path', PathOut, found); output_cfg%PathOut = PathOut; call check_field(found, 'Output.Path', ParName)
+         call par_file%get('Output.Path', PathOut, found); call check_field(found, 'Output.Path', ParName)
+
+         ! Transform backslashes to slash
+         do while(scan(PathOut,'\')>0)
+            index_bs = scan(PathOut,'\')
+            PathOut(index_bs:index_bs) = '/'
+         end do
+
+         ! Remove trailing slashes at the end
+         if (len(PathOut) == scan(trim(PathOut),"/", BACK= .true.)) then
+            output_cfg%PathOut = PathOut(1:len(PathOut) - 1)
+         else
+            output_cfg%PathOut = trim(PathOut)
+         end if
+
          ! Output depth reference
          call par_file%get("Output.OutputDepthReference", output_cfg%output_depth_reference, found); call check_field(found, 'Output.OutputDepthReference', ParName)
          if (.not.(output_cfg%output_depth_reference == 'surface' .or. output_cfg%output_depth_reference == 'bottom')) then
@@ -588,13 +608,12 @@ contains
          call par_file%get("ModelParameters.k_min", model_param%k_min, found); call check_field(found, 'ModelParameters.k_min', ParName)
          call par_file%get("ModelParameters.p_radin", model_param%p_radin, found); call check_field(found, 'ModelParameters.p_radin', ParName)
          call par_file%get("ModelParameters.p_windf", model_param%p_windf, found); call check_field(found, 'ModelParameters.p_windf', ParName)
-         call par_file%get("ModelParameters.beta_sol", model_param%beta_sol, found); call check_field(found, 'ModelParameters.beta_sol', ParName)
-         call par_file%get("ModelParameters.beta_snowice", model_param%beta_snow_ice, found); call check_field(found, 'ModelParameters.beta_snowice', ParName)     
-         call par_file%get("ModelParameters.albsw", model_param%albsw, found); call check_field(found, 'ModelParameters.albsw', ParName)
-         call par_file%get("ModelParameters.ice_albedo", model_param%ice_albedo, found); call check_field(found, 'ModelParameters.ice_albedo', ParName)
-         call par_file%get("ModelParameters.snow_albedo", model_param%snow_albedo, found); call check_field(found, 'ModelParameters.snow_albedo', ParName)
-         call par_file%get("ModelParameters.freez_temp", model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_temp', ParName)
-   
+         if (model_cfg%ice_model == 1) then    
+           call par_file%get("ModelParameters.p_albedo", model_param%p_albedo, found); call check_field(found, 'ModelParameters.p_albedo', ParName)   
+           call par_file%get("ModelParameters.freez_temp", model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_temp', ParName)
+           call par_file%get("ModelParameters.snow_temp", model_param%snow_temp, found); call check_field(found, 'ModelParameters.snow_temp', ParName)
+         end if      
+
          !Simulation Parameter
          call par_file%get("Simulation.Timestep s", sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep s', ParName)
          call par_file%get("Simulation.Start d", sim_cfg%start_datum, found); call check_field(found, 'Simulation.Start d', ParName)

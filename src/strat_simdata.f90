@@ -1,10 +1,11 @@
-!<    +---------------------------------------------------------------+
+!     +---------------------------------------------------------------+
 !     |  Data structure definitions for simulation data
-!<    +---------------------------------------------------------------+
+!     +---------------------------------------------------------------+
 
 module strat_simdata
    use strat_kinds
    use strat_grid
+   use strat_consts
    implicit none
    private
 
@@ -89,12 +90,9 @@ module strat_simdata
       real(RK) :: k_min
       real(RK) :: p_radin
       real(RK) :: p_windf
-      real(RK) :: beta_sol
-      real(RK) :: beta_snow_ice
-      real(RK) :: albsw
-      real(RK) :: ice_albedo ! Ice albedo
-      real(RK) :: snow_albedo ! Snow albedo   
-      real(RK) :: freez_temp ! Water freez point [kg m-3]     
+      real(RK) :: p_albedo     
+      real(RK) :: freez_temp 
+      real(RK) :: snow_temp      
    end type
 
    ! Model state (this is actually the simulation data!!!)
@@ -128,7 +126,7 @@ module strat_simdata
       real(RK) :: u_taub, drag, u_taus ! Drag
       real(RK) :: tx, ty ! Shear stress
       real(RK) :: C10 ! Wind drag coefficient
-      real(RK) :: SST, heat , heat_snow_ice! Sea surface temperature and heat flux
+      real(RK) :: SST, heat, heat_snow, heat_ice, heat_snowice! Sea surface temperature and heat flux
       !real(RK) :: rad0 ! Solar radiation at surface
       real(RK) :: T_atm ! Air temp at surface   
       real(RK), dimension(:), allocatable :: rad ! Solar radiation (in water)
@@ -137,9 +135,9 @@ module strat_simdata
       ! Snow and Ice
       real(RK), allocatable :: snow_h ! Snow layer height [m]
       real(RK), allocatable :: ice_h ! Ice layer height [m]   
-      real(RK) :: snow_dens ! On ice snow density [kg m-3]   
-      real(RK) :: ice_temp ! Ice density [kg m-3]
-      real(RK) :: snow_temp ! Ice density [kg m-3]
+      real(RK), allocatable :: snowice_h ! Snowice layer height [m]      
+      real(RK) :: snow_dens ! snow density [kg m-3]   
+      real(RK) :: ice_temp ! ice temperature [°C]
       real(RK) :: precip ! precipiation in water eqvivalent hight [m] 
    
       !For saving heatflux 
@@ -219,6 +217,7 @@ contains
 
       allocate (this%snow_h) 
       allocate (this%ice_h)  
+      allocate (this%snowice_h)
    
       allocate (this%ha) 
       allocate (this%hw) 
@@ -253,9 +252,11 @@ contains
     
       this%snow_h = 0.0_RK
       this%ice_h = 0.0_RK
+      this%snowice_h = 0.0_RK   
       this%ice_temp = 0.0_RK 
-      this%snow_temp = 0.0_RK
-   
+      this%snow_dens = rho_s_0
+      this%precip = 0.0_RK
+
       this%ha = 0.0_RK
       this%hw = 0.0_RK
       this%hk = 0.0_RK 
