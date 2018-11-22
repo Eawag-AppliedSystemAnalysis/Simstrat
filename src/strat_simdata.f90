@@ -124,6 +124,8 @@ module strat_simdata
       real(RK), dimension(:), allocatable :: dS ! Source/sink for salinity
       real(RK), dimension(:, :), allocatable :: Q_inp ! Horizontal inflow [m^3/s]
       real(RK), dimension(:), pointer :: rho ! Water density [kg/m^3]
+      real(RK), dimension(:,:), pointer :: AED2_state ! State matrix of AED2 variables
+      real(RK), dimension(:,:), pointer :: AED2_inflow ! Inflow matrix of AED2 variables
    
       ! Variables located on z_upp grid
       real(RK), dimension(:), allocatable :: k, ko ! Turbulent kinetic energy (TKE) [J/kg]
