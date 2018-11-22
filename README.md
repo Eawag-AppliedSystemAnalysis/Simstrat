@@ -1,75 +1,45 @@
-# Simstrat
+# Simstrat: a one-dimensional physical lake model
 
-The source code of different simstrat versions are available here:
+Simstrat is a one-dimensional physical lake model for the simulation of stratification and mixing in deep stratified lakes. The model was originally developed by Goudsmit et al. (2002) and has been successfully applied to lakes with different physical properties. A k-ε model is used to model turbulent mixing including energy transfer of internal seiches. River or groundwater inflow can be added at specific depths or as density-dependent intrusions. The newest version of Simstrat (see below) can also simulate ice/snow covers.
 
-[Version 1.0](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/releases/tag/V1.0)  
-Original model (Goudsmit, 2002)  
-Year: 2000  
+## Run Simstrat
+Pre-built binaries are available [here](prebuilt).
 
-[Version 1.2](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/releases/tag/V1.2)  
-Revision of the code, bug fixes  
-Year: 2014  
+## Build Simstrat
 
-[Version 1.4](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/releases/tag/V1.4)  
-Improved parameterization of heat fluxes, revision of the code (Schmid and Köster, 2016)  
-Year: 2016  
+### Linux or MacOS environment
+We suggest to setup the building environment using Docker; a complete step-by-step guide to use a docker container is available
+[here](misc/docker_build_env).
 
-[Version 1.6](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/releases/tag/V1.6)  
-Improved handling of inflows, revision of the code, addition of warning messages  
-Year: 2018  
+Once the building environment is setup, you can build simstrat with the provided build script. More details [here](build).
 
+### Windows environment
+Please install the required packages listed below (System requirements) and then from terminal navigate into `build` folder and run 
 
-## Compile Simstrat
+~~~bash
+fobis.py build -mode release-gnu
+~~~
 
-1. Download the simstrat source code of a specific simstrat version using the link above or clone the current master branch:
+**System requirements**
 
-   ```
-   git clone https://github.com/Eawag-AppliedSystemAnalysis/Simstrat
-   ```
+- [Python](https://www.python.org/) 2.7 or later
+- [FoBiS.py](https://github.com/szaghi/FoBiS) 2.2.6 or later (available via GitHub or pip using `pip install FoBiS.py`)
+- 2 compiler options:
+	- [Intel Fortran (Intel Parallel Studio XE 2016)](https://software.intel.com/en-us/parallel-studio-xe/choose-download) (commercial)
+	- Gfortran 6.3 or later (free)
 
-2. Navigate to the 'source' folder within the repository.
+In principle, the manual installation is platform independent. Be aware that other programs on your computer might already use some version of Python and thus interfere with any new installation of Python.
 
-3. Depending on the compiler on your system run the following command:
+## Documentation
 
-   Intel Fortran Compiler (on Windows)
-   ```
-   ifort simstrat.f90 /O3 /Qipo /Qprec-div /QxHost
-   ```
+The user manual can be found [here](doc). 
 
-   Intel Fortran Compiler (on Linux and macOS)
-   ```
-   ifort simstrat.f90 -O3 -ipo -prec-div -xHost
-   ```
+The developer documentation can be generated with the FORD python module (`pip install ford`). Go [here](doc/developer/ford) and run 
 
-   gfortran (on Windows)
-   ```
-   gfortran simstrat.f90 -o simstrat.exe -O2 -ffree-line-length-none -g -ffpe-trap=overflow,zero,invalid -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans -static
-   ```
+~~~bash
+ford ford_projectfile.md
+~~~
 
-   gfortran (on Linux and macOS)
-   ```
-   gfortran simstrat.f90 -o simstrat -O2 -ffree-line-length-none -g -ffpe-trap=overflow,zero,invalid -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans -static
-   ```
-   (don't forget to make the file executable, i.e. `chmod +x simstrat`)
+Once generated open the file `ford_doc/index.html` to see the code documentation.
 
-## Getting gfortran for Windows
-
-1. To get gfortran on Windows we recommend to download and install [MSYS2](http://www.msys2.org/). Follow the installation instruction on the webpage (update the package database with `pacman -Syu`).
-
-2. Install a toolchain:
-   a) for 32-bit:
-      ```
-      pacman -S mingw-w64-i686-toolchain
-      ```
-   b) for 64-bit:
-      ```
-      pacman -S mingw-w64-x86_64-toolchain
-      ```
-   Select which package to install, default is all
-
-3. To compile simstrat use the 'MinGW-w64 32-bit Shell' or 'MinGW-w64 64-bit Shell' which should be available in your start menu now.
-
-## Getting Intel Fortran Compiler for Windows, Linux & macOS
-
-Intel supports the next generation of scientists and engineers by ensuring that students and the faculty at qualifying universities have access to the full-featured Intel® Parallel Studio XE.
-You can find the free options for Windows, Linux and macOS [here](https://software.intel.com/en-us/parallel-studio-xe/choose-download).
+Additionally, a documentation about the numerical scheme of Simstrat can be found [here](doc/developer/dev_manual).

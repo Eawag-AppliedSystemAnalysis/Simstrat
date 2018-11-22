@@ -1,0 +1,42 @@
+[modes]
+modes = release-gnu release-intel debug-gnu
+
+[debug-gnu]
+compiler=Gnu
+cflags=-c -O2 -std=f2008 -ffree-line-length-none -g -ffpe-trap=overflow,zero -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans
+lflags=-static-libgcc -static-libgfortran -static
+build_dir=.
+src=../src/
+colors=False
+quiet=False
+target=simstrat.f90
+dependon=../lib/csv_fortran/fobos:release-gnu((direct))
+         ../lib/json_fortran/fobos:release-gnu((direct))
+log=True
+
+[release-gnu]
+compiler=Gnu
+cflags=-c -O2 -std=f2008 -ffree-line-length-none
+lflags=-static-libgcc -static-libgfortran -static
+build_dir=.
+src=../src/
+colors=False
+quiet=False
+target=simstrat.f90
+dependon=../lib/csv_fortran/fobos:release-gnu((direct))
+         ../lib/json_fortran/fobos:release-gnu((direct))
+log=True
+
+
+[release-intel]
+compiler=intel
+cflags=-c -O3
+modsw=-module=
+build_dir=.
+src=../src/
+colors=False
+quiet=False
+target=simstrat.f90
+dependon=../lib/csv_fortran/fobos:release-intel((direct))
+         ../lib/json_fortran/fobos:release-intel((direct))
+log=True
