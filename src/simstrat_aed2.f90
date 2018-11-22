@@ -180,9 +180,9 @@ contains
          self%uva(:) = (self%par(:)/0.45) * 0.035
          self%uvb(:) = (self%par(:)/0.45) * 0.005
 
-         call calculate_fluxes(self, state, column, column_sed, self%aed2_cfg%n_zones)
+         call calculate_fluxes(self, state, column, column_sed)
 
-         ! Update the water column layers
+         ! Update the water column layers using the biochemical reaction of AED2
          do v = 1, self%n_vars
             do lev = 1, self%grid%nz_occupied
                self%cc(lev, v) = self%cc(lev, v) + state%dt/self%aed2_cfg%split_factor*self%flux_pel(lev, v)
@@ -208,6 +208,11 @@ contains
 !       ! If simulating sediment zones, distribute cc-sed benthic properties back
 !       !  into main cc array, mainly for plotting
 !       IF ( benthic_mode .GT. 1 ) CALL copy_from_zone(cc, cc_diag, cc_diag_hz, wlev)
+
+         ! Diffusive transport of AED2 variables
+         do v=1, self%n_vars
+            call diffusion_AED2(self)
+         end do
 
       end do
 
@@ -421,7 +426,7 @@ contains
       end do
    END SUBROUTINE check_states
 
-   SUBROUTINE calculate_fluxes(self, state, column, column_sed, nsed)
+   SUBROUTINE calculate_fluxes(self, state, column, column_sed)
    !-------------------------------------------------------------------------------
    ! Checks the current values of all state variables and repairs these
    !-------------------------------------------------------------------------------
@@ -432,7 +437,6 @@ contains
       class(ModelState) :: state
       type (aed2_column_t), intent(inout) :: column(:)
       type (aed2_column_t), intent(inout) :: column_sed(:)
-      integer, intent(in) :: nsed
    !
    !LOCALS
       integer :: lev,zon,v_start,v_end,av,sv,sd
@@ -458,7 +462,7 @@ contains
 !          !# water conditions need to be aggregated from multiple cells/layers, and output flux
 !          !# needs disaggregating from each zone back to the overlying cells/layers
 
-!          do zon=1,nsed
+!          do zon=1,self%aed2_cfg%n_zones
 !             !# Reinitialise flux_ben to be repopulated for this zone
 !             flux_ben = zero_
 !             flux_pel_pre = zero_
@@ -777,6 +781,18 @@ contains
             end if
          end if
       end do      
+
+   end subroutine
+
+   subroutine diffusion_AED2(self)
+      ! Arguments
+      class(SimstratAED2) :: self
+
+      ! Locals
+      integer :: i,j
+
+      ! To be done...
+
 
    end subroutine
 
