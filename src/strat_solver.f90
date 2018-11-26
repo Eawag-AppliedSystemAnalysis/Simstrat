@@ -9,6 +9,7 @@ module strat_solver
    implicit none
 
    private
+   public solve_tridiag_thomas
 
    ! Type that represents a solver based on the Thomas algorithm
    ! https://en.wikipedia.org/wiki/Tridiagonal_matrix_algorithm

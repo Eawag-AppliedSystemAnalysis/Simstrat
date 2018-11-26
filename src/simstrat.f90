@@ -104,7 +104,7 @@ program simstrat_main
 
    ! Initialize biochemical model "AED2" if used
    if (simdata%model_cfg%couple_aed2) then
-      call mod_aed2%init(simdata%grid, simdata%aed2_cfg)
+      call mod_aed2%init(simdata%model, simdata%grid, simdata%aed2_cfg)
    end if
 
    ! Setup logger

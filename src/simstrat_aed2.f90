@@ -5,6 +5,7 @@
 module simstrat_aed2
    use strat_simdata
    use strat_grid
+   use strat_solver
    use utilities
    use aed2_common
    use aed2_core
@@ -221,13 +222,14 @@ contains
 !       !  into main cc array, mainly for plotting
 !       IF ( benthic_mode .GT. 1 ) CALL copy_from_zone(cc, cc_diag, cc_diag_hz, wlev)
 
-         ! Diffusive transport of AED2 variables
-         do v=1, self%n_vars
-            call diffusion_AED2(self)
-         end do
-
          ! Update in-/outflow of AED2 variables (to be used in following advection step in the main loop)
          call lateral_update_AED2(self, state)
+
+
+         ! Diffusive transport of AED2 variables
+         do v=1, self%n_vars
+            call diffusion_AED2(self, state, v)
+         end do
 
       end do
 
@@ -799,16 +801,43 @@ contains
 
    end subroutine
 
-   subroutine diffusion_AED2(self)
+   subroutine diffusion_AED2(self, state, var_index)
       ! Arguments
       class(SimstratAED2) :: self
+      class(ModelState) :: state
+
+      integer :: var_index
 
       ! Locals
-      integer :: i,j
+      real(RK), dimension(self%grid%ubnd_vol) :: boundaries, sources, lower_diag, main_diag, upper_diag, rhs
 
-      ! To be done...
+      boundaries = 0.
+      sources = 0.
+
+      call euleri_create_LES_MFQ_AED2(self, state%AED2_state(:,var_index), state%num, sources, boundaries, lower_diag, main_diag, upper_diag, rhs, state%dt)
+      !call solve_tridiag_thomas(lower_diag, main_diag, upper_diag, rhs, state%AED2_state(:,var_index), self%grid%ubnd_vol)
 
 
+   end subroutine
+
+   subroutine euleri_create_LES_MFQ_AED2(self, var, nu, sources, boundaries, lower_diag, main_diag, upper_diag, rhs, dt)
+      class(SimstratAED2), intent(inout) :: self
+      real(RK), dimension(:), intent(inout) :: var, sources, boundaries, lower_diag, upper_diag, main_diag, rhs, nu
+      real(RK), intent(inout) :: dt
+      integer :: n
+
+      n=self%grid%ubnd_vol
+
+      ! Build diagonals
+      upper_diag(1) = 0.0_RK
+      upper_diag(2:n) = dt*nu(2:n)*self%grid%AreaFactor_1(2:n)
+      lower_diag(1:n - 1) = dt*nu(2:n)*self%grid%AreaFactor_2(1:n-1)
+      lower_diag(n) = 0.0_RK
+      main_diag(1:n) = 1.0_RK - upper_diag(1:n) - lower_diag(1:n) + boundaries(1:n)*dt
+
+      ! Calculate RHS
+      ! A*phi^{n+1} = phi^{n}+dt*S^{n}
+      rhs(1:n) = var(1:n) + dt*sources(1:n)
    end subroutine
 
    subroutine lateral_update_AED2(self, state)
@@ -980,7 +1009,7 @@ contains
 
          end do ! end do i
 
-         ! The final AED2_state is located on the volume grid
+         ! The final AED2_inflow is located on the volume grid
          do i = 1, n
             do j = 1, ubnd_vol
                state%AED2_inflow(j, i) = Q_inp(i, j + 1) - Q_inp(i, j)
