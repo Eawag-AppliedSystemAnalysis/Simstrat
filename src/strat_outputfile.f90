@@ -217,8 +217,8 @@ contains
       class(StaggeredGrid), target :: grid
 
       logical :: status_ok, exist_output_folder
-      integer :: i, ppos
-      character(len=256) :: mkdirCmd, output_folder
+      integer :: i
+      character(len=256) :: mkdirCmd
 
       self%n_depths = grid%length_fce
 
@@ -267,8 +267,8 @@ contains
       class(StaggeredGrid), target :: grid
 
       logical :: status_ok, exist_output_folder
-      integer :: i, ppos
-      character(len=256) :: mkdirCmd, output_folder
+      integer :: i
+      character(len=256) :: mkdirCmd
 
       self%n_depths = size(output_config%zout)
 

@@ -444,7 +444,7 @@ contains
 
       type(json_file) :: par_file
       logical :: found
-      integer :: n_children_dummy, i, index_bs
+      integer :: n_children_dummy, index_bs
 
       !gfortran cannot handle type bound allocatable character that are passed to subroutine as intent(out)
       !as a workaround we have to store the values in a local scope allocatable character

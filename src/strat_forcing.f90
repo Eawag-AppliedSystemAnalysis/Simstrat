@@ -291,8 +291,6 @@ contains
                H_A = (1 - r_a)*((1 - 0.84_RK*Cloud)*(59.38_RK + 113.7_RK*((state%T_atm + 273.15_RK)/273.16_RK)**6&
                &   + 96.96_RK*sqrt(465*Vap_atm/(state%T_atm + 273.15_RK)*0.04_RK))/5.67e-8_RK/ &
                &   (state%T_atm + 273.15_RK)**4 + 0.84_RK*Cloud)*5.67e-8_RK*(state%T_atm + 273.15_RK)**4
-               else
-               H_A = H_A
                end if
                H_A = H_A*param%p_radin ! Provided fitting factor p_radin (~1)
 
@@ -324,14 +322,14 @@ contains
                   ! and with corrections in 
                   ! Leppäranta, M. (2014). Freezing of lakes and the evolution of their ice cover. 
                   ! New York: Springer. ISBN 978-3-642-29080-0
-                     if (state%ice_h > 0 .or. state%snowice_h > 0 .and. state%snow_h == 0) then !Ice Cover (ice and snowice)
+                     if (state%snow_h == 0) then !Ice Cover (ice and snowice)
                       emissivity = emiss_ice
-                     else if (state%snow_h > 0) then !Snow Cover
+                     else !Snow Cover
                       !varies from 0.8 to 0.9 depending on snow density
                       emissivity = 5.0e-4_RK * state%snow_dens + 6.75e-1_RK
                      end if
                      ! obs fiting factors param%p_radin and param%p_windf not applied to ice covered lake      
-                   H_A = (Ha_a + Ha_b * (Vap_atm**(1/2))) * (1 + Ha_c * Cloud**2) * sig * (state%T_atm + 273.15_RK)**4
+                   H_A = (Ha_a + Ha_b * (Vap_atm**(1.0_RK/2.0_RK))) * (1 + Ha_c * Cloud**2) * sig * (state%T_atm + 273.15_RK)**4
                    H_W = -emissivity * sig * (T_surf + 273.15_RK)**4
                    H_K = rho_air * cp_air * Hk_CH * (state%T_atm - T_surf) * state%uv10
                    sh_c = 0.622/param%p_air! converter from absolut vapour pressure to specific humidity (Lepparanta 2015)

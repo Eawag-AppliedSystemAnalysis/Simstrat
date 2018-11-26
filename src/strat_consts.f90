@@ -40,7 +40,7 @@
      real(RK), parameter     :: emiss_ice = 0.98_RK   ! Emissivity ice
      !Emissivity snow range from 0.8 to 0.9 depending on snow density in strat_forcing.f90
      real(RK), parameter     :: C01 = 5.8_RK / 3600_RK ! snow compresion in [m^-1 sec^-1] to match model timestep, initaly [m/h], from Yen (1981) page 5, C1 range [2.6 to 9.0] 
-     real(RK), parameter     :: C02 = 21_RK / 1000_RK !snow compresion in [m^3/kg] initaly [m^3/Mg], from Yen (1981) page 5
+     real(RK), parameter     :: C02 = 21.0_RK / 1000_RK !snow compresion in [m^3/kg] initaly [m^3/Mg], from Yen (1981) page 5
      real(RK), parameter     :: Ha_a = 0.68_RK ! Longwave emision parameter, Matti Leppäranta 2009 
      real(RK), parameter     :: Ha_b = 0.036_RK !Longwave emision parameter, Matti Leppäranta 2009 [mbar^-1/2]
      real(RK), parameter     :: Ha_c = 0.18_RK !Longwave emision parameter, Matti Leppäranta 2009 

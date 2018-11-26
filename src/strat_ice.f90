@@ -93,7 +93,7 @@ module strat_ice
    if (param%Freez_Temp < state%T_atm .and. (state%ice_h + state%snowice_h) > 0) then 
      !Melt snow    
      if (state%snow_h > 0 .and. param%snow_temp < state%T_atm .and. self%model_cfg%snow_model == 1) then
-      call self%do_snow_melting(state, param) 
+      call self%do_snow_melting(state) 
      end if 
      !Melt ice from above
      if (state%snowice_h + state%ice_h > 0) then
@@ -224,11 +224,10 @@ module strat_ice
 ! %%%%%%%%%%%%%%%%%%%%
 
  ! Snow melting from above through sublimation (l_e ~= 0) or non-sublimation (l_e = 0) (i.e. solid to gas (l_h + l_e))
- subroutine snow_melting(self, state, param)
+ subroutine snow_melting(self, state)
       implicit none   
       class(IceModule) :: self
       class(ModelState) :: state
-      class(ModelParam) :: param   
       ! Define variables only used in snow_model
       real(RK) :: Melt_energy1
       real(RK) :: MeltHeight1
@@ -301,7 +300,7 @@ module strat_ice
        MeltHeight2 = Melt_energy2 / (l_h) / (snowice_dens * 1 * 1) ![J] / [J/kg] / [kg/m3] / [m2] = [m] 
       else ! layer above and below, melt snow  
        state%heat_snow = Melt_energy2 / state%dt  
-       call self%do_snow_melting(state, param)   
+       call self%do_snow_melting(state)   
        MeltHeight2 = 0
       end if
        if (MeltHeight2 < 0) then !do not add ice, only melt.
