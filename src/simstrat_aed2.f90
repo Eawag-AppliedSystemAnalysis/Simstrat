@@ -53,8 +53,8 @@ module simstrat_aed2
       integer :: zone_var = 0
 
       ! Variables for in-/outflow
-      real(RK), dimension(:, :), allocatable   :: z_Inp, Q_start, Qs_start, Q_end, Qs_end, Q_read_start, Q_read_end
-      real(RK), dimension(:, :), allocatable   :: Inp_read_start, Inp_read_end, Qs_read_start, Qs_read_end, Q_inp
+      real(RK), dimension(:, :), allocatable   :: z_Inp_AED2, Q_start_AED2, Qs_start_AED2, Q_end_AED2, Qs_end_AED2, Q_read_start_AED2, Q_read_end_AED2
+      real(RK), dimension(:, :), allocatable   :: Inp_read_start_AED2, Inp_read_end_AED2, Qs_read_start_AED2, Qs_read_end_AED2, Q_inp_AED2
       real(RK), dimension(:), allocatable :: tb_start, tb_end ! Input depths, start time, end time
       integer, dimension(:), allocatable :: eof, nval, nval_deep, nval_surface
 
@@ -155,6 +155,9 @@ contains
                end if
             end if
          end do
+
+         ! Update in-/outflow of AED2 variables (to be used in following advection step in the main loop)
+         call lateral_update_AED2(self, state)
 
          write(*,"(/,5X,'----------  AED2 config : end  ----------',/)")
       end associate
@@ -614,7 +617,7 @@ contains
         character(len=100) :: fname
         integer :: i,nval
 
-        fname = trim(self%aed2_cfg%path_aed2_ini)//trim(varname)//'_ini.dat'
+        fname = trim(self%aed2_cfg%path_aed2_initial)//trim(varname)//'_ini.dat'
         open(14,action='read',status='unknown',err=1,file=fname)       ! Opens initial conditions file
         write(6,*) 'reading initial conditions of ', trim(varname)
         read(14,*)                                ! Skip header
@@ -644,7 +647,7 @@ contains
         end if
         return
 
-    1   write(6,*) '   File ''',trim(fname),''' not found. Initial conditions set to default value from file ''fabm.nml''.'
+    1   write(6,*) '   File ''',trim(fname),''' not found. Initial conditions set to default value from file ''AED2.nml''.'
         var(1:self%grid%nz_grid) = default_val !File not found: value from fabm.nml (constant)
         return
     end subroutine AED2_InitCondition
@@ -815,7 +818,7 @@ contains
       sources = 0.
 
       call euleri_create_LES_MFQ_AED2(self, state%AED2_state(:,var_index), state%num, sources, boundaries, lower_diag, main_diag, upper_diag, rhs, state%dt)
-      !call solve_tridiag_thomas(lower_diag, main_diag, upper_diag, rhs, state%AED2_state(:,var_index), self%grid%ubnd_vol)
+      call solve_tridiag_thomas(lower_diag, main_diag, upper_diag, rhs, state%AED2_state(:,var_index), self%grid%ubnd_vol)
 
 
    end subroutine
@@ -848,14 +851,13 @@ contains
       ! Local Declarations
       real(RK) :: dummy
 
-      integer :: i, j, n
+      integer :: i, j, n, status
       integer :: fnum(1:32) ! File number
       character(len=100) :: fname(1:32)
       type(aed2_variable_t),pointer :: tvar
 
       associate (datum => state%datum, &
                  idx => state%model_step_counter, &
-                 Q_inp => state%Q_inp, & ! Q_inp is the input at each depth for each time step
                  grid => self%grid, &
                  ubnd_vol => self%grid%ubnd_vol, &
                  ubnd_fce => self%grid%ubnd_fce)
@@ -863,37 +865,45 @@ contains
          n = self%n_vars + self%n_vars_ben
          ! FB 2016: Major revision to include surface inflow
          do i = 1, self%n_vars ! Do this for all AED2 vars
-            fname(i) = self%names(i)
+            fname(i) = trim(self%aed2_cfg%path_aed2_inflow)//trim(self%names(i))//'_inflow.dat'
             fnum(i) = i + 60  ! Should find a better way to manage unit numbers
-            if (idx==1) then ! First iteration
+            if (idx==0) then ! First iteration
                if (i==1) then ! First variable
                   ! Allocate arrays for first iteration of first variable
-                  allocate (self%z_Inp(1:n, 1:state%nz_input)) ! Input depths
-                  allocate (self%Inp_read_start(1:n, 1:state%nz_input)) ! Raw input read
-                  allocate (self%Inp_read_end(1:n, 1:state%nz_input)) ! Raw input read
-                  allocate (self%Q_read_start(1:n, 1:state%nz_input)) ! Integrated input
-                  allocate (self%Q_read_end(1:n, 1:state%nz_input)) ! Integrated input           
-                  allocate (self%Qs_read_start(1:n, 1:state%nz_input))  ! Integrated surface input
-                  allocate (self%Qs_read_end(1:n, 1:state%nz_input))  ! Integrated surface input
-                  allocate (self%Q_start(1:n, 1:grid%nz_grid+1)) ! Input interpolated on grid
-                  allocate (self%Q_end(1:n, 1:grid%nz_grid+1)) ! Input interpolated on grid
-                  allocate (self%Qs_start(1:n, 1:grid%nz_grid+1)) ! Surface input interpolated on grid
-                  allocate (self%Qs_end(1:n, 1:grid%nz_grid+1)) ! Surface input interpolated on grid
-                  allocate (self%Q_inp(1:n, 1:grid%nz_grid+1))
+                  allocate (self%z_Inp_AED2(1:n, 1:state%nz_input)) ! Input depths
+                  allocate (self%Inp_read_start_AED2(1:n, 1:state%nz_input)) ! Raw input read
+                  allocate (self%Inp_read_end_AED2(1:n, 1:state%nz_input)) ! Raw input read
+                  allocate (self%Q_read_start_AED2(1:n, 1:state%nz_input)) ! Integrated input
+                  allocate (self%Q_read_end_AED2(1:n, 1:state%nz_input)) ! Integrated input           
+                  allocate (self%Qs_read_start_AED2(1:n, 1:state%nz_input))  ! Integrated surface input
+                  allocate (self%Qs_read_end_AED2(1:n, 1:state%nz_input))  ! Integrated surface input
+                  allocate (self%Q_start_AED2(1:n, 1:grid%nz_grid+1)) ! Input interpolated on grid
+                  allocate (self%Q_end_AED2(1:n, 1:grid%nz_grid+1)) ! Input interpolated on grid
+                  allocate (self%Qs_start_AED2(1:n, 1:grid%nz_grid+1)) ! Surface input interpolated on grid
+                  allocate (self%Qs_end_AED2(1:n, 1:grid%nz_grid+1)) ! Surface input interpolated on grid
+                  allocate (self%Q_inp_AED2(1:n, 1:grid%nz_grid+1))
                   allocate (self%tb_start(n), self%tb_end(n), self%eof(n), self%nval(n), self%nval_deep(n), self%nval_surface(n))
                end if
 
                ! Default values
-               self%Q_start(i,:) = 0.0_RK
-               self%Q_end(i,:) = 0.0_RK
-               self%Qs_start(i, :) = 0.0_RK
-               self%Qs_end(i, :) = 0.0_RK
+               self%Q_start_AED2(i,:) = 0.0_RK
+               self%Q_end_AED2(i,:) = 0.0_RK
+               self%Qs_start_AED2(i, :) = 0.0_RK
+               self%Qs_end_AED2(i, :) = 0.0_RK
 
                ! Open file and start to read
+               open(fnum(i), action='read', iostat=status,file=fname(i))
+               if (status .ne. 0) then
+                  call error('File '//fname(i)//' not found.')
+                  stop
+               else
+                  write(6,*) 'Reading ', fname(i)
+               end if
+
                self%eof(i) = 0
                read (fnum(i), *, end=9) ! Skip first row: description of columns
 
-               if (state%has_surface_input(i)) then
+               if (state%has_surface_input_AED2) then
                 ! Read number of deep and surface inflows
                 read (fnum(i), *, end=9) self%nval_deep(i), self%nval_surface(i)
                 ! Total number of values to read
@@ -905,44 +915,45 @@ contains
               end if
 
                ! Read input depths
-               read (fnum(i), *, end=9) dummy, (self%z_Inp(i, j), j=1, self%nval(i))
+               read (fnum(i), *, end=9) dummy, (self%z_Inp_AED2(i, j), j=1, self%nval(i))
 
                ! Convert input depths
-               self%z_Inp(i, 1:self%nval_deep(i)) = grid%z_zero + self%z_Inp(i, 1:self%nval_deep(i))
+               self%z_Inp_AED2(i, 1:self%nval_deep(i)) = grid%z_zero + self%z_Inp_AED2(i, 1:self%nval_deep(i))
 
-               if (state%has_surface_input(i)) then
+               if (state%has_surface_input_AED2) then
                 ! Convert surface input depths
-                self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)) = grid%lake_level + self%z_Inp(i, self%nval_deep(i) + 1 :self%nval(i))
+                self%z_Inp_AED2(i, self%nval_deep(i) + 1:self%nval(i)) = grid%lake_level + self%z_Inp_AED2(i, self%nval_deep(i) + 1 :self%nval(i))
               end if
 
                ! Read first input line
-               read (fnum(i), *, end=9) self%tb_start(i), (self%Inp_read_start(i, j), j=1, self%nval(i))
+               read (fnum(i), *, end=9) self%tb_start(i), (self%Inp_read_start_AED2(i, j), j=1, self%nval(i))
 
-              if (state%has_deep_input(i)) then
+              if (state%has_deep_input_AED2) then
                 ! Cumulative integration of input
-                call Integrate(self%z_Inp(i, :), self%Inp_read_start(i, :), self%Q_read_start(i, :), self%nval_deep(i))
+                call Integrate(self%z_Inp_AED2(i, :), self%Inp_read_start_AED2(i, :), self%Q_read_start_AED2(i, :), self%nval_deep(i))
                 ! Interpolation on face grid
-                call grid%interpolate_to_face_from_second(self%z_Inp(i, :), self%Q_read_start(i, :), self%nval_deep(i), self%Q_start(i, :))
+                call grid%interpolate_to_face_from_second(self%z_Inp_AED2(i, :), self%Q_read_start_AED2(i, :), self%nval_deep(i), self%Q_start_AED2(i, :))
               end if
 
                ! If there is surface input, integrate and interpolate
-               if (state%has_surface_input(i)) then
-                  call Integrate(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Inp_read_start(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_start(i, :), self%nval_surface(i))
-                  call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_start(i, :), self%nval_surface(i), self%Qs_start(i, :))
+               if (state%has_surface_input_AED2) then
+                  call Integrate(self%z_Inp_AED2(i, self%nval_deep(i) + 1:self%nval(i)), self%Inp_read_start_AED2(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_start_AED2(i, :), self%nval_surface(i))
+                  call grid%interpolate_to_face_from_second(self%z_Inp_AED2(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_start_AED2(i, :), self%nval_surface(i), self%Qs_start_AED2(i, :))
                end if
 
 
                ! Read second line and treatment of deep inflow
-               read (fnum(i), *, end=7) self%tb_end(i), (self%Inp_read_end(i, j), j=1, self%nval(i))
-              if (state%has_deep_input(i)) then
-                call Integrate(self%z_Inp(i, :), self%Inp_read_end(i, :), self%Q_read_end(i, :), self%nval_deep(i))
-                call grid%interpolate_to_face_from_second(self%z_Inp(i, :), self%Q_read_end(i, :), self%nval_deep(i), self%Q_end(i, :))
+               read (fnum(i), *, end=7) self%tb_end(i), (self%Inp_read_end_AED2(i, j), j=1, self%nval(i))
+
+              if (state%has_deep_input_AED2) then
+                call Integrate(self%z_Inp_AED2(i, :), self%Inp_read_end_AED2(i, :), self%Q_read_end_AED2(i, :), self%nval_deep(i))
+                call grid%interpolate_to_face_from_second(self%z_Inp_AED2(i, :), self%Q_read_end_AED2(i, :), self%nval_deep(i), self%Q_end_AED2(i, :))
               end if
                ! If there is surface input, integrate and interpolate
-               if (state%has_surface_input(i)) then
-                  call Integrate(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Inp_read_end(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i))
-                  call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))
-               end if
+               if (state%has_surface_input_AED2) then
+                   call Integrate(self%z_Inp_AED2(i, self%nval_deep(i) + 1:self%nval(i)), self%Inp_read_end_AED2(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end_AED2(i, :), self%nval_surface(i))
+                   call grid%interpolate_to_face_from_second(self%z_Inp_AED2(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end_AED2(i, :), self%nval_surface(i), self%Qs_end_AED2(i, :))
+                end if
 
                write(6,*) '[OK] ','Input file successfully read: ',fname(i)
             end if ! idx==1
@@ -950,14 +961,14 @@ contains
 
 
             ! If lake level changes and if there is surface inflow, adjust inflow depth to keep them at the surface
-            if ((.not. grid%lake_level == grid%lake_level_old) .and. (state%has_surface_input(i))) then
+            if ((.not. grid%lake_level == grid%lake_level_old) .and. (state%has_surface_input_AED2)) then
 
               ! Readjust surface input depths
-              self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)) = self%z_Inp(i, self%nval_deep(i) + 1 :self%nval(i)) - grid%lake_level_old + grid%lake_level
+              self%z_Inp_AED2(i, self%nval_deep(i) + 1:self%nval(i)) = self%z_Inp_AED2(i, self%nval_deep(i) + 1 :self%nval(i)) - grid%lake_level_old + grid%lake_level
 
               ! Adjust surface inflow to new lake level        
-              call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_start(i, :), self%nval_surface(i), self%Qs_start(i, :))
-              call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))               
+              call grid%interpolate_to_face_from_second(self%z_Inp_AED2(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_start_AED2(i, :), self%nval_surface(i), self%Qs_start_AED2(i, :))
+              call grid%interpolate_to_face_from_second(self%z_Inp_AED2(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end_AED2(i, :), self%nval_surface(i), self%Qs_end_AED2(i, :))               
 
             end if ! end if not lake_level...
 
@@ -969,42 +980,42 @@ contains
             else
                do while (.not. ((datum >= self%tb_start(i)) .and. (datum <= self%tb_end(i)))) ! Do until datum between dates
                   self%tb_start(i) = self%tb_end(i) ! Move one step in time
-                  self%Q_start(i, :) = self%Q_end(i, :)
-                  self%Qs_start(i, :) = self%Qs_end(i, :)
-                  self%Qs_read_start(i, :) = self%Qs_read_end(i, :)
+                  self%Q_start_AED2(i, :) = self%Q_end_AED2(i, :)
+                  self%Qs_start_AED2(i, :) = self%Qs_end_AED2(i, :)
+                  self%Qs_read_start_AED2(i, :) = self%Qs_read_end_AED2(i, :)
 
-                  read (fnum(i), *, end=7) self%tb_end(i), (self%Inp_read_end(i, j), j=1, self%nval(i))
+                  read (fnum(i), *, end=7) self%tb_end(i), (self%Inp_read_end_AED2(i, j), j=1, self%nval(i))
 
-                  if (state%has_deep_input(i)) then
-                    call Integrate(self%z_Inp(i, :), self%Inp_read_end(i, :), self%Q_read_end(i, :), self%nval_deep(i))
-                    call grid%interpolate_to_face_from_second(self%z_Inp(i, :), self%Q_read_end(i, :), self%nval_deep(i), self%Q_end(i, :))
+                  if (state%has_deep_input_AED2) then
+                    call Integrate(self%z_Inp_AED2(i, :), self%Inp_read_end_AED2(i, :), self%Q_read_end_AED2(i, :), self%nval_deep(i))
+                    call grid%interpolate_to_face_from_second(self%z_Inp_AED2(i, :), self%Q_read_end_AED2(i, :), self%nval_deep(i), self%Q_end_AED2(i, :))
                   end if
 
-                  if (state%has_surface_input(i)) then
-                     call Integrate(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Inp_read_end(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i))
-                     call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))
+                  if (state%has_surface_input_AED2) then
+                     call Integrate(self%z_Inp_AED2(i, self%nval_deep(i) + 1:self%nval(i)), self%Inp_read_end_AED2(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end_AED2(i, :), self%nval_surface(i))
+                     call grid%interpolate_to_face_from_second(self%z_Inp_AED2(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end_AED2(i, :), self%nval_surface(i), self%Qs_end_AED2(i, :))
                   end if
                end do ! end do while
             end if
 
-            ! Linearly interpolate value at correct datum (Q_inp is on face grid)
+            ! Linearly interpolate value at correct datum (Q_inp_AED2 is on face grid)
             do j = 1, ubnd_fce
-               self%Q_inp(i,j) = (self%Q_start(i,j) + self%Qs_start(i,j)) + (datum-self%tb_start(i)) &
-               * (self%Q_end(i,j) + self%Qs_end(i,j) - self%Q_start(i,j) - self%Qs_start(i,j))/(self%tb_end(i)-self%tb_start(i))
+               self%Q_inp_AED2(i,j) = (self%Q_start_AED2(i,j) + self%Qs_start_AED2(i,j)) + (datum-self%tb_start(i)) &
+               * (self%Q_end_AED2(i,j) + self%Qs_end_AED2(i,j) - self%Q_start_AED2(i,j) - self%Qs_start_AED2(i,j))/(self%tb_end(i)-self%tb_start(i))
             end do
             goto 11
 
             ! If end of file reached, set to closest available value
  7          self%eof(i) = 1
- 8          self%Q_inp(i,1:ubnd_fce) = self%Q_start(i,1:ubnd_fce) + self%Qs_start(i,1:ubnd_fce)
+ 8          self%Q_inp_AED2(i,1:ubnd_fce) = self%Q_start_AED2(i,1:ubnd_fce) + self%Qs_start_AED2(i,1:ubnd_fce)
             goto 11
 
             ! If no data available
  9          write(6,*) '[WARNING] ','No data found in ',trim(fname(i)),' inflow file. Check number of depths. Values set to zero.'
             self%eof(i) = 1
-            self%Q_inp(i, 1:ubnd_fce) = 0.0_RK
-            self%Q_start(i, 1:ubnd_fce) = 0.0_RK
-            self%Qs_start(i, 1:ubnd_fce) = 0.0_RK
+            self%Q_inp_AED2(i, 1:ubnd_fce) = 0.0_RK
+            self%Q_start_AED2(i, 1:ubnd_fce) = 0.0_RK
+            self%Qs_start_AED2(i, 1:ubnd_fce) = 0.0_RK
             11        continue
 
          end do ! end do i
@@ -1012,7 +1023,7 @@ contains
          ! The final AED2_inflow is located on the volume grid
          do i = 1, n
             do j = 1, ubnd_vol
-               state%AED2_inflow(j, i) = Q_inp(i, j + 1) - Q_inp(i, j)
+               state%AED2_inflow(j, i) = self%Q_inp_AED2(i, j + 1) - self%Q_inp_AED2(i, j)
             end do
                !state%AED2_inflow(ubnd_vol + 1,ubnd_vol + 1) = 0
          end do

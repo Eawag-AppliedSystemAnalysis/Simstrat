@@ -79,7 +79,8 @@ module strat_simdata
    ! AED2 configuration (read from file)
    type, public :: AED2Config
       character(len=:), allocatable :: aed2_config_file
-      character(len=:), allocatable :: path_aed2_ini
+      character(len=:), allocatable :: path_aed2_initial
+      character(len=:), allocatable :: path_aed2_inflow
       integer :: split_factor
       logical :: particle_mobility
       logical :: bioshade_feedback
@@ -173,6 +174,7 @@ module strat_simdata
       real(RK), dimension(:), allocatable     :: fgeo_add
       logical :: has_advection
       logical, dimension(1:4) :: has_surface_input, has_deep_input
+      logical :: has_surface_input_AED2, has_deep_input_AED2
       integer :: nz_input
       !logical :: has_salinity_grad, has_salinity
 
