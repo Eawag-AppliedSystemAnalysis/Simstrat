@@ -328,8 +328,10 @@ contains
                       !varies from 0.8 to 0.9 depending on snow density
                       emissivity = 5.0e-4_RK * state%snow_dens + 6.75e-1_RK
                      end if
-                     ! obs fiting factors param%p_radin and param%p_windf not applied to ice covered lake      
+                     ! obs fiting factors param%p_radin and param%p_windf not applied to ice covered lake 
+                   if (cfg%forcing_mode /= 5) then      
                    H_A = (Ha_a + Ha_b * (Vap_atm**(1.0_RK/2.0_RK))) * (1 + Ha_c * Cloud**2) * sig * (state%T_atm + 273.15_RK)**4
+                   end if   
                    H_W = -emissivity * sig * (T_surf + 273.15_RK)**4
                    H_K = rho_air * cp_air * Hk_CH * (state%T_atm - T_surf) * state%uv10
                    sh_c = 0.622/param%p_air! converter from absolut vapour pressure to specific humidity (Lepparanta 2015)
