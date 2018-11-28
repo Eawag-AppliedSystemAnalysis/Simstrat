@@ -9,6 +9,7 @@ module strat_advection
    use strat_simdata
    use strat_consts
    use strat_grid
+   use simstrat_aed2
    use utilities
    implicit none
    private
@@ -59,6 +60,8 @@ contains
                  dt=>state%dt, &
                  h=>self%grid%h, &
                  Q_vert=>state%Q_vert, &
+                 AED2_state=>state%AED2_state, &
+                 AED2_inflow=>state%AED2_inflow, &
                  ubnd_vol=>self%grid%ubnd_vol, &
                  ubnd_fce=>self%grid%ubnd_fce)
 
@@ -91,50 +94,11 @@ contains
             AreaFactor_adv(1:nz_occupied) = dt_i(t_i)/(grid%Az(2:nz_occupied+1)*grid%h(1:nz_occupied)) ! Area factor for dt(t_i)
             dh_i(t_i) = dh*dt_i(t_i)/dt ! Depth difference for dt(t_i)
 
-            ! Calculate changes
-            do i = 1, ubnd_vol
-               if (i == ubnd_vol .and. Q_vert(i+1) > 0) then
-                  top = 0
-               else
-                  top = 1
-               end if
-               ! Advective flow out of box i, always negative
-               dU(i) = -top*abs(Q_vert(i+1))*state%U(i)
-               dV(i) = -top*abs(Q_vert(i+1))*state%V(i)
-               dTemp(i) = -top*abs(Q_vert(i+1))*state%T(i)
-               dS(i) = -top*abs(Q_vert(i+1))*state%S(i)
-               if (i > 2 .and. Q_vert(i) > 0) then ! Advective flow into box i, from below
-                  dU(i) = dU(i) + Q_vert(i)*state%U(i - 1)
-                  dV(i) = dV(i) + Q_vert(i)*state%V(i - 1)
-                  dTemp(i) = dTemp(i) + Q_vert(i)*state%T(i - 1)
-                  dS(i) = dS(i) + Q_vert(i)*state%S(i - 1)
-               end if
-               if (i < ubnd_vol) then
-                  if (Q_vert(i + 2) < 0) then ! Advective flow into box i, from above
-                     dU(i) = dU(i) - Q_vert(i + 2)*state%U(i + 1)
-                     dV(i) = dV(i) - Q_vert(i + 2)*state%V(i + 1)
-                     dTemp(i) = dTemp(i) - Q_vert(i + 2)*state%T(i + 1)
-                     dS(i) = dS(i) - Q_vert(i + 2)*state%S(i + 1)
-                  end if
-               end if
-            end do
+            ! Update Simstrat variables U, V, T and S
+            call do_update_statvars(self, state, AreaFactor_adv(1:nz_occupied), dh_i(t_i))
 
-            ! Add change to state variables
-            ! dT = dT(vertical advection) + dT(inflow) + dT(negative outflow), units: °C*m^3/s
-            dTemp(1:ubnd_vol) = dTemp(1:ubnd_vol) + state%Q_inp(3, 1:ubnd_vol) + state%Q_inp(2, 1:ubnd_vol)*state%T(1:ubnd_vol)
-            ! dS = dS(vertical advection) + dS(inflow) + dT(negative outflow), units: ‰*m^3/s
-            dS(1:ubnd_vol) = dS(1:ubnd_vol) + state%Q_inp(4, 1:ubnd_vol) + state%Q_inp(2, 1:ubnd_vol)*state%S(1:ubnd_vol)
-            ! Add change to the state variable
-            state%U(1:ubnd_vol) = state%U(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dU(1:ubnd_vol)
-            state%V(1:ubnd_vol) = state%V(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dV(1:ubnd_vol)
-            state%T(1:ubnd_vol) = state%T(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dTemp(1:ubnd_vol)
-            state%S(1:ubnd_vol) = state%S(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dS(1:ubnd_vol)
-
-            ! Variation of variables due to change in volume
-            state%U(ubnd_vol) = state%U(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh_i(t_i))
-            state%V(ubnd_vol) = state%V(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh_i(t_i))
-            state%T(ubnd_vol) = state%T(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh_i(t_i))
-            state%S(ubnd_vol) = state%S(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh_i(t_i))
+            ! Update AED2 variables
+            if(self%cfg%couple_aed2) call do_update_statvars_AED2(self, state, AreaFactor_adv(1:nz_occupied), dh_i(t_i))
 
             ! Adjust boxes (Horrible if/else construction - replace!)
             if (t_i == 1) then
@@ -158,6 +122,119 @@ contains
       end associate
    end subroutine
 
+   subroutine do_update_statvars(self, state, AreaFactor_adv, dh)
+      ! Arguments
+      class(AdvectionModule) :: self
+      class(ModelState) :: state
+      real(RK), dimension(:) :: AreaFactor_adv
+      real(RK) :: dh
+
+      ! Local variables
+      integer :: i, top
+      real(RK) :: dU(self%grid%nz_grid), dV(self%grid%nz_grid), dTemp(self%grid%nz_grid), dS(self%grid%nz_grid)
+
+      associate(ubnd_vol => self%grid%ubnd_vol, &
+         Q_vert => state%Q_vert, &
+         h => self%grid%h)
+         ! Calculate changes
+         do i = 1, ubnd_vol
+            if (i == ubnd_vol .and. Q_vert(i+1) > 0) then
+               top = 0
+            else
+               top = 1
+            end if
+
+            ! Advective flow out of box i, always negative
+            dU(i) = -top*abs(Q_vert(i+1))*state%U(i)
+            dV(i) = -top*abs(Q_vert(i+1))*state%V(i)
+            dTemp(i) = -top*abs(Q_vert(i+1))*state%T(i)
+            dS(i) = -top*abs(Q_vert(i+1))*state%S(i)
+            if (i > 2 .and. Q_vert(i) > 0) then ! Advective flow into box i, from below
+               dU(i) = dU(i) + Q_vert(i)*state%U(i - 1)
+               dV(i) = dV(i) + Q_vert(i)*state%V(i - 1)
+               dTemp(i) = dTemp(i) + Q_vert(i)*state%T(i - 1)
+               dS(i) = dS(i) + Q_vert(i)*state%S(i - 1)
+            end if
+            if (i < ubnd_vol) then
+               if (Q_vert(i + 2) < 0) then ! Advective flow into box i, from above
+                  dU(i) = dU(i) - Q_vert(i + 2)*state%U(i + 1)
+                  dV(i) = dV(i) - Q_vert(i + 2)*state%V(i + 1)
+                  dTemp(i) = dTemp(i) - Q_vert(i + 2)*state%T(i + 1)
+                  dS(i) = dS(i) - Q_vert(i + 2)*state%S(i + 1)
+               end if
+            end if
+         end do
+
+         ! Add change to state variables
+         ! dT = dT(vertical advection) + dT(inflow) + dT(negative outflow), units: °C*m^3/s
+         dTemp(1:ubnd_vol) = dTemp(1:ubnd_vol) + state%Q_inp(3, 1:ubnd_vol) + state%Q_inp(2, 1:ubnd_vol)*state%T(1:ubnd_vol)
+         ! dS = dS(vertical advection) + dS(inflow) + dT(negative outflow), units: ‰*m^3/s
+         dS(1:ubnd_vol) = dS(1:ubnd_vol) + state%Q_inp(4, 1:ubnd_vol) + state%Q_inp(2, 1:ubnd_vol)*state%S(1:ubnd_vol)
+         ! Add change to the state variable
+         state%U(1:ubnd_vol) = state%U(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dU(1:ubnd_vol)
+         state%V(1:ubnd_vol) = state%V(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dV(1:ubnd_vol)
+         state%T(1:ubnd_vol) = state%T(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dTemp(1:ubnd_vol)
+         state%S(1:ubnd_vol) = state%S(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dS(1:ubnd_vol)
+
+         ! Variation of variables due to change in volume
+         state%U(ubnd_vol) = state%U(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
+         state%V(ubnd_vol) = state%V(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
+         state%T(ubnd_vol) = state%T(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
+         state%S(ubnd_vol) = state%S(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
+      end associate
+   end subroutine
+
+   subroutine do_update_statvars_AED2(self, state, AreaFactor_adv, dh)
+      ! Arguments
+      class(AdvectionModule) :: self
+      class(ModelState) :: state
+      real(RK), dimension(:) :: AreaFactor_adv(1:self%grid%ubnd_vol)
+      real(RK) :: dh
+
+      ! Local variables
+      integer :: i, top
+      real(RK) :: dAED2(self%grid%nz_grid, state%n_AED2)
+
+      associate(ubnd_vol => self%grid%ubnd_vol, &
+         Q_vert => state%Q_vert, &
+         AED2_state => state%AED2_state, &
+         h => self%grid%h)
+
+         ! Calculate changes
+         do i = 1, ubnd_vol
+            if (i == ubnd_vol .and. Q_vert(i+1) > 0) then
+               top = 0
+            else
+               top = 1
+            end if
+
+            ! Advective flow out of box i, always negative
+            dAED2(i,:) = -top*abs(Q_vert(i + 1))*AED2_state(i,:)
+            if (i > 2 .and. Q_vert(i) > 0) then ! Advective flow into box i, from below
+               dAED2(i,:) = dAED2(i,:) + Q_vert(i)*AED2_state(i - 1,:)
+            end if
+            if (i < ubnd_vol) then
+               if (Q_vert(i + 2) < 0) then ! Advective flow into box i, from above
+                  dAED2(i,:) = dAED2(i,:) - Q_vert(i + 2)*AED2_state(i + 1,:)
+               end if
+            end if
+         end do
+
+         ! Add change to state variables
+         ! dAED2 = dAED2(vertical advection) + dAED2(inflow) + Outflow(negative)*AED2, units: C*m^3/s
+
+         ! Add change to the state variable
+         do i=1,state%n_AED2
+            dAED2(1:ubnd_vol,i) = dAED2(1:ubnd_vol,i) + state%AED2_inflow(1:ubnd_vol,i) + state%Q_inp(2, 1:ubnd_vol)*AED2_state(1:ubnd_vol,i)
+            AED2_state(1:ubnd_vol,i) = AED2_state(1:ubnd_vol,i) + AreaFactor_adv(1:ubnd_vol)*dAED2(1:ubnd_vol,i)
+         end do
+
+         ! Variation of variables due to change in volume
+         AED2_state(ubnd_vol,:) = AED2_state(ubnd_vol,:)*h(ubnd_vol)/(h(ubnd_vol) + dh)
+
+      end associate
+   end subroutine
+
    ! Merges two boxes
    ! - Takes care of calculating the new state variable for this box
    ! - Calls grid methods to modify grid spacing etc
@@ -167,7 +244,7 @@ contains
       class(ModelState) :: state
       real(RK) :: dh
       real(RK) :: w_a, w_b
-      associate (ubnd_fce=>self%grid%ubnd_fce, ubnd_vol=>self%grid%ubnd_vol)
+      associate (ubnd_fce=>self%grid%ubnd_fce, ubnd_vol=>self%grid%ubnd_vol, AED2_state=>state%AED2_state)
 
          ! New values of the state variables are weighted averages
          !determine weighting an normalization connstant
@@ -186,6 +263,9 @@ contains
          state%k(ubnd_fce) = (w_a*state%k(ubnd_fce + 1) + w_b*state%k(ubnd_fce))/(w_a + w_b)
          state%eps(ubnd_fce) = (w_a*state%eps(ubnd_fce + 1) + w_b*state%eps(ubnd_fce))/(w_a + w_b)
          state%Q_vert(ubnd_fce) = (w_a*state%Q_vert(ubnd_fce + 1) + w_b*state%Q_vert(ubnd_fce))/(w_a + w_b)
+
+         ! AED2
+         if (self%cfg%couple_AED2) AED2_state(ubnd_vol,:) = (w_a*AED2_state(ubnd_vol + 1,:) + w_b*AED2_state(ubnd_vol,:))/(w_a + w_b)
 
          ! update area factors
          call self%grid%update_area_factors()
@@ -215,6 +295,8 @@ contains
 
          state%k(ubnd_fce) = state%k(ubnd_fce - 1)
          state%eps(ubnd_fce) = state%eps(ubnd_fce - 1)
+
+         if (self%cfg%couple_AED2) state%AED2_state(ubnd_vol,:) = state%AED2_state(ubnd_vol - 1,:)
 
          call self%grid%update_area_factors()
 

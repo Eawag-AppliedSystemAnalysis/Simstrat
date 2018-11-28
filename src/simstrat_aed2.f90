@@ -137,6 +137,7 @@ contains
          !allocate(state%AED2_state(self%grid%nz_grid, n_vars + n_vars_ben))
          state%AED2_state => self%cc
          allocate(state%AED2_inflow(self%grid%nz_grid, n_vars + n_vars_ben))
+         state%n_AED2 = n_aed2_vars
 
          ! Assign name, min and max values of variables, print names to screen
          call assign_var_names(self)

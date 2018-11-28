@@ -176,6 +176,7 @@ module strat_simdata
       logical, dimension(1:4) :: has_surface_input, has_deep_input
       logical :: has_surface_input_AED2, has_deep_input_AED2
       integer :: nz_input
+      integer :: n_AED2
       !logical :: has_salinity_grad, has_salinity
 
    contains
