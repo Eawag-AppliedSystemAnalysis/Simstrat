@@ -32,6 +32,12 @@ module strat_simdata
       logical :: volume_grid, face_grid
    end type
 
+   ! Definition of a AED2 variable to log
+   type, public :: LogVariableAED2
+      character(len=48), pointer, dimension(:) :: names
+      real(RK), dimension(:,:), pointer :: values
+   end type
+
    ! Logging configuration
    type, public :: OutputConfig
       character(len=:), allocatable :: PathOut
@@ -44,6 +50,7 @@ module strat_simdata
       real(RK), dimension(:), allocatable :: adjusted_timestep
       logical :: write_to_file
       class(LogVariable), dimension(:), allocatable :: output_vars
+      class(LogVariableAED2), allocatable :: output_vars_aed2
 
       integer :: output_time_type, output_depth_type, thinning_interval
       real(RK) :: depth_interval, thinning_interval_read ! thinning_interval_read is a real to make sure that also values
@@ -81,6 +88,7 @@ module strat_simdata
       character(len=:), allocatable :: aed2_config_file
       character(len=:), allocatable :: path_aed2_initial
       character(len=:), allocatable :: path_aed2_inflow
+      character(len=:), allocatable :: path_aed2_output
       integer :: split_factor
       logical :: particle_mobility
       logical :: bioshade_feedback
@@ -127,6 +135,7 @@ module strat_simdata
       real(RK), dimension(:), pointer :: rho ! Water density [kg/m^3]
       real(RK), dimension(:,:), pointer :: AED2_state ! State matrix of AED2 variables
       real(RK), dimension(:,:), pointer :: AED2_inflow ! Inflow matrix of AED2 variables
+      character(len=48), dimension(:), pointer :: AED2_names ! Names of AED2 state variables used in the simulation
    
       ! Variables located on z_upp grid
       real(RK), dimension(:), allocatable :: k, ko ! Turbulent kinetic energy (TKE) [J/kg]

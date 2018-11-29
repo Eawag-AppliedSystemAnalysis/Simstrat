@@ -42,7 +42,7 @@ module simstrat_aed2
       !# External variables
       integer  :: w_adv_ctr    ! Scheme for vertical advection (0 if not used)
 
-      character(len=48),allocatable :: names(:)
+      character(len=48),pointer :: names(:)
       character(len=48),allocatable :: bennames(:)
 
       integer,allocatable,dimension(:) :: externalid
@@ -61,7 +61,6 @@ module simstrat_aed2
    contains
       procedure, pass(self), public :: init
       procedure, pass(self), public :: update
-      procedure, pass(self), public :: absorption_updateAED2
    end type SimstratAED2
 
 contains
@@ -137,10 +136,13 @@ contains
          !allocate(state%AED2_state(self%grid%nz_grid, n_vars + n_vars_ben))
          state%AED2_state => self%cc
          allocate(state%AED2_inflow(self%grid%nz_grid, n_vars + n_vars_ben))
-         state%n_AED2 = n_aed2_vars
+         state%n_AED2 = n_vars + n_vars_ben
+
 
          ! Assign name, min and max values of variables, print names to screen
          call assign_var_names(self)
+         allocate(state%AED2_names(n_vars + n_vars_ben))
+         state%AED2_names => self%names
 
          !# Now set initial values
          v = 0 ; sv = 0;

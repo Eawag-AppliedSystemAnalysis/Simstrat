@@ -569,6 +569,7 @@ contains
          call par_file%get("AED2Config.AED2ConfigFile", aed2_cfg%aed2_config_file,found); call check_field(found, 'AED2Config.AED2ConfigFile', ParName)
          call par_file%get("AED2Config.PathAED2initial", aed2_cfg%path_aed2_initial,found); call check_field(found, 'AED2Config.PathAED2initial', ParName)
          call par_file%get("AED2Config.PathAED2inflow", aed2_cfg%path_aed2_inflow,found); call check_field(found, 'AED2Config.PathAED2inflow',ParName)
+         call par_file%get("AED2Config.PathAED2output", aed2_cfg%path_aed2_output,found); call check_field(found, 'AED2Config.PathAED2output',ParName)
          call par_file%get("AED2Config.SplitFactor", aed2_cfg%split_factor,found); call check_field(found, 'AED2Config.SplitFactor', ParName)
          call par_file%get("AED2Config.ParticleMobility", aed2_cfg%particle_mobility,found); call check_field(found, 'AED2Config.ParticleMobility', ParName)
          call par_file%get("AED2Config.BioshadeFeedback", aed2_cfg%bioshade_feedback,found); call check_field(found, 'AED2Config.BioshadeFeedback', ParName)

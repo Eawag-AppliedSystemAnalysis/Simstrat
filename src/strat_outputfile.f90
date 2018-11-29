@@ -6,6 +6,7 @@ module strat_outputfile
    use strat_kinds
    use strat_simdata
    use strat_grid
+   use simstrat_aed2
    use utilities
    use csv_module
    implicit none
@@ -17,10 +18,13 @@ module strat_outputfile
       !###########################################
       class(OutputConfig), public, pointer   :: output_config
       class(SimConfig), public, pointer :: sim_config
+      class(ModelConfig), public, pointer :: model_config
+      class(AED2Config), public, pointer :: aed2_config
       class(StaggeredGrid), public, pointer ::grid
       type(csv_file), dimension(:), allocatable :: output_files
       integer, public :: n_depths
       integer, public :: n_vars
+      integer, public :: n_vars_AED2
 
    contains
       procedure(generic_log_init), deferred, pass(self), public :: initialize
@@ -51,12 +55,16 @@ module strat_outputfile
 
 contains
 
-  ! Abstract interface definitions
-   subroutine generic_log_init(self, sim_config, output_config, grid)
+   ! Abstract interface definitions
+
+   subroutine generic_log_init(self, state, sim_config, model_config, aed2_config, output_config, grid)
       implicit none
 
       class(SimstratOutputLogger), intent(inout) :: self
+      class(ModelState), target :: state
       class(SimConfig), target :: sim_config
+      class(ModelConfig), target :: model_config
+      class(AED2Config), target :: aed2_config
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
 
@@ -86,14 +94,18 @@ contains
    !************************* Init logging ****************************
 
    ! Init logging for simple logger
-   subroutine log_init_simple(self, sim_config, output_config, grid)
+   subroutine log_init_simple(self, state, sim_config, model_config, aed2_config, output_config, grid)
       implicit none
       class(SimpleLogger), intent(inout) :: self
+      class(ModelState), target :: state
       class(SimConfig), target :: sim_config
+      class(ModelConfig), target :: model_config
+      class(AED2Config), target :: aed2_config
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
 
       self%sim_config => sim_config
+      self%model_config => model_config
       self%output_config => output_config
       self%grid => grid
       self%n_vars = size(output_config%output_vars)
@@ -102,10 +114,13 @@ contains
    end subroutine
 
    ! Init logging for interpolating logger
-   subroutine log_init_interpolating(self, sim_config, output_config, grid)
+   subroutine log_init_interpolating(self, state, sim_config, model_config, aed2_config, output_config, grid)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
+      class(ModelState), target :: state
       class(SimConfig), target :: sim_config
+      class(ModelConfig), target :: model_config
+      class(AED2Config), target :: aed2_config
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
 
@@ -114,9 +129,19 @@ contains
       ! adjusted timestep is the same as the tout given in file
 
       self%sim_config => sim_config
+      self%model_config => model_config
+      self%aed2_config => aed2_config
       self%output_config => output_config
       self%grid => grid
       self%n_vars = size(output_config%output_vars)
+
+      if (self%model_config%couple_aed2) then
+        ! allocate AED2 output structure
+        allocate (output_config%output_vars_aed2) ! We don't know yet how many variables
+        output_config%output_vars_aed2%names => state%AED2_names
+        output_config%output_vars_aed2%values => state%AED2_state
+        self%n_vars_AED2 = state%n_AED2
+      end if
 
       ! If output times are given in file
       if (output_config%thinning_interval == 0) then
@@ -278,7 +303,7 @@ contains
       ! Check if output directory exists
       inquire(file=output_config%PathOut//'/',exist=exist_output_folder)
 
-      ! Create output folder if it does not exist
+      ! Create Simstrat output folder if it does not exist
       if(.not.exist_output_folder) then
         call warn('Result folder does not exist, create folder...')
         ppos = scan(trim(output_config%PathOut),"/", BACK= .true.)
@@ -289,7 +314,7 @@ contains
       end if
 
       if (allocated(self%output_files)) deallocate (self%output_files)
-      allocate (self%output_files(1:self%n_vars))
+      allocate (self%output_files(1:self%n_vars + self%n_vars_AED2))
 
       do i = 1, self%n_vars
          if (self%output_config%output_vars(i)%volume_grid) then
@@ -310,6 +335,28 @@ contains
          end if
          call self%output_files(i)%next_row()
       end do
+
+      ! AED2 part
+      if (self%model_config%couple_aed2) then
+        ! Check if output directory exists
+        inquire(file=self%aed2_config%path_aed2_output//'/',exist=exist_output_folder)
+        ! Create AED2 output folder if it does not exist
+        if(.not. exist_output_folder) then
+          call warn('AED2 result folder does not exist, create folder...')
+          ppos = scan(trim(self%aed2_config%path_aed2_output),"/", BACK= .true.)
+          if ( ppos > 0 ) output_folder = self%aed2_config%path_aed2_output(1:ppos - 1)
+          mkdirCmd = 'mkdir '//trim(output_folder)
+          write(6,*) mkdirCmd
+          call execute_command_line(mkdirCmd)
+        end if
+
+        do i = 1, self%n_vars_AED2
+            call self%output_files(i + self%n_vars)%open(self%aed2_config%path_aed2_output//'/'//trim(self%output_config%output_vars_aed2%names(i))//'_out.dat', n_cols=self%n_depths + 1, status_ok=status_ok)
+            call self%output_files(i + self%n_vars)%add('')
+            call self%output_files(i + self%n_vars)%add(self%output_config%zout, real_fmt='(F12.3)')
+            call self%output_files(i + self%n_vars)%next_row()
+            end do
+        end if
 
    end subroutine
 
@@ -365,7 +412,7 @@ contains
       real(RK), intent(in) :: datum
       !workaround gfortran bug => cannot pass allocatable array to csv file
       real(RK), dimension(self%n_depths) :: values_on_zout
-      integer :: i
+      integer :: i, j
 
       do i = 1, self%n_vars
         ! Write datum
@@ -388,6 +435,17 @@ contains
         ! Advance to next row
         call self%output_files(i)%next_row()
       end do
+
+      if (self%model_config%couple_aed2) then
+        do i = 1, self%n_vars_AED2
+          ! Interpolate state on volume grid
+          call self%grid%interpolate_from_vol(self%output_config%output_vars_aed2%values(:,i), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
+          ! Write state
+          call self%output_files(i + self%n_vars)%add(values_on_zout, real_fmt='(ES14.4)')
+          ! Advance to next row
+          call self%output_files(i + self%n_vars)%next_row()
+        end do
+      end if
 end subroutine
 
    !************************* Close ****************************

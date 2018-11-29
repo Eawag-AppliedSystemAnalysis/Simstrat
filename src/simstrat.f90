@@ -108,7 +108,7 @@ program simstrat_main
    end if
 
    ! Setup logger
-   call logger%initialize(simdata%sim_cfg, simdata%output_cfg, simdata%grid)
+   call logger%initialize(simdata%model, simdata%sim_cfg, simdata%model_cfg, simdata%aed2_cfg, simdata%output_cfg, simdata%grid)
 
    ! Initialize simulation modules
    call mod_stability%init(simdata%grid, simdata%model_cfg, simdata%model_param)

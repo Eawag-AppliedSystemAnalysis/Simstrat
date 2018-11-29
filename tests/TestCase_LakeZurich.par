@@ -35,6 +35,7 @@
     "AED2ConfigFile"          : "aed2.nml",
     "PathAED2initial"         : "AED2_initcond/",
     "PathAED2inflow"          : "AED2_inflow/",
+    "PathAED2output"          : "AED2_output/",
     "SplitFactor"             : 1,
     "ParticleMobility"        : 0,
     "BioshadeFeedback"        : 0,
