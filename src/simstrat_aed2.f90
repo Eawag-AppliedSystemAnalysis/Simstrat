@@ -52,6 +52,8 @@ module simstrat_aed2
       integer :: n_aed2_vars, n_vars, n_vars_ben, n_vars_diag, n_vars_diag_sheet
       integer :: zone_var = 0
 
+      logical :: there_is_inflow
+
       ! Variables for in-/outflow
       real(RK), dimension(:, :), allocatable   :: z_Inp_AED2, Q_start_AED2, Qs_start_AED2, Q_end_AED2, Qs_end_AED2, Q_read_start_AED2, Q_read_end_AED2
       real(RK), dimension(:, :), allocatable   :: Inp_read_start_AED2, Inp_read_end_AED2, Qs_read_start_AED2, Qs_read_end_AED2, Q_inp_AED2
@@ -65,10 +67,11 @@ module simstrat_aed2
 
 contains
 
-   subroutine init(self, state, grid, aed2_cfg)
+   subroutine init(self, state, grid, model_cfg, aed2_cfg)
       implicit none
       class(SimstratAED2) :: self
       class(ModelState) :: state
+      class(ModelConfig), target :: model_cfg
       class(AED2Config), target :: aed2_cfg
       class(StaggeredGrid), target :: grid
 
@@ -160,7 +163,10 @@ contains
          end do
 
          ! Update in-/outflow of AED2 variables (to be used in following advection step in the main loop)
-         call lateral_update_AED2(self, state)
+         if(state%has_advection .and. model_cfg%inflow_placement > 0) then
+            self%there_is_inflow = .TRUE.
+            call lateral_update_AED2(self, state)
+         end if
 
          write(*,"(/,5X,'----------  AED2 config : end  ----------',/)")
       end associate
@@ -229,7 +235,9 @@ contains
 !       IF ( benthic_mode .GT. 1 ) CALL copy_from_zone(cc, cc_diag, cc_diag_hz, wlev)
 
          ! Update in-/outflow of AED2 variables (to be used in following advection step in the main loop)
-         call lateral_update_AED2(self, state)
+         if (self%there_is_inflow) then
+            call lateral_update_AED2(self, state)
+         end if
 
 
          ! Diffusive transport of AED2 variables

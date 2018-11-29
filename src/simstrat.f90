@@ -84,14 +84,14 @@ program simstrat_main
                             simdata%input_cfg%AbsorpName, &
                             simdata%grid)
 
-   if (simdata%model%has_advection) then
+   if (simdata%model%has_advection .and. simdata%model_cfg%inflow_placement > 0) then
       ! initialize advection module
       call mod_advection%init(simdata%model_cfg, &
                            simdata%model_param, &
                            simdata%grid)
 
       ! initialize lateral module based on configuration
-      if (simdata%model_cfg%inflow_placement == 1) then
+      if (simdata%model_cfg%inflow_placement == 2) then
          ! Gravity based inflow
          mod_lateral => mod_lateral_rho
       else
@@ -100,11 +100,13 @@ program simstrat_main
       call mod_lateral%init(simdata%model_cfg, &
                            simdata%model_param, &
                            simdata%grid)
+   else
+      call warn('Lake in-/outflow is turned off')
    end if
 
    ! Initialize biochemical model "AED2" if used
    if (simdata%model_cfg%couple_aed2) then
-      call mod_aed2%init(simdata%model, simdata%grid, simdata%aed2_cfg)
+      call mod_aed2%init(simdata%model, simdata%grid, simdata%model_cfg, simdata%aed2_cfg)
    end if
 
    ! Setup logger
@@ -205,7 +207,7 @@ contains
          call mod_stability%update(simdata%model)
 
          ! If there is inflow/outflow do advection part
-         if (simdata%model%has_advection) then
+         if (simdata%model%has_advection .and. simdata%model_cfg%inflow_placement > 0) then
             ! Treat inflow/outflow
             call mod_lateral%update(simdata%model)
             ! Set old lake level (before it is changed by advection module)
