@@ -313,6 +313,8 @@ contains
 
       if (self%model_config%couple_aed2) then
         do i = 1, self%n_vars_AED2
+          ! Write datum
+          call self%output_files(i + self%n_vars)%add(datum, real_fmt='(F12.4)')
           ! Interpolate state on volume grid
           call self%grid%interpolate_from_vol(self%output_config%output_vars_aed2%values(:,i), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
           ! Write state
