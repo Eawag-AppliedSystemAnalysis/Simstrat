@@ -120,7 +120,7 @@ module strat_simdata
       real(RK) :: freez_temp ! Water freez point [kg m-3]     
    end type
 
-   ! Model state (this is actually the simulation data!!!)
+   ! Model state (self is actually the simulation data!!!)
    type, public :: ModelState
       ! Iteration variables
       integer :: i, j, output_counter, model_step_counter
@@ -162,6 +162,7 @@ module strat_simdata
       real(RK) :: T_atm ! Air temp at surface   
       real(RK), dimension(:), allocatable :: rad, rad_vol ! Solar radiation (in water)
       real(RK), dimension(:), allocatable :: Q_vert ! Vertical exchange between boxes
+      real(RK), dimension(:,:), allocatable :: Q_plunging ! Result of lateral_rho, used in lateral_rho_AED2
 
       ! Snow and Ice
       real(RK), allocatable :: snow_h ! Snow layer height [m]
@@ -207,102 +208,102 @@ module strat_simdata
    end type
 
 contains
-   subroutine simulation_data_init(this, state_size)
-      class(SimulationData), intent(inout) :: this
+   subroutine simulation_data_init(self, state_size)
+      class(SimulationData), intent(inout) :: self
       integer, intent(in) :: state_size
       ! init model data structures
-      call this%model%init(state_size)
+      call self%model%init(state_size)
 
    end subroutine
 
    ! Allocates all arrays of the model state in the correct size
-   subroutine model_state_init(this, state_size)
-      class(ModelState), intent(inout) :: this
+   subroutine model_state_init(self, state_size)
+      class(ModelState), intent(inout) :: self
       integer, intent(in) :: state_size
 
       ! Values on volume grid
       ! Important: Size is smaller than vars on upper grid.
       !            https://en.wikipedia.org/wiki/Off-by-one_error#Fencepost_error ;-)
-      allocate (this%U(state_size))
-      allocate (this%V(state_size))
-      allocate (this%T(state_size))
-      allocate (this%S(state_size))
-      allocate (this%dS(state_size))
-      allocate (this%Q_inp(1:4, state_size + 1))
-      allocate (this%rho(state_size))
-      allocate (this%avh(state_size))
+      allocate (self%U(state_size))
+      allocate (self%V(state_size))
+      allocate (self%T(state_size))
+      allocate (self%S(state_size))
+      allocate (self%dS(state_size))
+      allocate (self%Q_inp(1:4, state_size + 1))
+      allocate (self%rho(state_size))
+      allocate (self%avh(state_size))
 
       ! Values on z_upp grid
-      allocate (this%k(state_size + 1))
-      allocate (this%ko(state_size + 1))
-      allocate (this%eps(state_size + 1))
-      allocate (this%num(state_size + 1))
-      allocate (this%nuh(state_size + 1))
-      allocate (this%P(state_size + 1))
-      allocate (this%B(state_size + 1))
-      allocate (this%NN(state_size + 1))
-      allocate (this%cmue1(state_size + 1))
-      allocate (this%cmue2(state_size + 1))
-      allocate (this%P_Seiche(state_size + 1))
+      allocate (self%k(state_size + 1))
+      allocate (self%ko(state_size + 1))
+      allocate (self%eps(state_size + 1))
+      allocate (self%num(state_size + 1))
+      allocate (self%nuh(state_size + 1))
+      allocate (self%P(state_size + 1))
+      allocate (self%B(state_size + 1))
+      allocate (self%NN(state_size + 1))
+      allocate (self%cmue1(state_size + 1))
+      allocate (self%cmue2(state_size + 1))
+      allocate (self%P_Seiche(state_size + 1))
 
-      allocate (this%absorb(state_size + 1))
-      allocate (this%absorb_vol(state_size))
-      allocate (this%rad(state_size + 1))
-      allocate (this%rad_vol(state_size))
-      allocate (this%Q_vert(state_size + 1))
+      allocate (self%absorb(state_size + 1))
+      allocate (self%absorb_vol(state_size))
+      allocate (self%rad(state_size + 1))
+      allocate (self%rad_vol(state_size))
+      allocate (self%Q_vert(state_size + 1))
 
-      allocate (this%snow_h) 
-      allocate (this%ice_h)  
+      allocate (self%snow_h) 
+      allocate (self%ice_h)  
    
-      allocate (this%ha) 
-      allocate (this%hw) 
-      allocate (this%hk) 
-      allocate (this%hv) 
-      allocate (this%rad0) 
+      allocate (self%ha) 
+      allocate (self%hw) 
+      allocate (self%hk) 
+      allocate (self%hv) 
+      allocate (self%rad0) 
    
       ! init to zero
-      this%U = 0.0_RK
-      this%V = 0.0_RK
-      this%T = 0.0_RK
-      this%S = 0.0_RK
-      this%dS = 0.0_RK
-      this%Q_inp = 0.0_RK
-      this%rho = 0.0_RK
+      self%U = 0.0_RK
+      self%V = 0.0_RK
+      self%T = 0.0_RK
+      self%S = 0.0_RK
+      self%dS = 0.0_RK
+      self%Q_inp = 0.0_RK
+      self%rho = 0.0_RK
 
-      this%k = 0.0_RK
-      this%ko = 0.0_RK
-      this%eps = 0.0_RK
-      this%num = 0.0_RK
-      this%nuh = 0.0_RK
-      this%P = 0.0_RK
-      this%B = 0.0_RK
-      this%NN = 0.0_RK
-      this%cmue1 = 0.0_RK
-      this%cmue2 = 0.0_RK
-      this%P_Seiche = 0.0_RK
+      self%k = 0.0_RK
+      self%ko = 0.0_RK
+      self%eps = 0.0_RK
+      self%num = 0.0_RK
+      self%nuh = 0.0_RK
+      self%P = 0.0_RK
+      self%B = 0.0_RK
+      self%NN = 0.0_RK
+      self%cmue1 = 0.0_RK
+      self%cmue2 = 0.0_RK
+      self%P_Seiche = 0.0_RK
 
-      this%absorb = 0.0_RK
-      this%absorb_vol = 0.0_RK
-      this%rad = 0.0_RK
-      this%rad_vol = 0.0_RK
-      this%Q_vert = 0.0_RK
+      self%absorb = 0.0_RK
+      self%absorb_vol = 0.0_RK
+      self%rad = 0.0_RK
+      self%rad_vol = 0.0_RK
+      self%Q_vert = 0.0_RK
     
-      this%snow_h = 0.0_RK
-      this%ice_h = 0.0_RK
-      this%ice_temp = 0.0_RK 
-      this%snow_temp = 0.0_RK
+      self%snow_h = 0.0_RK
+      self%ice_h = 0.0_RK
+      self%ice_temp = 0.0_RK 
+      self%snow_temp = 0.0_RK
    
-      this%ha = 0.0_RK
-      this%hw = 0.0_RK
-      this%hk = 0.0_RK 
-      this%hv = 0.0_RK 
-      this%rad0 = 0.0_RK
+      self%ha = 0.0_RK
+      self%hw = 0.0_RK
+      self%hk = 0.0_RK 
+      self%hv = 0.0_RK 
+      self%rad0 = 0.0_RK
 
       ! init pointers
-      allocate(this%uv10)
-      this%uv10 = 0.0_RK
-      allocate(this%u_taub)
-      this%u_taub = 0.0_RK
+      allocate(self%uv10)
+      self%uv10 = 0.0_RK
+      allocate(self%u_taub)
+      self%u_taub = 0.0_RK
 
    end subroutine
 

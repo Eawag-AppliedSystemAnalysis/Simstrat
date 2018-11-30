@@ -131,6 +131,8 @@ contains
               read(fnum(i),*,end=9) self%nval_deep(i)
               ! Total number of values to read
               self%nval(i) = self%nval_deep(i)
+              ! Allocate Q_plunging which will be used for calculating plunging of AED2 variables (in lateral_rho_AED2)
+              if (i==1) allocate(state%Q_plunging(grid%nz_grid, self%nval(i)))
               read(fnum(i),*,end=9) dummy, (self%z_Inp(i,j),j=1,self%nval(i))
               self%z_Inp(i,1:self%nval(i)) = grid%z_zero + self%z_Inp(i,1:self%nval(i))
             end if
@@ -322,11 +324,14 @@ contains
                  end do
               end if
 
+              state%Q_plunging = 0.0_RK
               do i=i2,i1
                  Q_inp_inc = Q_in(k)/(grid%z_face(i1)-grid%z_face(i2)+grid%h(i))*grid%h(i)
                  Q_inp(1,i) = Q_inp(1,i) + Q_inp_inc
                  Q_inp(3,i) = Q_inp(3,i) + T_in*Q_inp_inc
                  Q_inp(4,i) = Q_inp(4,i) + S_in*Q_inp_inc
+
+                 state%Q_plunging(i,j) = Q_inp_inc
               end do
            end if
         end do

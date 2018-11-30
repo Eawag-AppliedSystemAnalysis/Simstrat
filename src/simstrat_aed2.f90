@@ -52,7 +52,8 @@ module simstrat_aed2
       integer :: n_aed2_vars, n_vars, n_vars_ben, n_vars_diag, n_vars_diag_sheet
       integer :: zone_var = 0
 
-      logical :: there_is_inflow
+      logical :: there_is_inflow = .FALSE.
+      logical :: plunging_inflow = .FALSE.
 
       ! Variables for in-/outflow
       real(RK), dimension(:, :), allocatable   :: z_Inp_AED2, Q_start_AED2, Qs_start_AED2, Q_end_AED2, Qs_end_AED2, Q_read_start_AED2, Q_read_end_AED2
@@ -163,9 +164,20 @@ contains
          end do
 
          ! Update in-/outflow of AED2 variables (to be used in following advection step in the main loop)
+         ! Maybe we don't need to calculate this in the init, but then the advection function in the main loop
+         ! Doesn't have the AED2 inflow at the first timestep (as the AED2 update happens after the advection update)
          if(state%has_advection .and. model_cfg%inflow_placement > 0) then
+            ! If the inflows are not empty and advection is not turned off
             self%there_is_inflow = .TRUE.
-            call lateral_update_AED2(self, state)
+            if (model_cfg%inflow_placement == 2) then
+               ! If the inflows plunge according to density
+               self%plunging_inflow = .TRUE.
+               call lateral_rho_update_AED2(self, state)
+            else if (model_cfg%inflow_placement == 1) then
+               ! If inflow depths are given in the file
+               self%plunging_inflow = .FALSE.
+               call lateral_update_AED2(self, state)
+            end if
          end if
 
          write(*,"(/,5X,'----------  AED2 config : end  ----------',/)")
@@ -236,7 +248,11 @@ contains
 
          ! Update in-/outflow of AED2 variables (to be used in following advection step in the main loop)
          if (self%there_is_inflow) then
-            call lateral_update_AED2(self, state)
+            if (self%plunging_inflow) then
+               call lateral_rho_update_AED2(self, state)
+            else
+               call lateral_update_AED2(self, state)
+            end if
          end if
 
 
@@ -1039,6 +1055,113 @@ contains
                !state%AED2_inflow(ubnd_vol + 1,ubnd_vol + 1) = 0
          end do
 
+      end associate
+   end subroutine
+
+   subroutine lateral_rho_update_AED2(self, state)
+      class(SimstratAED2) :: self
+      class(ModelState) :: state
+
+      ! Local Declarations
+      real(RK) :: Inp(1:self%n_vars,1:state%nz_input)
+      real(RK) :: dummy
+     
+      integer :: i, j, k, i1, i2, n, status
+      integer :: fnum(1:32) ! File number
+      character(len=48) :: fname(1:32)
+      type(aed2_variable_t),pointer :: tvar
+
+      associate (datum => state%datum, &
+                 idx => state%model_step_counter, &
+                 grid => self%grid, &
+                 ubnd_vol => self%grid%ubnd_vol, &
+                 ubnd_fce => self%grid%ubnd_fce)
+
+         n = self%n_vars + self%n_vars_ben
+         ! FB 2016: Major revision to include surface inflow
+         do i = 1, self%n_vars ! Do this for all AED2 vars
+            fname(i) = trim(self%aed2_cfg%path_aed2_inflow)//trim(self%names(i))//'_inflow.dat'
+            fnum(i) = i + 60  ! Should find a better way to manage unit numbers
+            if (idx==0) then ! First iteration
+               if (i==1) then ! First variable
+                  ! Allocate arrays for first iteration of first variable
+                  allocate (self%z_Inp_AED2(1:n, 1:state%nz_input)) ! Input depths
+                  allocate (self%Inp_read_start_AED2(1:n, 1:state%nz_input)) ! Raw input read
+                  allocate (self%Inp_read_end_AED2(1:n, 1:state%nz_input)) ! Raw input read
+                  allocate (self%Q_inp_AED2(1:n, 1:grid%nz_grid+1))
+                  allocate (self%tb_start(n), self%tb_end(n), self%eof(n), self%nval(n), self%nval_deep(n), self%nval_surface(n))
+               end if
+
+               ! Open file and start to read
+               open(fnum(i), action='read', iostat=status,file=fname(i))
+               if (status .ne. 0) then
+                  call error('File '//fname(i)//' not found.')
+                  stop
+               else
+                  write(6,*) 'Reading ', fname(i)
+               end if
+
+               self%eof(i) = 0
+               read (fnum(i), *, end=9) ! Skip first row: description of columns
+
+               read (fnum(i), *, end=9) self%nval_deep(i)
+               ! Total number of values to read
+               self%nval(i) = self%nval_deep(i)
+
+               ! Read input depths
+               read (fnum(i), *, end=9) dummy, (self%z_Inp_AED2(i, j), j=1, self%nval(i))
+
+               ! Convert input depths
+               self%z_Inp_AED2(i, 1:self%nval_deep(i)) = grid%z_zero + self%z_Inp_AED2(i, 1:self%nval_deep(i))
+
+               ! Read first input line
+               read (fnum(i), *, end=9) self%tb_start(i), (self%Inp_read_start_AED2(i, j), j=1, self%nval(i))
+
+               ! Read second line and treatment of deep inflow
+               read (fnum(i), *, end=7) self%tb_end(i), (self%Inp_read_end_AED2(i, j), j=1, self%nval(i))
+
+               write(6,*) '[OK] ','Input file successfully read: ',fname(i)
+            end if ! idx==1
+
+            if ((datum<=self%tb_start(i)).or.(self%eof(i)==1)) then    ! if datum before first date or end of file reached
+               goto 8
+            else
+               do while (.not.((datum>=self%tb_start(i)).and.(datum<=self%tb_end(i)))) ! do until datum between dates
+                  self%tb_start(i) = self%tb_end(i)             ! move one step in time
+                  self%Inp_read_start_AED2(i,:) = self%Inp_read_end_AED2(i,:)
+
+                  ! Read next line
+                  read(fnum(i),*,end=7) self%tb_end(i),(self%Inp_read_end_AED2(i,j),j=1,self%nval(i))
+               end do
+
+               !Linearly interpolate value at correct datum
+               Inp(i,1:self%nval(i)) = self%Inp_read_start_AED2(i,1:self%nval(i)) +&
+                      (datum-self%tb_start(i)) * (self%Inp_read_end_AED2(i,1:self%nval(i))-self%Inp_read_start_AED2(i,1:self%nval(i)))/(self%tb_end(i)-self%tb_start(i))
+            end if
+            goto 11
+
+7           self%eof(i) = 1
+8           Inp(i,:) = self%Inp_read_start_AED2(i,:) ! Set to closest available value
+            goto 11
+
+9           write(6,*) '[WARNING] ','No data found in ',trim(fname(i)),' file. Check number of depths. Values set to zero.'
+            self%eof(i) = 1
+            Inp(i,1:self%nval(i)) = 0.0_RK
+            self%Inp_read_start_AED2(i,1) = 0.0_RK
+
+11        continue
+         end do
+
+         ! Plunging algorithm by Adrien, not used for the first timestep as state%Q_plunging is determined later
+         if (idx>1) then
+            state%AED2_inflow = 0.0_RK
+
+            do j = 1,self%nval_deep(1)
+               do i=1,ubnd_vol
+                  state%AED2_inflow(i,1:n) = state%AED2_inflow(i,1:n) + Inp(1:n,j)*state%Q_plunging(i,j)
+               end do
+            end do
+         end if
       end associate
    end subroutine
 
