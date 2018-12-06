@@ -9,7 +9,10 @@ subroutine allocate_memory(self)
 
    ! Local variables
    integer status
-
+write(6,*) 'hans', self%n_aed2_vars
+   allocate(self%column(self%n_aed2_vars),stat=status)
+   allocate(self%column_sed(self%n_aed2_vars),stat=status)
+write(6,*) 'hans'
    ! names = grab the names from info
    allocate(self%names(self%n_vars),stat=status)
    if (status /= 0) stop 'allocate_memory(): Error allocating (names)'
@@ -158,21 +161,22 @@ subroutine assign_var_names(self)
 end subroutine
 
 
-subroutine define_column(self, state, column)
+subroutine define_column(self, state)
    !-------------------------------------------------------------------------------
    ! Set up the current column pointers
    !-------------------------------------------------------------------------------
-   !ARGUMENTS
-      class(SimstratAED2) :: self
-      class(ModelState) :: state
-      type (aed2_column_t), intent(inout) :: column(:)
-   !
-   !LOCALS
-      integer :: av !, i
-      integer :: v, d, sv, sd, ev
-      type(aed2_variable_t), pointer :: tvar
+   ! Arguments
+   class(SimstratAED2) :: self
+   class(ModelState) :: state
+
+   ! Local variables
+   integer :: av !, i
+   integer :: v, d, sv, sd, ev
+   type(aed2_variable_t), pointer :: tvar
    !-------------------------------------------------------------------------------
-   !BEGIN
+   ! Begin
+   associate(column => self%column)
+
       v = 0 ; d = 0; sv = 0; sd = 0 ; ev = 0
       do av=1,self%n_aed2_vars
          if ( .not.  aed2_get_var(av, tvar) ) stop "Error getting variable info"
@@ -229,7 +233,8 @@ subroutine define_column(self, state, column)
             end if
          end if
       end do
-   end subroutine define_column
+   end associate
+end subroutine define_column
 
 
 subroutine check_data(self)
@@ -308,14 +313,13 @@ subroutine check_data(self)
 end subroutine check_data
 
 
-subroutine check_states(self, column)
+subroutine check_states(self)
    use,intrinsic :: ieee_arithmetic
 
    implicit none
 
    ! Arguments
    class(SimstratAED2) :: self
-   type (aed2_column_t),intent(inout) :: column(:)
 
    ! Local variables
       type(aed2_variable_t), pointer :: tv
@@ -324,7 +328,7 @@ subroutine check_states(self, column)
    !-------------------------------------------------------------------------------
    ! Begin
       do lev=1, self%grid%nz_occupied
-         call aed2_equilibrate(column, lev) ! Should probably moved to the update routine for clarity
+         call aed2_equilibrate(self%column, lev) ! Should probably moved to the update routine for clarity
          v = 0
          do i=1,self%n_aed2_vars
             if ( aed2_get_var(i, tv) ) then
@@ -346,7 +350,7 @@ end subroutine check_states
 
 
 
-subroutine AED2_InitCondition(self, var,varname,default_val)
+subroutine AED2_InitCondition(self, var, varname, default_val)
    !#################################### written/copied by A. Gaudard, 2015
         implicit none
 

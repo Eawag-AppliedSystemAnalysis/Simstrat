@@ -4,12 +4,11 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Light absorption feedback by AED2 variables
 
-subroutine absorption_updateAED2(self, state, column)
+subroutine absorption_updateAED2(self, state)
 
    ! Arguments
    class(SimstratAED2) :: self
    class(ModelState) :: state
-   type (aed2_column_t), intent(inout) :: column(:)
 
    ! Local variables
    integer :: i
@@ -18,7 +17,7 @@ subroutine absorption_updateAED2(self, state, column)
 
    do i=self%grid%nz_occupied - 1, 1, -1
       bio_extinction = 0.0_RK
-      call aed2_light_extinction(column, i, bio_extinction)
+      call aed2_light_extinction(self%column, i, bio_extinction)
       extc_coef(i) = self%aed2_cfg%background_extinction + bio_extinction
 
    end do
