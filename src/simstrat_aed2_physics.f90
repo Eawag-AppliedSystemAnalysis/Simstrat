@@ -41,7 +41,7 @@ subroutine mobility(self, state, min_C, settling_v, conc)
    ! Local variables
    real(RK) :: dtMax, tdt, tmp
    real(RK), dimension(self%grid%ubnd_vol) :: mins, vols, Y
-   integer :: dirChng, signum, i
+   integer :: dirChng, signum, i, count
 
 
    ! determine mobility timestep i.e. maximum time step that particles
@@ -88,11 +88,12 @@ subroutine mobility(self, state, min_C, settling_v, conc)
    if (dirChng == 0 .and. settling_v(self%grid%ubnd_vol) < 0.) dirChng = self%grid%ubnd_vol ! all sinking
 
    tdt = dtMax
-
+   count = 0
    do
       ! do this in steps of dtMax, but at least once
       ! each time tdt is dtMax, except, possibly, the last which is whatever was left.
-      if ((state%dt - dtMax) < 0.) tdt = dtMax + state%dt   ! there was a -= in the if, check this some time
+      count = count + i    ! counter
+      if (count*dtMax > state%dt) tdt = state%dt - (count - 1)*dtMax ! Last timestep
       ! 2 possibilities
       ! 1) lower levels rising, upper levels sinking
       ! 2) lower levels sinking, upper levels rising
