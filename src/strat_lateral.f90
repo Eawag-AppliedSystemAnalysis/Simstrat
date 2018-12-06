@@ -266,8 +266,9 @@ contains
         end do
         Q_inp(2,ubnd_vol + 1) = 0
 
-        Q_inp(1,:) = 0
-        Q_inp(3:4,:) = 0
+        Q_inp(1,:) = 0.0_RK
+        Q_inp(3:4,:) = 0.0_RK
+        state%Q_plunging = 0.0_RK
 
         do j=1,self%nval_deep(1)
            if (Inp(1,j)>1E-15) then
@@ -324,7 +325,6 @@ contains
                  end do
               end if
 
-              state%Q_plunging = 0.0_RK
               do i=i2,i1
                  Q_inp_inc = Q_in(k)/(grid%z_face(i1)-grid%z_face(i2)+grid%h(i))*grid%h(i)
                  Q_inp(1,i) = Q_inp(1,i) + Q_inp_inc

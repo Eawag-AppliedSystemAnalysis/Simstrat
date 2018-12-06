@@ -522,7 +522,7 @@ contains
                  ubnd_vol => self%grid%ubnd_vol, &
                  ubnd_fce => self%grid%ubnd_fce)
 
-         n = self%n_vars + self%n_vars_ben
+         n = self%n_vars ! Only pelagic variables of AED2
          ! FB 2016: Major revision to include surface inflow
          do i = 1, self%n_vars ! Do this for all AED2 vars
             fname(i) = trim(self%aed2_cfg%path_aed2_inflow)//trim(self%names(i))//'_inflow.dat'
@@ -710,7 +710,7 @@ contains
                  ubnd_vol => self%grid%ubnd_vol, &
                  ubnd_fce => self%grid%ubnd_fce)
 
-         n = self%n_vars + self%n_vars_ben
+         n = self%n_vars   ! Only pelagic AED2 variables
          ! FB 2016: Major revision to include surface inflow
          do i = 1, self%n_vars ! Do this for all AED2 vars
             fname(i) = trim(self%aed2_cfg%path_aed2_inflow)//trim(self%names(i))//'_inflow.dat'
