@@ -254,7 +254,7 @@ contains
          ! Interpolate area (A) at all depths (z_face)
          call Interp(config%z_A_read, config%A_read, num_read, self%z_face, Az, nz_grid + 1)
          ! Interpolate area on volume grid (needed for AED2)
-         call Interp(config%z_A_read, config%A_read, num_read, self%z_volume, Az_vol, nz_grid)
+         call Interp(config%z_A_read, config%A_read, num_read, self%z_volume(1:nz_grid), Az_vol, nz_grid)
 
          ! Compute area derivative (= projected sediment area over layer thickness)
          dAz(1:nz_grid) = (Az(2:nz_grid + 1) - Az(1:nz_grid))/(z_face(2:nz_grid + 1) - z_face(1:nz_grid))

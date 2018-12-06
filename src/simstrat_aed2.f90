@@ -186,13 +186,18 @@ contains
 
 
    subroutine update(self, state)
+      use,intrinsic :: ieee_arithmetic
+
       implicit none
       class(SimstratAED2) :: self
       class(ModelState) :: state
 
       ! Local variables
       type (aed2_column_t) :: column(self%n_aed2_vars), column_sed(self%n_aed2_vars)
-      integer :: v, split, lev
+      type(aed2_variable_t),pointer :: tvar
+      real(RK) :: min_C
+      integer :: v, i, split, lev, r
+      real(RK), dimension(self%grid%ubnd_vol) :: tmp
 
       !# Calculate local pressure
       self%pres(1:self%grid%ubnd_vol) = -self%grid%z_volume(1:self%grid%ubnd_vol)
@@ -205,6 +210,26 @@ contains
 
       self%cc_diag = 0.
       self%cc_diag_hz = 0.
+
+      if (self%aed2_cfg%particle_mobility) then
+      !# (3) Calculate source/sink terms due to settling rising of state
+      !# variables in the water column (note that settling into benthos
+      !# is done in aed2_do_benthos)
+         v = 0
+         do i = 1,self%n_aed2_vars
+            if ( aed2_get_var(i, tvar) ) then
+               if ( .not. (tvar%sheet .or. tvar%diag .or. tvar%extern) ) then
+               v = v + 1
+               !# only for state_vars that are not sheet
+                  if ( .not. ieee_is_nan(tvar%mobility) ) then
+                     self%ws(:, v) = tvar%mobility
+                     min_C = tvar%minimum
+                     call Mobility(self, state, min_C, self%ws(:, v), self%cc(:, v))
+                  end if
+               end if
+            end if
+         end do
+      end if
 
       call check_states(self, column)
 
@@ -240,7 +265,7 @@ contains
 !          DO v = n_vars+1, n_vars+n_vars_ben
 !             cc(1, v) = cc(1, v) + dt_eff*flux_ben(v)
 !          ENDDO
-!       ENDIF
+!       end if
 
 !       ! If simulating sediment zones, distribute cc-sed benthic properties back
 !       !  into main cc array, mainly for plotting
@@ -403,7 +428,7 @@ contains
                case ( 'par_sf' )      ; column(av)%cell_sheet => state%rad0
                case ( 'taub' )        ; column(av)%cell_sheet => state%u_taub
                case ( 'lake_depth' )  ; column(av)%cell_sheet => self%grid%lake_level
-               case ( 'layer_area' )  ; column(av)%cell => self%grid%Az_vol
+               case ( 'layer_area' )  ; column(av)%cell => self%grid%Az_vol; write(6,*) self%grid%Az_vol
                case default ; call error("External variable "//TRIM(tvar%name)//" not found.")
             end select
          elseif ( tvar%diag ) then  !# Diagnostic variable
@@ -422,7 +447,7 @@ contains
    !            print *,'av',av,sv
                elseif ( tvar%top ) then
                   column(av)%cell_sheet => self%cc(self%grid%nz_occupied, self%n_vars + sv)
-               endif
+               end if
 
                column(av)%flux_ben => self%flux_ben(self%n_vars + sv)
                column(av)%flux_atm => self%flux_atm(self%n_vars + sv)
@@ -1164,5 +1189,175 @@ contains
          end if
       end associate
    end subroutine
+
+
+! The mobility algorithm is taken from the GLM code (http://aed.see.uwa.edu.au/research/models/GLM/)
+   subroutine mobility(self, state, min_C, settling_v, conc)
+      ! Arguments
+      class(SimstratAED2) :: self
+      class(ModelState) :: state
+      real(RK), intent(in) :: min_C
+      real(RK), dimension(:), intent(in) :: settling_v
+      real(RK), dimension(:), intent(inout) :: conc
+
+      ! Local variables
+      real(RK) :: dtMax, tdt, tmp
+      real(RK), dimension(self%grid%ubnd_vol) :: mins, vols, Y
+      integer :: dirChng, signum, i
+
+
+      ! determine mobility timestep i.e. maximum time step that particles
+      ! will not pass through more than one layer in a time step
+
+      dtMax = state%dt
+      dirChng = 0   ! this represents the layer at which direction switches from sinking to rising or visa versa
+      signum = sign(1.0_RK,settling_v(1))  ! positive for rising, negative for sinking
+
+      do i = 1,self%grid%ubnd_vol
+         ! for convenience
+         vols(i) = self%grid%Az_vol(i)*self%grid%h(i)
+         mins(i) = min_C*vols(i)
+         Y(i) = conc(i)*vols(i)
+
+         !look for the change of direction
+         if (signum .ne. sign(1.0_RK,settling_v(i))) then
+            signum = -signum
+            dirChng = i-1
+         end if
+
+         ! check if all movement can be from within this cell
+         if (abs(settling_v(i)*state%dt) > self%grid%h(i)) then
+            tdt = self%grid%h(i)/abs(settling_v(i))
+            if (tdt < dtMax) dtMax = tdt
+         end if
+
+         ! check if movement can all be into the next cell.
+         ! if movement is settling, next is below, otherwise next is above.
+         ! check also for top or bottom in case of oopsies
+
+         if (settling_v(i) > 0.) then
+            if ((i < self%grid%ubnd_vol) .and. (abs(settling_v(i))*state%dt) > self%grid%h(i+1)) then
+                tdt = self%grid%h(i+1)/abs(settling_v(i))
+                if(tdt < dtMax) dtMax = tdt
+            end if
+         else if ((i > 1) .and. (abs(settling_v(i))*state%dt) > self%grid%h(i-1)) then
+            tdt = self%grid%h(i-1)/abs(settling_v(i))
+            if(tdt < dtMax) dtMax = tdt
+         end if
+      end do ! end find maximum time step dtMax
+      if (dirChng == 0 .and. settling_v(1) > 0. ) dirChng = self%grid%ubnd_vol ! all rising
+      if (dirChng == 0 .and. settling_v(self%grid%ubnd_vol) < 0.) dirChng = self%grid%ubnd_vol ! all sinking
+
+      tdt = dtMax
+
+      do
+         ! do this in steps of dtMax, but at least once
+         ! each time tdt is dtMax, except, possibly, the last which is whatever was left.
+         if ((state%dt - dtMax) < 0.) tdt = dtMax + state%dt   ! there was a -= in the if, check this some time
+         ! 2 possibilities
+         ! 1) lower levels rising, upper levels sinking
+         ! 2) lower levels sinking, upper levels rising
+         if (settling_v(1) > 0. ) then ! lower levels rising
+            if (settling_v(self%grid%ubnd_vol) < 0.) then !top levels are sinking
+                call Sinking(self, Y, conc, settling_v, vols, mins, tdt, self%grid%ubnd_vol, dirChng, tmp)
+                Y(dirChng) = Y(dirChng) + tmp
+                conc(dirChng) = Y(dirChng)/vols(dirChng)
+            end if
+            call Rising(self, Y, conc, settling_v, vols, mins, tdt, 1, dirChng)
+         else ! lower levels sinking
+            call Sinking(self, Y, conc, settling_v, vols, mins, tdt, dirChng, 1, tmp)
+            if ( settling_v(self%grid%ubnd_vol) > 0.) then !top levels are rising
+               call Rising(self, Y, conc, settling_v, vols, mins, tdt, dirChng, self%grid%ubnd_vol)
+            end if
+            if (state%dt > 0.) exit
+         end if
+      end do
+
+   end subroutine
+
+   ! Rising is the easier on the two since the slope means we dont need to look
+   ! at relative areas (the cell above will always be >= to the current cell)
+   ! all matter is moved to the next cell      
+   ! for each cell except the top :  
+   ! 1) calculate how much is going to move  
+   ! 2) subtract amount that must now move 
+   ! 3) add the amount moved from previous cell to current cell
+   ! 4) fix concentration 
+   ! for the top cell :
+   ! 1) add the amount moved from previous cell to current cell
+   ! 2) fix concentration
+
+   subroutine Rising(self, Y, conc, settling_v, vols, mins, dt, start_i, end_i)
+      ! Arguments
+      class(SimstratAED2) :: self
+      real(RK), dimension(:), intent(inout) :: conc, Y
+      real(RK), dimension(:), intent(in) :: settling_v, vols, mins
+      real(RK) :: dt
+      integer :: start_i, end_i
+
+      ! Local variables
+      real(RK) :: mov, moved
+      integer i
+
+      mov = 0.
+      moved = 0.
+
+      do i = start_i,end_i
+         ! speed times time (=h) time area * concen = mass to move
+         mov = (settling_v(i) * dt) * self%grid%Az_vol(i)*conc(i)
+         ! if removing that much would bring it below min conc
+         if ((Y(i) + moved - mov) < mins(i) ) mov = Y(i) + moved - mins(i)
+
+         Y(i) = Y(i) + moved - mov;
+         conc(i) = Y(i) / vols(i) ! return it to a concentration
+         moved = mov ! for the next step
+      end do
+       ! nothing rises out of the end cell, but we still add that which came from below
+       Y(end_i) = Y(end_i) + moved
+       conc(end_i) = Y(end_i) / vols(end_i)
+
+   end subroutine
+
+
+! for each cell :
+! 1) calculate how much is going to move
+! 2) subtract amount that must now move
+! 3) add the amount moved from previous cell to current cell
+! 4) fix concentration
+! 5) compute the amount that will go to the next cell
+
+   subroutine Sinking(self, Y, conc, settling_v, vols, mins, dt, start_i, end_i, moved)
+      ! Arguments
+      class(SimstratAED2) :: self
+      real(RK), dimension(:), intent(inout) :: conc, Y
+      real(RK), dimension(:), intent(in) :: settling_v, vols, mins
+      real(RK) :: dt
+      real(RK), intent(out) :: moved
+      integer :: start_i, end_i
+
+      ! Local variables
+      real(RK) :: mov
+      integer :: i
+
+      mov = 0.
+      moved = 0.
+
+      do i = start_i,end_i, -1
+         ! speed times time (=h) time area * concen = mass to move
+         mov = (abs(settling_v(i)) * dt) * self%grid%Az_vol(i) * conc(i)
+         ! if removing that much would bring it below min conc
+         if ((Y(i) + moved - mov) < mins(i)) mov = Y(i) + moved - mins(i)
+         Y(i) = Y(i) + moved - mov
+         conc(i) = Y(i) / vols(i) ! return it to a concentration
+
+         ! so now mov has how much has moved out of the cell, but not all
+         ! of that will go into the next cell (FB: part of it sediments on the flancs)
+         if ( i > 0 )  then
+            moved = mov * (self%grid%Az_vol(i-1) / self%grid%Az_vol(i)) ! for the next step
+         else
+            moved = mov ! we are about to exit anyway.
+         end if
+      end do
+   end subroutine 
 
 end module simstrat_aed2
