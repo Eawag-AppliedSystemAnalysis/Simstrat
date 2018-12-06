@@ -280,7 +280,7 @@ contains
 !       ! If simulating sediment zones, distribute cc-sed benthic properties back
 !       !  into main cc array, mainly for plotting
 !       IF ( benthic_mode .GT. 1 ) CALL copy_from_zone(cc, cc_diag, cc_diag_hz, wlev)
-
+      end do
          ! Update in-/outflow of AED2 variables (to be used in following advection step in the main loop)
          if (self%there_is_inflow) then
             if (self%plunging_inflow) then
@@ -296,7 +296,6 @@ contains
             call diffusion_AED2(self, state, v)
          end do
 
-      end do
    end subroutine
 
    subroutine calculate_fluxes(self, state)

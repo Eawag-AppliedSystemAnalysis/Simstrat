@@ -92,8 +92,9 @@ subroutine mobility(self, state, min_C, settling_v, conc)
    do
       ! do this in steps of dtMax, but at least once
       ! each time tdt is dtMax, except, possibly, the last which is whatever was left.
-      count = count + i    ! counter
+      count = count + 1    ! counter
       if (count*dtMax > state%dt) tdt = state%dt - (count - 1)*dtMax ! Last timestep
+
       ! 2 possibilities
       ! 1) lower levels rising, upper levels sinking
       ! 2) lower levels sinking, upper levels rising
