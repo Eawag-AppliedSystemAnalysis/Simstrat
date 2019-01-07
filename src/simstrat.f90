@@ -23,6 +23,7 @@ program simstrat_main
    use strat_absorption
    use strat_advection
    use strat_lateral
+   use forbear
    use, intrinsic :: ieee_arithmetic
 
    implicit none
@@ -53,9 +54,12 @@ program simstrat_main
    character(len=100) :: arg
    character(len=:), allocatable :: ParName
 
+   ! Instantiate progress bar object
+   type(bar_object):: bar
+
    !print some information
    write (*, *) 'Simstrat version '//version
-   write (*, *) 'This software has been developed at eawag - Swiss Federal Institute of Aquatic Science and Technology'
+   write (*, *) 'This software has been developed at Eawag - Swiss Federal Institute of Aquatic Science and Technology'
    write (*, *) ''
 
    !get first cli argument
@@ -135,6 +139,27 @@ program simstrat_main
 contains
 
    subroutine run_simulation()
+      ! initialize a bar with the progress percentage counter
+      call bar%destroy
+      write(*,*)simdata%model%datum, simdata%sim_cfg%start_datum, simdata%sim_cfg%end_datum
+
+      call bar%initialize(filled_char_string='+', prefix_string='progress |', suffix_string='| ', add_progress_percent=.true., max_value=simdata%sim_cfg%end_datum-simdata%sim_cfg%start_datum)
+      ! initialize a very fancy bar with "all batteries included"
+      !call bar%initialize(width=32,                                                                       &
+      !              bracket_left_string='|', bracket_left_color_fg='blue',                          &
+      !              empty_char_string='o', empty_char_color_fg='blue', empty_char_color_bg='white', &
+      !              filled_char_string=' ', filled_char_color_bg='blue',                            &
+      !              bracket_right_string='|', bracket_right_color_fg='blue',                        &
+      !              prefix_string='progress ', prefix_color_fg='red',                               &
+      !              add_progress_percent=.true., progress_percent_color_fg='yellow',                &
+      !              add_progress_speed=.true., progress_speed_color_fg='green',                     &
+      !              add_date_time=.true., date_time_color_fg='magenta',                             &
+      !              add_scale_bar=.true., scale_bar_color_fg='blue', scale_bar_style='underline_on',&
+      !              max_value=simdata%sim_cfg%end_datum-simdata%sim_cfg%start_datum)
+
+      ! start the progress bar
+      call bar%start
+
       !! run the marching time loop
 
       !call logger%log(0.0_RK) ! Write initial conditions
@@ -145,6 +170,8 @@ contains
          ! ****************************************
          ! ***** Update counters and timestep *****
          ! ****************************************
+         !update the progress bar
+         call bar%update(current=simdata%model%datum-simdata%sim_cfg%start_datum)
 
          ! Increase iteration counter
          simdata%model%model_step_counter = simdata%model%model_step_counter + 1
