@@ -58,9 +58,9 @@ program simstrat_main
    type(bar_object):: bar
 
    !print some information
-   write (*, *) 'Simstrat version '//version
-   write (*, *) 'This software has been developed at Eawag - Swiss Federal Institute of Aquatic Science and Technology'
-   write (*, *) ''
+   write(6, *) 'Simstrat version '//version
+   write(6, *) 'This software has been developed at Eawag - Swiss Federal Institute of Aquatic Science and Technology'
+   write(6, *) ''
 
    !get first cli argument
    call get_command_argument(1, arg)
@@ -140,22 +140,11 @@ contains
 
    subroutine run_simulation()
       ! initialize a bar with the progress percentage counter
-      call bar%destroy
-      write(*,*)simdata%model%datum, simdata%sim_cfg%start_datum, simdata%sim_cfg%end_datum
-
-      call bar%initialize(filled_char_string='+', prefix_string='progress |', suffix_string='| ', add_progress_percent=.true., max_value=simdata%sim_cfg%end_datum-simdata%sim_cfg%start_datum)
-      ! initialize a very fancy bar with "all batteries included"
-      !call bar%initialize(width=32,                                                                       &
-      !              bracket_left_string='|', bracket_left_color_fg='blue',                          &
-      !              empty_char_string='o', empty_char_color_fg='blue', empty_char_color_bg='white', &
-      !              filled_char_string=' ', filled_char_color_bg='blue',                            &
-      !              bracket_right_string='|', bracket_right_color_fg='blue',                        &
-      !              prefix_string='progress ', prefix_color_fg='red',                               &
-      !              add_progress_percent=.true., progress_percent_color_fg='yellow',                &
-      !              add_progress_speed=.true., progress_speed_color_fg='green',                     &
-      !              add_date_time=.true., date_time_color_fg='magenta',                             &
-      !              add_scale_bar=.true., scale_bar_color_fg='blue', scale_bar_style='underline_on',&
-      !              max_value=simdata%sim_cfg%end_datum-simdata%sim_cfg%start_datum)
+      call bar%initialize(filled_char_string='+', &
+         prefix_string='Simulation progress |',  &
+         suffix_string='| ', add_progress_percent=.true., &
+         add_date_time=.true., &
+         max_value=(simdata%sim_cfg%end_datum-simdata%sim_cfg%start_datum))
 
       ! start the progress bar
       call bar%start
@@ -165,13 +154,11 @@ contains
       !call logger%log(0.0_RK) ! Write initial conditions
 
       ! Run simulation until end datum or until no more results are required by the output time file
-      do while (simdata%model%datum<simdata%sim_cfg%end_datum .and. simdata%model%output_counter<=size(simdata%output_cfg%tout))
+      do while (simdata%model%datum<simdata%sim_cfg%end_datum) ! .and. simdata%model%output_counter<=size(simdata%output_cfg%tout))
 
          ! ****************************************
          ! ***** Update counters and timestep *****
          ! ****************************************
-         !update the progress bar
-         call bar%update(current=simdata%model%datum-simdata%sim_cfg%start_datum)
 
          ! Increase iteration counter
          simdata%model%model_step_counter = simdata%model%model_step_counter + 1
@@ -202,7 +189,7 @@ contains
                ! Don't log
                simdata%output_cfg%write_to_file = .false.
             end if
-         end if 
+         end if
 
          ! Advance to the next timestep
          simdata%model%datum = simdata%model%datum + simdata%model%dt/86400
@@ -287,6 +274,9 @@ contains
             simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
          end if
 
+         !update the progress bar
+         call bar%update(current=(simdata%model%datum-simdata%sim_cfg%start_datum))
+
       end do
 
       if (simdata%sim_cfg%disp_simulation/=0) then
@@ -296,6 +286,7 @@ contains
          write(6,*) ' -------------------------- '
          write(6,*)
       end if
+
    end subroutine
 
 end program simstrat_main

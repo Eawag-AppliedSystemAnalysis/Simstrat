@@ -125,7 +125,6 @@ contains
          ! If Simulation start larger than output times, abort.
         if (sim_config%start_datum > output_config%tout(1)) then
             call error('Simulation start time is larger than first output time.')
-            stop
         end if
 
         ! Allocate arrays for number of timesteps between output times and adjusted timestep

@@ -226,7 +226,7 @@ contains
                state%eps(i) = epslim
             end if
             if (state%eps(i) < 0) then
-               write (6, *) 'Dissipation negative'
+               write(6, *) 'Dissipation negative'
             end if
 
             state%num(i) = state%cmue1(i)*state%k(i)*state%k(i)/state%eps(i) + 1.5e-6_RK
