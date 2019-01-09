@@ -143,7 +143,8 @@ contains
             end if
             if (i==3 .or. i==4) then
                if (any(self%z_Inp(i,1:self%nval(i))/=self%z_Inp(1,1:self%nval(i)))) then
-                  call error('Inflow depths in '//trim(fname(i))//' file must match the ones in inflow file.')
+                  write(6,*) '[ERROR] ','Inflow depths in ',trim(fname(i)),' file must match the ones in inflow file.'
+                  stop
                end if
             end if
 
@@ -175,7 +176,7 @@ contains
                 call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))
               end if
             end if
-            call ok('Input file successfully read: '//fname(i))
+            write(6,*) '[OK] ','Input file successfully read: ',fname(i)
           end if ! if idx
 
           ! If lake level changes and if there is surface inflow, adjust inflow depth to keep them at the surface
@@ -230,7 +231,8 @@ contains
                       (datum-self%tb_start(i)) * (self%Inp_read_end(i,1:self%nval(i))-self%Inp_read_start(i,1:self%nval(i)))/(self%tb_end(i)-self%tb_start(i))
              else
                 if(self%tb_end(i)<=self%tb_start(i)) then
-                  call error('Dates in '//trim(fname(i))//' file must always be increasing.')
+                  write(6,*) '[ERROR] ','Dates in ',trim(fname(i)),' file must always be increasing.'
+                  stop
                 end if
                 do j=1,ubnd_fce
                   Q_inp(i,j) = (self%Q_start(i,j) + self%Qs_start(i,j)) + (datum-self%tb_start(i)) &
@@ -440,7 +442,7 @@ contains
                   call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))
                end if
 
-               call ok('Input file successfully read: '//fname(i))
+               write(6,*) '[OK] ','Input file successfully read: ',fname(i)
             end if ! idx==1
 
 

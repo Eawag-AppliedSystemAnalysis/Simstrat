@@ -145,7 +145,8 @@ contains
 
          !Include top value if not included
          if (config%grid_read(1) /= (config%max_depth - self%z_zero)) then
-            call error('Top value '//trim(toStr(config%max_depth - self%z_zero))//' is not included in grid file!')
+            write(6,*) '[ERROR] ', 'Top value ', config%max_depth - self%z_zero, 'is not included in grid file!'
+            stop
             !warn('Grid top value is smaller than in morphology file and added automatically '
             !self%nz_grid=self%nz_grid + 1
             !do i = self%nz_grid,1,-1
@@ -156,7 +157,8 @@ contains
 
          !If maxdepth grid larger than morphology
          if (config%grid_read(self%nz_grid + 1) < -self%z_zero) then
-            call error('Grid invalid: maxdepth of grid larger than morphology!')
+            write (6, *) '[ERROR] ', 'Grid invalid: maxdepth of grid larger than morphology!'
+            stop
             !do while ((config%grid_read(self%nz_grid)>config%depth).and.(self%nz_grid>0.))
             !    self%nz_grid=self%nz_grid-1
             !end do
@@ -164,7 +166,8 @@ contains
 
          !Include bottom value if not included
          if (config%grid_read(self%nz_grid + 1) > -self%z_zero) then
-            call error('Bottom value '//trim(toStr(-self%z_zero))//' is not included in grid file!')
+            write (*, *) '[ERROR] ', 'Bottom value', -self%z_zero, 'is not included in grid file!'
+            stop
             !self%nz_grid=self%nz_grid+1
             !config%grid_read(self%nz_grid)=config%depth
          end if
@@ -172,6 +175,7 @@ contains
          do i=2,self%nz_grid
             if ((config%grid_read(i) - config%grid_read(i-1)) > 0) then
                call error('Grid input values are not monotonously decreasing')
+               stop
             end if
          end do
       end if

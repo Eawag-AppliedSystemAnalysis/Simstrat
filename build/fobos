@@ -12,7 +12,6 @@ quiet=False
 target=simstrat.f90
 dependon=../lib/csv_fortran/fobos:release-gnu((direct))
          ../lib/json_fortran/fobos:release-gnu((direct))
-         ../lib/forbear/fobos:static-gnu((direct))
 log=True
 
 [release-gnu]
@@ -26,7 +25,6 @@ quiet=False
 target=simstrat.f90
 dependon=../lib/csv_fortran/fobos:release-gnu((direct))
          ../lib/json_fortran/fobos:release-gnu((direct))
-         ../lib/forbear/fobos:static-gnu((direct))
 log=True
 
 
@@ -41,5 +39,4 @@ quiet=False
 target=simstrat.f90
 dependon=../lib/csv_fortran/fobos:release-intel((direct))
          ../lib/json_fortran/fobos:release-intel((direct))
-         ../lib/forbear/fobos:static-gnu((direct))
 log=True

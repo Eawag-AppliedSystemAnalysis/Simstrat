@@ -91,8 +91,9 @@ contains
 
             call f%read (output_cfg%zoutName, header_row=1, status_ok=status_ok)
             if (.not. status_ok) then
-               call f%destroy()
                call error('Unable to read output depths: '//output_cfg%zoutName)
+               call f%destroy()
+               stop
             end if
             ! Values are read into array zout_read instead of zout to keep zout for the final output depths. For example,
             ! zout_read will contain only one value here if the output frequency is given, but zout will contain the output
@@ -114,6 +115,7 @@ contains
                   if (i>1) then
                      if (output_cfg%zout_read(i) < output_cfg%zout_read(i-1)) then
                         call error('Output depths are not monotonous. Maybe you chose the wrong output depth reference?')
+                        stop
                      end if
                   end if
                end do 
@@ -127,8 +129,9 @@ contains
 
             call f%read (output_cfg%toutName, header_row=1, status_ok=status_ok)
             if (.not. status_ok) then
-               call f%destroy()
                call error('Unable to read output depths: '//output_cfg%toutName)
+               call f%destroy()
+               stop
             end if
             call f%get(1, output_cfg%tout, status_ok)
             call f%destroy()
@@ -394,11 +397,13 @@ contains
             if (i==1) then
                if(z_tmp(i)<0) then
                   call error('The uppermost depth in the morphology file is negative, it should be at least 0!')
+                  stop
                end if
             else
             ! Check that depth and area are monotonous              
                if (z_tmp(i)>z_tmp(i-1)) then
                   call error('The depths of the morphology input file are not decreasing monotonously.')
+                  stop
                else if(A_tmp(i)>A_tmp(i-1)) then
                   call warn('The lake area increases with depth somewhere. Do you really want this?')
                end if
@@ -463,6 +468,7 @@ contains
          call par_file%load_file(filename=ParName)
          if (par_file%failed()) then
             call error('Could not read inputfile '//ParName)
+            stop
          end if
 
          !Names of Inputfile
@@ -508,6 +514,7 @@ contains
          call par_file%get("Output.OutputDepthReference", output_cfg%output_depth_reference, found); call check_field(found, 'Output.OutputDepthReference', ParName)
          if (.not.(output_cfg%output_depth_reference == 'surface' .or. output_cfg%output_depth_reference == 'bottom')) then
             call error('Invalid field "Output.OutputDepthReference" in par-file.')
+            stop
          end if
 
          ! Output depths
@@ -527,6 +534,7 @@ contains
 
          else
             call error('Invalid field "Output.Depths" in par-file.')
+            stop
          end if
 
          ! Output times
@@ -549,6 +557,7 @@ contains
 
          else
             call error('Invalid field "Output.Times" in par-file.')
+            stop
          end if
 
          !Model configuration
@@ -588,8 +597,10 @@ contains
          call par_file%get("ModelParameters.c10", model_param%C10_constant, found); call check_field(found, 'ModelParameters.c10', ParName)
          if (model_cfg%wind_drag_model == 1 .and. model_param%C10_constant > 0.1) then
             call error('The input value of C10 is too high to be physically possible. Choose a lower value or change the wind drag model to 2 or 3 if you meant to use C10 as a calibration parameter.')
+            stop
          else if (model_cfg%wind_drag_model > 1 .and. model_param%C10_constant < 0.1) then
             call error('The input value of C10 is too low to serve as calibration parameter. Maybe you intended it as physical parameter but then you need to use wind drag model = 1.')
+            stop
          end if
 
          call par_file%get("ModelParameters.cd", model_param%CD, found); call check_field(found, 'ModelParameters.cd', ParName)
@@ -645,13 +656,16 @@ contains
             read (13, *, end=99) z_read(i), U_read(i), V_read(i), T_read(i), S_read(i), k_read(i), eps_read(i)
             if (z_read(i)>0) then
                call error('One or several input depths of initial conditions are positive.')
+               stop
             end if
          end do
 99       num_read = i-1                               ! Number of valuInitNamees
          if (num_read < 1) then
             call error('Unable to read initial conditions files (no data found).')
+            stop
          else if(num_read==max_length_input_data) then
             write(6,*) '[ERROR] ','Only first ',max_length_input_data,' values of initial data file read.'
+            stop
          end if
 
          close (13)
@@ -710,6 +724,7 @@ contains
 
       if (.not. found) then
          call error('Field '//field_name//' not found in '//file_name)
+         stop
       end if
    end subroutine check_field
 
