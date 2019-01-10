@@ -74,7 +74,7 @@ contains
                  nval=>self%nval, &
                  nz=>self%grid%nz_occupied)
 
-         if (state%model_step_counter == 1) then ! First iteration
+         if (state%first_timestep) then ! First iteration
             open (30, status='old', file=self%file)
             eof = 0
 

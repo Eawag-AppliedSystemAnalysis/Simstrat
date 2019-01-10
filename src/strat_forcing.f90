@@ -57,7 +57,8 @@ contains
 
       ! Global variables
       class(ForcingModule) :: self
-      integer, intent(in) :: idx, nval
+      integer, intent(in) :: nval
+      logical, intent(in) :: idx
       real(RK), intent(in) :: datum !Required date
       real(RK), intent(inout) :: A_cur(1:nval), A_s(1:nval), A_e(1:nval) !output values, Start and end values
 
@@ -68,7 +69,7 @@ contains
       save tb_start, tb_end
       save eof
 
-      if (idx == 1) then
+      if (idx) then
 
          open (20, status='old', file=self%file)
          eof = 0
@@ -99,6 +100,7 @@ contains
 
   7   eof = 1
       if(datum>tb_start) call warn('Last forcing date before simulation end time.')
+      write(6,*) datum, tb_start
 
 
   8   A_cur(1:nval) = A_s(1:nval)       !Take first value of current interval
@@ -155,8 +157,8 @@ contains
               stop
             end if
 
-            call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%model_step_counter)
-            call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%model_step_counter)
+            call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%first_timestep)
+            call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%first_timestep)
             state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
             state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
             state%uv10 = sqrt(state%u10**2 + state%v10**2) !AG 2014
@@ -169,7 +171,7 @@ contains
 
          else if (cfg%forcing_mode >= 2) then
             if (cfg%forcing_mode == 2) then ! date, U,V,Tatm,Hsol,Vap
-               call self%read (state%datum, A_s, A_e, A_cur, 5 + nval_offset, state%model_step_counter)
+               call self%read (state%datum, A_s, A_e, A_cur, 5 + nval_offset, state%first_timestep)
                state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
                state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
                state%T_atm = A_cur(3)
@@ -194,7 +196,7 @@ contains
                end if
 
             else if (cfg%forcing_mode == 3) then ! date,U10,V10,Tatm,Hsol,Vap,Clouds
-               call self%read (state%datum, A_s, A_e, A_cur, 6 + nval_offset, state%model_step_counter)
+               call self%read (state%datum, A_s, A_e, A_cur, 6 + nval_offset, state%first_timestep)
                state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
                state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
                state%T_atm = A_cur(3)
@@ -230,7 +232,7 @@ contains
                  stop
                end if
 
-               call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%model_step_counter)
+               call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%first_timestep)
                state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
                state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
                heat0 = A_cur(3) !MS 2014
@@ -239,7 +241,7 @@ contains
                if (cfg%use_filtered_wind) state%Wf = A_cur(5) !AG 2014
             !UK added forcing mode with incomming long-wave radiation instead of cloudiness
             else if (cfg%forcing_mode == 5) then ! date,U10,V10,Tatm,Hsol,Vap,ILWR
-               call self%read (state%datum, A_s, A_e, A_cur, 6 + nval_offset, state%model_step_counter)
+               call self%read (state%datum, A_s, A_e, A_cur, 6 + nval_offset, state%first_timestep)
                state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
                state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
                state%T_atm = A_cur(3)

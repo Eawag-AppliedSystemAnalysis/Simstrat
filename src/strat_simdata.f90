@@ -100,6 +100,7 @@ module strat_simdata
       ! Iteration variables
       integer :: i, j, output_counter, model_step_counter
       real(RK) :: datum, dt
+      logical :: first_timestep = .true.
 
       ! Variables located on z_cent grid
       ! Note that for these variables the value at 0 z.b. U(0) is not used

@@ -152,7 +152,26 @@ contains
          ! If output times are specified in file
          if(simdata%output_cfg%thinning_interval==0) then
             ! At the first iteration or always after the model output was logged
-            if (simdata%model%model_step_counter==1 .or. simdata%output_cfg%write_to_file) then
+            if (simdata%model%model_step_counter==1) then
+               ! Adjust timestep so that the next output time is on the "time grid"
+               simdata%model%dt = simdata%output_cfg%adjusted_timestep(simdata%model%output_counter)
+               ! Don't log anymore until the next output time is reached
+               simdata%output_cfg%write_to_file = .false.
+               ! Log initial state if first output time corresponds to simulation start
+               if (simdata%model%dt < 1e-6) then
+                  ! Log initial conditions and display
+                  call logger%log(simdata%model%datum)
+                  if (simdata%sim_cfg%disp_simulation > 0) then
+                     write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%lake_level, &
+                     simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
+                  end if
+                  ! Update counters and timestep
+                  simdata%model%model_step_counter = simdata%model%model_step_counter + 1
+                  simdata%model%output_counter = simdata%model%output_counter + 1
+                  simdata%model%dt = simdata%output_cfg%adjusted_timestep(simdata%model%output_counter)
+               end if
+
+            else if (simdata%output_cfg%write_to_file) then
                ! Adjust timestep so that the next output time is on the "time grid"
                simdata%model%dt = simdata%output_cfg%adjusted_timestep(simdata%model%output_counter)
                ! Don't log anymore until the next output time is reached
@@ -260,6 +279,8 @@ contains
             simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
          end if
 
+         ! This logical is used to do some allocation in the forcing, absorption and lateral subroutines during the first timestep
+         simdata%model%first_timestep = .false.
       end do
 
       if (simdata%sim_cfg%disp_simulation/=0) then
