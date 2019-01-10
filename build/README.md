@@ -1,30 +1,27 @@
-# How to build Simstrat (via build.sh)
-The build script of Simstrat is `build/build.sh`. From this folder (`build`), run
+# How to build Simstrat with FoBiS.py
+From this folder (`build`), run:
 
 ~~~bash
-./build.sh -h
+FoBiS.py -h
 ~~~
 
-to get help information about its usage:
+to get help information about its usage.
+To compile Simstrat with default configuration, run:
 
-~~~
-Usage: ./build.sh [-m <string>] [-c] [-d]
-
-  -m <string>  compile mode: release (default), debug
-  -c           clean previous compiling files before building
-  -d           generate code documentation with FORD after building
- in case of no arguments, "./build.sh -m release" is called
-~~~
-
-> **N.B.** you can use one-line command to call the script from the root repository folder, e.g.
 ~~~bash
-cd build; ./build.sh; cd -
+FoBiS.py build
 ~~~
 
-## Code documentation with FORD
-You can find the generated code documentation (flag `-d`) in `doc/developer/ford/ford_doc/index.htlm`
+If you want to generate code documentation, you can run
 
-> **N.B.** you can generate the documentation in any moment from `doc/developer/ford` folder by running
 ~~~bash
-ford ford_projectfile.md
+FoBiS.py rule -ex makedoc
+~~~
+
+The generated code documentation is saved in `doc/developer/ford/ford_doc/index.htlm`
+
+
+> **N.B.** you can use one-line command to call the build procedure from any folder, e.g. from `tests`
+~~~bash
+cd ../build; FoBiS.py build; cd -
 ~~~
