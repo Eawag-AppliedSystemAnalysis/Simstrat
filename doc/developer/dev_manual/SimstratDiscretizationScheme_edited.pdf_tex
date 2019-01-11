@@ -50,10 +50,10 @@
   \makeatother%
   \begin{picture}(1,0.36799465)%
     \put(0,0){\includegraphics[width=\unitlength,page=1]{SimstratDiscretizationScheme.pdf}}%
-    \put(0.9361989,0.00346288){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$z=0$}}}%
-    \put(0.93725633,0.05338075){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$z=1$}}}%
-    \put(0.93725633,0.12388596){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$z=2$}}}%
-    \put(0.93725633,0.23385796){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$z=3$}}}%
+    \put(0.9361989,0.00346288){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$z=1$}}}%
+    \put(0.93725633,0.05338075){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$z=2$}}}%
+    \put(0.93725633,0.12388596){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$z=3$}}}%
+    \put(0.93725633,0.23385796){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$z=4$}}}%
     \put(0,0){\includegraphics[width=\unitlength,page=2]{SimstratDiscretizationScheme.pdf}}%
     \put(0.00049485,0.02842979){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$z=1$}}}%
     \put(0.00049485,0.08874105){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$z=2$}}}%
@@ -69,10 +69,10 @@
     \put(0.61502724,0.08793826){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$h_2$}}}%
     \put(0.61502724,0.17812397){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$h_3$}}}%
     \put(0,0){\includegraphics[width=\unitlength,page=5]{SimstratDiscretizationScheme.pdf}}%
-    \put(0.35390701,0.01841432){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$A_{z-2}$}}}%
-    \put(0.35390701,0.06873464){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$A_{z-1}$}}}%
-    \put(0.35390701,0.13894928){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$A_z$}}}%
-    \put(0.35390701,0.24985731){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$A_{z+1}$}}}%
+    \put(0.35390701,0.01841432){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$A_{z-1}$}}}%
+    \put(0.35390701,0.06873464){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$A_{z}$}}}%
+    \put(0.35390701,0.13894928){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$A_{z+1}$}}}%
+    \put(0.35390701,0.24985731){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$A_{z+2}$}}}%
     \put(0.00009582,0.27835576){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$T$, $u$, $v$}}}%
     \put(0.90284384,0.2745889){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$k$, $\epsilon$}}}%
   \end{picture}%
