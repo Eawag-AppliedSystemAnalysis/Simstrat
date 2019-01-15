@@ -18,7 +18,7 @@
   },
   "ModelConfig" : {
     "MaxLengthInputData"      : 1000,
-    "CoupleAED2"              : true,
+    "CoupleAED2"              : false,
     "TurbulenceModel"         : 1,
     "StabilityFunction"       : 2,
     "FluxCondition"           : 1,
@@ -28,28 +28,14 @@
     "WindDragModel"           : 3,
     "InflowPlacement"         : 0,
     "PressureGradients"       : 0,
-    "IceModel"                : 0,
-    "SnowModel"               : 0	
-  },
-  "AED2Config" : {
-    "AED2ConfigFile"          : "aed2.nml",
-    "PathAED2initial"         : "AED2_initcond/",
-    "PathAED2inflow"          : "AED2_inflow/",
-    "PathAED2output"          : "AED2_output/",
-    "SplitFactor"             : 1,
-    "ParticleMobility"        : 0,
-    "BioshadeFeedback"        : 0,
-    "BackgroundExtinction"    : 0.2,
-    "RepairState"             : 1,
-    "BenthicMode"             : 0,
-    "NZones"                  : 1,
-    "ZoneHeights"             : [1,2,3]
+    "IceModel"                : 1,
+    "SnowModel"               : 1	
   },
   "Simulation" : {
     "Timestep s"        : 300,
     "Start d"           : 35001,
-    "End d"             : 35002,
-    "DisplaySimulation" : 1
+    "End d"             : 35732,
+    "DisplaySimulation" : 0
   },
   "ModelParameters" : {
     "lat"           : 47.3,
@@ -62,16 +48,9 @@
     "hgeo"          : 0.1,
     "k_min"         : 1e-30,
     "p_radin"       : 1.1978,
-<<<<<<< HEAD
     "p_windf"       : 1,
-    "beta_sol"      : 0.35,
-    "beta_snowice"  : 0.40,  
-    "albsw"         : 0.08,
-    "ice_albedo"    : 0.30,
-    "snow_albedo"   : 0.77,
-    "freez_temp"    : 0.05  
-=======
-    "p_windf"       : 1
->>>>>>> master
+    "p_albedo"      : 1,
+    "freez_temp"    : 0.00,
+    "snow_temp"     : 1	
   }
 }

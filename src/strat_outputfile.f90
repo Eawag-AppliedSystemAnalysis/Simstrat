@@ -132,7 +132,11 @@ contains
         ! If number of timesteps = 0
         if (int(output_config%n_timesteps_between_tout(1)) == 0) then
             output_config%adjusted_timestep(1) = (output_config%tout(1) - sim_config%start_datum)*86400
-            tout_test(1) = sim_config%start_datum + output_config%adjusted_timestep(1)
+            tout_test(1) = sim_config%start_datum + output_config%adjusted_timestep(1)/86400
+
+            ! Set to 1, as the adjusted timestep has to be used once, otherwise the model does not advance
+            output_config%n_timesteps_between_tout(1) = 1
+            call warn('First output time is equal to simulation start time')
         else
             ! If number of timesteps > 0
             output_config%adjusted_timestep(1) = ((output_config%tout(1) - sim_config%start_datum)*86400)/int(output_config%n_timesteps_between_tout(1))
@@ -150,8 +154,11 @@ contains
             ! If number of timesteps = 0
             if (int(output_config%n_timesteps_between_tout(i))==0) then
                 output_config%adjusted_timestep(i) = (output_config%tout(i) - tout_test(i-1))*86400
-                tout_test(i) = tout_test(i-1) + output_config%adjusted_timestep(i)
-                call warn('Time interval for output is smaller than dt for iteration')
+                tout_test(i) = tout_test(i-1) + output_config%adjusted_timestep(i)/86400
+
+                ! Set to 1, as the adjusted timestep has to be used once, otherwise the model does not advance
+                output_config%n_timesteps_between_tout(i) = 1
+                call warn('At least one time interval for the model output is smaller than the simulation timestep')
             else
                 ! If number of timesteps > 0
                 output_config%adjusted_timestep(i) = ((output_config%tout(i) - tout_test(i-1))*86400)/int(output_config%n_timesteps_between_tout(i))
@@ -218,15 +225,12 @@ contains
       self%n_depths = size(output_config%zout)
 
       ! Check if output directory exists
-      inquire(file=output_config%PathOut//'/',exist=exist_output_folder)
+      inquire(file=output_config%PathOut,exist=exist_output_folder)
 
       ! Create Simstrat output folder if it does not exist
       if(.not.exist_output_folder) then
         call warn('Result folder does not exist, create folder...')
-        ppos = scan(trim(output_config%PathOut),"/", BACK= .true.)
-        if ( ppos > 0 ) output_folder = output_config%PathOut(1:ppos - 1)
-        mkdirCmd = 'mkdir '//trim(output_folder)
-        write(6,*) mkdirCmd
+        mkdirCmd = 'mkdir '//trim(output_config%PathOut)
         call execute_command_line(mkdirCmd)
       end if
 

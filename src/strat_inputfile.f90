@@ -1,8 +1,8 @@
-!<    +---------------------------------------------------------------+
+!     +---------------------------------------------------------------+
 !     | Inputfile  module
 !     |  - Reads configuration and initial conditions
 !     |  - Sets up simulation data structure!
-!<    +---------------------------------------------------------------+
+!     +---------------------------------------------------------------+
 
 module strat_inputfile
    use strat_kinds
@@ -146,112 +146,145 @@ contains
          end if
 
          ! Define variables that should be written
-         allocate (self%simdata%output_cfg%output_vars(21))
+         allocate (self%simdata%output_cfg%output_vars(23))
 
+         ! Horizontal velocity in y direction [m s-1]
          self%simdata%output_cfg%output_vars(1)%name = "V"
          self%simdata%output_cfg%output_vars(1)%values => self%simdata%model%V
          self%simdata%output_cfg%output_vars(1)%volume_grid = .true.
          self%simdata%output_cfg%output_vars(1)%face_grid = .false.
 
+         ! Horizontal velocity in x direction [m s-1]
          self%simdata%output_cfg%output_vars(2)%name = "U"
          self%simdata%output_cfg%output_vars(2)%values => self%simdata%model%U
          self%simdata%output_cfg%output_vars(2)%volume_grid = .true.
          self%simdata%output_cfg%output_vars(2)%face_grid = .false.
 
+         ! Temperature [°C]
          self%simdata%output_cfg%output_vars(3)%name = "T"
          self%simdata%output_cfg%output_vars(3)%values => self%simdata%model%T
          self%simdata%output_cfg%output_vars(3)%volume_grid = .true.
          self%simdata%output_cfg%output_vars(3)%face_grid = .false.
 
+         ! Salinity [‰]
          self%simdata%output_cfg%output_vars(4)%name = "S"
          self%simdata%output_cfg%output_vars(4)%values => self%simdata%model%S
          self%simdata%output_cfg%output_vars(4)%volume_grid = .true.
          self%simdata%output_cfg%output_vars(4)%face_grid = .false.
 
-         self%simdata%output_cfg%output_vars(5)%name = "P"
-         self%simdata%output_cfg%output_vars(5)%values => self%simdata%model%P
+         ! Turbulent diffusivity for momentum  (viscosity) [m2 s]
+         self%simdata%output_cfg%output_vars(5)%name = "num"
+         self%simdata%output_cfg%output_vars(5)%values => self%simdata%model%num
          self%simdata%output_cfg%output_vars(5)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(5)%face_grid = .true.
 
-         self%simdata%output_cfg%output_vars(6)%name = "num"
-         self%simdata%output_cfg%output_vars(6)%values => self%simdata%model%num
+         ! Turbulent diffusivity for temperature [m2 s]
+         self%simdata%output_cfg%output_vars(6)%name = "nuh"
+         self%simdata%output_cfg%output_vars(6)%values => self%simdata%model%nuh
          self%simdata%output_cfg%output_vars(6)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(6)%face_grid = .true.
 
-         self%simdata%output_cfg%output_vars(7)%name = "nuh"
-         self%simdata%output_cfg%output_vars(7)%values => self%simdata%model%nuh
+         ! Brunt-Väisälä frequency [s-1]
+         self%simdata%output_cfg%output_vars(7)%name = "NN"
+         self%simdata%output_cfg%output_vars(7)%values => self%simdata%model%NN
          self%simdata%output_cfg%output_vars(7)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(7)%face_grid = .true.
 
-         self%simdata%output_cfg%output_vars(8)%name = "NN"
-         self%simdata%output_cfg%output_vars(8)%values => self%simdata%model%NN
+         ! Turbulent kinetic energy (TKE) [J kg-1]
+         self%simdata%output_cfg%output_vars(8)%name = "k"
+         self%simdata%output_cfg%output_vars(8)%values => self%simdata%model%k
          self%simdata%output_cfg%output_vars(8)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(8)%face_grid = .true.
 
-         self%simdata%output_cfg%output_vars(9)%name = "k"
-         self%simdata%output_cfg%output_vars(9)%values => self%simdata%model%k
+         ! TKE dissipation rate [W kg-1]
+         self%simdata%output_cfg%output_vars(9)%name = "eps"
+         self%simdata%output_cfg%output_vars(9)%values => self%simdata%model%eps
          self%simdata%output_cfg%output_vars(9)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(9)%face_grid = .true.
 
-         self%simdata%output_cfg%output_vars(10)%name = "eps"
-         self%simdata%output_cfg%output_vars(10)%values => self%simdata%model%eps
+         ! Shear stress production P [W kg-1]
+         self%simdata%output_cfg%output_vars(10)%name = "P"
+         self%simdata%output_cfg%output_vars(10)%values => self%simdata%model%P
          self%simdata%output_cfg%output_vars(10)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(10)%face_grid = .true.
 
+         ! Buoyancy production [W kg-1]
          self%simdata%output_cfg%output_vars(11)%name = "B"
          self%simdata%output_cfg%output_vars(11)%values => self%simdata%model%B
          self%simdata%output_cfg%output_vars(11)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(11)%face_grid = .true.
 
+         ! Production of TKE due to internal seiching [W kg-1]
          self%simdata%output_cfg%output_vars(12)%name = "Ps"
          self%simdata%output_cfg%output_vars(12)%values => self%simdata%model%P_seiche
          self%simdata%output_cfg%output_vars(12)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(12)%face_grid = .true.
-   
+
+         ! Infrared radiation from sky [W m-2]
          self%simdata%output_cfg%output_vars(13)%name = "HA"
          self%simdata%output_cfg%output_vars(13)%values_surf => self%simdata%model%ha
          self%simdata%output_cfg%output_vars(13)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(13)%face_grid = .false.
-   
+
+         ! Infrared ratidation from water [W m-2]
          self%simdata%output_cfg%output_vars(14)%name = "HW"
          self%simdata%output_cfg%output_vars(14)%values_surf => self%simdata%model%hw
          self%simdata%output_cfg%output_vars(14)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(14)%face_grid = .false.
-   
+
+         ! Sensible heat flux from water [W m-2]
          self%simdata%output_cfg%output_vars(15)%name = "HK"
          self%simdata%output_cfg%output_vars(15)%values_surf => self%simdata%model%hk
          self%simdata%output_cfg%output_vars(15)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(15)%face_grid = .false.
-   
+
+         ! Latent heat flux from water [W m-2]
          self%simdata%output_cfg%output_vars(16)%name = "HV"
          self%simdata%output_cfg%output_vars(16)%values_surf => self%simdata%model%hv
          self%simdata%output_cfg%output_vars(16)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(16)%face_grid = .false.
-   
+
+         ! Solar radiation at surface [W m-2]
          self%simdata%output_cfg%output_vars(17)%name = "Rad0"
          self%simdata%output_cfg%output_vars(17)%values_surf => self%simdata%model%rad0
          self%simdata%output_cfg%output_vars(17)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(17)%face_grid = .false.
 
-         self%simdata%output_cfg%output_vars(18)%name = "IceH"
-         self%simdata%output_cfg%output_vars(18)%values_surf => self%simdata%model%ice_h
+         ! Total ice thickness [m]
+         self%simdata%output_cfg%output_vars(18)%name = "TotalIceH"
+         self%simdata%output_cfg%output_vars(18)%values_surf => self%simdata%model%total_ice_h
          self%simdata%output_cfg%output_vars(18)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(18)%face_grid = .false.
 
-         self%simdata%output_cfg%output_vars(19)%name = "SnowH"
-         self%simdata%output_cfg%output_vars(19)%values_surf => self%simdata%model%snow_h
+         ! Black ice thickness [m]
+         self%simdata%output_cfg%output_vars(19)%name = "BlackIceH"
+         self%simdata%output_cfg%output_vars(19)%values_surf => self%simdata%model%black_ice_h
          self%simdata%output_cfg%output_vars(19)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(19)%face_grid = .false.  
+         self%simdata%output_cfg%output_vars(19)%face_grid = .false.
 
-         self%simdata%output_cfg%output_vars(20)%name = "WaterH"
-         self%simdata%output_cfg%output_vars(20)%values_surf => self%simdata%grid%lake_level
+         ! White ice (snow ice) thickness [m]
+         self%simdata%output_cfg%output_vars(20)%name = "WhiteIceH"
+         self%simdata%output_cfg%output_vars(20)%values_surf => self%simdata%model%white_ice_h
          self%simdata%output_cfg%output_vars(20)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(20)%face_grid = .false.  
 
-         self%simdata%output_cfg%output_vars(21)%name = "Qvert"
-         self%simdata%output_cfg%output_vars(21)%values => self%simdata%model%Q_vert
+         ! Snow layer thickness [m]
+         self%simdata%output_cfg%output_vars(21)%name = "SnowH"
+         self%simdata%output_cfg%output_vars(21)%values_surf => self%simdata%model%snow_h
          self%simdata%output_cfg%output_vars(21)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(21)%face_grid = .true.  
+         self%simdata%output_cfg%output_vars(21)%face_grid = .false.  
+
+         ! Water level [m]
+         self%simdata%output_cfg%output_vars(22)%name = "WaterH"
+         self%simdata%output_cfg%output_vars(22)%values_surf => self%simdata%grid%lake_level
+         self%simdata%output_cfg%output_vars(22)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(22)%face_grid = .false.  
+
+         ! Vertical advection [m3 s-1]
+         self%simdata%output_cfg%output_vars(23)%name = "Qvert"
+         self%simdata%output_cfg%output_vars(23)%values => self%simdata%model%Q_vert
+         self%simdata%output_cfg%output_vars(23)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(23)%face_grid = .true.   
  
       end associate
    end subroutine
@@ -439,7 +472,7 @@ contains
 
       type(json_file) :: par_file
       logical :: found
-      integer :: n_children_dummy
+      integer :: n_children_dummy, index_bs
 
       !gfortran cannot handle type bound allocatable character that are passed to subroutine as intent(out)
       !as a workaround we have to store the values in a local scope allocatable character
@@ -489,8 +522,23 @@ contains
          call par_file%get('Input.Outflow', QoutName, found); input_cfg%QoutName = QoutName; call check_field(found, 'Input.Outflow', ParName)
          call par_file%get('Input.Inflow temperature', TinpName, found); input_cfg%TinpName = TinpName; call check_field(found, 'Input.Inflow temperature', ParName)
          call par_file%get('Input.Inflow salinity', SinpName, found); input_cfg%SinpName = SinpName; call check_field(found, 'Input.Inflow salinity', ParName)
+
          ! Path to output folder
-         call par_file%get('Output.Path', PathOut, found); output_cfg%PathOut = PathOut; call check_field(found, 'Output.Path', ParName)
+         call par_file%get('Output.Path', PathOut, found); call check_field(found, 'Output.Path', ParName)
+
+         ! Transform backslashes to slash
+         do while(scan(PathOut,'\')>0)
+            index_bs = scan(PathOut,'\')
+            PathOut(index_bs:index_bs) = '/'
+         end do
+
+         ! Remove trailing slashes at the end
+         if (len(PathOut) == scan(trim(PathOut),"/", BACK= .true.)) then
+            output_cfg%PathOut = PathOut(1:len(PathOut) - 1)
+         else
+            output_cfg%PathOut = trim(PathOut)
+         end if
+
          ! Output depth reference
          call par_file%get("Output.OutputDepthReference", output_cfg%output_depth_reference, found); call check_field(found, 'Output.OutputDepthReference', ParName)
          if (.not.(output_cfg%output_depth_reference == 'surface' .or. output_cfg%output_depth_reference == 'bottom')) then
@@ -605,15 +653,11 @@ contains
          call par_file%get("ModelParameters.k_min", model_param%k_min, found); call check_field(found, 'ModelParameters.k_min', ParName)
          call par_file%get("ModelParameters.p_radin", model_param%p_radin, found); call check_field(found, 'ModelParameters.p_radin', ParName)
          call par_file%get("ModelParameters.p_windf", model_param%p_windf, found); call check_field(found, 'ModelParameters.p_windf', ParName)
-         call par_file%get("ModelParameters.beta_sol", model_param%beta_sol, found); call check_field(found, 'ModelParameters.beta_sol', ParName)
-         
-         !if (model_cfg%ice_model==1) then
-            call par_file%get("ModelParameters.beta_snowice", model_param%beta_snow_ice, found); call check_field(found, 'ModelParameters.beta_snowice', ParName)     
-            call par_file%get("ModelParameters.albsw", model_param%albsw, found); call check_field(found, 'ModelParameters.albsw', ParName)
-            call par_file%get("ModelParameters.ice_albedo", model_param%ice_albedo, found); call check_field(found, 'ModelParameters.ice_albedo', ParName)
-            call par_file%get("ModelParameters.snow_albedo", model_param%snow_albedo, found); call check_field(found, 'ModelParameters.snow_albedo', ParName)
-            call par_file%get("ModelParameters.freez_temp", model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_temp', ParName)
-         !end if
+         if (model_cfg%ice_model == 1) then    
+           call par_file%get("ModelParameters.p_albedo", model_param%p_albedo, found); call check_field(found, 'ModelParameters.p_albedo', ParName)   
+           call par_file%get("ModelParameters.freez_temp", model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_temp', ParName)
+           call par_file%get("ModelParameters.snow_temp", model_param%snow_temp, found); call check_field(found, 'ModelParameters.snow_temp', ParName)
+         end if
 
          !Simulation Parameter
          call par_file%get("Simulation.Timestep s", sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep s', ParName)
