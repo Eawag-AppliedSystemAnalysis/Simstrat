@@ -135,8 +135,9 @@ module strat_simdata
 
       ! Snow and Ice
       real(RK), allocatable :: snow_h ! Snow layer height [m]
-      real(RK), allocatable :: ice_h ! Ice layer height [m]   
-      real(RK), allocatable :: snowice_h ! Snowice layer height [m]      
+      real(RK), allocatable :: total_ice_h ! Total ice layer height [m]
+      real(RK), allocatable :: black_ice_h ! Black ice layer height [m]   
+      real(RK), allocatable :: white_ice_h ! Snowice layer height [m]      
       real(RK) :: snow_dens ! snow density [kg m-3]   
       real(RK) :: ice_temp ! ice temperature [°C]
       real(RK) :: precip ! precipiation in water eqvivalent hight [m] 
@@ -217,8 +218,9 @@ contains
       allocate (this%Q_vert(state_size + 1))
 
       allocate (this%snow_h) 
-      allocate (this%ice_h)  
-      allocate (this%snowice_h)
+      allocate (this%total_ice_h) 
+      allocate (this%black_ice_h) 
+      allocate (this%white_ice_h)
    
       allocate (this%ha) 
       allocate (this%hw) 
@@ -252,8 +254,9 @@ contains
       this%Q_vert = 0.0_RK
     
       this%snow_h = 0.0_RK
-      this%ice_h = 0.0_RK
-      this%snowice_h = 0.0_RK   
+      this%total_ice_h = 0.0_RK
+      this%black_ice_h = 0.0_RK
+      this%white_ice_h = 0.0_RK   
       this%ice_temp = 0.0_RK 
       this%snow_dens = rho_s_0
       this%precip = 0.0_RK
