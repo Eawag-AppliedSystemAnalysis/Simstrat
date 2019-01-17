@@ -10,6 +10,7 @@ src=../src/
 colors=False
 quiet=False
 target=simstrat.f90
+output=simstrat
 dependon=../lib/csv_fortran/fobos:release-gnu((direct))
          ../lib/json_fortran/fobos:release-gnu((direct))
          ../lib/forbear/fobos:static-gnu((direct))
@@ -24,6 +25,7 @@ src=../src/
 colors=False
 quiet=False
 target=simstrat.f90
+output=simstrat
 dependon=../lib/csv_fortran/fobos:release-gnu((direct))
          ../lib/json_fortran/fobos:release-gnu((direct))
          ../lib/forbear/fobos:static-gnu((direct))
@@ -39,6 +41,7 @@ src=../src/
 colors=False
 quiet=False
 target=simstrat.f90
+output=simstrat
 dependon=../lib/csv_fortran/fobos:release-intel((direct))
          ../lib/json_fortran/fobos:release-intel((direct))
          ../lib/forbear/fobos:static-gnu((direct))

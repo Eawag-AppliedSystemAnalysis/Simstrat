@@ -1,3 +1,3 @@
 #!/bin/bash
-../bin/simstrat TestCase_LakeZurich.par
+../build/simstrat TestCase_LakeZurich.par
 
