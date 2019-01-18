@@ -175,8 +175,8 @@ module strat_simdata
    end type
 
 contains
-   subroutine simulation_data_init(this, state_size)
-      class(SimulationData), intent(inout) :: this
+   subroutine simulation_data_init(self, state_size)
+      class(SimulationData), intent(inout) :: self
       integer, intent(in) :: state_size
       ! init model data structures
       call self%model%init(state_size)
@@ -184,8 +184,8 @@ contains
    end subroutine
 
    ! Allocates all arrays of the model state in the correct size
-   subroutine model_state_init(this, state_size)
-      class(ModelState), intent(inout) :: this
+   subroutine model_state_init(self, state_size)
+      class(ModelState), intent(inout) :: self
       integer, intent(in) :: state_size
 
       ! Values on volume grid
