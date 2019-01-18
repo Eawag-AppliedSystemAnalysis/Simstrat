@@ -137,7 +137,7 @@ contains
 
             if (i==2 .and. self%nval(i)>1) then
                !if (any(self%z_Inp(i,2:self%nval(i))<=self%z_Inp(i,1:(self%nval(i)-1)))) then
-               !   write(6,*) '[ERROR] ','Outflow depths in ',trim(fname(i)),' file must be strictly increasing.'
+               !   write(*,*) '[ERROR] ','Outflow depths in ',trim(fname(i)),' file must be strictly increasing.'
                !   stop
                !end if
             end if
@@ -245,7 +245,7 @@ contains
           if(i==2) Q_inp(i,1:ubnd_vol) = self%Q_start(i,1:ubnd_vol) ! Set to closest available value
           goto 11
 
-9         write(6,*) '[WARNING] ','No data found in ',trim(fname(i)),' file. Check number of depths. Values set to zero.'
+9         write(*,*) '[WARNING] ','No data found in ',trim(fname(i)),' file. Check number of depths. Values set to zero.'
           self%eof(i) = 1
           if(i/=2) Inp(i,1:self%nval(i)) = 0.0_RK
           if(i/=2) self%Inp_read_start(i,1) = 0.0_RK
@@ -496,7 +496,7 @@ contains
             goto 11
 
             ! If no data available
- 9          write(6,*) '[WARNING] ','No data found in ',trim(fname(i)),' file. Check number of depths. Values set to zero.'
+ 9          write(*,*) '[WARNING] ','No data found in ',trim(fname(i)),' file. Check number of depths. Values set to zero.'
             self%eof(i) = 1
             Q_inp(i, 1:ubnd_fce) = 0.0_RK
             self%Q_start(i, 1:ubnd_fce) = 0.0_RK

@@ -58,9 +58,9 @@ program simstrat_main
    type(bar_object):: bar
 
    !print some information
-   write(6, *) 'Simstrat version '//version
-   write(6, *) 'This software has been developed at Eawag - Swiss Federal Institute of Aquatic Science and Technology'
-   write(6, *) ''
+   write(*, *) 'Simstrat version '//version
+   write(*, *) 'This software has been developed at Eawag - Swiss Federal Institute of Aquatic Science and Technology'
+   write(*, *) ''
 
    !get first cli argument
    call get_command_argument(1, arg)
@@ -140,7 +140,7 @@ contains
 
    subroutine run_simulation()
       ! initialize a bar with the progress percentage counter
-      call bar%initialize(filled_char_string='+', &
+      call bar%initialize(filled_char_string='>', &
          prefix_string='Simulation progress |',  &
          suffix_string='| ', add_progress_percent=.true., &
          add_date_time=.true., &
@@ -221,12 +221,12 @@ contains
 
          ! Display to screen
          if (simdata%model%model_step_counter==1 .and. simdata%sim_cfg%disp_simulation/=0) then
-            write(6,*)
-            write(6,*) ' -------------------------- '
-            write(6,*) '   SIMULATION IN PROGRESS   '
-            write(6,*) ' -------------------------- '
-            write(6,*)
-            if(simdata%sim_cfg%disp_simulation/=0) write(6,'(A12, A20, A20, A20)') 'Time [d]','Surface level [m]','T_surf [degC]','T_bottom [degC]'
+            write(*,*)
+            write(*,*) ' -------------------------- '
+            write(*,*) '   SIMULATION IN PROGRESS   '
+            write(*,*) ' -------------------------- '
+            write(*,*)
+            if(simdata%sim_cfg%disp_simulation/=0) write(*,'(A12, A20, A20, A20)') 'Time [d]','Surface level [m]','T_surf [degC]','T_bottom [degC]'
          end if
 
          ! Update Coriolis
@@ -265,12 +265,12 @@ contains
 
          ! Standard display: display when logged: datum, lake surface, T(1), T(surf)
          if (simdata%sim_cfg%disp_simulation==1 .and. simdata%output_cfg%write_to_file) then
-            write(6,'(F12.4,F16.4,F20.4,F20.4)') simdata%model%datum, simdata%grid%lake_level, &
+            write(*,'(F12.4,F16.4,F20.4,F20.4)') simdata%model%datum, simdata%grid%lake_level, &
             simdata%model%T(simdata%grid%nz_occupied), simdata%model%T(1)
 
          ! Extra display: display every iteration: datum, lake surface, T(1), T(surf)
          else if (simdata%sim_cfg%disp_simulation==2) then
-            write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%lake_level, &
+            write(*,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%lake_level, &
             simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
          end if
 
@@ -280,11 +280,11 @@ contains
       end do
 
       if (simdata%sim_cfg%disp_simulation/=0) then
-         write(6,*)
-         write(6,*) ' -------------------------- '
-         write(6,*) '    SIMULATION COMPLETED    '
-         write(6,*) ' -------------------------- '
-         write(6,*)
+         write(*,*)
+         write(*,*) ' -------------------------- '
+         write(*,*) '    SIMULATION COMPLETED    '
+         write(*,*) ' -------------------------- '
+         write(*,*)
       end if
 
    end subroutine

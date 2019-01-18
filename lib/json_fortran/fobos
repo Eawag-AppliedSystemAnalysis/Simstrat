@@ -4,9 +4,9 @@ modes = release-gnu release-intel
 [release-gnu]
 compiler=Gnu
 cflags=-c -O2 -ffree-line-length-none -static-libgcc -static-libgfortran
-mod_dir=./
-obj_dir=./
-build_dir=./build/
+mod_dir=./mod/
+obj_dir=./obj/
+build_dir=./static/
 src=./src/
 colors=False
 quiet=False
@@ -20,9 +20,9 @@ compiler=intel
 cflags=-c -O3
 preproc=-fpp
 modsw=-module=
-mod_dir=./
-obj_dir=./
-build_dir=build
+mod_dir=./mod/
+obj_dir=./obj/
+build_dir=./static/
 src=./src/
 colors=False
 quiet=False

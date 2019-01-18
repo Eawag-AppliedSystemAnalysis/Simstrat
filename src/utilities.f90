@@ -192,20 +192,20 @@ contains
    subroutine ok(message)
       implicit none
       character(len=*), intent(in) :: message
-      write(6, '(a)') '[OK] '//message
+      write(*, '(a)') '[OK] '//message
    end subroutine ok
 
    subroutine error(message)
       implicit none
       character(len=*), intent(in) :: message
-      write(6, *) '[ERROR] '//message
+      write(*, *) '[ERROR] '//message
       stop
    end subroutine error
 
    subroutine warn(message)
       implicit none
       character(len=*), intent(in) :: message
-      write(6, *) '[WARNING] '//message
+      write(*, *) '[WARNING] '//message
    end subroutine warn
 
    pure function find_index_ordered(array, target_value) result(idx)

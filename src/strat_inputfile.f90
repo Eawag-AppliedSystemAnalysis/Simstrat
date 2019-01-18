@@ -352,7 +352,7 @@ contains
             end do
 
 69          if(i==max_length_input_data) then
-               write(6,*) '[WARNING] ','Only first ',max_length_input_data,' values of file read.'
+               write(*,*) '[WARNING] ','Only first ',max_length_input_data,' values of file read.'
             else 
                call ok('Grid file successfully read')
             end if
@@ -406,7 +406,7 @@ contains
          end do
 
 86       if(i==max_length_input_data) then
-            write(6,*) '[WARNING] ','Only first ',max_length_input_data,' values of file read.'
+            write(*,*) '[WARNING] ','Only first ',max_length_input_data,' values of file read.'
          else
             call ok('Morphology file successfully read')
          end if
@@ -651,7 +651,7 @@ contains
          if (num_read < 1) then
             call error('Unable to read initial conditions files (no data found).')
          else if(num_read==max_length_input_data) then
-            write(6,*) '[ERROR] ','Only first ',max_length_input_data,' values of initial data file read.'
+            write(*,*) '[ERROR] ','Only first ',max_length_input_data,' values of initial data file read.'
          end if
 
          close (13)

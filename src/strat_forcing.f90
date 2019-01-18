@@ -76,7 +76,7 @@ contains
          read (20, *, end=9)
          read (20, *, end=9) tb_start, (A_s(i), i=1, nval)
          if (datum < tb_start) then
-            write(6,*) '[WARNING] ','First forcing date after simulation start time. datum=', datum,  'start=', tb_start
+            write(*,*) '[WARNING] ','First forcing date after simulation start time. datum=', datum,  'start=', tb_start
          end if
          read (20, *, end=7) tb_end, (A_e(i), i=1, nval)
 
@@ -209,8 +209,8 @@ contains
                Vap_atm = A_cur(5)
                Cloud = A_cur(6)
                if (Cloud < 0 .or. Cloud > 1) then
-                  write(6,'(A,F12.6)') 'Cloud : ' , Cloud
-                  write(6,'(A,F12.6)') 'Date  : ' , state%datum
+                  write(*,'(A,F12.6)') 'Cloud : ' , Cloud
+                  write(*,'(A,F12.6)') 'Date  : ' , state%datum
                   call error('Cloudiness should always be between 0 and 1.')
                end if
                if (cfg%use_filtered_wind) state%Wf = A_cur(7) !AG 2014

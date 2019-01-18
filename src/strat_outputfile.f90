@@ -168,7 +168,7 @@ contains
         end do
       end if
 
-      if (output_config%thinning_interval>1) write(6,*) 'Interval [days]: ',output_config%thinning_interval*sim_config%timestep/86400.
+      if (output_config%thinning_interval>1) write(*,*) 'Interval [days]: ',output_config%thinning_interval*sim_config%timestep/86400.
       call ok('Output times successfully read')
 
 
