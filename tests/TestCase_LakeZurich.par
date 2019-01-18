@@ -62,16 +62,6 @@
     "hgeo"          : 0.1,
     "k_min"         : 1e-30,
     "p_radin"       : 1.1978,
-<<<<<<< HEAD
-    "p_windf"       : 1,
-    "beta_sol"      : 0.35,
-    "beta_snowice"  : 0.40,  
-    "albsw"         : 0.08,
-    "ice_albedo"    : 0.30,
-    "snow_albedo"   : 0.77,
-    "freez_temp"    : 0.05  
-=======
-    "p_windf"       : 1
->>>>>>> master
+    "p_windf"       : 1r
   }
 }
