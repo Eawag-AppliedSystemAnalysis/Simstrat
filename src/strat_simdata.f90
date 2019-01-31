@@ -248,6 +248,7 @@ contains
       self%cmue1 = 0.0_RK
       self%cmue2 = 0.0_RK
       self%P_Seiche = 0.0_RK
+      self%E_Seiche = 0.0_RK
 
       self%absorb = 0.0_RK
       self%rad = 0.0_RK
