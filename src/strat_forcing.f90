@@ -108,8 +108,6 @@ contains
 
   9   call error('Unable to read forcing file (no data found).')
 
-      stop
-
    end subroutine
 
    !Compute appropriate forcing parameters at given datum
@@ -154,7 +152,6 @@ contains
          if (cfg%forcing_mode == 1) then
             if (cfg%ice_model == 1) then 
               call error('Ice module not compatible with forcing mode 1, use 2, 3 or 5.')
-              stop
             end if
 
             call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%first_timestep)
@@ -214,10 +211,9 @@ contains
                Vap_atm = A_cur(5)
                Cloud = A_cur(6)
                if (Cloud < 0 .or. Cloud > 1) then
-                  call error('Cloudiness should always be between 0 and 1.')
                   write (*,'(A,F12.6)') 'Cloud : ' , Cloud
                   write (*,'(A,F12.6)') 'Date  : ' , state%datum
-                  stop
+                  call error('Cloudiness should always be between 0 and 1.')
                end if
                if (cfg%use_filtered_wind) state%Wf = A_cur(7) !AG 2014
                if (cfg%snow_model == 1 .and. cfg%use_filtered_wind) then
@@ -229,7 +225,6 @@ contains
             else if (cfg%forcing_mode == 4) then ! date,U10,V10,Hnet,Hsol
                if (cfg%ice_model == 1) then
                  call error('Ice module not compatible with forcing mode 4, use 2, 3 or 5.')
-                 stop
                end if
 
                call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%first_timestep)
@@ -266,7 +261,6 @@ contains
                end if
             else
                call error('Wrong forcing type (must be 1, 2, 3, 4 or 5).')
-               stop
             end if
             state%uv10 = sqrt(state%u10**2 + state%v10**2) !AG 2014
 
@@ -365,7 +359,6 @@ contains
                F_ice     = F_glob * exp(-lambda_snow*state%snow_h -lambda_snowice*state%white_ice_h) - F_glob * exp(-lambda_snow*state%snow_h -lambda_snowice*state%white_ice_h -lambda_ice*state%black_ice_h)            
                if (F_snow < 0 .or. F_snowice < 0 .or. F_ice < 0 .or. state%heat < 0 .or. state%rad0 < 0) then
                  call error('Negative heat flux not alowed for melting')
-                 stop
                end if
 
                !Light + other heat fluxes into top layer

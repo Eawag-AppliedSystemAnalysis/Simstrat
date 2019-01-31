@@ -54,9 +54,9 @@ program simstrat_main
    character(len=:), allocatable :: ParName
 
    !print some information
-   write (*, *) 'Simstrat version '//version
-   write (*, *) 'This software has been developed at eawag - Swiss Federal Institute of Aquatic Science and Technology'
-   write (*, *) ''
+   write (6, *) 'Simstrat version '//version
+   write (6, *) 'This software has been developed at eawag - Swiss Federal Institute of Aquatic Science and Technology'
+   write (6, *) ''
 
    !get first cli argument
    call get_command_argument(1, arg)
@@ -194,7 +194,7 @@ contains
                ! Don't log
                simdata%output_cfg%write_to_file = .false.
             end if
-         end if 
+         end if
 
          ! Advance to the next timestep
          simdata%model%datum = simdata%model%datum + simdata%model%dt/86400
