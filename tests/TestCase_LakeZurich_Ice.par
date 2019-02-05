@@ -18,7 +18,7 @@
   },
   "ModelConfig" : {
     "MaxLengthInputData"      : 1000,
-    "CoupleAED2"              : false,
+    "CoupleAED2"              : true,
     "TurbulenceModel"         : 1,
     "StabilityFunction"       : 2,
     "FluxCondition"           : 1,
@@ -31,11 +31,25 @@
     "IceModel"                : 1,
     "SnowModel"               : 1	
   },
+  "AED2Config" : {
+    "AED2ConfigFile"          : "aed2.nml",
+    "PathAED2initial"         : "AED2_initcond/",
+    "PathAED2inflow"          : "AED2_inflow/",
+    "PathAED2output"          : "AED2_output/",
+    "SplitFactor"             : 1,
+    "ParticleMobility"        : 0,
+    "BioshadeFeedback"        : 0,
+    "BackgroundExtinction"    : 0.2,
+    "RepairState"             : 1,
+    "BenthicMode"             : 0,
+    "NZones"                  : 1,
+    "ZoneHeights"             : [1,2,3]
+  },
   "Simulation" : {
     "Timestep s"        : 300,
     "Start d"           : 35001,
     "End d"             : 35732,
-    "DisplaySimulation" : 0
+    "DisplaySimulation" : 1
   },
   "ModelParameters" : {
     "lat"           : 47.3,
