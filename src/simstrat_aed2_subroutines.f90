@@ -9,10 +9,9 @@ subroutine allocate_memory(self)
 
    ! Local variables
    integer status
-write(6,*) 'hans', self%n_aed2_vars
    allocate(self%column(self%n_aed2_vars),stat=status)
    allocate(self%column_sed(self%n_aed2_vars),stat=status)
-write(6,*) 'hans'
+
    ! names = grab the names from info
    allocate(self%names(self%n_vars),stat=status)
    if (status /= 0) stop 'allocate_memory(): Error allocating (names)'
