@@ -23,6 +23,7 @@ program simstrat_main
    use strat_absorption
    use strat_advection
    use strat_lateral
+   use forbear
    use, intrinsic :: ieee_arithmetic
 
    implicit none
@@ -53,10 +54,14 @@ program simstrat_main
    character(len=100) :: arg
    character(len=:), allocatable :: ParName
 
+   ! Instantiate progress bar object
+   type(bar_object):: bar
+
    !print some information
    write(*, *) 'Simstrat version '//version
    write(*, *) 'This software has been developed at Eawag - Swiss Federal Institute of Aquatic Science and Technology'
    write(*, *) ''
+
 
    !get first cli argument
    call get_command_argument(1, arg)
@@ -135,7 +140,6 @@ program simstrat_main
 contains
 
    subroutine run_simulation()
-<<<<<<< HEAD
       ! initialize a bar with the progress percentage counter
       call bar%initialize(filled_char_string='>', &
          prefix_string='Simulation progress |',  &
@@ -146,8 +150,6 @@ contains
       ! start the progress bar
       call bar%start
 
-=======
->>>>>>> master
       !! run the marching time loop
 
       !call logger%log(0.0_RK) ! Write initial conditions
@@ -207,7 +209,7 @@ contains
                ! Don't log
                simdata%output_cfg%write_to_file = .false.
             end if
-         end if 
+         end if
 
          ! Advance to the next timestep
          simdata%model%datum = simdata%model%datum + simdata%model%dt/86400
@@ -294,6 +296,10 @@ contains
 
          ! This logical is used to do some allocation in the forcing, absorption and lateral subroutines during the first timestep
          simdata%model%first_timestep = .false.
+
+         !update the progress bar
+         call bar%update(current=(simdata%model%datum-simdata%sim_cfg%start_datum))
+
       end do
 
       if (simdata%sim_cfg%disp_simulation/=0) then

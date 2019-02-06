@@ -1,0 +1,1 @@
+..\build\simstrat.exe TestCase_LakeZurich_Ice.par
