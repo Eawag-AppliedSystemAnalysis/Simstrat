@@ -23,7 +23,6 @@ program simstrat_main
    use strat_absorption
    use strat_advection
    use strat_lateral
-   use forbear
    use, intrinsic :: ieee_arithmetic
 
    implicit none
@@ -53,9 +52,6 @@ program simstrat_main
 
    character(len=100) :: arg
    character(len=:), allocatable :: ParName
-
-   ! Instantiate progress bar object
-   type(bar_object):: bar
 
    !print some information
    write(*, *) 'Simstrat version '//version
@@ -139,6 +135,7 @@ program simstrat_main
 contains
 
    subroutine run_simulation()
+<<<<<<< HEAD
       ! initialize a bar with the progress percentage counter
       call bar%initialize(filled_char_string='>', &
          prefix_string='Simulation progress |',  &
@@ -149,12 +146,14 @@ contains
       ! start the progress bar
       call bar%start
 
+=======
+>>>>>>> master
       !! run the marching time loop
 
       !call logger%log(0.0_RK) ! Write initial conditions
 
       ! Run simulation until end datum or until no more results are required by the output time file
-      do while (simdata%model%datum<simdata%sim_cfg%end_datum) ! .and. simdata%model%output_counter<=size(simdata%output_cfg%tout))
+      do while (simdata%model%datum<simdata%sim_cfg%end_datum .and. simdata%model%output_counter<=size(simdata%output_cfg%tout))
 
          ! ****************************************
          ! ***** Update counters and timestep *****
@@ -166,7 +165,26 @@ contains
          ! If output times are specified in file
          if(simdata%output_cfg%thinning_interval==0) then
             ! At the first iteration or always after the model output was logged
-            if (simdata%model%model_step_counter==1 .or. simdata%output_cfg%write_to_file) then
+            if (simdata%model%model_step_counter==1) then
+               ! Adjust timestep so that the next output time is on the "time grid"
+               simdata%model%dt = simdata%output_cfg%adjusted_timestep(simdata%model%output_counter)
+               ! Don't log anymore until the next output time is reached
+               simdata%output_cfg%write_to_file = .false.
+               ! Log initial state if first output time corresponds to simulation start
+               if (simdata%model%dt < 1e-6) then
+                  ! Log initial conditions and display
+                  call logger%log(simdata%model%datum)
+                  if (simdata%sim_cfg%disp_simulation > 0) then
+                     write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%lake_level, &
+                     simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
+                  end if
+                  ! Update counters and timestep
+                  simdata%model%model_step_counter = simdata%model%model_step_counter + 1
+                  simdata%model%output_counter = simdata%model%output_counter + 1
+                  simdata%model%dt = simdata%output_cfg%adjusted_timestep(simdata%model%output_counter)
+               end if
+
+            else if (simdata%output_cfg%write_to_file) then
                ! Adjust timestep so that the next output time is on the "time grid"
                simdata%model%dt = simdata%output_cfg%adjusted_timestep(simdata%model%output_counter)
                ! Don't log anymore until the next output time is reached
@@ -189,7 +207,7 @@ contains
                ! Don't log
                simdata%output_cfg%write_to_file = .false.
             end if
-         end if
+         end if 
 
          ! Advance to the next timestep
          simdata%model%datum = simdata%model%datum + simdata%model%dt/86400
@@ -274,9 +292,8 @@ contains
             simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
          end if
 
-         !update the progress bar
-         call bar%update(current=(simdata%model%datum-simdata%sim_cfg%start_datum))
-
+         ! This logical is used to do some allocation in the forcing, absorption and lateral subroutines during the first timestep
+         simdata%model%first_timestep = .false.
       end do
 
       if (simdata%sim_cfg%disp_simulation/=0) then
@@ -286,7 +303,6 @@ contains
          write(*,*) ' -------------------------- '
          write(*,*)
       end if
-
    end subroutine
 
 end program simstrat_main

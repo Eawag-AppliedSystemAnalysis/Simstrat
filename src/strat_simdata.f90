@@ -100,6 +100,7 @@ module strat_simdata
       ! Iteration variables
       integer :: i, j, output_counter, model_step_counter
       real(RK) :: datum, dt
+      logical :: first_timestep = .true.
 
       ! Variables located on z_cent grid
       ! Note that for these variables the value at 0 z.b. U(0) is not used
@@ -134,8 +135,9 @@ module strat_simdata
 
       ! Snow and Ice
       real(RK), allocatable :: snow_h ! Snow layer height [m]
-      real(RK), allocatable :: ice_h ! Ice layer height [m]   
-      real(RK), allocatable :: snowice_h ! Snowice layer height [m]      
+      real(RK), allocatable :: total_ice_h ! Total ice layer height [m]
+      real(RK), allocatable :: black_ice_h ! Black ice layer height [m]   
+      real(RK), allocatable :: white_ice_h ! Snowice layer height [m]      
       real(RK) :: snow_dens ! snow density [kg m-3]   
       real(RK) :: ice_temp ! ice temperature [°C]
       real(RK) :: precip ! precipiation in water eqvivalent hight [m] 
@@ -177,7 +179,7 @@ contains
       class(SimulationData), intent(inout) :: this
       integer, intent(in) :: state_size
       ! init model data structures
-      call this%model%init(state_size)
+      call self%model%init(state_size)
 
    end subroutine
 
@@ -189,79 +191,81 @@ contains
       ! Values on volume grid
       ! Important: Size is smaller than vars on upper grid.
       !            https://en.wikipedia.org/wiki/Off-by-one_error#Fencepost_error ;-)
-      allocate (this%U(state_size))
-      allocate (this%V(state_size))
-      allocate (this%T(state_size))
-      allocate (this%S(state_size))
-      allocate (this%dS(state_size))
-      allocate (this%Q_inp(1:4, state_size + 1))
-      allocate (this%rho(state_size))
-      allocate (this%avh(state_size))
+      allocate (self%U(state_size))
+      allocate (self%V(state_size))
+      allocate (self%T(state_size))
+      allocate (self%S(state_size))
+      allocate (self%dS(state_size))
+      allocate (self%Q_inp(1:4, state_size + 1))
+      allocate (self%rho(state_size))
+      allocate (self%avh(state_size))
 
       ! Values on z_upp grid
-      allocate (this%k(state_size + 1))
-      allocate (this%ko(state_size + 1))
-      allocate (this%eps(state_size + 1))
-      allocate (this%num(state_size + 1))
-      allocate (this%nuh(state_size + 1))
-      allocate (this%P(state_size + 1))
-      allocate (this%B(state_size + 1))
-      allocate (this%NN(state_size + 1))
-      allocate (this%cmue1(state_size + 1))
-      allocate (this%cmue2(state_size + 1))
-      allocate (this%P_Seiche(state_size + 1))
+      allocate (self%k(state_size + 1))
+      allocate (self%ko(state_size + 1))
+      allocate (self%eps(state_size + 1))
+      allocate (self%num(state_size + 1))
+      allocate (self%nuh(state_size + 1))
+      allocate (self%P(state_size + 1))
+      allocate (self%B(state_size + 1))
+      allocate (self%NN(state_size + 1))
+      allocate (self%cmue1(state_size + 1))
+      allocate (self%cmue2(state_size + 1))
+      allocate (self%P_Seiche(state_size + 1))
 
-      allocate (this%absorb(state_size + 1))
-      allocate (this%rad(state_size + 1))
-      allocate (this%Q_vert(state_size + 1))
+      allocate (self%absorb(state_size + 1))
+      allocate (self%rad(state_size + 1))
+      allocate (self%Q_vert(state_size + 1))
 
-      allocate (this%snow_h) 
-      allocate (this%ice_h)  
-      allocate (this%snowice_h)
+      allocate (self%snow_h) 
+      allocate (self%total_ice_h) 
+      allocate (self%black_ice_h) 
+      allocate (self%white_ice_h)
    
-      allocate (this%ha) 
-      allocate (this%hw) 
-      allocate (this%hk) 
-      allocate (this%hv) 
-      allocate (this%rad0) 
+      allocate (self%ha) 
+      allocate (self%hw) 
+      allocate (self%hk) 
+      allocate (self%hv) 
+      allocate (self%rad0) 
    
       ! init to zero
-      this%U = 0.0_RK
-      this%V = 0.0_RK
-      this%T = 0.0_RK
-      this%S = 0.0_RK
-      this%dS = 0.0_RK
-      this%Q_inp = 0.0_RK
-      this%rho = 0.0_RK
+      self%U = 0.0_RK
+      self%V = 0.0_RK
+      self%T = 0.0_RK
+      self%S = 0.0_RK
+      self%dS = 0.0_RK
+      self%Q_inp = 0.0_RK
+      self%rho = 0.0_RK
 
-      this%k = 0.0_RK
-      this%ko = 0.0_RK
-      this%eps = 0.0_RK
-      this%num = 0.0_RK
-      this%nuh = 0.0_RK
-      this%P = 0.0_RK
-      this%B = 0.0_RK
-      this%NN = 0.0_RK
-      this%cmue1 = 0.0_RK
-      this%cmue2 = 0.0_RK
-      this%P_Seiche = 0.0_RK
+      self%k = 0.0_RK
+      self%ko = 0.0_RK
+      self%eps = 0.0_RK
+      self%num = 0.0_RK
+      self%nuh = 0.0_RK
+      self%P = 0.0_RK
+      self%B = 0.0_RK
+      self%NN = 0.0_RK
+      self%cmue1 = 0.0_RK
+      self%cmue2 = 0.0_RK
+      self%P_Seiche = 0.0_RK
 
-      this%absorb = 0.0_RK
-      this%rad = 0.0_RK
-      this%Q_vert = 0.0_RK
+      self%absorb = 0.0_RK
+      self%rad = 0.0_RK
+      self%Q_vert = 0.0_RK
     
-      this%snow_h = 0.0_RK
-      this%ice_h = 0.0_RK
-      this%snowice_h = 0.0_RK   
-      this%ice_temp = 0.0_RK 
-      this%snow_dens = rho_s_0
-      this%precip = 0.0_RK
+      self%snow_h = 0.0_RK
+      self%total_ice_h = 0.0_RK
+      self%black_ice_h = 0.0_RK
+      self%white_ice_h = 0.0_RK   
+      self%ice_temp = 0.0_RK 
+      self%snow_dens = rho_s_0
+      self%precip = 0.0_RK
 
-      this%ha = 0.0_RK
-      this%hw = 0.0_RK
-      this%hk = 0.0_RK 
-      this%hv = 0.0_RK 
-      this%rad0 = 0.0_RK   
+      self%ha = 0.0_RK
+      self%hw = 0.0_RK
+      self%hk = 0.0_RK 
+      self%hv = 0.0_RK 
+      self%rad0 = 0.0_RK   
    
    end subroutine
 

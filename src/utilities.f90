@@ -11,10 +11,6 @@ module utilities
       character(len=:), allocatable :: str
    end type
 
-   interface toStr
-      module procedure str_int, str_real
-   end interface
-
 contains
 
    !> Interpolation of yi on grid zi (based on the given y on grid z)
@@ -181,10 +177,14 @@ contains
       logical :: file_exists
       if (fname == '') then
          call error('Filename is empty')
+         !write(*,*) 'Filename is empty'
+         stop
       else
          inquire (file=fname, exist=file_exists)
          if (.not. file_exists) then
             call error('File '//fname//' does not exist')
+            !write(*,*) 'File '//fname//' does not exist'
+            stop
          end if
       end if
    end subroutine check_file_exists
@@ -192,7 +192,7 @@ contains
    subroutine ok(message)
       implicit none
       character(len=*), intent(in) :: message
-      write(*, '(a)') '[OK] '//message
+      write(*, *) '[OK] '//message
    end subroutine ok
 
    subroutine error(message)
@@ -262,21 +262,5 @@ contains
       end do
 
    end subroutine
-
-   character(len=20) function str_int(k)
-      implicit none
-      ! "Convert an integer to string."
-      integer, intent(in) :: k
-      write (str_int, '(a)') k
-      str_int = adjustl(str_int)
-   end function str_int
-
-   character(len=20) function str_real(k)
-      implicit none
-      ! "Convert an integer to string."
-      real(RK), intent(in) :: k
-      write (str_real, '(a)') k
-      str_real = adjustl(str_real)
-   end function str_real
 
 end module utilities

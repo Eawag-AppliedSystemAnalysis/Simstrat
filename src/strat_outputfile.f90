@@ -125,6 +125,7 @@ contains
          ! If Simulation start larger than output times, abort.
         if (sim_config%start_datum > output_config%tout(1)) then
             call error('Simulation start time is larger than first output time.')
+            stop
         end if
 
         ! Allocate arrays for number of timesteps between output times and adjusted timestep
@@ -136,7 +137,11 @@ contains
         ! If number of timesteps = 0
         if (int(output_config%n_timesteps_between_tout(1)) == 0) then
             output_config%adjusted_timestep(1) = (output_config%tout(1) - sim_config%start_datum)*86400
-            tout_test(1) = sim_config%start_datum + output_config%adjusted_timestep(1)
+            tout_test(1) = sim_config%start_datum + output_config%adjusted_timestep(1)/86400
+
+            ! Set to 1, as the adjusted timestep has to be used once, otherwise the model does not advance
+            output_config%n_timesteps_between_tout(1) = 1
+            call warn('First output time is equal to simulation start time')
         else
             ! If number of timesteps > 0
             output_config%adjusted_timestep(1) = ((output_config%tout(1) - sim_config%start_datum)*86400)/int(output_config%n_timesteps_between_tout(1))
@@ -154,8 +159,11 @@ contains
             ! If number of timesteps = 0
             if (int(output_config%n_timesteps_between_tout(i))==0) then
                 output_config%adjusted_timestep(i) = (output_config%tout(i) - tout_test(i-1))*86400
-                tout_test(i) = tout_test(i-1) + output_config%adjusted_timestep(i)
-                call warn('Time interval for output is smaller than dt for iteration')
+                tout_test(i) = tout_test(i-1) + output_config%adjusted_timestep(i)/86400
+
+                ! Set to 1, as the adjusted timestep has to be used once, otherwise the model does not advance
+                output_config%n_timesteps_between_tout(i) = 1
+                call warn('At least one time interval for the model output is smaller than the simulation timestep')
             else
                 ! If number of timesteps > 0
                 output_config%adjusted_timestep(i) = ((output_config%tout(i) - tout_test(i-1))*86400)/int(output_config%n_timesteps_between_tout(i))

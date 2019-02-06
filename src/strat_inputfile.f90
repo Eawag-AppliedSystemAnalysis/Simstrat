@@ -23,7 +23,7 @@ module strat_inputfile
    type, public :: SimstratSimulationFactory
       private
       class(SimulationData), pointer :: simdata
-   
+
    contains
       procedure, pass(self), public :: initialize_model
       procedure, pass(self), public :: read_json_par_file
@@ -50,7 +50,7 @@ contains
 
       !Parse inputfile
       call self%read_json_par_file(fname)
-  
+
       !Set up grid
       call self%read_grid_config
 
@@ -91,8 +91,9 @@ contains
 
             call f%read (output_cfg%zoutName, header_row=1, status_ok=status_ok)
             if (.not. status_ok) then
-               call f%destroy()
                call error('Unable to read output depths: '//output_cfg%zoutName)
+               call f%destroy()
+               stop
             end if
             ! Values are read into array zout_read instead of zout to keep zout for the final output depths. For example,
             ! zout_read will contain only one value here if the output frequency is given, but zout will contain the output
@@ -114,6 +115,7 @@ contains
                   if (i>1) then
                      if (output_cfg%zout_read(i) < output_cfg%zout_read(i-1)) then
                         call error('Output depths are not monotonous. Maybe you chose the wrong output depth reference?')
+                        stop
                      end if
                   end if
                end do 
@@ -127,8 +129,9 @@ contains
 
             call f%read (output_cfg%toutName, header_row=1, status_ok=status_ok)
             if (.not. status_ok) then
-               call f%destroy()
                call error('Unable to read output depths: '//output_cfg%toutName)
+               call f%destroy()
+               stop
             end if
             call f%get(1, output_cfg%tout, status_ok)
             call f%destroy()
@@ -143,118 +146,146 @@ contains
          end if
 
          ! Define variables that should be written
-         allocate (self%simdata%output_cfg%output_vars(22))
+         allocate (self%simdata%output_cfg%output_vars(23))
 
+         ! Horizontal velocity in y direction [m s-1]
          self%simdata%output_cfg%output_vars(1)%name = "V"
          self%simdata%output_cfg%output_vars(1)%values => self%simdata%model%V
          self%simdata%output_cfg%output_vars(1)%volume_grid = .true.
          self%simdata%output_cfg%output_vars(1)%face_grid = .false.
 
+         ! Horizontal velocity in x direction [m s-1]
          self%simdata%output_cfg%output_vars(2)%name = "U"
          self%simdata%output_cfg%output_vars(2)%values => self%simdata%model%U
          self%simdata%output_cfg%output_vars(2)%volume_grid = .true.
          self%simdata%output_cfg%output_vars(2)%face_grid = .false.
 
+         ! Temperature [°C]
          self%simdata%output_cfg%output_vars(3)%name = "T"
          self%simdata%output_cfg%output_vars(3)%values => self%simdata%model%T
          self%simdata%output_cfg%output_vars(3)%volume_grid = .true.
          self%simdata%output_cfg%output_vars(3)%face_grid = .false.
 
+         ! Salinity [‰]
          self%simdata%output_cfg%output_vars(4)%name = "S"
          self%simdata%output_cfg%output_vars(4)%values => self%simdata%model%S
          self%simdata%output_cfg%output_vars(4)%volume_grid = .true.
          self%simdata%output_cfg%output_vars(4)%face_grid = .false.
 
-         self%simdata%output_cfg%output_vars(5)%name = "P"
-         self%simdata%output_cfg%output_vars(5)%values => self%simdata%model%P
+         ! Turbulent diffusivity for momentum  (viscosity) [m2 s]
+         self%simdata%output_cfg%output_vars(5)%name = "num"
+         self%simdata%output_cfg%output_vars(5)%values => self%simdata%model%num
          self%simdata%output_cfg%output_vars(5)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(5)%face_grid = .true.
 
-         self%simdata%output_cfg%output_vars(6)%name = "num"
-         self%simdata%output_cfg%output_vars(6)%values => self%simdata%model%num
+         ! Turbulent diffusivity for temperature [m2 s]
+         self%simdata%output_cfg%output_vars(6)%name = "nuh"
+         self%simdata%output_cfg%output_vars(6)%values => self%simdata%model%nuh
          self%simdata%output_cfg%output_vars(6)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(6)%face_grid = .true.
 
-         self%simdata%output_cfg%output_vars(7)%name = "nuh"
-         self%simdata%output_cfg%output_vars(7)%values => self%simdata%model%nuh
+         ! Brunt-Väisälä frequency [s-1]
+         self%simdata%output_cfg%output_vars(7)%name = "NN"
+         self%simdata%output_cfg%output_vars(7)%values => self%simdata%model%NN
          self%simdata%output_cfg%output_vars(7)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(7)%face_grid = .true.
 
-         self%simdata%output_cfg%output_vars(8)%name = "NN"
-         self%simdata%output_cfg%output_vars(8)%values => self%simdata%model%NN
+         ! Turbulent kinetic energy (TKE) [J kg-1]
+         self%simdata%output_cfg%output_vars(8)%name = "k"
+         self%simdata%output_cfg%output_vars(8)%values => self%simdata%model%k
          self%simdata%output_cfg%output_vars(8)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(8)%face_grid = .true.
 
-         self%simdata%output_cfg%output_vars(9)%name = "k"
-         self%simdata%output_cfg%output_vars(9)%values => self%simdata%model%k
+         ! TKE dissipation rate [W kg-1]
+         self%simdata%output_cfg%output_vars(9)%name = "eps"
+         self%simdata%output_cfg%output_vars(9)%values => self%simdata%model%eps
          self%simdata%output_cfg%output_vars(9)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(9)%face_grid = .true.
 
-         self%simdata%output_cfg%output_vars(10)%name = "eps"
-         self%simdata%output_cfg%output_vars(10)%values => self%simdata%model%eps
+         ! Shear stress production P [W kg-1]
+         self%simdata%output_cfg%output_vars(10)%name = "P"
+         self%simdata%output_cfg%output_vars(10)%values => self%simdata%model%P
          self%simdata%output_cfg%output_vars(10)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(10)%face_grid = .true.
 
+         ! Buoyancy production [W kg-1]
          self%simdata%output_cfg%output_vars(11)%name = "B"
          self%simdata%output_cfg%output_vars(11)%values => self%simdata%model%B
          self%simdata%output_cfg%output_vars(11)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(11)%face_grid = .true.
 
+         ! Production of TKE due to internal seiching [W kg-1]
          self%simdata%output_cfg%output_vars(12)%name = "Ps"
          self%simdata%output_cfg%output_vars(12)%values => self%simdata%model%P_seiche
          self%simdata%output_cfg%output_vars(12)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(12)%face_grid = .true.
-   
+
+         ! Infrared radiation from sky [W m-2]
          self%simdata%output_cfg%output_vars(13)%name = "HA"
          self%simdata%output_cfg%output_vars(13)%values_surf => self%simdata%model%ha
          self%simdata%output_cfg%output_vars(13)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(13)%face_grid = .false.
-   
+
+         ! Infrared ratidation from water [W m-2]
          self%simdata%output_cfg%output_vars(14)%name = "HW"
          self%simdata%output_cfg%output_vars(14)%values_surf => self%simdata%model%hw
          self%simdata%output_cfg%output_vars(14)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(14)%face_grid = .false.
-   
+
+         ! Sensible heat flux from water [W m-2]
          self%simdata%output_cfg%output_vars(15)%name = "HK"
          self%simdata%output_cfg%output_vars(15)%values_surf => self%simdata%model%hk
          self%simdata%output_cfg%output_vars(15)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(15)%face_grid = .false.
-   
+
+         ! Latent heat flux from water [W m-2]
          self%simdata%output_cfg%output_vars(16)%name = "HV"
          self%simdata%output_cfg%output_vars(16)%values_surf => self%simdata%model%hv
          self%simdata%output_cfg%output_vars(16)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(16)%face_grid = .false.
-   
+
+         ! Solar radiation at surface [W m-2]
          self%simdata%output_cfg%output_vars(17)%name = "Rad0"
          self%simdata%output_cfg%output_vars(17)%values_surf => self%simdata%model%rad0
          self%simdata%output_cfg%output_vars(17)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(17)%face_grid = .false.
 
-         self%simdata%output_cfg%output_vars(18)%name = "IceH"
-         self%simdata%output_cfg%output_vars(18)%values_surf => self%simdata%model%ice_h
+         ! Total ice thickness [m]
+         self%simdata%output_cfg%output_vars(18)%name = "TotalIceH"
+         self%simdata%output_cfg%output_vars(18)%values_surf => self%simdata%model%total_ice_h
          self%simdata%output_cfg%output_vars(18)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(18)%face_grid = .false.
 
-         self%simdata%output_cfg%output_vars(19)%name = "SnowH"
-         self%simdata%output_cfg%output_vars(19)%values_surf => self%simdata%model%snow_h
+         ! Black ice thickness [m]
+         self%simdata%output_cfg%output_vars(19)%name = "BlackIceH"
+         self%simdata%output_cfg%output_vars(19)%values_surf => self%simdata%model%black_ice_h
          self%simdata%output_cfg%output_vars(19)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(19)%face_grid = .false.  
+         self%simdata%output_cfg%output_vars(19)%face_grid = .false.
 
-         self%simdata%output_cfg%output_vars(20)%name = "WaterH"
-         self%simdata%output_cfg%output_vars(20)%values_surf => self%simdata%grid%lake_level
+         ! White ice (snow ice) thickness [m]
+         self%simdata%output_cfg%output_vars(20)%name = "WhiteIceH"
+         self%simdata%output_cfg%output_vars(20)%values_surf => self%simdata%model%white_ice_h
          self%simdata%output_cfg%output_vars(20)%volume_grid = .false.
          self%simdata%output_cfg%output_vars(20)%face_grid = .false.  
 
-         self%simdata%output_cfg%output_vars(21)%name = "Qvert"
-         self%simdata%output_cfg%output_vars(21)%values => self%simdata%model%Q_vert
+         ! Snow layer thickness [m]
+         self%simdata%output_cfg%output_vars(21)%name = "SnowH"
+         self%simdata%output_cfg%output_vars(21)%values_surf => self%simdata%model%snow_h
          self%simdata%output_cfg%output_vars(21)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(21)%face_grid = .true.  
-   
-         self%simdata%output_cfg%output_vars(22)%name = "SnowIceH"
-         self%simdata%output_cfg%output_vars(22)%values_surf => self%simdata%model%snowice_h
+         self%simdata%output_cfg%output_vars(21)%face_grid = .false.  
+
+         ! Water level [m]
+         self%simdata%output_cfg%output_vars(22)%name = "WaterH"
+         self%simdata%output_cfg%output_vars(22)%values_surf => self%simdata%grid%lake_level
          self%simdata%output_cfg%output_vars(22)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(22)%face_grid = .false.   
- 
+         self%simdata%output_cfg%output_vars(22)%face_grid = .false.  
+
+         ! Vertical advection [m3 s-1]
+         self%simdata%output_cfg%output_vars(23)%name = "Qvert"
+         self%simdata%output_cfg%output_vars(23)%values => self%simdata%model%Q_vert
+         self%simdata%output_cfg%output_vars(23)%volume_grid = .false.
+         self%simdata%output_cfg%output_vars(23)%face_grid = .true.   
+
       end associate
    end subroutine
 
@@ -353,7 +384,7 @@ contains
 
 69          if(i==max_length_input_data) then
                write(*,*) '[WARNING] ','Only first ',max_length_input_data,' values of file read.'
-            else 
+            else
                call ok('Grid file successfully read')
             end if
             close (12)
@@ -394,11 +425,13 @@ contains
             if (i==1) then
                if(z_tmp(i)<0) then
                   call error('The uppermost depth in the morphology file is negative, it should be at least 0!')
+                  stop
                end if
             else
-            ! Check that depth and area are monotonous              
+            ! Check that depth and area are monotonous
                if (z_tmp(i)>z_tmp(i-1)) then
                   call error('The depths of the morphology input file are not decreasing monotonously.')
+                  stop
                else if(A_tmp(i)>A_tmp(i-1)) then
                   call warn('The lake area increases with depth somewhere. Do you really want this?')
                end if
@@ -463,6 +496,7 @@ contains
          call par_file%load_file(filename=ParName)
          if (par_file%failed()) then
             call error('Could not read inputfile '//ParName)
+            stop
          end if
 
          !Names of Inputfile
@@ -470,7 +504,7 @@ contains
          call par_file%get('Input.Initial conditions', InitName, found); input_cfg%InitName = InitName; call check_field(found, 'Input.Initial conditions', ParName)
          call par_file%get('Input.Forcing', ForcingName, found); input_cfg%ForcingName = ForcingName; call check_field(found, 'Input.Forcing', ParName)
          call par_file%get('Input.Absorption', AbsorpName, found); input_cfg%AbsorpName = AbsorpName; call check_field(found, 'Input.Absorption', ParName)
-         
+
          ! Grid information can also be included in par-file
          ! Check type of json entry
          call par_file%info('Input.Grid',found,input_cfg%grid_input_type,n_children_dummy)
@@ -508,6 +542,7 @@ contains
          call par_file%get("Output.OutputDepthReference", output_cfg%output_depth_reference, found); call check_field(found, 'Output.OutputDepthReference', ParName)
          if (.not.(output_cfg%output_depth_reference == 'surface' .or. output_cfg%output_depth_reference == 'bottom')) then
             call error('Invalid field "Output.OutputDepthReference" in par-file.')
+            stop
          end if
 
          ! Output depths
@@ -527,6 +562,7 @@ contains
 
          else
             call error('Invalid field "Output.Depths" in par-file.')
+            stop
          end if
 
          ! Output times
@@ -538,17 +574,18 @@ contains
          else if (output_cfg%output_time_type == 3) then ! Output depths are given
             call par_file%get('Output.Times', output_cfg%tout, found); call check_field(found, 'Output.Times', ParName)
             output_cfg%thinning_interval = 0
-         
+
          else if (output_cfg%output_time_type == 5 .or. output_cfg%output_time_type == 6) then ! Output interval is given
             call par_file%get('Output.Times', output_cfg%thinning_interval_read, found); call check_field(found, 'Output.Times', ParName)
             output_cfg%thinning_interval = int(output_cfg%thinning_interval_read)
-            
+
             ! This code is needed for line 141 in simstrat.f90. Not very elegant.. might change in the future.
             allocate(output_cfg%tout(1))
             output_cfg%tout(1) = output_cfg%thinning_interval
 
          else
             call error('Invalid field "Output.Times" in par-file.')
+            stop
          end if
 
          !Model configuration
@@ -581,15 +618,17 @@ contains
          call par_file%get("ModelParameters.a_seiche", model_param%a_seiche, found); call check_field(found, 'ModelParameters.a_seiche', ParName)
          call par_file%get("ModelParameters.q_nn", model_param%q_NN, found); call check_field(found, 'ModelParameters.q_nn', ParName)
          call par_file%get("ModelParameters.f_wind", model_param%f_wind, found); call check_field(found, 'ModelParameters.f_wind', ParName)
-         
+
          ! C10 is a physical parameter on the order of e-3 if wind drag model is 1. Conversely, it is a calibration parameter
          ! with a value around 1 for wind drag models 2 and 3. This fact can lead to confusion and thus we check for realistic
          ! input values depending on the wind drag model chosen.
          call par_file%get("ModelParameters.c10", model_param%C10_constant, found); call check_field(found, 'ModelParameters.c10', ParName)
          if (model_cfg%wind_drag_model == 1 .and. model_param%C10_constant > 0.1) then
             call error('The input value of C10 is too high to be physically possible. Choose a lower value or change the wind drag model to 2 or 3 if you meant to use C10 as a calibration parameter.')
+            stop
          else if (model_cfg%wind_drag_model > 1 .and. model_param%C10_constant < 0.1) then
             call error('The input value of C10 is too low to serve as calibration parameter. Maybe you intended it as physical parameter but then you need to use wind drag model = 1.')
+            stop
          end if
 
          call par_file%get("ModelParameters.cd", model_param%CD, found); call check_field(found, 'ModelParameters.cd', ParName)
@@ -645,11 +684,13 @@ contains
             read (13, *, end=99) z_read(i), U_read(i), V_read(i), T_read(i), S_read(i), k_read(i), eps_read(i)
             if (z_read(i)>0) then
                call error('One or several input depths of initial conditions are positive.')
+               stop
             end if
          end do
 99       num_read = i-1                               ! Number of valuInitNamees
          if (num_read < 1) then
             call error('Unable to read initial conditions files (no data found).')
+            stop
          else if(num_read==max_length_input_data) then
             write(*,*) '[ERROR] ','Only first ',max_length_input_data,' values of initial data file read.'
          end if
@@ -710,6 +751,7 @@ contains
 
       if (.not. found) then
          call error('Field '//field_name//' not found in '//file_name)
+         stop
       end if
    end subroutine check_field
 

@@ -290,7 +290,7 @@ The current state (Spring 17) of the code should give a solid foundation for fur
 \end{itemize}
 
 
-\section{Discretisation Scheme and Numerical Approach}
+\section{Discretization Scheme and Numerical Approach}
 \subsection{System of Governing Equations}
 The governing equations are described in Goudsmit et al. 2000
 \begin{align}
@@ -302,6 +302,7 @@ The governing equations are described in Goudsmit et al. 2000
 	\frac{\partial k}{\partial t} &= \frac{1}{A}\frac{\partial}{\partial z}\left(A\nu_k\frac{\partial k}{\partial z}\right) + P + P_{seiche} + B - \epsilon\\
 	\frac{\partial \epsilon}{\partial t} &= \frac{1}{A}\frac{\partial}{\partial z}\left(A\nu_{\epsilon}\frac{\partial \epsilon}{\partial z}\right) + \frac{k}{\epsilon}\left(c_{\epsilon 1}\left(P+P_{seiche}\right)+c_{\epsilon 3}B-c_{\epsilon 2}\epsilon\right)
 \end{align}
+Note that these equations do not include advection caused by in- and outflow caused by rivers and/or groundwater sources. In Simstrat, advection is decoupled from diffusion and source/sink treatment and computed separately.
 
 \subsection{Numerical Concept}
 In the above system of partial differential equations the temporal change of a quantity formally consists of a diffusive component $D$ and a source/sink component $S$:
@@ -331,84 +332,84 @@ where $\phi$ represents any of the above quantities ($T$, $u$, $v$, $k$, $\epsil
 where $bu=(1-au-cu)$. This system of linear equations can be solved very efficiently by the tridiagonal matrix algorithm.
 
 \subsection{Discretization Scheme: Finite Volume Approach on a Staggered Grid}
-The discretisation follows a finite volume approach. The water column is divided into $nz$ volumes with height $h_z$, an area $A_z$ at the top and $A_{z-1}$ at the bottom. The volume centres have indices from 1 to nz (bottom to surface). The volume faces have indices from 0 to nz. The mean flow quantities ($T$, $u$, $v$) are placed at the centre of the volumes. Turbulent quantities ($k$, $\epsilon$) are assigned to the volume faces (the interface between two volumes). Within a volume, the diffusion coefficients are assumed to be equal to the diffusion coefficient assigned to the top face of the volume.
+The discretization follows a finite volume approach. The water column is divided into $n_{vol}$ volumes with height $h_z$, an area $A_{z+1}$ at the top of the volume and $A_{z-1}$ at the bottom (the so-called faces). The volume centers have indices from 1 to $n_{vol}$ (bottom to surface). The faces have indices from 1 to $n_{face}$ which is equal to $n_{vol}+1$. The mean flow quantities ($T$, $u$, $v$) are placed at the center of the volumes. Turbulent quantities ($k$, $\epsilon$) are assigned to the volume faces (the interface between two volumes). Within a volume, the diffusion coefficients are assumed to be equal to the mean value of the diffusion coefficients at the upper and lower face.
 
 \begin{figure}[h!]
 	\centering
 	\def\svgwidth{\textwidth}
 	\input{SimstratDiscretizationScheme_edited.pdf_tex}
-	\caption{Discretisation Scheme}
+	\caption{Discretization Scheme}
 \end{figure}
 
-The temporal change of mean flow quantities within each volume results from the in-balance between the fluxes thought the two interfaces and sources/sinks:
+The temporal change of mean flow quantities within each volume results from the diffusive fluxes through the two interfaces and sources/sinks within the volume:
 \begin{equation}
-	\left.\frac{\partial\phi}{\partial t}\right|_{z} = \frac{A_{z-1}F_{z-1}-A_zF_z}{V_z}+S_z
+	\left.\frac{\partial\phi}{\partial t}\right|_{z} = \frac{A_{z}F_{z}-A_{z+1}F_{z+1}}{V_z}+S_z
 \end{equation}
-where $V_z=h_z\left(A_z+A_{z-1}\right)/2$.
+where $V_z=h_z\left(A_z+A_{z+1}\right)/2$.
 
 The flux through the upper and lower interface are:
 \begin{align}
-	F_{face,z} &= -\nu\left.\frac{\partial \phi}{\partial z}\right|_{z}^{face} = -\nu_z\frac{\phi_{z+1}-\phi_{z}}{(h_{z+1}+h_{z})/2} \\
-	F_{face,z-1} &= -\nu\left.\frac{\partial \phi}{\partial z}\right|_{z-1}^{face} = -\nu_z\frac{\phi_{z}-\phi_{z-1}}{(h_{z}+h_{z-1})/2}
+	F_{z+1,face} &= -\nu\left.\frac{\partial \phi}{\partial z}\right|_{z+1}^{face} = -\nu_{z+1}\frac{\phi_{z+1}-\phi_{z}}{(h_{z+1}+h_{z})/2} \\
+	F_{z,face} &= -\nu\left.\frac{\partial \phi}{\partial z}\right|_{z}^{face} = -\nu_z\frac{\phi_{z}-\phi_{z-1}}{(h_{z}+h_{z-1})/2}
 \end{align}
 
 \noindent The resulting discretization for mean flow quantities is then:
 \begin{equation}
-	\frac{\phi^{n+1}_z-\phi^n_z}{dt} = \frac{1}{h_z\left(A_z+A_{z-1}\right)/2}
-	\left(A_z\nu^{n}_z\frac{\phi^{n+1}_{z+1}-\phi^{n+1}_{z}}{(h_{z+1}+h_{z})/2}-A_{z-1}\nu^{n}_z\frac{\phi^{n+1}_{z}-\phi^{n+1}_{z-1}}{(h_{z}+h_{z-1})/2}
+	\frac{\phi^{n+1}_z-\phi^n_z}{dt} = \frac{1}{h_z\left(A_z+A_{z+1}\right)/2}
+	\left(A_{z+1}\nu^{n}_{z+1}\frac{\phi^{n+1}_{z+1}-\phi^{n+1}_{z}}{(h_{z+1}+h_{z})/2}-A_{z}\nu^{n}_z\frac{\phi^{n+1}_{z}-\phi^{n+1}_{z-1}}{(h_{z}+h_{z-1})/2}
 	\right)+S^n_z 
 \end{equation}
 
 \noindent This can be rearranged to:
 \begin{align}
-	&dt\cdot form_1\cdot\nu^{n+1}_z\phi^{n+1}_{z-1}\nonumber\\
-	&+(1-dt\cdot form_1\nu^{n}_z-dt\cdot form_2\nu^{n}_z)\phi^{n+1}_z\nonumber\\
-	&+ dt\cdot form_2\cdot\nu^{n+1}_z\phi^{n+1}_{z+1} = \phi^{n}_{z}+dt\cdot S^n_z\\
-	&form_1 = \frac{-4A_{z-1}}{\left(A_z+A_{z-1}\right)\left(h_{z}+h_{z-1}\right)}\\
-	&form_2 = \frac{-4A_{z}}{\left(A_z+A_{z-1}\right)\left(h_{z+1}+h_{z}\right)}
+	&dt\cdot AreaFactor_1\cdot\nu^{n+1}_z\phi^{n+1}_{z-1}\nonumber\\
+	&+(1-dt\cdot AreaFactor_1\nu^{n}_z-dt\cdot form_2\nu^{n}_{z+1})\phi^{n+1}_z\nonumber\\
+	&+ dt\cdot AreaFactor_2\cdot\nu^{n+1}_{z+1}\phi^{n+1}_{z+1} = \phi^{n}_{z}+dt\cdot S^n_z\\
+	&AreaFactor_1 = \frac{-4A_{z}}{\left(A_z+A_{z+1}\right)\left(h_{z}+h_{z-1}\right)}\\
+	&AreaFactor_2 = \frac{-4A_{z+1}}{\left(A_z+A_{z+1}\right)\left(h_{z+1}+h_{z}\right)}
 \end{align}
 
 The temporal change of turbulent quantities mainly follows the same concept except that the control volumes are shifted so that the turbulent quantities are at the center of the control volumes and the mean flow quantities are located at the volume faces. The balance for the turbulent quantities is therefore:
 \begin{equation}
 	\left.\frac{\partial\phi}{\partial t}\right|_{z} =
-	\frac{\left(A_z+A_{z-1}\right)/2\cdot F_{z}-\left(A_{z+1}+A_z\right)/2\cdot F_{z+1}}{V_z}+S_z
+	\frac{\left(A_z+A_{z-1}\right)/2\cdot F_{z-1}-\left(A_{z+1}+A_z\right)/2\cdot F_{z}}{V_z}+S_z
 \end{equation}
-where $V_z=A_z\left(h_z+h_{z+1}\right)/2$.
+where $V_z=A_z\left(h_{z-1}+h_{z}\right)/2$.
 
 To calculate the flux through the upper and lower interface the turbulent kinetic energy and the dissipation at these interfaces are approximated by averaging the TKE and dissipation at the volume centres:
 \begin{align}
-	\nu_{z,face}&=\left(\nu_{z,centre}+\nu_{z-1,centre}\right)/2 \\
+	\nu_{z,face}&=\left(\nu_{z,center}+\nu_{z-1,center}\right)/2 \\
 \end{align}
 
 \noindent The flux through the upper and lower interface are:
 \begin{align}
-F_{z+1} &= -\nu\left.\frac{\partial \phi}{\partial z}\right|_{z+1} = -\nu_{z,face}\frac{\phi_{z+1}-\phi_{z}}{h_{z+1}} \\
-F_{z} &= -\nu\left.\frac{\partial \phi}{\partial z}\right|_{z} = -\nu_{z,face}\frac{\phi_{z}-\phi_{z-1}}{h_{z}}
+F_{z,center} &= -\nu\left.\frac{\partial \phi}{\partial z}\right|_{z}^{center} = -\nu_{z}\frac{\phi_{z+1}-\phi_{z}}{h_{z}} \\
+F_{z-1,center} &= -\nu\left.\frac{\partial \phi}{\partial z}\right|_{z-1}^{center} = -\nu_{z-1}\frac{\phi_{z}-\phi_{z-1}}{h_{z-1}}
 \end{align}
 
 \noindent The resulting discretization for turbulent quantities is then:
 \begin{align}
 &\frac{\phi^{n+1}_z-\phi^n_z}{dt} = \nonumber\\
-&\frac{2}{A_z\left(h_z+h_{z+1}\right)}
-\left(\frac{A_{z+1}+A_z}{2}\nu^{n}_{z,face}\frac{\phi^{n+1}_{z+1}-\phi^{n+1}_{z}}{h_{z+1}}
--\frac{A_{z}+A_{z-1}}{2}\nu^{n}_{z,face}\frac{\phi^{n+1}_{z}-\phi^{n+1}_{z-1}}{h_{z}}
+&\frac{1}{A_z\left(h_z+h_{z+1}\right)/2}
+\left(\frac{A_{z+1}+A_z}{2}\nu^{n}_{z}\frac{\phi^{n+1}_{z+1}-\phi^{n+1}_{z}}{h_{z}}
+-\frac{A_{z}+A_{z-1}}{2}\nu^{n}_{z-1}\frac{\phi^{n+1}_{z}-\phi^{n+1}_{z-1}}{h_{z-1}}
 \right)+S^n_z 
 \end{align}
 
 \noindent This can be rearranged to:
 \begin{align}
-  &\left(dt\cdot form_{k1}\cdot\nu^{n+1}_{z,face}\right)\phi^{n+1}_{z-1}\nonumber\\
-  +&\left(1-dt\cdot form_{k1}\nu^{n}_{z,face}-dt\cdot form_{k2}\nu^{n}_{z,face}\right)\phi^{n+1}_z\nonumber\\
-  +&\left(dt\cdot form_{k2}\cdot\nu^{n+1}_{z,face}\right)\phi^{n+1}_{z+1}\nonumber\\ 
+  &\left(dt\cdot AreaFactor_{k1}\cdot\nu^{n+1}_{z-1}\right)\phi^{n+1}_{z-1}\nonumber\\
+  +&\left(1-dt\cdot AreaFactor_{k1}\nu^{n}_{z-1}-dt\cdot AreaFactor_{k2}\nu^{n}_{z}\right)\phi^{n+1}_z\nonumber\\
+  +&\left(dt\cdot AreaFactor_{k2}\cdot\nu^{n+1}_{z}\right)\phi^{n+1}_{z+1}\nonumber\\ 
   =& \phi^{n}_{z}+dt\cdot S^n_z\\
-&form_{k1} = \frac{A_{z}+A_{z-1}}{A_z\left(h_z+h_{z+1}\right)h_z}\\
-&form_{k2} = \frac{A_{z+1}+A_z}{A_z\left(h_z+h_{z+1}\right)h_{z+1}}
+&AreaFactor_{k1} = \frac{A_{z}+A_{z-1}}{A_z\left(h_z+h_{z-1}\right)h_{z-1}}\\
+&AreaFactor_{k2} = \frac{A_{z+1}+A_z}{A_z\left(h_z+h_{z-1}\right)h_{z}}
 \end{align}
 
 
-\subsection{Boundary Condition at the Sediment and Lake Surface}
+\subsection{Boundary Conditions at the Sediment and Lake Surface}
 
-The basic discretisation assumes a no-flux boundary at the sediment and lake surface. Concentration dependent fluxes at these interfaces are implemented as an additional component of the main diagonal.
+The basic discretization assumes a no-flux boundary at the sediment and lake surface. Concentration dependent fluxes at these interfaces are implemented as an additional component of the main diagonal.
 
 %----------------------------------------------------------------------------------------
 %\end{multicols}

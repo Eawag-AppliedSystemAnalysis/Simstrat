@@ -31,7 +31,6 @@ dependon=../lib/csv_fortran/fobos:release-gnu((direct))
          ../lib/forbear/fobos:static-gnu((direct))
 log=True
 
-
 [release-intel]
 compiler=intel
 cflags=-c -O3
@@ -44,5 +43,9 @@ target=simstrat.f90
 output=simstrat
 dependon=../lib/csv_fortran/fobos:release-intel((direct))
          ../lib/json_fortran/fobos:release-intel((direct))
-         ../lib/forbear/fobos:static-gnu((direct))
 log=True
+
+
+[rule-makedoc]
+help = Generate FORD documentation (see /doc/developer folder)
+rule = FoBiS.py rule -ford ../doc/developer/ford/ford_projectfile.md

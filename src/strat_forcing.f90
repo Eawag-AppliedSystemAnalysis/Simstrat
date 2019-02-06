@@ -57,7 +57,8 @@ contains
 
       ! Global variables
       class(ForcingModule) :: self
-      integer, intent(in) :: idx, nval
+      integer, intent(in) :: nval
+      logical, intent(in) :: idx
       real(RK), intent(in) :: datum !Required date
       real(RK), intent(inout) :: A_cur(1:nval), A_s(1:nval), A_e(1:nval) !output values, Start and end values
 
@@ -68,7 +69,7 @@ contains
       save tb_start, tb_end
       save eof
 
-      if (idx == 1) then
+      if (idx) then
 
          open (20, status='old', file=self%file)
          eof = 0
@@ -99,12 +100,15 @@ contains
 
   7   eof = 1
       if(datum>tb_start) call warn('Last forcing date before simulation end time.')
+      write(6,*) datum, tb_start
 
 
   8   A_cur(1:nval) = A_s(1:nval)       !Take first value of current interval
       return
 
   9   call error('Unable to read forcing file (no data found).')
+
+      stop
 
    end subroutine
 
@@ -130,7 +134,7 @@ contains
       save A_s, A_e
       associate (cfg=>self%cfg, param=>self%param)
 
-      if((state%snow_h + state%snowice_h + state%ice_h) > 0) then !ice cover
+      if((state%snow_h + state%white_ice_h + state%black_ice_h) > 0) then !ice cover
          T_surf = param%Freez_Temp
       else
          T_surf = state%T(self%grid%ubnd_vol) !free water
@@ -150,10 +154,11 @@ contains
          if (cfg%forcing_mode == 1) then
             if (cfg%ice_model == 1) then 
               call error('Ice module not compatible with forcing mode 1, use 2, 3 or 5.')
+              stop
             end if
 
-            call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%model_step_counter)
-            call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%model_step_counter)
+            call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%first_timestep)
+            call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%first_timestep)
             state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
             state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
             state%uv10 = sqrt(state%u10**2 + state%v10**2) !AG 2014
@@ -166,14 +171,14 @@ contains
 
          else if (cfg%forcing_mode >= 2) then
             if (cfg%forcing_mode == 2) then ! date, U,V,Tatm,Hsol,Vap
-               call self%read (state%datum, A_s, A_e, A_cur, 5 + nval_offset, state%model_step_counter)
+               call self%read (state%datum, A_s, A_e, A_cur, 5 + nval_offset, state%first_timestep)
                state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
                state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
                state%T_atm = A_cur(3)
-      
-               if (state%ice_h > 0 .and. state%snowice_h == 0 .and. state%snow_h == 0) then !Ice
+
+               if (state%black_ice_h > 0 .and. state%white_ice_h == 0 .and. state%snow_h == 0) then !Ice
                F_glob = (A_cur(4)*(1 - ice_albedo)) * param%p_albedo
-               else if (state%snowice_h > 0 .and. state%snow_h == 0) then !Snowice
+               else if (state%white_ice_h > 0 .and. state%snow_h == 0) then !Snowice
                F_glob = (A_cur(4)*(1 - snowice_albedo)) * param%p_albedo   
                else if (state%snow_h > 0) then !Snow
                F_glob = (A_cur(4)*(1 - snow_albedo)) * param%p_albedo
@@ -191,14 +196,14 @@ contains
                end if
 
             else if (cfg%forcing_mode == 3) then ! date,U10,V10,Tatm,Hsol,Vap,Clouds
-               call self%read (state%datum, A_s, A_e, A_cur, 6 + nval_offset, state%model_step_counter)
+               call self%read (state%datum, A_s, A_e, A_cur, 6 + nval_offset, state%first_timestep)
                state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
                state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
                state%T_atm = A_cur(3)
 
-               if (state%ice_h > 0 .and. state%snowice_h == 0 .and. state%snow_h == 0) then !Ice                
+               if (state%black_ice_h > 0 .and. state%white_ice_h == 0 .and. state%snow_h == 0) then !Ice                
                F_glob = (A_cur(4)*(1 - ice_albedo)) * param%p_albedo
-               else if (state%snowice_h > 0 .and. state%snow_h == 0) then !Snowice
+               else if (state%white_ice_h > 0 .and. state%snow_h == 0) then !Snowice
                 F_glob = (A_cur(4)*(1 - snowice_albedo)) * param%p_albedo     
                else if (state%snow_h > 0) then !Snow
                 F_glob = (A_cur(4)*(1 - snow_albedo)) * param%p_albedo
@@ -223,9 +228,10 @@ contains
             else if (cfg%forcing_mode == 4) then ! date,U10,V10,Hnet,Hsol
                if (cfg%ice_model == 1) then
                  call error('Ice module not compatible with forcing mode 4, use 2, 3 or 5.')
+                 stop
                end if
 
-               call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%model_step_counter)
+               call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%first_timestep)
                state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
                state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
                heat0 = A_cur(3) !MS 2014
@@ -234,14 +240,14 @@ contains
                if (cfg%use_filtered_wind) state%Wf = A_cur(5) !AG 2014
             !UK added forcing mode with incomming long-wave radiation instead of cloudiness
             else if (cfg%forcing_mode == 5) then ! date,U10,V10,Tatm,Hsol,Vap,ILWR
-               call self%read (state%datum, A_s, A_e, A_cur, 6 + nval_offset, state%model_step_counter)
+               call self%read (state%datum, A_s, A_e, A_cur, 6 + nval_offset, state%first_timestep)
                state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
                state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
                state%T_atm = A_cur(3)
       
-               if (state%ice_h > 0 .and. state%snowice_h == 0 .and. state%snow_h == 0) then !Ice
+               if (state%black_ice_h > 0 .and. state%white_ice_h == 0 .and. state%snow_h == 0) then !Ice
                F_glob = (A_cur(4)*(1 - ice_albedo)) * param%p_albedo
-               else if (state%snowice_h > 0 .and. state%snow_h == 0) then !Snowice
+               else if (state%white_ice_h > 0 .and. state%snow_h == 0) then !Snowice
                F_glob = (A_cur(4)*(1 - snowice_albedo)) * param%p_albedo     
                else if (state%snow_h > 0) then !Snow
                F_glob = (A_cur(4)*(1 - snow_albedo)) * param%p_albedo
@@ -259,11 +265,12 @@ contains
                end if
             else
                call error('Wrong forcing type (must be 1, 2, 3, 4 or 5).')
+               stop
             end if
             state%uv10 = sqrt(state%u10**2 + state%v10**2) !AG 2014
 
             if (cfg%forcing_mode /= 4) then ! Heat fluxes calculations (forcing 2, 3 and 5)
-              if (state%ice_h + state%snowice_h == 0) then !Free water
+              if (state%black_ice_h + state%white_ice_h == 0) then !Free water
                ! Wind function (Adams et al., 1990), changed by MS, June 2016
                ! Factor 0.6072 to account for changing wind height from 10 to 2 m
                ! Further evaluation of evaporation algorithm may be required.
@@ -305,7 +312,7 @@ contains
                 state%heat_snowice = 0 !Heat snowice
                 state%heat_ice = 0 !Heat ice          
   
-              elseif (state%ice_h > 0 .or. state%snowice_h > 0) then !Ice Cover
+              elseif (state%black_ice_h > 0 .or. state%white_ice_h > 0) then !Ice Cover
                 !Light penetration in snow, ice and snowice as well as wind blocking added 2018 by Love Raaman
 
                   if (state%T_atm >= param%Freez_Temp) then!melting occures when air temp above freez point,
@@ -346,41 +353,42 @@ contains
                 ! Global heat flux (positive: air to water, negative: water to air) !MS: added beta_sol ; LRV added lambda_snow_ice
                 ! Leppäranta, M. (2014), Eq. 6.12
                 ! Removal of solar short-wave radiation absorbed in snow, snowice, ice and first water cell (works also when x_h = 0)  
-                 state%heat = F_glob * exp(-lambda_snow*state%snow_h -lambda_snowice*state%snowice_h -lambda_ice*state%ice_h) * beta_sol
-                 state%rad0 = F_glob * exp(-lambda_snow*state%snow_h -lambda_snowice*state%snowice_h -lambda_ice*state%ice_h) * (1 - beta_sol)      
+                 state%heat = F_glob * exp(-lambda_snow*state%snow_h -lambda_snowice*state%white_ice_h -lambda_ice*state%black_ice_h) * beta_sol
+                 state%rad0 = F_glob * exp(-lambda_snow*state%snow_h -lambda_snowice*state%white_ice_h -lambda_ice*state%black_ice_h) * (1 - beta_sol)      
 
                !Heat flux into snow, ice or snowice layer.
                ! Light absorption each layer
                ! Leppäranta, M. (2014), Eq. 6.12    
                F_snow    = F_glob - F_glob * exp(-lambda_snow*state%snow_h)
-               F_snowice = F_glob * exp(-lambda_snow*state%snow_h) - F_glob * exp(-lambda_snow*state%snow_h -lambda_snowice*state%snowice_h)
-               F_ice     = F_glob * exp(-lambda_snow*state%snow_h -lambda_snowice*state%snowice_h) - F_glob * exp(-lambda_snow*state%snow_h -lambda_snowice*state%snowice_h -lambda_ice*state%ice_h)            
+               F_snowice = F_glob * exp(-lambda_snow*state%snow_h) - F_glob * exp(-lambda_snow*state%snow_h -lambda_snowice*state%white_ice_h)
+               F_ice     = F_glob * exp(-lambda_snow*state%snow_h -lambda_snowice*state%white_ice_h) - F_glob * exp(-lambda_snow*state%snow_h -lambda_snowice*state%white_ice_h -lambda_ice*state%black_ice_h)            
                if (F_snow < 0 .or. F_snowice < 0 .or. F_ice < 0 .or. state%heat < 0 .or. state%rad0 < 0) then
                  call error('Negative heat flux not alowed for melting')
+                 stop
                end if
 
                !Light + other heat fluxes into top layer
-               if (state%snow_h > 0 .and. state%snowice_h > 0 .and. state%ice_h > 0) then ! snow, snowice and ice
+               if (state%snow_h > 0 .and. state%white_ice_h > 0 .and. state%black_ice_h > 0) then ! snow, snowice and ice
                   state%heat_snow = H_tot + F_snow       
                   state%heat_snowice = F_snowice
                   state%heat_ice = F_ice
-               else if (state%snow_h > 0 .and. state%snowice_h > 0 .and. state%ice_h == 0) then! snow and snowice
+               else if (state%snow_h > 0 .and. state%white_ice_h > 0 .and. state%black_ice_h == 0) then! snow and snowice
                   state%heat_snow = H_tot + F_snow           
                   state%heat_snowice = F_snowice
                   state%heat_ice = 0 
-               else if (state%snow_h > 0 .and. state%snowice_h == 0 .and. state%ice_h > 0) then! snow and ice
+               else if (state%snow_h > 0 .and. state%white_ice_h == 0 .and. state%black_ice_h > 0) then! snow and ice
                   state%heat_snow = H_tot + F_snow              
                   state%heat_snowice = 0 
                   state%heat_ice = F_ice
-               else if (state%snow_h == 0 .and. state%snowice_h > 0 .and. state%ice_h > 0) then! snowice and ice
+               else if (state%snow_h == 0 .and. state%white_ice_h > 0 .and. state%black_ice_h > 0) then! snowice and ice
                   state%heat_snow = 0 
                   state%heat_snowice = H_tot + F_snowice      
                   state%heat_ice = F_ice
-               else if (state%snow_h == 0 .and. state%snowice_h == 0 .and. state%ice_h > 0) then! ice 
+               else if (state%snow_h == 0 .and. state%white_ice_h == 0 .and. state%black_ice_h > 0) then! ice 
                   state%heat_snow = 0 
                   state%heat_snowice = 0 
                   state%heat_ice = H_tot + F_ice  
-               else if (state%snow_h == 0 .and. state%snowice_h > 0 .and. state%ice_h == 0) then! snowice 
+               else if (state%snow_h == 0 .and. state%white_ice_h > 0 .and. state%black_ice_h == 0) then! snowice 
                   state%heat_snow = 0 
                   state%heat_snowice = H_tot + F_snowice    
                   state%heat_ice = 0 
