@@ -23,7 +23,7 @@ module strat_inputfile
    type, public :: SimstratSimulationFactory
       private
       class(SimulationData), pointer :: simdata
-   
+
    contains
       procedure, pass(self), public :: initialize_model
       procedure, pass(self), public :: read_json_par_file
@@ -50,7 +50,7 @@ contains
 
       !Parse inputfile
       call self%read_json_par_file(fname)
-  
+
       !Set up grid
       call self%read_grid_config
 
@@ -116,7 +116,7 @@ contains
                         call error('Output depths are not monotonous. Maybe you chose the wrong output depth reference?')
                      end if
                   end if
-               end do 
+               end do
 
             end if
          end if
@@ -263,26 +263,26 @@ contains
          self%simdata%output_cfg%output_vars(20)%name = "WhiteIceH"
          self%simdata%output_cfg%output_vars(20)%values_surf => self%simdata%model%white_ice_h
          self%simdata%output_cfg%output_vars(20)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(20)%face_grid = .false.  
+         self%simdata%output_cfg%output_vars(20)%face_grid = .false.
 
          ! Snow layer thickness [m]
          self%simdata%output_cfg%output_vars(21)%name = "SnowH"
          self%simdata%output_cfg%output_vars(21)%values_surf => self%simdata%model%snow_h
          self%simdata%output_cfg%output_vars(21)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(21)%face_grid = .false.  
+         self%simdata%output_cfg%output_vars(21)%face_grid = .false.
 
          ! Water level [m]
          self%simdata%output_cfg%output_vars(22)%name = "WaterH"
          self%simdata%output_cfg%output_vars(22)%values_surf => self%simdata%grid%lake_level
          self%simdata%output_cfg%output_vars(22)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(22)%face_grid = .false.  
+         self%simdata%output_cfg%output_vars(22)%face_grid = .false.
 
          ! Vertical advection [m3 s-1]
          self%simdata%output_cfg%output_vars(23)%name = "Qvert"
          self%simdata%output_cfg%output_vars(23)%values => self%simdata%model%Q_vert
          self%simdata%output_cfg%output_vars(23)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(23)%face_grid = .true.   
- 
+         self%simdata%output_cfg%output_vars(23)%face_grid = .true.
+
       end associate
    end subroutine
 
@@ -381,7 +381,7 @@ contains
 
 69          if(i==max_length_input_data) then
                write(6,*) '[WARNING] ','Only first ',max_length_input_data,' values of file read.'
-            else 
+            else
                call ok('Grid file successfully read')
             end if
             close (12)
@@ -424,7 +424,7 @@ contains
                   call error('The uppermost depth in the morphology file is negative, it should be at least 0!')
                end if
             else
-            ! Check that depth and area are monotonous              
+            ! Check that depth and area are monotonous
                if (z_tmp(i)>z_tmp(i-1)) then
                   call error('The depths of the morphology input file are not decreasing monotonously.')
                else if(A_tmp(i)>A_tmp(i-1)) then
@@ -498,7 +498,7 @@ contains
          call par_file%get('Input.Initial conditions', InitName, found); input_cfg%InitName = InitName; call check_field(found, 'Input.Initial conditions', ParName)
          call par_file%get('Input.Forcing', ForcingName, found); input_cfg%ForcingName = ForcingName; call check_field(found, 'Input.Forcing', ParName)
          call par_file%get('Input.Absorption', AbsorpName, found); input_cfg%AbsorpName = AbsorpName; call check_field(found, 'Input.Absorption', ParName)
-         
+
          ! Grid information can also be included in par-file
          ! Check type of json entry
          call par_file%info('Input.Grid',found,input_cfg%grid_input_type,n_children_dummy)
@@ -566,11 +566,11 @@ contains
          else if (output_cfg%output_time_type == 3) then ! Output depths are given
             call par_file%get('Output.Times', output_cfg%tout, found); call check_field(found, 'Output.Times', ParName)
             output_cfg%thinning_interval = 0
-         
+
          else if (output_cfg%output_time_type == 5 .or. output_cfg%output_time_type == 6) then ! Output interval is given
             call par_file%get('Output.Times', output_cfg%thinning_interval_read, found); call check_field(found, 'Output.Times', ParName)
             output_cfg%thinning_interval = int(output_cfg%thinning_interval_read)
-            
+
             ! This code is needed for line 141 in simstrat.f90. Not very elegant.. might change in the future.
             allocate(output_cfg%tout(1))
             output_cfg%tout(1) = output_cfg%thinning_interval
@@ -609,7 +609,7 @@ contains
          call par_file%get("ModelParameters.a_seiche", model_param%a_seiche, found); call check_field(found, 'ModelParameters.a_seiche', ParName)
          call par_file%get("ModelParameters.q_nn", model_param%q_NN, found); call check_field(found, 'ModelParameters.q_nn', ParName)
          call par_file%get("ModelParameters.f_wind", model_param%f_wind, found); call check_field(found, 'ModelParameters.f_wind', ParName)
-         
+
          ! C10 is a physical parameter on the order of e-3 if wind drag model is 1. Conversely, it is a calibration parameter
          ! with a value around 1 for wind drag models 2 and 3. This fact can lead to confusion and thus we check for realistic
          ! input values depending on the wind drag model chosen.
@@ -625,11 +625,11 @@ contains
          call par_file%get("ModelParameters.k_min", model_param%k_min, found); call check_field(found, 'ModelParameters.k_min', ParName)
          call par_file%get("ModelParameters.p_radin", model_param%p_radin, found); call check_field(found, 'ModelParameters.p_radin', ParName)
          call par_file%get("ModelParameters.p_windf", model_param%p_windf, found); call check_field(found, 'ModelParameters.p_windf', ParName)
-         if (model_cfg%ice_model == 1) then    
-           call par_file%get("ModelParameters.p_albedo", model_param%p_albedo, found); call check_field(found, 'ModelParameters.p_albedo', ParName)   
+         if (model_cfg%ice_model == 1) then
+           call par_file%get("ModelParameters.p_albedo", model_param%p_albedo, found); call check_field(found, 'ModelParameters.p_albedo', ParName)
            call par_file%get("ModelParameters.freez_temp", model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_temp', ParName)
            call par_file%get("ModelParameters.snow_temp", model_param%snow_temp, found); call check_field(found, 'ModelParameters.snow_temp', ParName)
-         end if      
+         end if
 
          !Simulation Parameter
          call par_file%get("Simulation.Timestep s", sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep s', ParName)

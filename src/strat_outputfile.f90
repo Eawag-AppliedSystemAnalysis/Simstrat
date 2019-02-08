@@ -78,7 +78,7 @@ contains
    end subroutine
 
    subroutine generic_log_close(self)
-      implicit none      
+      implicit none
 
       class(SimstratOutputLogger), intent(inout) :: self
    end subroutine
@@ -129,7 +129,7 @@ contains
 
         ! Allocate arrays for number of timesteps between output times and adjusted timestep
         allocate(output_config%n_timesteps_between_tout(n_output_times), output_config%adjusted_timestep(n_output_times))
-        
+
         ! Compute number of timesteps between simulation start and first output time
         output_config%n_timesteps_between_tout(1) = (output_config%tout(1) - sim_config%start_datum)*86400/sim_config%timestep
 
@@ -154,7 +154,7 @@ contains
         ! Compute number of timesteps between subsequent output times
         do i=2,n_output_times
             output_config%n_timesteps_between_tout(i) = (output_config%tout(i) - tout_test(i-1))*86400/sim_config%timestep
-            
+
             ! If number of timesteps = 0
             if (int(output_config%n_timesteps_between_tout(i))==0) then
                 output_config%adjusted_timestep(i) = (output_config%tout(i) - tout_test(i-1))*86400
@@ -193,7 +193,7 @@ contains
             output_config%zout(i) = output_config%zout(i - 1) + output_config%depth_interval
             i = i + 1
           end do
-          
+
         else if (output_config%output_depth_reference == 'surface') then
           ! Add output depth every "output_config%depth_interval" meters until max_depth is reached
           do while ((grid%max_depth + 1e-6) > (output_config%depth_interval - output_config%zout(i - 1)))
@@ -254,11 +254,11 @@ contains
             call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=grid%nz_grid + 2, status_ok=status_ok)
             call self%output_files(i)%add('')
             call self%output_files(i)%add(grid%z_face(1:grid%nz_grid + 1), real_fmt='(F12.3)')
-         else  
+         else
             !Variable at surface
             call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=1 + 1, status_ok=status_ok)
             call self%output_files(i)%add('')
-            call self%output_files(i)%add(grid%z_face(grid%ubnd_fce), real_fmt='(F12.3)')             
+            call self%output_files(i)%add(grid%z_face(grid%ubnd_fce), real_fmt='(F12.3)')
          end if
          call self%output_files(i)%next_row()
       end do
@@ -302,11 +302,11 @@ contains
             call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=self%n_depths+1, status_ok=status_ok)
             call self%output_files(i)%add('')
             call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
-         else  
+         else
             !Variable at surface
             call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=1 + 1, status_ok=status_ok)
             call self%output_files(i)%add('')
-            call self%output_files(i)%add(grid%z_face(grid%ubnd_fce), real_fmt='(F12.3)')             
+            call self%output_files(i)%add(grid%z_face(grid%ubnd_fce), real_fmt='(F12.3)')
          end if
          call self%output_files(i)%next_row()
       end do
@@ -339,7 +339,7 @@ contains
            ! Write state
            call self%output_files(i)%add(values_out, real_fmt='(ES14.4)')
 
-           ! If on face grid  
+           ! If on face grid
         else if (self%output_config%output_vars(i)%face_grid) then
           values_out(1:self%grid%nz_grid + 1) = self%output_config%output_vars(i)%values
            ! Assign nan to values out of grid

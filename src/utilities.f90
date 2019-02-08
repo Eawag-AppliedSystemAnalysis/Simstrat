@@ -277,5 +277,5 @@ contains
       write (str_real, '(a)') k
       str_real = adjustl(str_real)
    end function str_real
-   
+
 end module utilities

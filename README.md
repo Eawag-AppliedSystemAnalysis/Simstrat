@@ -17,7 +17,7 @@ Once the building environment is setup, you can build simstrat with the provided
 Please install the required packages listed below (System requirements) and then from terminal navigate into `build` folder and run 
 
 ~~~bash
-fobis.py build -mode release-gnu
+FoBiS.py build
 ~~~
 
 **System requirements**
@@ -32,14 +32,15 @@ In principle, the manual installation is platform independent. Be aware that oth
 
 ## Documentation
 
-The user manual can be found [here](doc). 
+The user manual can be found [here](doc).
 
-The developer documentation can be generated with the FORD python module (`pip install ford`). Go [here](doc/developer/ford) and run 
+The developer documentation can be generated with the FORD python module (`pip install ford`).
+To generate the documentation, run
 
 ~~~bash
-ford ford_projectfile.md
+FoBiS.py rule -ex makedoc
 ~~~
 
-Once generated open the file `ford_doc/index.html` to see the code documentation.
+The generated code documentation is saved in `doc/developer/ford/ford_doc/index.htlm`
 
 Additionally, a documentation about the numerical scheme of Simstrat can be found [here](doc/developer/dev_manual).

@@ -72,17 +72,17 @@ contains
       implicit none
       class(LateralRhoModule) :: self
       class(ModelState) :: state
-   
+
       ! Local Declarations
       real(RK) :: Inp(1:4,1:state%nz_input)
       real(RK) :: dummy
       real(RK) :: Q_in(1:self%grid%ubnd_vol), h_in(1:self%grid%ubnd_vol)
       real(RK) :: T_in, S_in, rho_in, CD_in, g_red, slope, Ri, E, Q_inp_inc
-     
+
       integer :: i, j, k, i1, i2
       integer :: fnum(1:4) ! File number
       character(len=20) :: fname(1:4)
-     
+
       associate (datum=>state%datum, &
                  idx=>state%first_timestep, &
                  Q_inp=>state%Q_inp, & ! Q_inp is the input at each depth for each time step
@@ -90,7 +90,7 @@ contains
                  grid=>self%grid, &
                  ubnd_vol=>self%grid%ubnd_vol, &
                  ubnd_fce=>self%grid%ubnd_fce)
-        
+
         fname = ['inflow           ','outflow          ','input temperature','input salinity   ']
         fnum = [41,42,43,44]
         do i=1,4
@@ -101,7 +101,7 @@ contains
               allocate (self%Inp_read_start(1:4,1:state%nz_input))
               allocate (self%Inp_read_end(1:4,1:state%nz_input))
               allocate (self%Q_read_start(1:4, 1:state%nz_input)) ! Integrated input
-              allocate (self%Q_read_end(1:4, 1:state%nz_input)) ! Integrated input           
+              allocate (self%Q_read_end(1:4, 1:state%nz_input)) ! Integrated input
               allocate (self%Qs_read_start(1:4,1:state%nz_input))  ! Integrated surface input
               allocate (self%Qs_read_end(1:4,1:state%nz_input))  ! Integrated surface input
               allocate (self%Q_start(1:4,1:grid%nz_grid + 1)) ! Input interpolated on grid
@@ -109,7 +109,7 @@ contains
               allocate (self%Qs_start(1:4,1:grid%nz_grid + 1)) ! Surface input interpolated on grid
               allocate (self%Qs_end(1:4,1:grid%nz_grid + 1)) ! Surface input interpolated on grid
             end if
-  
+
             ! Default values
             self%Q_start(i,:) = 0.0_RK
             self%Q_end(i,:) = 0.0_RK
@@ -187,9 +187,9 @@ contains
               self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)) = self%z_Inp(i, self%nval_deep(i) + 1 :self%nval(i)) - grid%lake_level_old + grid%lake_level
 
               ! Adjust surface inflow to new lake level
-              if (state%has_surface_input(i)) then     
+              if (state%has_surface_input(i)) then
                 call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_start(i, :), self%nval_surface(i), self%Qs_start(i, :))
-                call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))               
+                call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))
               end if
 
             end if ! end if not lake_level...
@@ -370,7 +370,7 @@ contains
                   allocate (self%Inp_read_start(1:4, 1:state%nz_input)) ! Raw input read
                   allocate (self%Inp_read_end(1:4, 1:state%nz_input)) ! Raw input read
                   allocate (self%Q_read_start(1:4, 1:state%nz_input)) ! Integrated input
-                  allocate (self%Q_read_end(1:4, 1:state%nz_input)) ! Integrated input           
+                  allocate (self%Q_read_end(1:4, 1:state%nz_input)) ! Integrated input
                   allocate (self%Qs_read_start(1:4, 1:state%nz_input))  ! Integrated surface input
                   allocate (self%Qs_read_end(1:4, 1:state%nz_input))  ! Integrated surface input
                   allocate (self%Q_start(1:4, 1:grid%nz_grid+1)) ! Input interpolated on grid
@@ -451,9 +451,9 @@ contains
               ! Readjust surface input depths
               self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)) = self%z_Inp(i, self%nval_deep(i) + 1 :self%nval(i)) - grid%lake_level_old + grid%lake_level
 
-              ! Adjust surface inflow to new lake level        
+              ! Adjust surface inflow to new lake level
               call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_start(i, :), self%nval_surface(i), self%Qs_start(i, :))
-              call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))               
+              call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))
 
             end if ! end if not lake_level...
 

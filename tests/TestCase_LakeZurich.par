@@ -29,7 +29,7 @@
     "InflowPlacement"         : 0,
     "PressureGradients"       : 0,
     "IceModel"                : 0,
-    "SnowModel"               : 0	
+    "SnowModel"               : 0
   },
   "Simulation" : {
     "Timestep s"        : 300,
