@@ -7,17 +7,17 @@ Pre-built binaries are available [here](https://github.com/Eawag-AppliedSystemAn
 
 ## Build Simstrat
 
-### Linux or MacOS environment
+### Multiple platform (Linux, MacOS, Win) building with Docker
 We suggest to setup the building environment using Docker; a complete step-by-step guide to use a docker container is available
 [here](misc/docker_build_env).
 
-Once the building environment is setup, you can build simstrat with the provided build script. More details [here](build).
+Once the building environment is setup, you can build simstrat with the FoBiS tool. More details [here](build).
 
-### Windows environment
-Please install the required packages listed below (System requirements) and then from terminal navigate into `build` folder and run 
+### Windows environment (manual setup)
+Please install the required packages listed below (System requirements) and then from terminal navigate into `build` folder and run
 
 ~~~bash
-fobis.py build -mode release-gnu
+FoBiS.py build
 ~~~
 
 **System requirements**
@@ -32,7 +32,7 @@ In principle, the manual installation is platform independent. Be aware that oth
 
 ## Documentation
 
-The user manual can be found [here](doc). 
+The user manual can be found [here](doc).
 
 The developer documentation can be generated with the FORD python module (`pip install ford`). Go [here](doc/developer/ford) and run 
 

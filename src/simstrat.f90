@@ -141,8 +141,8 @@ contains
 
    subroutine run_simulation()
       ! initialize a bar with the progress percentage counter
-      call bar%initialize(filled_char_string='>', &
-         prefix_string='Simulation progress |',  &
+      call bar%initialize(filled_char_string='#', &
+         prefix_string=' Simulation progress |',  &
          suffix_string='| ', add_progress_percent=.true., &
          add_date_time=.true., &
          max_value=(simdata%sim_cfg%end_datum-simdata%sim_cfg%start_datum))

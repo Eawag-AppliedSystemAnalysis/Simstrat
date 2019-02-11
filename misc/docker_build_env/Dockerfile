@@ -14,7 +14,7 @@ RUN pip3 install FoBiS.py ford pygooglechart
 RUN update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/x86_64-linux-gnu-gfortran 100
 RUN update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/x86_64-w64-mingw32-gfortran 50
 
-# change manually the alternatives with (requires root user)
+# to change manually the alternatives with (requires root user)
 # update-alternatives --config gfortran
 
 # Set the locale

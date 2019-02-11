@@ -14,13 +14,13 @@ git clone https://github.com/Eawag-AppliedSystemAnalysis/Simstrat.git
 4. Build the docker image using the given Dockerfile
 
     ~~~bash
-    docker build -t simstrat:alpine .
+    docker build -t simstrat:ubuntu .
     ~~~
 
 5. Create the actual docker container (that makes use of the image you just created), remembering to provide the `<pathToLocalGitRepoDirectory>`. Be aware of [case sensitivity under Windows 7/Docker Toolbox](https://github.com/moby/moby/issues/28660).
 
     ~~~bash
-    docker create --name simstrat -it -v <pathToLocalGitRepoDirectory>:/home/Simstrat simstrat:alpine
+    docker create --name simstrat -it -v <pathToLocalGitRepoDirectory>:/home/Simstrat simstrat:ubuntu
     ~~~
 
 6. A container named `simstrat` has just been created, now let's start it:
