@@ -123,25 +123,25 @@ contains
       ! Number of output times specified in file
       n_output_times = size(output_config%tout)
          ! If Simulation start larger than output times, abort.
-        if (sim_config%start_datum > output_config%tout(1)) then
+         if (sim_config%start_datum > output_config%tout(1)) then
             call error('Simulation start time is larger than first output time.')
-        end if
+         end if
 
-        ! Allocate arrays for number of timesteps between output times and adjusted timestep
-        allocate(output_config%n_timesteps_between_tout(n_output_times), output_config%adjusted_timestep(n_output_times))
+         ! Allocate arrays for number of timesteps between output times and adjusted timestep
+         allocate(output_config%n_timesteps_between_tout(n_output_times), output_config%adjusted_timestep(n_output_times))
 
-        ! Compute number of timesteps between simulation start and first output time
-        output_config%n_timesteps_between_tout(1) = (output_config%tout(1) - sim_config%start_datum)*86400/sim_config%timestep
+         ! Compute number of timesteps between simulation start and first output time
+         output_config%n_timesteps_between_tout(1) = (output_config%tout(1) - sim_config%start_datum)*86400/sim_config%timestep
 
-        ! If number of timesteps = 0
-        if (int(output_config%n_timesteps_between_tout(1)) == 0) then
+         ! If number of timesteps = 0
+         if (int(output_config%n_timesteps_between_tout(1)) == 0) then
             output_config%adjusted_timestep(1) = (output_config%tout(1) - sim_config%start_datum)*86400
             tout_test(1) = sim_config%start_datum + output_config%adjusted_timestep(1)/86400
 
             ! Set to 1, as the adjusted timestep has to be used once, otherwise the model does not advance
             output_config%n_timesteps_between_tout(1) = 1
             call warn('First output time is equal to simulation start time')
-        else
+         else
             ! If number of timesteps > 0
             output_config%adjusted_timestep(1) = ((output_config%tout(1) - sim_config%start_datum)*86400)/int(output_config%n_timesteps_between_tout(1))
             tout_test(1) = sim_config%start_datum
@@ -149,30 +149,30 @@ contains
             do j = 1, int(output_config%n_timesteps_between_tout(1))
                 tout_test(1) = tout_test(1) + output_config%adjusted_timestep(1)/86400
             end do
-        end if
+         end if
 
-        ! Compute number of timesteps between subsequent output times
-        do i=2,n_output_times
+         ! Compute number of timesteps between subsequent output times
+         do i=2,n_output_times
             output_config%n_timesteps_between_tout(i) = (output_config%tout(i) - tout_test(i-1))*86400/sim_config%timestep
 
             ! If number of timesteps = 0
             if (int(output_config%n_timesteps_between_tout(i))==0) then
-                output_config%adjusted_timestep(i) = (output_config%tout(i) - tout_test(i-1))*86400
-                tout_test(i) = tout_test(i-1) + output_config%adjusted_timestep(i)/86400
+               output_config%adjusted_timestep(i) = (output_config%tout(i) - tout_test(i-1))*86400
+               tout_test(i) = tout_test(i-1) + output_config%adjusted_timestep(i)/86400
 
-                ! Set to 1, as the adjusted timestep has to be used once, otherwise the model does not advance
-                output_config%n_timesteps_between_tout(i) = 1
-                call warn('At least one time interval for the model output is smaller than the simulation timestep')
+               ! Set to 1, as the adjusted timestep has to be used once, otherwise the model does not advance
+               output_config%n_timesteps_between_tout(i) = 1
+               call warn('At least one time interval for the model output is smaller than the simulation timestep')
             else
-                ! If number of timesteps > 0
-                output_config%adjusted_timestep(i) = ((output_config%tout(i) - tout_test(i-1))*86400)/int(output_config%n_timesteps_between_tout(i))
-                tout_test(i) = tout_test(i-1)
-                ! Add up adjusted timesteps. The resulting tout_test(i) should be equal to tout(i)
-                do j = 1, int(output_config%n_timesteps_between_tout(i))
-                    tout_test(i) = tout_test(i) + output_config%adjusted_timestep(i)/86400
-                end do
+               ! If number of timesteps > 0
+               output_config%adjusted_timestep(i) = ((output_config%tout(i) - tout_test(i-1))*86400)/int(output_config%n_timesteps_between_tout(i))
+               tout_test(i) = tout_test(i-1)
+               ! Add up adjusted timesteps. The resulting tout_test(i) should be equal to tout(i)
+               do j = 1, int(output_config%n_timesteps_between_tout(i))
+                  tout_test(i) = tout_test(i) + output_config%adjusted_timestep(i)/86400
+               end do
             end if
-        end do
+         end do
       end if
 
       if (output_config%thinning_interval>1) write(6,*) 'Interval [days]: ',output_config%thinning_interval*sim_config%timestep/86400.
@@ -182,35 +182,35 @@ contains
       ! If output depth interval is given
       if (output_config%depth_interval > 0) then
 
-        ! Allocate zout
-        allocate(output_config%zout(ceiling(grid%max_depth/output_config%depth_interval + 1e-6)))
+         ! Allocate zout
+         allocate(output_config%zout(ceiling(grid%max_depth/output_config%depth_interval + 1e-6)))
 
-        output_config%zout(1) = 0
-        i = 2
+         output_config%zout(1) = 0
+         i = 2
 
-        if (output_config%output_depth_reference == 'bottom') then
-          do while ((grid%max_depth + 1e-6) > (output_config%depth_interval + output_config%zout(i - 1)))
-            output_config%zout(i) = output_config%zout(i - 1) + output_config%depth_interval
-            i = i + 1
-          end do
+         if (output_config%output_depth_reference == 'bottom') then
+            do while ((grid%max_depth + 1e-6) > (output_config%depth_interval + output_config%zout(i - 1)))
+               output_config%zout(i) = output_config%zout(i - 1) + output_config%depth_interval
+               i = i + 1
+            end do
 
-        else if (output_config%output_depth_reference == 'surface') then
-          ! Add output depth every "output_config%depth_interval" meters until max_depth is reached
-          do while ((grid%max_depth + 1e-6) > (output_config%depth_interval - output_config%zout(i - 1)))
-            output_config%zout(i) = output_config%zout(i - 1) - output_config%depth_interval
-            i = i + 1
-          end do
+         else if (output_config%output_depth_reference == 'surface') then
+            ! Add output depth every "output_config%depth_interval" meters until max_depth is reached
+            do while ((grid%max_depth + 1e-6) > (output_config%depth_interval - output_config%zout(i - 1)))
+               output_config%zout(i) = output_config%zout(i - 1) - output_config%depth_interval
+               i = i + 1
+            end do
 
-          call reverse_in_place(output_config%zout)
-        end if
+            call reverse_in_place(output_config%zout)
+         end if
 
       else if (output_config%depth_interval == 0) then
-        allocate(output_config%zout(size(output_config%zout_read)))
-        output_config%zout = output_config%zout_read
+         allocate(output_config%zout(size(output_config%zout_read)))
+         output_config%zout = output_config%zout_read
       end if
       call ok('Output depths successfully read')
 
-    call self%init_files(output_config, grid)
+      call self%init_files(output_config, grid)
    end subroutine
 
    !************************* Init files ****************************
@@ -237,9 +237,9 @@ contains
 
       ! Create output folder if it does not exist
       if(.not.exist_output_folder) then
-        call warn('Result folder does not exist, create folder...')
-        mkdirCmd = 'mkdir '//trim(output_config%PathOut)
-        call execute_command_line(mkdirCmd)
+         call warn('Result folder does not exist, create folder...')
+         mkdirCmd = 'mkdir '//trim(output_config%PathOut)
+         call execute_command_line(mkdirCmd)
       end if
 
       ! For each configured variable, create file and write header
@@ -283,9 +283,9 @@ contains
 
       ! Create output folder if it does not exist
       if(.not.exist_output_folder) then
-        call warn('Result folder does not exist, create folder...')
-        mkdirCmd = 'mkdir '//trim(output_config%PathOut)
-        call execute_command_line(mkdirCmd)
+         call warn('Result folder does not exist, create folder...')
+         mkdirCmd = 'mkdir '//trim(output_config%PathOut)
+         call execute_command_line(mkdirCmd)
       end if
 
       if (allocated(self%output_files)) deallocate (self%output_files)
@@ -328,29 +328,29 @@ contains
 
       ! For each variable, write state
       do i = 1, self%n_vars
-        ! Write datum
-        call self%output_files(i)%add(datum, real_fmt='(F12.4)')
+         ! Write datum
+         call self%output_files(i)%add(datum, real_fmt='(F12.4)')
 
-        ! If on volume grid
-        if (self%output_config%output_vars(i)%volume_grid) then
-           values_out(1:self%grid%nz_grid) = self%output_config%output_vars(i)%values
-           ! Assign nan to values out of grid
-           call assign_nan(values_out,self%grid%ubnd_vol,self%grid%nz_grid)
-           ! Write state
-           call self%output_files(i)%add(values_out, real_fmt='(ES14.4)')
+         ! If on volume grid
+         if (self%output_config%output_vars(i)%volume_grid) then
+            values_out(1:self%grid%nz_grid) = self%output_config%output_vars(i)%values
+            ! Assign nan to values out of grid
+            call assign_nan(values_out,self%grid%ubnd_vol,self%grid%nz_grid)
+            ! Write state
+            call self%output_files(i)%add(values_out, real_fmt='(ES14.4)')
 
-           ! If on face grid
-        else if (self%output_config%output_vars(i)%face_grid) then
-          values_out(1:self%grid%nz_grid + 1) = self%output_config%output_vars(i)%values
-           ! Assign nan to values out of grid
-           call assign_nan(values_out,self%grid%ubnd_fce,self%grid%nz_grid)
-           ! Write state
-           call self%output_files(i)%add(values_out, real_fmt='(ES14.4)')
-        else
+            ! If on face grid
+         else if (self%output_config%output_vars(i)%face_grid) then
+            values_out(1:self%grid%nz_grid + 1) = self%output_config%output_vars(i)%values
+            ! Assign nan to values out of grid
+            call assign_nan(values_out,self%grid%ubnd_fce,self%grid%nz_grid)
+            ! Write state
+            call self%output_files(i)%add(values_out, real_fmt='(ES14.4)')
+         else
 
-           ! If only value at surface
-           call self%output_files(i)%add(self%output_config%output_vars(i)%values_surf, real_fmt='(ES14.4)')
-        end if
+            ! If only value at surface
+            call self%output_files(i)%add(self%output_config%output_vars(i)%values_surf, real_fmt='(ES14.4)')
+         end if
          ! Advance to next row
          call self%output_files(i)%next_row()
       end do
@@ -368,27 +368,27 @@ contains
       integer :: i
 
       do i = 1, self%n_vars
-        ! Write datum
-        call self%output_files(i)%add(datum, real_fmt='(F12.4)')
-        ! If on volume or faces grid
-        if (self%output_config%output_vars(i)%volume_grid) then
-          ! Interpolate state on volume grid
-          call self%grid%interpolate_from_vol(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-          ! Write state
-          call self%output_files(i)%add(values_on_zout, real_fmt='(ES14.4)')
-        else if (self%output_config%output_vars(i)%face_grid) then
-          ! Interpolate state on face grid
-          call self%grid%interpolate_from_face(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-          ! Write state
-          call self%output_files(i)%add(values_on_zout, real_fmt='(ES14.4)')
-        else
-          ! If only value at surface
-          call self%output_files(i)%add(self%output_config%output_vars(i)%values_surf, real_fmt='(ES14.4)')
-        end if
-        ! Advance to next row
-        call self%output_files(i)%next_row()
+         ! Write datum
+         call self%output_files(i)%add(datum, real_fmt='(F12.4)')
+         ! If on volume or faces grid
+         if (self%output_config%output_vars(i)%volume_grid) then
+            ! Interpolate state on volume grid
+            call self%grid%interpolate_from_vol(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
+            ! Write state
+            call self%output_files(i)%add(values_on_zout, real_fmt='(ES14.4)')
+         else if (self%output_config%output_vars(i)%face_grid) then
+            ! Interpolate state on face grid
+            call self%grid%interpolate_from_face(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
+            ! Write state
+            call self%output_files(i)%add(values_on_zout, real_fmt='(ES14.4)')
+         else
+            ! If only value at surface
+            call self%output_files(i)%add(self%output_config%output_vars(i)%values_surf, real_fmt='(ES14.4)')
+         end if
+         ! Advance to next row
+         call self%output_files(i)%next_row()
       end do
-end subroutine
+   end subroutine
 
    !************************* Close ****************************
 
