@@ -520,8 +520,8 @@ contains
          call par_file%get('Output.Path', PathOut, found); call check_field(found, 'Output.Path', ParName)
 
          ! Transform backslashes to slash
-         do while(scan(PathOut,'\')>0)
-            index_bs = scan(PathOut,'\')
+         do while(scan(PathOut,'\\')>0)
+            index_bs = scan(PathOut,'\\')
             PathOut(index_bs:index_bs) = '/'
          end do
 
