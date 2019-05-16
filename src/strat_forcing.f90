@@ -354,11 +354,11 @@ contains
                !Heat flux into snow, ice or snowice layer.
                ! Light absorption each layer
                ! Leppäranta, M. (2014), Eq. 6.12
-               F_snow    = F_glob - F_glob * exp(-lambda_snow*state%snow_h)
-               F_snowice = F_glob * exp(-lambda_snow*state%snow_h) - F_glob * exp(-lambda_snow*state%snow_h -lambda_snowice*state%white_ice_h)
-               F_ice     = F_glob * exp(-lambda_snow*state%snow_h -lambda_snowice*state%white_ice_h) - F_glob * exp(-lambda_snow*state%snow_h -lambda_snowice*state%white_ice_h -lambda_ice*state%black_ice_h)
+               F_snow    = F_glob * (1 - exp(-lambda_snow*state%snow_h))
+               F_snowice = F_glob * (exp(-lambda_snow*state%snow_h) - exp(-lambda_snow*state%snow_h - lambda_snowice*state%white_ice_h))
+               F_ice     = F_glob * (exp(-lambda_snow*state%snow_h - lambda_snowice*state%white_ice_h) - exp(-lambda_snow*state%snow_h - lambda_snowice*state%white_ice_h - lambda_ice*state%black_ice_h))
                if (F_snow < 0 .or. F_snowice < 0 .or. F_ice < 0 .or. state%heat < 0 .or. state%rad0 < 0) then
-                 call error('Negative heat flux not alowed for melting')
+                 call error('Negative heat flux not allowed for melting.')
                end if
 
                !Light + other heat fluxes into top layer
