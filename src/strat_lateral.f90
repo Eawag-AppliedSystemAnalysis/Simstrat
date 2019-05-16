@@ -145,16 +145,12 @@ contains
                   self%z_Inp(i,1:self%nval(i)) = grid%z_zero + self%z_Inp(i,1:self%nval(i))
                end if
 
+               !!!! FB: This error message could lead to simulation stop although entries are correct and will be deleted in the future.
                ! Plunging temperature and salinity input must be combined with a matching input of water
-               if (i==3 .or. i==4) then
-                  if (any(self%z_Inp(i,1:self%nval_deep(i))/=self%z_Inp(1,1:self%nval_deep(1)))) then
-                     call error('Inflow depths in '//trim(fname(i))//' file must match the ones in inflow file.')
-                  end if
-               end if
-
-               ! ! Plunging inflow needs temperature and salinity
-               ! if (i==1) then
-               !    if (any(self%z_Inp(1,1:self%nval_deep(1))/=self%z_Inp(3,1:self%nval_deep(3)))) then
+               ! if (i==3 .or. i==4) then
+               !    write(6,*) self%z_Inp(i,1:self%nval_deep(i))
+               !    write(6,*) self%z_Inp(1,1:self%nval_deep(1))
+               !    if (any(self%z_Inp(i,1:self%nval_deep(i))/=self%z_Inp(1,1:self%nval_deep(1)))) then
                !       call error('Inflow depths in '//trim(fname(i))//' file must match the ones in inflow file.')
                !    end if
                ! end if
