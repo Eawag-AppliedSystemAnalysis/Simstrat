@@ -283,63 +283,63 @@ contains
          end do
 
          ! Plunging algorithm
-         do j=1,self%nval_deep(1)  ! nval_deep needs to be the same for i=1,3,4
-            if (Inp(1,j)>1E-15) then
-               k=ubnd_vol
-               do while (grid%z_volume(k)>self%z_Inp(1,j))
-                  k=k-1
+         do j = 1,self%nval_deep(1)  ! nval_deep needs to be the same for i=1,3,4
+            if (Inp(1,j) > 1E-15) then
+               k = ubnd_vol
+               do while (grid%z_volume(k) > self%z_Inp(1,j)) ! Find the place where the plunging inflow enters the lake
+                  k = k - 1
                end do
                Q_in(k) = Inp(1,j) !Inflow flow rate [m3/s]
                T_in = Inp(3,j) !Inflow temperature [°C]
                S_in = Inp(4,j) !Inflow salinity [‰]
-               rho_in = rho_0*(0.9998395+T_in*(6.7914e-5+T_in*(-9.0894e-6+T_in*&
-                     (1.0171e-7+T_in*(-1.2846e-9+T_in*(1.1592e-11+T_in*(-5.0125e-14))))))+&
-                     (8.181e-4+T_in*(-3.85e-6+T_in*(4.96e-8)))*S_in) !Inflow density [kg/m3]
-               g_red = g*(rho_in-state%rho(k))/rho_in !Reduced gravity [m/s2]
+               rho_in = rho_0*(0.9998395 + T_in*(6.7914e-5 + T_in*(-9.0894e-6 + T_in*&
+                     (1.0171e-7 + T_in*(-1.2846e-9 + T_in*(1.1592e-11 + T_in*(-5.0125e-14)))))) + &
+                     (8.181e-4 + T_in*(-3.85e-6 + T_in*(4.96e-8)))*S_in) !Inflow density [kg/m3]
+               g_red = g*(rho_in - state%rho(k))/rho_in !Reduced gravity [m/s2]
 
                slope = pi/72 !Slope of inflow
                !hang = pi/3 !Stream half-angle
                CD_in = self%param%CD*10 !Inflow drag coefficient
                !Ri = CD_in*(1+0.21*CD_in**0.5*sin(hang))/(sin(hang)*tan(slope)) !Richardson number
                !Ri = CD_in/tan(slope)*(1/sin(hang)+0.21*CD_in**0.5) !Richardson number
-               Ri = CD_in/tan(slope)*(1.15+0.21*CD_in**0.5) !Richardson number (assuming an inflow half-angle of pi/3)
+               Ri = CD_in/tan(slope)*(1.15 + 0.21*CD_in**0.5) !Richardson number (assuming an inflow half-angle of pi/3)
                E = 1.6*CD_in**1.5/Ri !Entrainment coefficient
                h_in(k) = (2*Q_in(k)**2*Ri*tan(slope)**2/abs(g_red))**0.2 !Inflow thickness [m]
 
-               if (g_red>0) then !Inflow plunges
-                  do while ((rho_in>state%rho(k)).and.(k>1))
-                     h_in(k-1) = 1.2*E*(grid%z_volume(k)-grid%z_volume(k-1))/sin(slope) + h_in(k)
-                     Q_in(k-1) = Q_in(k)*(h_in(k-1)/h_in(k))**(5./3.)
-                     Q_inp(2,k) = Q_inp(2,k) - (Q_in(k-1)-Q_in(k))
-                     T_in = (T_in*Q_in(k)+state%T(k)*(Q_in(k-1)-Q_in(k)))/Q_in(k-1)
-                     S_in = (S_in*Q_in(k)+state%S(k)*(Q_in(k-1)-Q_in(k)))/Q_in(k-1)
-                     rho_in = (rho_in*Q_in(k)+state%rho(k)*(Q_in(k-1)-Q_in(k)))/Q_in(k-1)
-                     k=k-1
+               if (g_red > 0) then !Inflow plunges
+                  do while ((rho_in > state%rho(k)).and.(k > 1))
+                     h_in(k - 1) = 1.2*E*(grid%z_volume(k) - grid%z_volume(k-1))/sin(slope) + h_in(k)
+                     Q_in(k - 1) = Q_in(k)*(h_in(k - 1)/h_in(k))**(5./3.)
+                     Q_inp(2,k) = Q_inp(2,k) - (Q_in(k-1) - Q_in(k))
+                     T_in = (T_in*Q_in(k) + state%T(k)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
+                     S_in = (S_in*Q_in(k) + state%S(k)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
+                     rho_in = (rho_in*Q_in(k) + state%rho(k)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
+                     k = k - 1
                   end do
                   i2 = k
-                  do i1=k,ubnd_vol !extend upwards
-                     if(i1==ubnd_vol) exit
-                     if(grid%z_volume(i1+1)>(grid%z_volume(k)+h_in(k))) exit
+                  do i1 = k,ubnd_vol !extend upwards
+                     if(i1 == ubnd_vol) exit
+                     if(grid%z_volume(i1 + 1) > (grid%z_volume(k) + h_in(k))) exit
                   end do
-               else if (g_red<0) then !Inflow rises
-                  do while ((rho_in<state%rho(k)).and.(k<ubnd_vol))
-                     h_in(k+1) = 1.2*E*(grid%z_volume(k+1)-grid%z_volume(k))/sin(slope) + h_in(k)
-                     Q_in(k+1) = Q_in(k)*(h_in(k+1)/h_in(k))**(5./3.)
-                     Q_inp(2,k) = Q_inp(2,k) - (Q_in(k+1)-Q_in(k))
-                     T_in = (T_in*Q_in(k)+state%T(k)*(Q_in(k+1)-Q_in(k)))/Q_in(k+1)
-                     S_in = (S_in*Q_in(k)+state%S(k)*(Q_in(k+1)-Q_in(k)))/Q_in(k+1)
-                     rho_in = (rho_in*Q_in(k)+state%rho(k)*(Q_in(k+1)-Q_in(k)))/Q_in(k+1)
-                     k=k+1
+               else if (g_red < 0) then !Inflow rises
+                  do while ((rho_in < state%rho(k)) .and. (k < ubnd_vol))
+                     h_in(k + 1) = 1.2*E*(grid%z_volume(k + 1) - grid%z_volume(k))/sin(slope) + h_in(k)
+                     Q_in(k + 1) = Q_in(k)*(h_in(k + 1)/h_in(k))**(5./3.)
+                     Q_inp(2,k) = Q_inp(2,k) - (Q_in(k + 1) - Q_in(k))
+                     T_in = (T_in*Q_in(k) + state%T(k)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
+                     S_in = (S_in*Q_in(k) + state%S(k)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
+                     rho_in = (rho_in*Q_in(k) + state%rho(k)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
+                     k = k + 1
                   end do
                   i1 = k
-                  do i2=k,1,-1 !extend downwards
-                     if(i2==1) exit
-                     if(grid%z_volume(i2-1)<(grid%z_volume(k)-h_in(k))) exit
+                  do i2 = k,1,-1 !extend downwards
+                     if(i2 == 1) exit
+                     if(grid%z_volume(i2 - 1) < (grid%z_volume(k) - h_in(k))) exit
                   end do
                end if
 
                ! Deep plunging input is added to Q_inp for i=1,3,4 (inflow, temperature, salinity)
-               do i=i2,i1
+               do i = i2,i1
                   Q_inp_inc = Q_in(k)/(grid%z_face(i1 + 1) - grid%z_face(i2))*grid%h(i)
                   Q_inp(1,i) = Q_inp(1,i) + Q_inp_inc
                   Q_inp(3,i) = Q_inp(3,i) + T_in*Q_inp_inc
@@ -351,8 +351,8 @@ contains
          ! Q_vert is the integrated difference between in- and outflow (starting at the lake bottom)
          ! Q_vert is located on the face grid, m^3/s
          Q_vert(1) = 0
-         do i=2,ubnd_fce
-            Q_vert(i) = Q_vert(i-1) + Q_inp(1,i-1) + Q_inp(2,i-1)
+         do i = 2,ubnd_fce
+            Q_vert(i) = Q_vert(i - 1) + Q_inp(1,i - 1) + Q_inp(2,i - 1)
          end do
       end associate
    end subroutine
