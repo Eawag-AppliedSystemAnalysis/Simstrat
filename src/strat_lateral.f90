@@ -290,8 +290,8 @@ contains
                   k=k-1
                end do
                Q_in(k) = Inp(1,j) !Inflow flow rate [m3/s]
-               T_in = Inp(3,j) !Inflow temperature [°C*m3/s]
-               S_in = Inp(4,j) !Inflow salinity [‰*m3/s]
+               T_in = Inp(3,j) !Inflow temperature [°C]
+               S_in = Inp(4,j) !Inflow salinity [‰]
                rho_in = rho_0*(0.9998395+T_in*(6.7914e-5+T_in*(-9.0894e-6+T_in*&
                      (1.0171e-7+T_in*(-1.2846e-9+T_in*(1.1592e-11+T_in*(-5.0125e-14))))))+&
                      (8.181e-4+T_in*(-3.85e-6+T_in*(4.96e-8)))*S_in) !Inflow density [kg/m3]
@@ -340,7 +340,7 @@ contains
 
                ! Deep plunging input is added to Q_inp for i=1,3,4 (inflow, temperature, salinity)
                do i=i2,i1
-                  Q_inp_inc = Q_in(k)/(grid%z_face(i1)-grid%z_face(i2)+grid%h(i))*grid%h(i)
+                  Q_inp_inc = Q_in(k)/(grid%z_face(i1 + 1) - grid%z_face(i2))*grid%h(i)
                   Q_inp(1,i) = Q_inp(1,i) + Q_inp_inc
                   Q_inp(3,i) = Q_inp(3,i) + T_in*Q_inp_inc
                   Q_inp(4,i) = Q_inp(4,i) + S_in*Q_inp_inc
@@ -350,9 +350,9 @@ contains
 
          ! Q_vert is the integrated difference between in- and outflow (starting at the lake bottom)
          ! Q_vert is located on the face grid, m^3/s
-         Q_vert(1) = Q_inp(1,1) + Q_inp(2,1)
+         Q_vert(1) = 0
          do i=2,ubnd_fce
-            Q_vert(i) = Q_vert(i-1) + Q_inp(1,i) + Q_inp(2,i)
+            Q_vert(i) = Q_vert(i-1) + Q_inp(1,i-1) + Q_inp(2,i-1)
          end do
       end associate
    end subroutine
@@ -537,6 +537,10 @@ contains
             end do
             Q_inp(i,ubnd_vol + 1) = 0
          end do
+         !write(6,*) 1, Q_inp(1,1), Q_inp(1,ubnd_vol)
+         !write(6,*) 2, Q_inp(2,1), Q_inp(2,ubnd_vol)
+         !write(6,*) 3, Q_inp(3,1), Q_inp(3,ubnd_vol)
+         !write(6,*) 4, Q_inp(4,1), Q_inp(4,ubnd_vol)
 
       end associate
    end subroutine
