@@ -113,9 +113,9 @@ module strat_simdata
       real(RK) :: k_min
       real(RK) :: p_radin
       real(RK) :: p_windf
-      real(RK) :: p_albedo     
-      real(RK) :: freez_temp 
-      real(RK) :: snow_temp      
+      real(RK) :: p_albedo
+      real(RK) :: freez_temp
+      real(RK) :: snow_temp
    end type
 
    ! Model state (self is actually the simulation data!!!)
@@ -166,13 +166,13 @@ module strat_simdata
       ! Snow and Ice
       real(RK), allocatable :: snow_h ! Snow layer height [m]
       real(RK), allocatable :: total_ice_h ! Total ice layer height [m]
-      real(RK), allocatable :: black_ice_h ! Black ice layer height [m]   
-      real(RK), allocatable :: white_ice_h ! Snowice layer height [m]      
-      real(RK) :: snow_dens ! snow density [kg m-3]   
+      real(RK), allocatable :: black_ice_h ! Black ice layer height [m]
+      real(RK), allocatable :: white_ice_h ! Snowice layer height [m]
+      real(RK) :: snow_dens ! snow density [kg m-3]
       real(RK) :: ice_temp ! ice temperature [°C]
-      real(RK) :: precip ! precipiation in water eqvivalent hight [m] 
-   
-      !For saving heatflux 
+      real(RK) :: precip ! precipiation in water eqvivalent hight [m]
+
+      !For saving heatflux
       real(RK), allocatable :: ha ! Incoming long wave [W m-2]
       real(RK), allocatable :: hw ! Outgoing long wave [W m-2]
       real(RK), allocatable :: hk ! Sensible flux [W m-2]
@@ -252,17 +252,17 @@ contains
       allocate (self%rad_vol(state_size))
       allocate (self%Q_vert(state_size + 1))
 
-      allocate (self%snow_h) 
-      allocate (self%total_ice_h) 
-      allocate (self%black_ice_h) 
+      allocate (self%snow_h)
+      allocate (self%total_ice_h)
+      allocate (self%black_ice_h)
       allocate (self%white_ice_h)
-   
-      allocate (self%ha) 
-      allocate (self%hw) 
-      allocate (self%hk) 
-      allocate (self%hv) 
-      allocate (self%rad0) 
-   
+
+      allocate (self%ha)
+      allocate (self%hw)
+      allocate (self%hk)
+      allocate (self%hv)
+      allocate (self%rad0)
+
       ! init to zero
       self%U = 0.0_RK
       self%V = 0.0_RK
@@ -283,26 +283,21 @@ contains
       self%cmue1 = 0.0_RK
       self%cmue2 = 0.0_RK
       self%P_Seiche = 0.0_RK
+      self%E_Seiche = 0.0_RK
 
       self%absorb = 0.0_RK
       self%absorb_vol = 0.0_RK
       self%rad = 0.0_RK
       self%rad_vol = 0.0_RK
       self%Q_vert = 0.0_RK
-    
+
       self%snow_h = 0.0_RK
       self%total_ice_h = 0.0_RK
       self%black_ice_h = 0.0_RK
-      self%white_ice_h = 0.0_RK   
-      self%ice_temp = 0.0_RK 
+      self%white_ice_h = 0.0_RK
+      self%ice_temp = 0.0_RK
       self%snow_dens = rho_s_0
-      self%precip = 0.0_RK
-
-      self%ha = 0.0_RK
-      self%hw = 0.0_RK
-      self%hk = 0.0_RK 
-      self%hv = 0.0_RK 
-      self%rad0 = 0.0_RK   
+      self%precip = 0.0_RK 
    
       self%ha = 0.0_RK
       self%hw = 0.0_RK

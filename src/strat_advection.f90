@@ -77,7 +77,9 @@ contains
          !Split timestep depending on situation
          if (dh == 0.) then ! If volume does not change, take one normal time step
             dt_i(1) = dt
-         else if ((dh + top_z) >= grid%max_depth) then ! If surface level reached, take a step until surface
+         else if (top_z == grid%max_depth) then ! If we are already at the maximum lake level
+            dt_i(1) = dt
+         else if ((dh + top_z) >= grid%max_depth) then ! If the full timestep would lead to a lake level higher than maximum allowed lake level, split the timestep.
             dt_i(1) = (grid%max_depth - top_z)/dh*dt
          else if (((dh + top_h) > h_div_2) .and. & ! If top box>0.5*lower box and <2*lower box, take one time step
                   ((dh + top_h) < h_mult_2)) then
@@ -91,7 +93,7 @@ contains
 
          ! FB 2016: Revision
          do t_i = 1, 2 !First and (if needed) second timestep
-            AreaFactor_adv(1:nz_occupied) = dt_i(t_i)/(grid%Az(2:nz_occupied+1)*grid%h(1:nz_occupied)) ! Area factor for dt(t_i)
+            AreaFactor_adv(1:nz_occupied) = dt_i(t_i)/((grid%Az(1:nz_occupied) + grid%Az(2:nz_occupied+1))/2*grid%h(1:nz_occupied)) ! Area factor for dt(t_i)
             dh_i(t_i) = dh*dt_i(t_i)/dt ! Depth difference for dt(t_i)
 
             ! Update Simstrat variables U, V, T and S
@@ -132,55 +134,75 @@ contains
       ! Local variables
       integer :: i, top
       real(RK) :: dU(self%grid%nz_grid), dV(self%grid%nz_grid), dTemp(self%grid%nz_grid), dS(self%grid%nz_grid)
+      integer :: outflow_above, outflow_below
 
       associate(ubnd_vol => self%grid%ubnd_vol, &
          Q_vert => state%Q_vert, &
          h => self%grid%h)
-         ! Calculate changes
-         do i = 1, ubnd_vol
-            if (i == ubnd_vol .and. Q_vert(i+1) > 0) then
-               top = 0
-            else
-               top = 1
-            end if
 
-            ! Advective flow out of box i, always negative
-            dU(i) = -top*abs(Q_vert(i+1))*state%U(i)
-            dV(i) = -top*abs(Q_vert(i+1))*state%V(i)
-            dTemp(i) = -top*abs(Q_vert(i+1))*state%T(i)
-            dS(i) = -top*abs(Q_vert(i+1))*state%S(i)
-            if (i > 2 .and. Q_vert(i) > 0) then ! Advective flow into box i, from below
-               dU(i) = dU(i) + Q_vert(i)*state%U(i - 1)
-               dV(i) = dV(i) + Q_vert(i)*state%V(i - 1)
-               dTemp(i) = dTemp(i) + Q_vert(i)*state%T(i - 1)
-               dS(i) = dS(i) + Q_vert(i)*state%S(i - 1)
-            end if
-            if (i < ubnd_vol) then
-               if (Q_vert(i + 2) < 0) then ! Advective flow into box i, from above
-                  dU(i) = dU(i) - Q_vert(i + 2)*state%U(i + 1)
-                  dV(i) = dV(i) - Q_vert(i + 2)*state%V(i + 1)
-                  dTemp(i) = dTemp(i) - Q_vert(i + 2)*state%T(i + 1)
-                  dS(i) = dS(i) - Q_vert(i + 2)*state%S(i + 1)
+            ! Calculate changes
+            do i = 1, ubnd_vol
+               ! For the top-most cell, if Q_vert at the upper face is positive, there is still no outflow (the cell is simply growing, but this is done elsewhere)
+               if ((i == ubnd_vol) .and. Q_vert(i + 1) > 0) then
+                  top = 0
+               else
+                  top = 1
                end if
-            end if
-         end do
 
-         ! Add change to state variables
-         ! dT = dT(vertical advection) + dT(inflow) + dT(negative outflow), units: °C*m^3/s
-         dTemp(1:ubnd_vol) = dTemp(1:ubnd_vol) + state%Q_inp(3, 1:ubnd_vol) + state%Q_inp(2, 1:ubnd_vol)*state%T(1:ubnd_vol)
-         ! dS = dS(vertical advection) + dS(inflow) + dT(negative outflow), units: ‰*m^3/s
-         dS(1:ubnd_vol) = dS(1:ubnd_vol) + state%Q_inp(4, 1:ubnd_vol) + state%Q_inp(2, 1:ubnd_vol)*state%S(1:ubnd_vol)
-         ! Add change to the state variable
-         state%U(1:ubnd_vol) = state%U(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dU(1:ubnd_vol)
-         state%V(1:ubnd_vol) = state%V(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dV(1:ubnd_vol)
-         state%T(1:ubnd_vol) = state%T(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dTemp(1:ubnd_vol)
-         state%S(1:ubnd_vol) = state%S(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dS(1:ubnd_vol)
+               ! If Q_vert at the upper face of cell i is positive, then there is outflow to the cell above
+               if (Q_vert(i + 1) > 0) then
+                     outflow_above = 1
+               else 
+                     outflow_above = 0
+               end if
 
-         ! Variation of variables due to change in volume
-         state%U(ubnd_vol) = state%U(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
-         state%V(ubnd_vol) = state%V(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
-         state%T(ubnd_vol) = state%T(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
-         state%S(ubnd_vol) = state%S(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
+               ! If Q_vert at the lower face of cell i is negative, then there is outflow to the cell below
+               if (Q_vert(i) < 0) then
+                     outflow_below = 1
+               else
+                     outflow_below = 0
+               end if
+
+               ! Calculate advective flow out of cell (thus negative sign in the front) i to the cells above and below
+               dU(i) = -(top*outflow_above*Q_vert(i + 1) - outflow_below*Q_vert(i))*state%U(i)
+               dV(i) = -(top*outflow_above*Q_vert(i + 1) - outflow_below*Q_vert(i))*state%V(i)
+               dTemp(i) = -(top*outflow_above*Q_vert(i + 1) - outflow_below*Q_vert(i))*state%T(i)
+               dS(i) = -(top*outflow_above*Q_vert(i + 1) - outflow_below*Q_vert(i))*state%S(i)
+
+               ! Calculate the advective flow into cell i from below
+               if (i > 1 .and. Q_vert(i ) > 0) then
+                  dU(i) = dU(i) + Q_vert(i)*state%U(i - 1)
+                  dV(i) = dV(i) + Q_vert(i)*state%V(i - 1)
+                  dTemp(i) = dTemp(i) + Q_vert(i)*state%T(i - 1)
+                  dS(i) = dS(i) + Q_vert(i)*state%S(i - 1)
+               end if
+
+               ! Calculate the advective flow into cell i from above (- sign in front because Q_vert is negative if there is inflow)
+               if (i < ubnd_vol .and. Q_vert(i + 1) < 0) then
+                  dU(i) = dU(i) - Q_vert(i + 1)*state%U(i + 1)
+                  dV(i) = dV(i) - Q_vert(i + 1)*state%V(i + 1)
+                  dTemp(i) = dTemp(i) - Q_vert(i + 1)*state%T(i + 1)
+                  dS(i) = dS(i) - Q_vert(i + 1)*state%S(i + 1)
+               end if
+            end do
+
+            ! Add change to state variables
+            ! dT = dT(vertical advection) + dT(inflow) + dT(outflow), units: °C*m^3/s
+            dTemp(1:ubnd_vol) = dTemp(1:ubnd_vol) + state%Q_inp(3, 1:ubnd_vol) + state%Q_inp(2, 1:ubnd_vol)*state%T(1:ubnd_vol)
+            ! dS = dS(vertical advection) + dS(inflow) + dS(outflow), units: ‰*m^3/s
+            dS(1:ubnd_vol) = dS(1:ubnd_vol) + state%Q_inp(4, 1:ubnd_vol) + state%Q_inp(2, 1:ubnd_vol)*state%S(1:ubnd_vol)
+
+            ! Add change to the state variable
+            state%U(1:ubnd_vol) = state%U(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dU(1:ubnd_vol)
+            state%V(1:ubnd_vol) = state%V(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dV(1:ubnd_vol)
+            state%T(1:ubnd_vol) = state%T(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dTemp(1:ubnd_vol)
+            state%S(1:ubnd_vol) = state%S(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dS(1:ubnd_vol)
+
+            ! Variation of variables due to change in volume
+            state%U(ubnd_vol) = state%U(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
+            state%V(ubnd_vol) = state%V(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
+            state%T(ubnd_vol) = state%T(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
+            state%S(ubnd_vol) = state%S(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
       end associate
    end subroutine
 

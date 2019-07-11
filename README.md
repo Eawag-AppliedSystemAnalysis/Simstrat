@@ -3,7 +3,7 @@
 Simstrat is a one-dimensional physical lake model for the simulation of stratification and mixing in deep stratified lakes. The model was originally developed by Goudsmit et al. (2002) and has been successfully applied to lakes with different physical properties. A k-ε model is used to model turbulent mixing including energy transfer of internal seiches. River or groundwater inflow can be added at specific depths or as density-dependent intrusions. The newest version of Simstrat (see below) can also simulate ice/snow covers.
 
 ## Run Simstrat
-Pre-built binaries are available [here](prebuilt).
+Pre-built binaries are available [here](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/releases).
 
 ## Build Simstrat
 
@@ -17,7 +17,7 @@ Once the building environment is setup, you can build simstrat with the provided
 Please install the required packages listed below (System requirements) and then from terminal navigate into `build` folder and run 
 
 ~~~bash
-fobis.py build -mode release-gnu
+FoBiS.py build
 ~~~
 
 **System requirements**
@@ -32,14 +32,15 @@ In principle, the manual installation is platform independent. Be aware that oth
 
 ## Documentation
 
-The user manual can be found [here](doc). 
+The user manual can be found [here](doc).
 
-The developer documentation can be generated with the FORD python module (`pip install ford`). Go [here](doc/developer/ford) and run 
+The developer documentation can be generated with the FORD python module (`pip install ford`).
+To generate the documentation, run
 
 ~~~bash
-ford ford_projectfile.md
+FoBiS.py rule -ex makedoc
 ~~~
 
-Once generated open the file `ford_doc/index.html` to see the code documentation.
+The generated code documentation is saved in `doc/developer/ford/ford_doc/index.htlm`
 
 Additionally, a documentation about the numerical scheme of Simstrat can be found [here](doc/developer/dev_manual).

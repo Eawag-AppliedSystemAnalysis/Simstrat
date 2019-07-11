@@ -99,7 +99,7 @@ contains
 
             ! Write to console that file was successfully read
             call ok('Absorption input file successfully read')
-            write(6,*)
+
             ! Do the same for absorb_read_end
             call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end(1:nz + 1))
 
@@ -130,7 +130,7 @@ contains
          return
 
 9        call error('Reading light attenuation file (no data found).')
-         stop
+
       end associate
    end subroutine
 

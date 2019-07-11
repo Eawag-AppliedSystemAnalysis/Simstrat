@@ -40,9 +40,9 @@ git clone https://github.com/Eawag-AppliedSystemAnalysis/Simstrat.git
 9. Next time you want to access the container, simply execute points 6 and 7 (even just 7 if your container is already running). Now you are ready to actually build Simstrat.
 
 ### Build and run Simstrat inside the docker container
-To build the code you can use the `./build/build.sh` script, as explained [here](../../build).
+To build the code you can go to the build folder and use `FoBiS.py build`, as explained [here](../../build).
 
-To run the Zurichsee testcase you can use the script `./tests/run_testcase.sh`.
+To run the Zurichsee testcase, go to the tests folder and use the script `./run_testcase.sh`.
 
 > **N.B.** you can use one-line command to call the script from the root repository folder, e.g.
 ~~~bash

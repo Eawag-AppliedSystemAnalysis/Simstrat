@@ -29,7 +29,7 @@
     "InflowPlacement"         : 0,
     "PressureGradients"       : 0,
     "IceModel"                : 1,
-    "SnowModel"               : 1	
+    "SnowModel"               : 1
   },
   "AED2Config" : {
     "AED2ConfigFile"          : "aed2.nml",

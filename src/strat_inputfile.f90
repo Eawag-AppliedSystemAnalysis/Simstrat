@@ -23,7 +23,7 @@ module strat_inputfile
    type, public :: SimstratSimulationFactory
       private
       class(SimulationData), pointer :: simdata
-   
+
    contains
       procedure, pass(self), public :: initialize_model
       procedure, pass(self), public :: read_json_par_file
@@ -50,7 +50,7 @@ contains
 
       !Parse inputfile
       call self%read_json_par_file(fname)
-  
+
       !Set up grid
       call self%read_grid_config
 
@@ -91,9 +91,8 @@ contains
 
             call f%read (output_cfg%zoutName, header_row=1, status_ok=status_ok)
             if (.not. status_ok) then
-               call error('Unable to read output depths: '//output_cfg%zoutName)
                call f%destroy()
-               stop
+               call error('Unable to read output depths: '//output_cfg%zoutName)
             end if
             ! Values are read into array zout_read instead of zout to keep zout for the final output depths. For example,
             ! zout_read will contain only one value here if the output frequency is given, but zout will contain the output
@@ -115,10 +114,9 @@ contains
                   if (i>1) then
                      if (output_cfg%zout_read(i) < output_cfg%zout_read(i-1)) then
                         call error('Output depths are not monotonous. Maybe you chose the wrong output depth reference?')
-                        stop
                      end if
                   end if
-               end do 
+               end do
 
             end if
          end if
@@ -129,9 +127,8 @@ contains
 
             call f%read (output_cfg%toutName, header_row=1, status_ok=status_ok)
             if (.not. status_ok) then
-               call error('Unable to read output depths: '//output_cfg%toutName)
                call f%destroy()
-               stop
+               call error('Unable to read output depths: '//output_cfg%toutName)
             end if
             call f%get(1, output_cfg%tout, status_ok)
             call f%destroy()
@@ -266,26 +263,26 @@ contains
          self%simdata%output_cfg%output_vars(20)%name = "WhiteIceH"
          self%simdata%output_cfg%output_vars(20)%values_surf => self%simdata%model%white_ice_h
          self%simdata%output_cfg%output_vars(20)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(20)%face_grid = .false.  
+         self%simdata%output_cfg%output_vars(20)%face_grid = .false.
 
          ! Snow layer thickness [m]
          self%simdata%output_cfg%output_vars(21)%name = "SnowH"
          self%simdata%output_cfg%output_vars(21)%values_surf => self%simdata%model%snow_h
          self%simdata%output_cfg%output_vars(21)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(21)%face_grid = .false.  
+         self%simdata%output_cfg%output_vars(21)%face_grid = .false.
 
          ! Water level [m]
          self%simdata%output_cfg%output_vars(22)%name = "WaterH"
          self%simdata%output_cfg%output_vars(22)%values_surf => self%simdata%grid%lake_level
          self%simdata%output_cfg%output_vars(22)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(22)%face_grid = .false.  
+         self%simdata%output_cfg%output_vars(22)%face_grid = .false.
 
          ! Vertical advection [m3 s-1]
          self%simdata%output_cfg%output_vars(23)%name = "Qvert"
          self%simdata%output_cfg%output_vars(23)%values => self%simdata%model%Q_vert
          self%simdata%output_cfg%output_vars(23)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(23)%face_grid = .true.   
- 
+         self%simdata%output_cfg%output_vars(23)%face_grid = .true.
+
       end associate
    end subroutine
 
@@ -384,7 +381,7 @@ contains
 
 69          if(i==max_length_input_data) then
                write(6,*) '[WARNING] ','Only first ',max_length_input_data,' values of file read.'
-            else 
+            else
                call ok('Grid file successfully read')
             end if
             close (12)
@@ -425,13 +422,11 @@ contains
             if (i==1) then
                if(z_tmp(i)<0) then
                   call error('The uppermost depth in the morphology file is negative, it should be at least 0!')
-                  stop
                end if
             else
-            ! Check that depth and area are monotonous              
+            ! Check that depth and area are monotonous
                if (z_tmp(i)>z_tmp(i-1)) then
                   call error('The depths of the morphology input file are not decreasing monotonously.')
-                  stop
                else if(A_tmp(i)>A_tmp(i-1)) then
                   call warn('The lake area increases with depth somewhere. Do you really want this?')
                end if
@@ -497,7 +492,6 @@ contains
          call par_file%load_file(filename=ParName)
          if (par_file%failed()) then
             call error('Could not read inputfile '//ParName)
-            stop
          end if
 
          !Names of Inputfile
@@ -505,7 +499,7 @@ contains
          call par_file%get('Input.Initial conditions', InitName, found); input_cfg%InitName = InitName; call check_field(found, 'Input.Initial conditions', ParName)
          call par_file%get('Input.Forcing', ForcingName, found); input_cfg%ForcingName = ForcingName; call check_field(found, 'Input.Forcing', ParName)
          call par_file%get('Input.Absorption', AbsorpName, found); input_cfg%AbsorpName = AbsorpName; call check_field(found, 'Input.Absorption', ParName)
-         
+
          ! Grid information can also be included in par-file
          ! Check type of json entry
          call par_file%info('Input.Grid',found,input_cfg%grid_input_type,n_children_dummy)
@@ -527,8 +521,8 @@ contains
          call par_file%get('Output.Path', PathOut, found); call check_field(found, 'Output.Path', ParName)
 
          ! Transform backslashes to slash
-         do while(scan(PathOut,'\')>0)
-            index_bs = scan(PathOut,'\')
+         do while(scan(PathOut,'\\')>0)
+            index_bs = scan(PathOut,'\\')
             PathOut(index_bs:index_bs) = '/'
          end do
 
@@ -543,7 +537,6 @@ contains
          call par_file%get("Output.OutputDepthReference", output_cfg%output_depth_reference, found); call check_field(found, 'Output.OutputDepthReference', ParName)
          if (.not.(output_cfg%output_depth_reference == 'surface' .or. output_cfg%output_depth_reference == 'bottom')) then
             call error('Invalid field "Output.OutputDepthReference" in par-file.')
-            stop
          end if
 
          ! Output depths
@@ -563,7 +556,6 @@ contains
 
          else
             call error('Invalid field "Output.Depths" in par-file.')
-            stop
          end if
 
          ! Output times
@@ -575,18 +567,17 @@ contains
          else if (output_cfg%output_time_type == 3) then ! Output depths are given
             call par_file%get('Output.Times', output_cfg%tout, found); call check_field(found, 'Output.Times', ParName)
             output_cfg%thinning_interval = 0
-         
+
          else if (output_cfg%output_time_type == 5 .or. output_cfg%output_time_type == 6) then ! Output interval is given
             call par_file%get('Output.Times', output_cfg%thinning_interval_read, found); call check_field(found, 'Output.Times', ParName)
             output_cfg%thinning_interval = int(output_cfg%thinning_interval_read)
-            
+
             ! This code is needed for line 141 in simstrat.f90. Not very elegant.. might change in the future.
             allocate(output_cfg%tout(1))
             output_cfg%tout(1) = output_cfg%thinning_interval
 
          else
             call error('Invalid field "Output.Times" in par-file.')
-            stop
          end if
 
          !Model configuration
@@ -635,17 +626,15 @@ contains
          call par_file%get("ModelParameters.a_seiche", model_param%a_seiche, found); call check_field(found, 'ModelParameters.a_seiche', ParName)
          call par_file%get("ModelParameters.q_nn", model_param%q_NN, found); call check_field(found, 'ModelParameters.q_nn', ParName)
          call par_file%get("ModelParameters.f_wind", model_param%f_wind, found); call check_field(found, 'ModelParameters.f_wind', ParName)
-         
+
          ! C10 is a physical parameter on the order of e-3 if wind drag model is 1. Conversely, it is a calibration parameter
          ! with a value around 1 for wind drag models 2 and 3. This fact can lead to confusion and thus we check for realistic
          ! input values depending on the wind drag model chosen.
          call par_file%get("ModelParameters.c10", model_param%C10_constant, found); call check_field(found, 'ModelParameters.c10', ParName)
          if (model_cfg%wind_drag_model == 1 .and. model_param%C10_constant > 0.1) then
             call error('The input value of C10 is too high to be physically possible. Choose a lower value or change the wind drag model to 2 or 3 if you meant to use C10 as a calibration parameter.')
-            stop
          else if (model_cfg%wind_drag_model > 1 .and. model_param%C10_constant < 0.1) then
             call error('The input value of C10 is too low to serve as calibration parameter. Maybe you intended it as physical parameter but then you need to use wind drag model = 1.')
-            stop
          end if
 
          call par_file%get("ModelParameters.cd", model_param%CD, found); call check_field(found, 'ModelParameters.cd', ParName)
@@ -653,8 +642,8 @@ contains
          call par_file%get("ModelParameters.k_min", model_param%k_min, found); call check_field(found, 'ModelParameters.k_min', ParName)
          call par_file%get("ModelParameters.p_radin", model_param%p_radin, found); call check_field(found, 'ModelParameters.p_radin', ParName)
          call par_file%get("ModelParameters.p_windf", model_param%p_windf, found); call check_field(found, 'ModelParameters.p_windf', ParName)
-         if (model_cfg%ice_model == 1) then    
-           call par_file%get("ModelParameters.p_albedo", model_param%p_albedo, found); call check_field(found, 'ModelParameters.p_albedo', ParName)   
+         if (model_cfg%ice_model == 1) then
+           call par_file%get("ModelParameters.p_albedo", model_param%p_albedo, found); call check_field(found, 'ModelParameters.p_albedo', ParName)
            call par_file%get("ModelParameters.freez_temp", model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_temp', ParName)
            call par_file%get("ModelParameters.snow_temp", model_param%snow_temp, found); call check_field(found, 'ModelParameters.snow_temp', ParName)
          end if
@@ -701,16 +690,13 @@ contains
             read (13, *, end=99) z_read(i), U_read(i), V_read(i), T_read(i), S_read(i), k_read(i), eps_read(i)
             if (z_read(i)>0) then
                call error('One or several input depths of initial conditions are positive.')
-               stop
             end if
          end do
 99       num_read = i-1                               ! Number of valuInitNamees
          if (num_read < 1) then
             call error('Unable to read initial conditions files (no data found).')
-            stop
          else if(num_read==max_length_input_data) then
             write(6,*) '[ERROR] ','Only first ',max_length_input_data,' values of initial data file read.'
-            stop
          end if
 
          close (13)
@@ -771,7 +757,6 @@ contains
 
       if (.not. found) then
          call error('Field '//field_name//' not found in '//file_name)
-         stop
       end if
    end subroutine check_field
 
