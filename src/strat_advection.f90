@@ -214,7 +214,7 @@ contains
       real(RK) :: dh
 
       ! Local variables
-      integer :: i, top
+      integer :: i, top, outflow_above, outflow_below
       real(RK) :: dAED2(self%grid%nz_grid, state%n_AED2)
 
       associate(ubnd_vol => self%grid%ubnd_vol, &
@@ -224,21 +224,37 @@ contains
 
          ! Calculate changes
          do i = 1, ubnd_vol
-            if (i == ubnd_vol .and. Q_vert(i+1) > 0) then
+            ! For the top-most cell, if Q_vert at the upper face is positive, there is still no outflow (the cell is simply growing, but this is done elsewhere)
+            if ((i == ubnd_vol) .and. Q_vert(i + 1) > 0) then
                top = 0
             else
                top = 1
             end if
 
-            ! Advective flow out of box i, always negative
-            dAED2(i,:) = -top*abs(Q_vert(i + 1))*AED2_state(i,:)
-            if (i > 2 .and. Q_vert(i) > 0) then ! Advective flow into box i, from below
+            ! If Q_vert at the upper face of cell i is positive, then there is outflow to the cell above
+            if (Q_vert(i + 1) > 0) then
+                  outflow_above = 1
+            else 
+                  outflow_above = 0
+            end if
+
+            ! If Q_vert at the lower face of cell i is negative, then there is outflow to the cell below
+            if (Q_vert(i) < 0) then
+                  outflow_below = 1
+            else
+                  outflow_below = 0
+            end if
+
+            ! Calculate advective flow out of cell (thus negative sign in the front) i to the cells above and below
+            dAED2(i,:) = -(top*outflow_above*Q_vert(i + 1) - outflow_below*Q_vert(i))*AED2_state(i,:)
+
+            ! Calculate the advective flow into cell i from below
+            if (i > 1 .and. Q_vert(i) > 0) then
                dAED2(i,:) = dAED2(i,:) + Q_vert(i)*AED2_state(i - 1,:)
             end if
-            if (i < ubnd_vol) then
-               if (Q_vert(i + 2) < 0) then ! Advective flow into box i, from above
-                  dAED2(i,:) = dAED2(i,:) - Q_vert(i + 2)*AED2_state(i + 1,:)
-               end if
+            ! Calculate the advective flow into cell i from above (- sign in front because Q_vert is negative if there is inflow)
+            if (i < ubnd_vol .and. Q_vert(i + 1) < 0) then
+               dAED2(i,:) = dAED2(i,:) - Q_vert(i + 1)*AED2_state(i + 1,:)
             end if
          end do
 
