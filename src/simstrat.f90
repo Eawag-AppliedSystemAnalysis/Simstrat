@@ -215,11 +215,13 @@ contains
          ! Read forcing file
          call mod_forcing%update(simdata%model)
 
-         ! Update absorption
-         if (.not. simdata%aed2_cfg%bioshade_feedback) then
+         ! Update absorption (except if AED2 is off or if AED2 is on but bioshade feedback is off)
+         if (simdata%model_cfg%couple_aed2) then
+            if (.not. simdata%aed2_cfg%bioshade_feedback) then
+               call mod_absorption%update(simdata%model)
+            end if
+         else
             call mod_absorption%update(simdata%model)
-         !else
-         !   call mod_aed2%update_absorption(simdata%model, simdata%grid, simdata%aed2_cfg)
          end if
 
          ! Update physics

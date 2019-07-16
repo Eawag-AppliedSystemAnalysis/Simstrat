@@ -245,7 +245,10 @@ contains
 
       do split=1, self%aed2_cfg%split_factor
 
-         call absorption_updateAED2(self, state)
+         ! Compute shading of AED2 variables. If bioshade feedback is off, then the "normal" absorption is computed in the main loop of Simstrat
+         if (self%aed2_cfg%bioshade_feedback) then
+            call absorption_updateAED2(self, state)
+         end if
 
          !# Fudge
          self%nir(:) = (self%par(:)/0.45) * 0.51
