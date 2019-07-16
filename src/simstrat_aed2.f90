@@ -180,14 +180,14 @@ contains
          ! Update in-/outflow of AED2 variables (to be used in following advection step in the main loop)
          ! Maybe we don't need to calculate this in the init, but then the advection function in the main loop
          ! Doesn't have the AED2 inflow at the first timestep (as the AED2 update happens after the advection update)
-         if(state%has_advection .and. model_cfg%inflow_placement > 0) then
+         if(state%has_advection .and. model_cfg%inflow_mode > 0) then
             ! If the inflows are not empty and advection is not turned off
             self%there_is_inflow = .TRUE.
-            if (model_cfg%inflow_placement == 2) then
+            if (model_cfg%inflow_mode == 2) then
                ! If the inflows plunge according to density
                self%plunging_inflow = .TRUE.
                call lateral_rho_update_AED2(self, state)
-            else if (model_cfg%inflow_placement == 1) then
+            else if (model_cfg%inflow_mode == 1) then
                ! If inflow depths are given in the file
                self%plunging_inflow = .FALSE.
                call lateral_update_AED2(self, state)

@@ -77,7 +77,7 @@ module strat_simdata
       logical :: use_filtered_wind
       integer :: seiche_normalization
       integer :: wind_drag_model
-      integer :: inflow_placement
+      integer :: inflow_mode
       integer :: pressure_gradients
       logical :: salinity_transport
       integer :: ice_model
