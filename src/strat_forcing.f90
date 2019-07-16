@@ -69,7 +69,7 @@ contains
       save tb_start, tb_end
       save eof
 
-      if (idx) then
+      if (idx==1) then
 
          open (20, status='old', file=self%file)
          eof = 0
