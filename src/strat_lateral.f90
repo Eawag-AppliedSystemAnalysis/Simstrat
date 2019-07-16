@@ -146,15 +146,10 @@ contains
                   self%z_Inp(i,1:self%nval(i)) = grid%z_zero + self%z_Inp(i,1:self%nval(i))
                end if
 
-               !!!! FB: This error message could lead to simulation stop although entries are correct and will be deleted in the future.
-               ! Plunging temperature and salinity input must be combined with a matching input of water
-               ! if (i==3 .or. i==4) then
-               !    write(6,*) self%z_Inp(i,1:self%nval_deep(i))
-               !    write(6,*) self%z_Inp(1,1:self%nval_deep(1))
-               !    if (any(self%z_Inp(i,1:self%nval_deep(i))/=self%z_Inp(1,1:self%nval_deep(1)))) then
-               !       call error('Inflow depths in '//trim(fname(i))//' file must match the ones in inflow file.')
-               !    end if
-               ! end if
+               ! Allocate Q_plunging which will be used for calculating plunging of AED2 variables (in lateral_rho_AED2)
+               if (i==1) allocate(state%Q_plunging(grid%nz_grid, self%nval(i)))
+
+
 
                !Read first input values
                read(fnum(i),*,end=9) self%tb_start(i),(self%Inp_read_start(i,j),j=1,self%nval(i))
@@ -283,6 +278,8 @@ contains
             Q_inp(i,ubnd_vol + 1) = 0
          end do
 
+         state%Q_plunging = 0.0_RK
+
          ! Plunging algorithm
          do j = 1,self%nval_deep(1)  ! nval_deep needs to be the same for i=1,3,4
             if (Inp(1,j) > 1E-15) then
@@ -345,6 +342,9 @@ contains
                   Q_inp(1,i) = Q_inp(1,i) + Q_inp_inc
                   Q_inp(3,i) = Q_inp(3,i) + T_in*Q_inp_inc
                   Q_inp(4,i) = Q_inp(4,i) + S_in*Q_inp_inc
+
+                  ! Update Q_plunging which is used for input of AED2 variables (in lateral_rho_AED2)
+                  state%Q_plunging(i,j) = Q_inp_inc
                end do
             end if
          end do
