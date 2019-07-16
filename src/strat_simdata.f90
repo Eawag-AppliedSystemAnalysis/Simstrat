@@ -90,6 +90,7 @@ module strat_simdata
       real(RK) :: k_min
       real(RK) :: p_radin
       real(RK) :: p_windf
+      real(RK) :: albsw
       real(RK) :: p_albedo
       real(RK) :: freez_temp
       real(RK) :: snow_temp
