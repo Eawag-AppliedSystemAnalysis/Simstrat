@@ -137,7 +137,7 @@ contains
    subroutine run_simulation()
       !! run the marching time loop
 
-      !call logger%log(0.0_RK) ! Write initial conditions
+      call logger%log(simdata%model%datum) ! Write initial conditions
 
       ! Run simulation until end datum or until no more results are required by the output time file
       do while (simdata%model%datum<simdata%sim_cfg%end_datum .and. simdata%model%output_counter<=size(simdata%output_cfg%tout))
