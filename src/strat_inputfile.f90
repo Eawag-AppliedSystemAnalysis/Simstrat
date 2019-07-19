@@ -485,7 +485,7 @@ contains
          !check if inputfile SimstratModelexists
          call check_file_exists(ParName)
 
-         call par_file%initialize()
+         call par_file%initialize(comment_char='!')
 
          !load file or stop if fail
          call par_file%load_file(filename=ParName)
