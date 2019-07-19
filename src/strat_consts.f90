@@ -17,7 +17,6 @@
      real(RK), parameter     :: rho_0 = 1000_RK ! Mean freshwater density (seawater: 1023) [kg/m3]
      real(RK), parameter     :: cp = 4182_RK ! Mean freshwater heat capacity (seawater: 3992) [J/kg/K]
      real(RK), parameter     :: cp_air = 1005_RK ! Mean air heat capacity [J/kg/K]
-     real(RK), parameter     :: beta_sol = 0.35_RK ! parameter determin absoption in first grid cell [-]
 
     ! *** Further parameters controlling water dynamic ***
      real(RK), parameter     :: Prndtl = 0.8_RK ! Prandtl number for air??
