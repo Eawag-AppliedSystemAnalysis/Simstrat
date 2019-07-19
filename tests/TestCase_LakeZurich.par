@@ -48,6 +48,7 @@
     "hgeo"          : 0.1,
     "k_min"         : 1e-30,
     "p_radin"       : 1.1978,
-    "p_windf"       : 1
+    "p_windf"       : 1,
+    "albsw"         : 0.09
   }
 }

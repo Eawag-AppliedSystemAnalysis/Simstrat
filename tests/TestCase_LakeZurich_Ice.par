@@ -49,6 +49,7 @@
     "k_min"         : 1e-30,
     "p_radin"       : 1.1978,
     "p_windf"       : 1,
+    "albsw"         : 0.09,
     "p_albedo"      : 1,
     "freez_temp"    : 0.00,
     "snow_temp"     : 1	
