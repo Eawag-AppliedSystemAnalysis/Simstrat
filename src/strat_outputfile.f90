@@ -273,7 +273,7 @@ contains
       class(StaggeredGrid), target :: grid
 
       logical :: status_ok, exist_output_folder
-      integer :: i
+      integer :: i, exitstat
       character(len=256) :: mkdirCmd
 
       self%n_depths = size(output_config%zout)
@@ -283,9 +283,17 @@ contains
 
       ! Create output folder if it does not exist
       if(.not.exist_output_folder) then
-         call warn('Result folder does not exist, create folder...')
+         call warn('Result folder does not exist, create folder according to config file...')
          mkdirCmd = 'mkdir '//trim(output_config%PathOut)
-         call execute_command_line(mkdirCmd)
+         call execute_command_line(mkdirCmd, exitstat = exitstat)
+
+         ! mkdir does not seem to accept a path to a folder in execute_command_line, thus a default result folder "Results" will be generated in this case.
+         if (exitstat==1) then
+            call warn('Result path specified in config file could not be generated. Default result folder "Results" was generated instead.')
+            call execute_command_line('mkdir Results')
+            output_config%PathOut = 'Results'
+         end if
+
       end if
 
       if (allocated(self%output_files)) deallocate (self%output_files)
