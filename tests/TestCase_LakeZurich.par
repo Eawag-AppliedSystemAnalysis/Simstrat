@@ -47,7 +47,8 @@
     "cd"            : 0.002,                            ! Bottom drag coefficient [-]
     "hgeo"          : 0.1,                              ! Geothermal heat flux [W/m2]
     "k_min"         : 1e-30,                            ! Minimum value for TKE [J/kg]
-    "p_lw   "       : 1.1978,                           ! Fit parameter for absorption of IR radiation from sky [-]
+    "p_sw"          : 1,                                ! Fit parameter for absorption of 
+    "p_lw"          : 1.1978,                           ! Fit parameter for absorption of IR radiation from sky [-]
     "p_windf"       : 1,                                ! Fit parameter for convective and latent heat fluxes [-]
     "beta_sol"      : 0.3,                              ! Fraction of short-wave radiation directly absorbed as heat by water [-]
     "albsw"         : 0.09,                             ! Albedo for reflection of short-wave radiation on water [-]

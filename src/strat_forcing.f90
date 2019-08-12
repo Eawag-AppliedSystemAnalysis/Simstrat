@@ -182,7 +182,7 @@ contains
             else if (state%snow_h > 0) then !Snow
                F_glob = (A_cur(4)*(1 - snow_albedo)) * param%p_albedo
             else !Water
-               F_glob = A_cur(4)*(1 - param%albsw)
+               F_glob = A_cur(4)*(1 - param%albsw) * param%p_sw
             end if
 
             Vap_atm = A_cur(5)
@@ -207,7 +207,7 @@ contains
             else if (state%snow_h > 0) then !Snow
                F_glob = (A_cur(4)*(1 - snow_albedo)) * param%p_albedo
             else !Water
-               F_glob = A_cur(4)*(1 - param%albsw)
+               F_glob = A_cur(4)*(1 - param%albsw) * param%p_sw
             end if
 
             Vap_atm = A_cur(5)
@@ -233,7 +233,7 @@ contains
             state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
             state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
             heat0 = A_cur(3) !MS 2014
-            F_glob = A_cur(4)*(1 - param%albsw)
+            F_glob = A_cur(4)*(1 - param%albsw) * param%p_sw
             state%T_atm = 0.0_RK
             if (cfg%use_filtered_wind) state%Wf = A_cur(5) !AG 2014
          !UK added forcing mode with incomming long-wave radiation instead of cloudiness
@@ -250,7 +250,7 @@ contains
             else if (state%snow_h > 0) then !Snow
                F_glob = (A_cur(4)*(1 - snow_albedo)) * param%p_albedo
             else !Water
-               F_glob = A_cur(4)*(1 - param%albsw)
+               F_glob = A_cur(4)*(1 - param%albsw) * param%p_sw
             end if
 
             Vap_atm = A_cur(5)

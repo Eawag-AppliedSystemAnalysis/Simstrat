@@ -88,6 +88,7 @@ module strat_simdata
       real(RK) :: CD
       real(RK) :: fgeo
       real(RK) :: k_min
+      real(RK) :: p_sw
       real(RK) :: p_lw
       real(RK) :: p_windf
       real(RK) :: beta_sol
