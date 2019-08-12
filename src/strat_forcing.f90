@@ -290,7 +290,7 @@ contains
                   &   + 96.96_RK*sqrt(465*Vap_atm/(state%T_atm + 273.15_RK)*0.04_RK))/5.67e-8_RK/ &
                   &   (state%T_atm + 273.15_RK)**4 + 0.84_RK*Cloud)*5.67e-8_RK*(state%T_atm + 273.15_RK)**4
                end if
-               H_A = H_A*param%p_radin ! Provided fitting factor p_radin (~1)
+               H_A = H_A*param%p_lw ! Provided fitting factor p_radin (~1)
 
                H_W = -emiss_water*sig*(T_surf + 273.15_RK)**4
 
