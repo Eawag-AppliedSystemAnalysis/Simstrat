@@ -92,7 +92,6 @@ module strat_simdata
       real(RK) :: p_lw
       real(RK) :: p_windf
       real(RK) :: beta_sol
-      real(RK) :: albsw
       real(RK) :: p_albedo
       real(RK) :: freez_temp
       real(RK) :: snow_temp
@@ -135,6 +134,8 @@ module strat_simdata
       real(RK) :: T_atm ! Air temp at surface
       real(RK), dimension(:), allocatable :: rad ! Solar radiation (in water)
       real(RK), dimension(:), allocatable :: Q_vert ! Vertical exchange between boxes
+      real(RK), dimension(9,12) :: albedo_data  ! Experimental monthly albedo data for determination of current water albedo
+      real(RK) :: albedo_water   ! Current water albedo
 
       ! Snow and Ice
       real(RK), allocatable :: snow_h ! Snow layer height [m]

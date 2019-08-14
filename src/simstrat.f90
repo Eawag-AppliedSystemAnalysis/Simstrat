@@ -76,6 +76,9 @@ program simstrat_main
                          simdata%input_cfg%ForcingName, &
                          simdata%grid)
 
+   ! initialize albedo data used for water albedo calculation
+   call mod_forcing%init_albedo(simdata%model)
+
    ! initialize absorption module
    call mod_absorption%init(simdata%model_cfg, &
                             simdata%model_param, &
@@ -203,8 +206,11 @@ contains
          ! ***** Compute next model state *****
          ! ************************************
 
-         ! Read forcing file
+         ! Update forcing
          call mod_forcing%update(simdata%model)
+
+         ! Update water albedo
+         call mod_forcing%update_albedo(simdata%model)
 
          ! Update absorption
          call mod_absorption%update(simdata%model)
