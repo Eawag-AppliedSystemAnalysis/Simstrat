@@ -54,6 +54,7 @@ module strat_simdata
    ! Simulation configuration
    type, public :: SimConfig
       integer :: timestep
+      integer :: start_year
       real(RK) :: start_datum
       real(RK) :: end_datum
       integer :: disp_simulation
@@ -136,6 +137,7 @@ module strat_simdata
       real(RK), dimension(:), allocatable :: Q_vert ! Vertical exchange between boxes
       real(RK), dimension(9,12) :: albedo_data  ! Experimental monthly albedo data for determination of current water albedo
       real(RK) :: albedo_water   ! Current water albedo
+      integer :: lat_number ! Latitude band (used for determination of albedo)
 
       ! Snow and Ice
       real(RK), allocatable :: snow_h ! Snow layer height [m]

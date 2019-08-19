@@ -33,7 +33,8 @@
   },
   "Simulation" : {
     "Timestep s"        : 300,                          ! Simulation timestep in seconds
-    "Start d"           : 35001,                        ! Simulation start in days since 01.01.1981
+    "Start year"        : 1900,                         ! Starting year
+    "Start d"           : 35001,                        ! Simulation start in days since 01.01. of starting year
     "End d"             : 35732,                        ! Simulation end
     "DisplaySimulation" : 1                             ! 0: No display, 1: Display when output is written, 2: Display every iteration
   },
@@ -47,7 +48,7 @@
     "cd"            : 0.002,                            ! Bottom drag coefficient [-]
     "hgeo"          : 0.1,                              ! Geothermal heat flux [W/m2]
     "k_min"         : 1e-30,                            ! Minimum value for TKE [J/kg]
-    "p_sw"          : 1,                                ! Fit parameter for absorption of 
+    "p_sw"          : 1,                                ! Fit parameter for absorption of short wave radiation from sky [-]
     "p_lw"          : 1.1978,                           ! Fit parameter for absorption of IR radiation from sky [-]
     "p_windf"       : 1,                                ! Fit parameter for convective and latent heat fluxes [-]
     "beta_sol"      : 0.3,                              ! Fraction of short-wave radiation directly absorbed as heat by water [-]

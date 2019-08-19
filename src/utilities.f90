@@ -279,4 +279,93 @@ contains
       str_real = adjustl(str_real)
    end function str_real
 
+   subroutine date_to_month(current_year, elapsed_days, input_date, month)
+      implicit none
+      integer, intent(inout) :: current_year
+      real(RK), intent(inout) :: elapsed_days
+      real(RK), intent(in) :: input_date
+      integer, intent(out) :: month
+
+      integer :: days_per_year, day
+
+      days_per_year = 0
+      day = 0
+
+      ! Find out which year
+      do
+         ! Check for leap year
+         if (mod(current_year,4)==0 .and. .not. mod(current_year,100)==0) then
+            days_per_year = 366
+         else
+            days_per_year = 365
+         end if
+
+         if ((elapsed_days + days_per_year) < input_date) then
+            elapsed_days = elapsed_days + days_per_year
+            current_year = current_year + 1
+         else
+            exit
+         end if
+      end do
+      day = input_date - elapsed_days
+
+      ! Find out which month
+      if (days_per_year == 366) then
+         if (day < 32) then
+            month = 1
+         else if (day < 61) then
+            month = 2
+         else if (day < 92) then
+            month = 3
+         else if (day < 122) then
+            month = 4
+         else if (day < 153) then
+            month = 5
+         else if (day < 183) then
+            month = 6
+         else if (day < 214) then
+            month = 7
+         else if (day < 245) then
+            month = 8
+         else if (day < 275) then
+            month = 9
+         else if (day < 306) then
+            month = 10
+         else if (day < 336) then
+            month = 11
+         else
+            month = 12
+         end if
+      end if
+         
+      if (days_per_year == 365) then
+         if (day < 32) then
+            month = 1
+         else if (day < 60) then
+            month = 2
+         else if (day < 91) then
+            month = 3
+         else if (day < 121) then
+            month = 4
+         else if (day < 152) then
+            month = 5
+         else if (day < 182) then
+            month = 6
+         else if (day < 213) then
+            month = 7
+         else if (day < 244) then
+            month = 8
+         else if (day < 274) then
+            month = 9
+         else if (day < 305) then
+            month = 10
+         else if (day < 335) then
+            month = 11
+         else
+            month = 12
+         end if
+      end if
+
+   end subroutine
+
 end module utilities
