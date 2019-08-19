@@ -20,6 +20,7 @@
     "MaxLengthInputData"      : 1000,                   ! Maximum length of input data (initial conditions, bathymetry, grid etc.)
     "CoupleAED2"              : false,                  ! Switch to turn on/off the biochemical model AED2
     "TurbulenceModel"         : 1,                      ! 1: k-epsilon, 2: Mellor-Yamada
+    "SplitSeicheParameter"    : true,                   ! True: Use a_seiche if N2 exceeds strat_sumr and a_seiche_w otherwise, False: Always use a_seiche
     "StabilityFunction"       : 2,                      ! 1: constant, 2: quasi-equilibrium
     "FluxCondition"           : 1,                      ! 0: Dirichlet condition, 1: no-flux
     "Forcing"                 : 3,                      ! 1: Wind + Temp + SolRad, 2: 1 + VapP, 3: 2 + Cloud, 4: Wind + HeatFlux + SolRad, 5: 2 + Incoming Long Wave
@@ -42,6 +43,8 @@
     "lat"           : 47.3,                             ! Latitude in [°]
     "p_air"         : 960,                              ! Air pressure in [mbar]
     "a_seiche"      : 0.0011046,                        ! Fraction of wind energy which goes into seiche energy [-]
+    "a_seiche_w"    : 0,                                ! Fraction of wind energy which goes into seiche energy in winter [-] (only used if SplitSeicheParameter=true)
+    "strat_sumr"    : 0,                                ! If maximum N2 (Brundt-Vaisala frequency) is below this threshold, a_seiche_w is used instead of a_seiche (only used if SplitSeicheParameter=true)
     "q_nn"          : 0.75,                             ! Fit parameter for distribution of seiche energy [-]
     "f_wind"        : 1.6423,                           ! Ratio of forcing wind to wind speed at 10 m above lake level [-]
     "c10"           : 1,                                ! Wind drag coefficient, a physical constant around 0.001 if WindDragModel = 1 and a calibration parameter around 1 if WindDragModel = 2 or 3

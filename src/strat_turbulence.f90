@@ -51,11 +51,8 @@ contains
 
       call self%do_production(state)
 
-      if (param%a_seiche /= 0) then
-         call self%do_seiche(state, param)
-      else
-         state%P_seiche = 0.0_RK
-      end if
+      call self%do_seiche(state, param)
+
 
    end subroutine
 
@@ -90,7 +87,7 @@ contains
       class(ModelParam) :: param
 
       ! Local variables
-      real(RK) :: W10, PS, PW, f_norm, minNN
+      real(RK) :: W10, PS, PW, f_norm, minNN, a_seiche_local
       real(RK) :: distrib(self%grid%ubnd_fce)
       integer :: i
 
@@ -104,6 +101,25 @@ contains
          do i = 2, ubnd_fce - 1
             distrib(i) = max(state%NN(i)**param%q_NN, minNN)/grid%Az(i)*grid%dAz(i-1)
          end do
+
+         ! Determine a_seiche (in case split_a_seiche is true)
+         if (self%model_cfg%split_a_seiche) then
+
+            ! If maximum stratification (N2) is higher than threshold
+            if (maxval(state%NN(2:ubnd_fce - 1)) >= param%strat_sumr) then
+               a_seiche_local = param%a_seiche
+
+            ! If maximum stratification (N2) is lower than threshold
+            else if (maxval(state%NN(2:ubnd_fce - 1)) < param%strat_sumr) then
+               a_seiche_local = param%a_seiche_w
+            end if
+         end if
+
+         ! Exit function if a_seiche is 0
+         if (a_seiche_local == 0) then
+            state%P_seiche = 0.0_RK
+            return
+         end if
 
          !calculate Seiche normalization factor
          f_norm = 0.0_RK
@@ -131,10 +147,10 @@ contains
 
          !Adjust wind params based on configuration
          if (self%model_cfg%use_filtered_wind) then !use filtered wind (AG 2014)
-            PW = param%a_seiche*grid%Az(ubnd_fce)*rho_air*state%C10*state%Wf**3
+            PW = a_seiche_local*grid%Az(ubnd_fce)*rho_air*state%C10*state%Wf**3
          else !use real wind
             W10 = sqrt(state%u10**2 + state%v10**2)
-            PW = param%a_seiche*grid%Az(ubnd_fce)*rho_air*state%C10*W10**3
+            PW = a_seiche_local*grid%Az(ubnd_fce)*rho_air*state%C10*W10**3
          end if
 
          !Update E_Seiche

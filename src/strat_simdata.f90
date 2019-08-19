@@ -65,6 +65,7 @@ module strat_simdata
       integer :: max_length_input_data
       logical :: couple_aed2
       integer :: turbulence_model
+      logical :: split_a_seiche
       integer :: stability_func
       integer :: flux_condition
       integer :: forcing_mode
@@ -83,6 +84,8 @@ module strat_simdata
       real(RK) :: Lat
       real(RK) :: p_air
       real(RK) :: a_seiche
+      real(RK) :: a_seiche_w
+      real(RK) :: strat_sumr
       real(RK) :: q_NN
       real(RK) :: f_wind
       real(RK) :: C10_constant

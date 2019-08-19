@@ -591,6 +591,7 @@ contains
             call warn('Variable "ModelConfig.CoupleAED2" is not set. Assume you do not want to couple simstrat with aed2.')
          end if
          call par_file%get("ModelConfig.TurbulenceModel", model_cfg%turbulence_model, found); call check_field(found, 'ModelConfig.TurbulenceModel', ParName)
+         call par_file%get("ModelConfig.SplitSeicheParameter", model_cfg%split_a_seiche, found); call check_field(found, 'ModelConfig.SplitSeicheParameter', ParName)
          call par_file%get("ModelConfig.StabilityFunction", model_cfg%stability_func, found); call check_field(found, 'ModelConfig.StabilityFunction', ParName)
          call par_file%get("ModelConfig.FluxCondition", model_cfg%flux_condition, found); call check_field(found, 'ModelConfig.FluxCondition', ParName)
          call par_file%get("ModelConfig.Forcing", model_cfg%forcing_mode, found); call check_field(found, 'ModelConfig.Forcing', ParName)
@@ -607,6 +608,11 @@ contains
          call par_file%get("ModelParameters.lat", model_param%Lat, found); call check_field(found, 'ModelParameters.lat', ParName)
          call par_file%get("ModelParameters.p_air", model_param%p_air, found); call check_field(found, 'ModelParameters.p_air', ParName)
          call par_file%get("ModelParameters.a_seiche", model_param%a_seiche, found); call check_field(found, 'ModelParameters.a_seiche', ParName)
+         call par_file%get("ModelParameters.a_seiche", model_param%a_seiche, found); call check_field(found, 'ModelParameters.a_seiche', ParName)
+         if (model_cfg%split_a_seiche) then
+            call par_file%get("ModelParameters.a_seiche_w", model_param%a_seiche_w, found); call check_field(found, 'ModelParameters.a_seiche_w', ParName)
+            call par_file%get("ModelParameters.strat_sumr", model_param%strat_sumr, found); call check_field(found, 'ModelParameters.strat_sumr', ParName)
+         end if 
          call par_file%get("ModelParameters.q_nn", model_param%q_NN, found); call check_field(found, 'ModelParameters.q_nn', ParName)
          call par_file%get("ModelParameters.f_wind", model_param%f_wind, found); call check_field(found, 'ModelParameters.f_wind', ParName)
 
