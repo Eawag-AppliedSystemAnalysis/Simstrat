@@ -30,7 +30,7 @@ contains
          return
       end if
 
-      !Assign closest value if out of given grid
+      ! Assign closest value if out of given grid
       posk1 = 1
       do while (zi(posk1) <= z(1))
          yi(posk1) = y(1)
@@ -42,7 +42,7 @@ contains
          posk2 = posk2 - 1
       end do
 
-      !Linear interpolation
+      ! Linear interpolation
       posi = 1
       do i = posk1, posk2
          do while (zi(i) > z(posi + 1))
@@ -54,7 +54,7 @@ contains
       return
    end
 
-   !Interpolation of yi on grid zi (based on the given y on grid z)
+   ! Interpolation of yi on grid zi (based on the given y on grid z)
    !####################################################################
    pure subroutine Interp_nan(z, y, num_z, zi, yi, num_zi)
       !####################################################################
@@ -68,7 +68,7 @@ contains
 
       integer posk1, posk2, posi, i
 
-      !Assign NaN if out of given grid
+      ! Assign NaN if out of given grid
       posk1 = 1
       do while (zi(posk1) < z(1))
          yi(posk1) = 0.0_RK
@@ -79,11 +79,10 @@ contains
       do while (zi(posk2) > z(num_z))
          yi(posk2) = 0.0_RK
          yi(posk2) = ieee_value(yi(posk2), ieee_quiet_nan) ! NaN
-         !yi(posk2) = z(num_z)
          posk2 = posk2 - 1
       end do
 
-      !Linear interpolation
+      ! Linear interpolation
       posi = 1
       do i = posk1, posk2
          do while (zi(i) > z(posi + 1))
@@ -95,7 +94,7 @@ contains
       return
    end subroutine Interp_nan
 
-   !!Integrate discrete function y[x] using the trapezoidal rule
+   !! Integrate discrete function y[x] using the trapezoidal rule
    !!####################################################################
    subroutine Integrate(x, y, inty, num)
       !!####################################################################
@@ -112,7 +111,7 @@ contains
       return
    end
 
-      !Assign nan to values out of current grid
+      ! Assign nan to values out of current grid
    !####################################################################
    pure subroutine Assign_nan(y, ubnd, ubnd_grid)
       !####################################################################
@@ -125,7 +124,7 @@ contains
 
       integer :: i
 
-      !Assign NaN if out of given grid
+      ! Assign NaN if out of given grid
       i = ubnd_grid
       do while (i > ubnd)
          y(i) = 0.0_RK

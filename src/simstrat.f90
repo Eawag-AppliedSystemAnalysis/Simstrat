@@ -53,49 +53,51 @@ program simstrat_main
    character(len=100) :: arg
    character(len=:), allocatable :: ParName
 
-   !print some information
+   ! Print some information
    write (6, *) 'Simstrat version '//version
    write (6, *) 'This software has been developed at eawag - Swiss Federal Institute of Aquatic Science and Technology'
    write (6, *) ''
 
-   !get first cli argument
+   ! Get first cli argument
    call get_command_argument(1, arg)
    ParName = trim(arg)
    if (ParName == '') ParName = 'simstrat.par'
 
-   !initialize model from inputfiles
+   ! Initialize model from input files
    call factory%initialize_model(ParName, simdata)
 
-   ! initialize Discretization
+   ! Initialize Discretization
    call euler_i_disc%init(simdata%grid)
    call euler_i_disc_keps%init(simdata%grid)
 
-   !initialize forcing module
+   ! Initialize forcing module
    call mod_forcing%init(simdata%model_cfg, &
                          simdata%model_param, &
                          simdata%input_cfg%ForcingName, &
                          simdata%grid)
 
-   ! initialize albedo data used for water albedo calculation
+   ! Initialize albedo data used for water albedo calculation
    call mod_forcing%init_albedo(simdata%model, simdata%sim_cfg)
 
-   ! initialize absorption module
+   ! Initialize absorption module
    call mod_absorption%init(simdata%model_cfg, &
                             simdata%model_param, &
                             simdata%input_cfg%AbsorpName, &
                             simdata%grid)
 
+   ! If there is advection (due to inflow)
    if (simdata%model%has_advection) then
-      ! initialize advection module
+      ! Initialize advection module
       call mod_advection%init(simdata%model_cfg, &
                            simdata%model_param, &
                            simdata%grid)
 
-      ! initialize lateral module based on configuration
+      ! Initialize lateral module based on configuration
       if (simdata%model_cfg%inflow_placement == 1) then
          ! Gravity based inflow
          mod_lateral => mod_lateral_rho
       else
+         ! User defined inflow depths
          mod_lateral => mod_lateral_normal
       end if
       call mod_lateral%init(simdata%model_cfg, &
@@ -138,9 +140,10 @@ program simstrat_main
 contains
 
    subroutine run_simulation()
-      !! run the marching time loop
+      ! Run the simulation loop
 
-      call logger%log(simdata%model%datum) ! Write initial conditions
+      ! Write initial conditions
+      call logger%log(simdata%model%datum)
 
       ! Run simulation until end datum or until no more results are required by the output time file
       do while (simdata%model%datum<simdata%sim_cfg%end_datum .and. simdata%model%output_counter<=size(simdata%output_cfg%tout))

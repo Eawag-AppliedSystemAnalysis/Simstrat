@@ -145,16 +145,6 @@ contains
                   self%z_Inp(i,1:self%nval(i)) = grid%z_zero + self%z_Inp(i,1:self%nval(i))
                end if
 
-               !!!! FB: This error message could lead to simulation stop although entries are correct and will be deleted in the future.
-               ! Plunging temperature and salinity input must be combined with a matching input of water
-               ! if (i==3 .or. i==4) then
-               !    write(6,*) self%z_Inp(i,1:self%nval_deep(i))
-               !    write(6,*) self%z_Inp(1,1:self%nval_deep(1))
-               !    if (any(self%z_Inp(i,1:self%nval_deep(i))/=self%z_Inp(1,1:self%nval_deep(1)))) then
-               !       call error('Inflow depths in '//trim(fname(i))//' file must match the ones in inflow file.')
-               !    end if
-               ! end if
-
                !Read first input values
                read(fnum(i),*,end=9) self%tb_start(i),(self%Inp_read_start(i,j),j=1,self%nval(i))
 
@@ -237,7 +227,7 @@ contains
                   call error('Dates in '//trim(fname(i))//' file must always be increasing.')
                end if
 
-               !Linearly interpolate value at correct datum
+               ! Linearly interpolate value at correct datum
                if (i/=2) then
                   ! For plunging input, Inp will be needed later
                   Inp(i,1:self%nval_deep(i)) = self%Inp_read_start(i,1:self%nval_deep(i)) + (datum-self%tb_start(i)) &
@@ -537,10 +527,6 @@ contains
             end do
             Q_inp(i,ubnd_vol + 1) = 0
          end do
-         !write(6,*) 1, Q_inp(1,1), Q_inp(1,ubnd_vol)
-         !write(6,*) 2, Q_inp(2,1), Q_inp(2,ubnd_vol)
-         !write(6,*) 3, Q_inp(3,1), Q_inp(3,ubnd_vol)
-         !write(6,*) 4, Q_inp(4,1), Q_inp(4,ubnd_vol)
 
       end associate
    end subroutine

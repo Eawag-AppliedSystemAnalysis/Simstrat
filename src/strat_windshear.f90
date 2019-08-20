@@ -61,7 +61,7 @@ contains
                                       grid%dAz(2:ubnd_vol - 1)/grid%Az(2:ubnd_vol - 1)
          end if
 
-         ! set surface condition based on shear stress variable
+         ! Set surface condition based on shear stress variable
          sources(ubnd_vol) = self%stress_t/grid%h(ubnd_vol)
 
          !!!!!!!! Explicit boundary conditions !!!!!

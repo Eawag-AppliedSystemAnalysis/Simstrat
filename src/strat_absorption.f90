@@ -32,7 +32,7 @@ module strat_absorption
 contains
 
    subroutine absorption_init(self, model_config, model_param, absorption_file, grid)
-   !! initialize absorption
+   ! Initialize absorption
 
       implicit none
       class(AbsorptionModule) :: self
@@ -54,7 +54,7 @@ contains
    end subroutine
 
    subroutine absorption_update(self, state)
-   !! update absorption
+   ! Update absorption
       implicit none
       class(AbsorptionModule) :: self
       class(ModelState) :: state

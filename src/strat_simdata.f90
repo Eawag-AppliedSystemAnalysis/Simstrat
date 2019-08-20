@@ -134,7 +134,6 @@ module strat_simdata
       real(RK) :: tx, ty ! Shear stress
       real(RK) :: C10 ! Wind drag coefficient
       real(RK) :: SST, heat, heat_snow, heat_ice, heat_snowice! Sea surface temperature and heat flux
-      !real(RK) :: rad0 ! Solar radiation at surface
       real(RK) :: T_atm ! Air temp at surface
       real(RK), dimension(:), allocatable :: rad ! Solar radiation (in water)
       real(RK), dimension(:), allocatable :: Q_vert ! Vertical exchange between boxes
@@ -147,9 +146,9 @@ module strat_simdata
       real(RK), allocatable :: total_ice_h ! Total ice layer height [m]
       real(RK), allocatable :: black_ice_h ! Black ice layer height [m]
       real(RK), allocatable :: white_ice_h ! Snowice layer height [m]
-      real(RK) :: snow_dens ! snow density [kg m-3]
-      real(RK) :: ice_temp ! ice temperature [°C]
-      real(RK) :: precip ! precipiation in water eqvivalent hight [m]
+      real(RK) :: snow_dens ! Snow density [kg m-3]
+      real(RK) :: ice_temp ! Ice temperature [°C]
+      real(RK) :: precip ! Precipiation in water eqvivalent hight [m]
 
       !For saving heatflux
       real(RK), allocatable :: ha ! Incoming long wave [W m-2]
@@ -164,7 +163,6 @@ module strat_simdata
       logical :: has_advection
       logical, dimension(1:4) :: has_surface_input, has_deep_input
       integer :: nz_input
-      !logical :: has_salinity_grad, has_salinity
 
    contains
       procedure, pass :: init => model_state_init
@@ -187,7 +185,7 @@ contains
    subroutine simulation_data_init(self, state_size)
       class(SimulationData), intent(inout) :: self
       integer, intent(in) :: state_size
-      ! init model data structures
+      ! Init model data structures
       call self%model%init(state_size)
 
    end subroutine
@@ -237,7 +235,7 @@ contains
       allocate (self%hv)
       allocate (self%rad0)
 
-      ! init to zero
+      ! Init to zero
       self%U = 0.0_RK
       self%V = 0.0_RK
       self%T = 0.0_RK
