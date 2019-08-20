@@ -212,7 +212,7 @@ contains
       ! Local variables
       type(aed2_variable_t),pointer :: tvar
       real(RK) :: min_C
-      integer :: v, i, split, lev, r
+      integer :: v, i, lev, r
       real(RK), dimension(self%grid%ubnd_vol) :: tmp
 
       ! Calculate local pressure
@@ -243,26 +243,24 @@ contains
 
       call check_states(self)
 
-      do split=1, self%aed2_cfg%split_factor
+      ! Compute shading of AED2 variables. If bioshade feedback is off, then the "normal" absorption is computed in the main loop of Simstrat
+      if (self%aed2_cfg%bioshade_feedback) then
+         call absorption_updateAED2(self, state)
+      end if
 
-         ! Compute shading of AED2 variables. If bioshade feedback is off, then the "normal" absorption is computed in the main loop of Simstrat
-         if (self%aed2_cfg%bioshade_feedback) then
-            call absorption_updateAED2(self, state)
-         end if
+      !# Fudge
+      self%nir(:) = (self%par(:)/0.45) * 0.51
+      self%uva(:) = (self%par(:)/0.45) * 0.035
+      self%uvb(:) = (self%par(:)/0.45) * 0.005
 
-         !# Fudge
-         self%nir(:) = (self%par(:)/0.45) * 0.51
-         self%uva(:) = (self%par(:)/0.45) * 0.035
-         self%uvb(:) = (self%par(:)/0.45) * 0.005
+      call calculate_fluxes(self, state)
 
-         call calculate_fluxes(self, state)
-
-         ! Update the water column layers using the biochemical reaction of AED2
-         do v = 1, self%n_vars
-            do lev = 1, self%grid%nz_occupied
-               self%cc(lev, v) = self%cc(lev, v) + state%dt/self%aed2_cfg%split_factor*self%flux_pel(lev, v)
-            end do
+      ! Update the water column layers using the biochemical reaction of AED2
+      do v = 1, self%n_vars
+         do lev = 1, self%grid%nz_occupied
+            self%cc(lev, v) = self%cc(lev, v) + state%dt*self%flux_pel(lev, v)
          end do
+      end do
 
 !       ! Now update benthic variables, depending on whether zones are simulated
 !       IF ( benthic_mode .GT. 1 ) THEN
@@ -283,21 +281,21 @@ contains
 !       ! If simulating sediment zones, distribute cc-sed benthic properties back
 !       !  into main cc array, mainly for plotting
 !       IF ( benthic_mode .GT. 1 ) CALL copy_from_zone(cc, cc_diag, cc_diag_hz, wlev)
-      end do
-         ! Update in-/outflow of AED2 variables (to be used in following advection step in the main loop)
-         if (self%there_is_inflow) then
-            if (self%plunging_inflow) then
-               call lateral_rho_update_AED2(self, state)
-            else
-               call lateral_update_AED2(self, state)
-            end if
+
+      ! Update in-/outflow of AED2 variables (to be used in following advection step in the main loop)
+      if (self%there_is_inflow) then
+         if (self%plunging_inflow) then
+            call lateral_rho_update_AED2(self, state)
+         else
+            call lateral_update_AED2(self, state)
          end if
+      end if
 
 
-         ! Diffusive transport of AED2 variables
-         do v=1, self%n_vars
-            call diffusion_AED2(self, state, v)
-         end do
+      ! Diffusive transport of AED2 variables
+      do v=1, self%n_vars
+         call diffusion_AED2(self, state, v)
+      end do
 
    end subroutine
 
