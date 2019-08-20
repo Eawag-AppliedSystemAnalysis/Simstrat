@@ -218,8 +218,8 @@ contains
       class(StaggeredGrid), target :: grid
 
       logical :: status_ok, exist_output_folder
-      integer :: i, ppos
-      character(len=256) :: mkdirCmd, output_folder
+      integer :: i, exitstat
+      character(len=256) :: mkdirCmd
 
       self%n_depths = size(output_config%zout)
 
@@ -228,9 +228,17 @@ contains
 
       ! Create Simstrat output folder if it does not exist
       if(.not.exist_output_folder) then
-         call warn('Result folder does not exist, create folder...')
+         call warn('Result folder does not exist, create folder according to config file...')
          mkdirCmd = 'mkdir '//trim(output_config%PathOut)
-         call execute_command_line(mkdirCmd)
+         call execute_command_line(mkdirCmd, exitstat = exitstat)
+
+         ! mkdir does not seem to accept a path to a folder in execute_command_line, thus a default result folder "Results" will be generated in this case.
+         if (exitstat==1) then
+            call warn('Result path specified in config file could not be generated. Default result folder "Results" was generated instead.')
+            call execute_command_line('mkdir Results')
+            output_config%PathOut = 'Results'
+         end if
+
       end if
 
       if (allocated(self%output_files)) deallocate (self%output_files)
@@ -262,21 +270,25 @@ contains
         inquire(file=self%aed2_config%path_aed2_output//'/',exist=exist_output_folder)
         ! Create AED2 output folder if it does not exist
         if(.not. exist_output_folder) then
-          call warn('AED2 result folder does not exist, create folder...')
-          ppos = scan(trim(self%aed2_config%path_aed2_output),"/", BACK= .true.)
-          if ( ppos > 0 ) output_folder = self%aed2_config%path_aed2_output(1:ppos - 1)
-          mkdirCmd = 'mkdir '//trim(output_folder)
-          write(6,*) mkdirCmd
-          call execute_command_line(mkdirCmd)
-        end if
+         call warn('Result folder does not exist, create folder according to config file...')
+         mkdirCmd = 'mkdir '//trim(output_config%PathOut)
+         call execute_command_line(mkdirCmd, exitstat = exitstat)
+
+         ! mkdir does not seem to accept a path to a folder in execute_command_line, thus a default result folder "Results" will be generated in this case.
+         if (exitstat==1) then
+            call warn('Result path specified in config file could not be generated. Default result folder "ResultsAED2" was generated instead.')
+            call execute_command_line('mkdir Results')
+            output_config%PathOut = 'ResultsAED2'
+         end if
+       end if
 
         do i = 1, self%n_vars_AED2
             call self%output_files(i + self%n_vars)%open(self%aed2_config%path_aed2_output//'/'//trim(self%output_config%output_vars_aed2%names(i))//'_out.dat', n_cols=self%n_depths + 1, status_ok=status_ok)
             call self%output_files(i + self%n_vars)%add('')
             call self%output_files(i + self%n_vars)%add(self%output_config%zout, real_fmt='(F12.3)')
             call self%output_files(i + self%n_vars)%next_row()
-            end do
-        end if
+        end do
+      end if
 
    end subroutine
 

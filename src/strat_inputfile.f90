@@ -42,21 +42,21 @@ contains
       class(SimulationData), pointer, intent(out) :: simdata
       character(len=*) :: fname
 
-      !allocate model
-      !if(associated(simdata)) deallocate(simdata)
+      ! Allocate model
+      ! If(associated(simdata)) deallocate(simdata)
 
       allocate (SimulationData :: self%simdata)
       simdata => self%simdata
 
-      !Parse inputfile
+      ! Parse inputfile
       call self%read_json_par_file(fname)
 
-      !Set up grid
+      ! Set up grid
       call self%read_grid_config
 
       call self%simdata%model%init(self%simdata%grid%nz_grid)
 
-      !Read initial data
+      ! Read initial data
       call self%read_initial_data
 
       ! Update area factors
@@ -65,7 +65,7 @@ contains
       ! Init rest of model
       call self%setup_model()
 
-      ! check input files for advection
+      ! Check input files for advection
       call self%check_advection()
 
       ! Set output configuration
@@ -290,7 +290,7 @@ contains
    subroutine setup_model(self)
       implicit none
       class(SimstratSimulationFactory) :: self
-      !integer :: i
+      ! Integer :: i
       associate (simdata=>self%simdata, &
                  model_cfg=>self%simdata%model_cfg, &
                  model_param=>self%simdata%model_param, &
@@ -322,32 +322,6 @@ contains
                model%fgeo_add(1) = model%fgeo_add(1) + 2*model_param%fgeo/rho_0/cp*grid%Az(1)/((grid%Az(1) + grid%Az(2))*grid%h(1))
             end if
          end if
-
-         ! Salinity control for buoyancy functions
-         ! if salinity transport is enabled
-         ! FB2018: commented out, see strat_stability module for explanation
-!          if (model_cfg%salinity_transport) then
-!             model%has_salinity = .true.
-!             model%has_salinity_grad = .true.
-!          else ! else, test for this config
-!             model%has_salinity = .false.
-!             model%has_salinity_grad = .false.
-!             do i = 1, grid%ubnd_vol
-!                if (model%S(i) /= 0) then
-!                   model%has_salinity = .true.
-!                   exit
-!                end if
-
-!             end do
-!             if (model%has_salinity) then
-!                do i = 2, grid%nz_grid
-!                   if (model%S(i) - model%S(i - 1) /= 0) then
-!                      model%has_salinity_grad = .true.
-!                      exit
-!                   end if
-!                end do
-!             end if
-!          end if
 
          ! Set up timing
          model%datum = self%simdata%sim_cfg%start_datum
@@ -452,7 +426,7 @@ contains
 
          grid_config%max_depth = grid_config%z_A_read(1) - grid_config%z_A_read(num_read) ! depth = max - min depth
 
-         ! initialize Grid of simdata
+         ! Initialize Grid of simdata
          call simdata%grid%init(grid_config)
       end associate
    end subroutine
@@ -469,8 +443,8 @@ contains
       logical :: found
       integer :: n_children_dummy, index_bs
 
-      !gfortran cannot handle type bound allocatable character that are passed to subroutine as intent(out)
-      !as a workaround we have to store the values in a local scope allocatable character
+      ! gfortran cannot handle type bound allocatable character that are passed to subroutine as intent(out)
+      ! as a workaround we have to store the values in a local scope allocatable character
       character(kind=CK, len=:), allocatable          :: MorphName, InitName, ForcingName, AbsorpName
       character(kind=CK, len=:), allocatable          :: GridName, zoutName, toutName, PathOut
       character(kind=CK, len=:), allocatable          :: QinpName, QoutName, TinpName, SinpName
@@ -482,19 +456,19 @@ contains
                  sim_cfg=>self%simdata%sim_cfg, &
                  model_param=>self%simdata%model_param)
 
-         !model%ParName = ParName
-         !check if inputfile SimstratModelexists
+         ! model%ParName = ParName
+         ! Check if inputfile SimstratModelexists
          call check_file_exists(ParName)
 
-         call par_file%initialize()
+         call par_file%initialize(comment_char='!')
 
-         !load file or stop if fail
+         ! Load file or stop if fail
          call par_file%load_file(filename=ParName)
          if (par_file%failed()) then
             call error('Could not read inputfile '//ParName)
          end if
 
-         !Names of Inputfile
+         ! Names of Inputfile
          call par_file%get('Input.Morphology', MorphName, found); input_cfg%MorphName = MorphName; call check_field(found, 'Input.Morphology', ParName)
          call par_file%get('Input.Initial conditions', InitName, found); input_cfg%InitName = InitName; call check_field(found, 'Input.Initial conditions', ParName)
          call par_file%get('Input.Forcing', ForcingName, found); input_cfg%ForcingName = ForcingName; call check_field(found, 'Input.Forcing', ParName)
@@ -580,7 +554,7 @@ contains
             call error('Invalid field "Output.Times" in par-file.')
          end if
 
-         !Model configuration
+         ! Model configuration
          call par_file%get("ModelConfig.MaxLengthInputData", model_cfg%max_length_input_data, found);
          if (.not. found) then
             model_cfg%max_length_input_data = 1000
@@ -592,6 +566,7 @@ contains
             call warn('Variable "ModelConfig.CoupleAED2" is not set. Assume you do not want to couple simstrat with aed2.')
          end if
          call par_file%get("ModelConfig.TurbulenceModel", model_cfg%turbulence_model, found); call check_field(found, 'ModelConfig.TurbulenceModel', ParName)
+         call par_file%get("ModelConfig.SplitSeicheParameter", model_cfg%split_a_seiche, found); call check_field(found, 'ModelConfig.SplitSeicheParameter', ParName)
          call par_file%get("ModelConfig.StabilityFunction", model_cfg%stability_func, found); call check_field(found, 'ModelConfig.StabilityFunction', ParName)
          call par_file%get("ModelConfig.FluxCondition", model_cfg%flux_condition, found); call check_field(found, 'ModelConfig.FluxCondition', ParName)
          call par_file%get("ModelConfig.Forcing", model_cfg%forcing_mode, found); call check_field(found, 'ModelConfig.Forcing', ParName)
@@ -600,7 +575,6 @@ contains
          call par_file%get("ModelConfig.WindDragModel", model_cfg%wind_drag_model, found); call check_field(found, 'ModelConfig.WindDragModel', ParName)
          call par_file%get("ModelConfig.InflowMode", model_cfg%inflow_mode, found); call check_field(found, 'ModelConfig.InflowMode', ParName)
          call par_file%get("ModelConfig.PressureGradients", model_cfg%pressure_gradients, found); call check_field(found, 'ModelConfig.PressureGradients', ParName)
-         !call par_file%get("ModelConfig.EnableSalinityTransport", model_cfg%salinity_transport, found); call check_field(found, 'ModelConfig.EnableSalinityTransport', ParName)
          call par_file%get("ModelConfig.IceModel", model_cfg%ice_model, found); call check_field(found, 'ModelConfig.IceModel', ParName)
          call par_file%get("ModelConfig.SnowModel", model_cfg%snow_model, found); call check_field(found, 'ModelConfig.SnowModel', ParName)
 
@@ -624,6 +598,11 @@ contains
          call par_file%get("ModelParameters.lat", model_param%Lat, found); call check_field(found, 'ModelParameters.lat', ParName)
          call par_file%get("ModelParameters.p_air", model_param%p_air, found); call check_field(found, 'ModelParameters.p_air', ParName)
          call par_file%get("ModelParameters.a_seiche", model_param%a_seiche, found); call check_field(found, 'ModelParameters.a_seiche', ParName)
+         call par_file%get("ModelParameters.a_seiche", model_param%a_seiche, found); call check_field(found, 'ModelParameters.a_seiche', ParName)
+         if (model_cfg%split_a_seiche) then
+            call par_file%get("ModelParameters.a_seiche_w", model_param%a_seiche_w, found); call check_field(found, 'ModelParameters.a_seiche_w', ParName)
+            call par_file%get("ModelParameters.strat_sumr", model_param%strat_sumr, found); call check_field(found, 'ModelParameters.strat_sumr', ParName)
+         end if 
          call par_file%get("ModelParameters.q_nn", model_param%q_NN, found); call check_field(found, 'ModelParameters.q_nn', ParName)
          call par_file%get("ModelParameters.f_wind", model_param%f_wind, found); call check_field(found, 'ModelParameters.f_wind', ParName)
 
@@ -640,27 +619,25 @@ contains
          call par_file%get("ModelParameters.cd", model_param%CD, found); call check_field(found, 'ModelParameters.cd', ParName)
          call par_file%get("ModelParameters.hgeo", model_param%fgeo, found); call check_field(found, 'ModelParameters.hgeo', ParName)
          call par_file%get("ModelParameters.k_min", model_param%k_min, found); call check_field(found, 'ModelParameters.k_min', ParName)
-         call par_file%get("ModelParameters.p_radin", model_param%p_radin, found); call check_field(found, 'ModelParameters.p_radin', ParName)
+         call par_file%get("ModelParameters.p_sw", model_param%p_sw, found); call check_field(found, 'ModelParameters.p_sw', ParName)
+         call par_file%get("ModelParameters.p_lw", model_param%p_lw, found); call check_field(found, 'ModelParameters.p_lw', ParName)
          call par_file%get("ModelParameters.p_windf", model_param%p_windf, found); call check_field(found, 'ModelParameters.p_windf', ParName)
+         call par_file%get("ModelParameters.beta_sol", model_param%beta_sol, found); call check_field(found, 'ModelParameters.beta_sol', ParName)
          if (model_cfg%ice_model == 1) then
            call par_file%get("ModelParameters.p_albedo", model_param%p_albedo, found); call check_field(found, 'ModelParameters.p_albedo', ParName)
            call par_file%get("ModelParameters.freez_temp", model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_temp', ParName)
            call par_file%get("ModelParameters.snow_temp", model_param%snow_temp, found); call check_field(found, 'ModelParameters.snow_temp', ParName)
          end if
 
-         !Simulation Parameter
+         ! Simulation Parameter
          call par_file%get("Simulation.Timestep s", sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep s', ParName)
+         call par_file%get("Simulation.Start year", sim_cfg%start_year, found); call check_field(found, 'Simulation.Start year', ParName)
          call par_file%get("Simulation.Start d", sim_cfg%start_datum, found); call check_field(found, 'Simulation.Start d', ParName)
          call par_file%get("Simulation.End d", sim_cfg%end_datum, found); call check_field(found, 'Simulation.End d', ParName)
          call par_file%get("Simulation.DisplaySimulation", sim_cfg%disp_simulation, found); call check_field(found, 'Simulation.DisplaySimulation', ParName)
 
          call par_file%destroy()
 
-         !check validity of inputfile
-         !  if(.not.(simdata%model_cfg%disp_sim==1 .or. simdata%model_cfg%disp_sim==2 .or. simdata%model_cfg%disp_sim==3)) simdata%model_cfg%disp_sim=0
-         !  if(.not.(simdata%model_cfg%disp_dgn==1 .or. simdata%model_cfg%disp_dgn==2)) simdata%model_cfg%disp_dgn=0
-
-         !  if(simdata%model_cfg%disp_dgn/=0) then
          call ok('Configuration: '//trim(ParName))
          !  end if
       end associate
@@ -705,7 +682,7 @@ contains
          end do
          z_ini_depth = z_read(1) ! Initial depth (top-most)
 
-         ! update actual filled z in grid
+         ! Update actual filled z in grid
          call grid%update_depth(z_ini_depth)
 
          ! Set initial lake level
@@ -714,7 +691,7 @@ contains
 
          grid%lake_level_old = grid%lake_level
 
-         ! reverse arrays
+         ! Reverse arrays
          call reverse_in_place(z_read(1:num_read))
          z_read(1:num_read) = grid%z_zero - z_read(1:num_read)
          call reverse_in_place(U_read(1:num_read))
@@ -733,7 +710,7 @@ contains
             model%k = k_read(1)
             model%eps = eps_read(1)
          else
-            ! interpolate variables UVTS on central grid and store
+            ! Interpolate variables UVTS on central grid and store
             call grid%interpolate_to_vol(z_read, U_read, num_read, model%U)
             call grid%interpolate_to_vol(z_read, V_read, num_read, model%V)
             call grid%interpolate_to_vol(z_read, T_read, num_read, model%T)
@@ -760,7 +737,7 @@ contains
       end if
    end subroutine check_field
 
-   !Set has_advection to 1 if any inflow/outflow file contains data, otherwise to 0
+   ! Set has_advection to 1 if any inflow/outflow file contains data, otherwise to 0
    subroutine check_advection(self)
       implicit none
       class(SimstratSimulationFactory) :: self
@@ -808,7 +785,7 @@ contains
 9        rewind(fnum(i))
       end do
 
-      if (if_adv == 4) then   ! if all input files are empty
+      if (if_adv == 4) then   ! If all input files are empty
          self%simdata%model%has_advection = .FALSE.
          call warn('Advection is turned off since the input files were found to be empty. Check if you use the right line feed (\n) if they are not empty.')
       else

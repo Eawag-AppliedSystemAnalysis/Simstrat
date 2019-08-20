@@ -91,7 +91,7 @@ contains
          end if
          dt_i(2) = dt - dt_i(1) ! Rest of timestep
 
-         ! FB 2016: Revision
+         ! FB 2016/2019: Revisions
          do t_i = 1, 2 !First and (if needed) second timestep
             AreaFactor_adv(1:nz_occupied) = dt_i(t_i)/((grid%Az(1:nz_occupied) + grid%Az(2:nz_occupied+1))/2*grid%h(1:nz_occupied)) ! Area factor for dt(t_i)
             dh_i(t_i) = dh*dt_i(t_i)/dt ! Depth difference for dt(t_i)

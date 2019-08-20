@@ -149,8 +149,6 @@ contains
                ! Allocate Q_plunging which will be used for calculating plunging of AED2 variables (in lateral_rho_AED2)
                if (i==1) allocate(state%Q_plunging(grid%nz_grid, self%nval(i)))
 
-
-
                !Read first input values
                read(fnum(i),*,end=9) self%tb_start(i),(self%Inp_read_start(i,j),j=1,self%nval(i))
 
@@ -233,7 +231,7 @@ contains
                   call error('Dates in '//trim(fname(i))//' file must always be increasing.')
                end if
 
-               !Linearly interpolate value at correct datum
+               ! Linearly interpolate value at correct datum
                if (i/=2) then
                   ! For plunging input, Inp will be needed later
                   Inp(i,1:self%nval_deep(i)) = self%Inp_read_start(i,1:self%nval_deep(i)) + (datum-self%tb_start(i)) &

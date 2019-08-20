@@ -40,19 +40,16 @@ contains
    end subroutine
 
    ! Update state variables
-   ! FB 2018: The same update_NN function is used independently of the presence of a salinity gradient or not (or even
-   ! salinity or not). Reason: There is no clear reason why to treat these cases differently (the different treatments
-   ! are a relict fromt the original code of Gerrit Goudsmit)
    subroutine stability_module_update(self, state)
       implicit none
       class(StabilityModule) :: self
       class(ModelState) :: state
       real(RK), dimension(self%grid%ubnd_fce) :: beta
 
-      !Do buoyancy update (update NN)
+      ! Do buoyancy update (update NN)
       call self%update_NN(state%T, state%S, state%rho, state%NN)
 
-      !update cmue depending on selected stabilty function
+      ! Update cmue depending on selected stabilty function
       if (self%model_cfg%stability_func == 1) then
          call self%update_cmue_cn(state%cmue1, state%cmue2)
 
@@ -107,11 +104,11 @@ contains
       class(StabilityModule) :: self
       real(RK), dimension(:), intent(inout) :: cmue1, cmue2
 
-      !Standard version of k-eps model
+      ! Standard version of k-eps model
       cmue1 = cmue
       cmue2 = cmue/Prndtl
 
-      ! set boundaries
+      ! Set boundaries
       cmue1(1) = cmue1(2)
       cmue2(1) = cmue2(2)
       cmue1(self%grid%ubnd_fce) = cmue1(self%grid%ubnd_fce - 1)
@@ -140,7 +137,7 @@ contains
          cmue2(i) = sqrt(2.0_RK)*cde*sh
       end do
 
-      ! set boundaries
+      ! Set boundaries
       cmue1(1) = cmue1(2)
       cmue2(1) = cmue2(2)
       cmue1(self%grid%ubnd_fce) = cmue1(self%grid%ubnd_fce - 1)

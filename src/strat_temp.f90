@@ -33,10 +33,10 @@ contains
                  ubnd_vol=>self%grid%ubnd_vol)
 
          !!!!!!!! Precalculations !!!!!!!!
-         !Radiation reaching top layer
-         state%rad(self%grid%ubnd_fce) = state%rad0/rho_0/cp ![°C*m/s]  , rad  is on faces
+         ! Radiation reaching top layer
+         state%rad(self%grid%ubnd_fce) = state%rad0/rho_0/cp ![°C*m/s]  , rad is on faces
 
-         !Radiation reaching a layer is equal to radiation in the layer above minus absorption
+         ! Radiation reaching a layer is equal to radiation in the layer above minus absorption
          do i = ubnd_fce - 1, 1, -1
             state%rad(i) = state%rad(i + 1)*exp(-grid%h(i)*(state%absorb(ubnd_fce - i)+state%absorb(ubnd_fce + 1 - i))/2) !Attenuated by absorption
          end do
@@ -51,7 +51,7 @@ contains
          ! Set boundary heat flux at surface (Eq 25, Goudsmit(2002))
          sources(ubnd_vol) = sources(ubnd_vol) + state%heat/rho_0/cp/grid%h(ubnd_vol)
 
-         ! no explicit boundary conditions
+         ! No explicit boundary conditions
          boundaries(1:ubnd_vol) = 0
 
          ! Forcing mode 1 for temp is done in post solve method
