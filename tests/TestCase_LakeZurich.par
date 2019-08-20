@@ -33,13 +33,13 @@
     "SnowModel"               : 1                       ! Switch to turn on/off the snow model (needs ice model and an additional column in forcing)
   },
   "AED2Config" : {
-    "AED2ConfigFile"          : "aed2.nml",
-    "PathAED2initial"         : "AED2_initcond/",
-    "PathAED2inflow"          : "AED2_inflow/",
-    "PathAED2output"          : "AED2_output/",
-    "ParticleMobility"        : 0,
-    "BioshadeFeedback"        : 0,
-    "BackgroundExtinction"    : 0.2,
+    "AED2ConfigFile"          : "aed2.nml",             ! AED2 config file
+    "PathAED2initial"         : "AED2_initcond/",       ! Folder with initial conditions of biochemical variables
+    "PathAED2inflow"          : "AED2_inflow/",         ! Folder with inflow files of biochemical variables
+    "PathAED2output"          : "AED2_output/",         ! AED2 output folder
+    "ParticleMobility"        : 0,                      ! 0: particle mobility is off, 1: particle mobility is on
+    "BioshadeFeedback"        : 0,                      ! 0: light absorption coefficients are read from Simstrat input file, 1: light absorption is calculated from biochemical variables
+    "BackgroundExtinction"    : 0.2,                    ! Background extinction added to biochemical absorption (only used if bioshadeFeedback is 1)
     "RepairState"             : 1,
     "BenthicMode"             : 0,
     "NZones"                  : 1,
