@@ -29,6 +29,10 @@ end subroutine
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! The mobility algorithm is taken from the GLM code (http://aed.see.uwa.edu.au/research/models/GLM/)
+!
+! Assumptions:
+! 1) movement direction has at most one change down the layers              *
+! 2) sides of the lake slope inward (ie bottom is narrower than top)
 
 subroutine mobility(self, state, min_C, settling_v, conc)
    ! Arguments
@@ -182,7 +186,7 @@ subroutine Sinking(self, Y, conc, settling_v, vols, mins, dt, start_i, end_i, mo
 
    mov = 0.
    moved = 0.
-
+write(6,*) 'hansus'
    do i = start_i,end_i, -1
       ! speed times time (=h) time area * concen = mass to move
       mov = (abs(settling_v(i)) * dt) * self%grid%Az_vol(i) * conc(i)
@@ -193,8 +197,9 @@ subroutine Sinking(self, Y, conc, settling_v, vols, mins, dt, start_i, end_i, mo
 
       ! so now mov has how much has moved out of the cell, but not all
       ! of that will go into the next cell (FB: part of it sediments on the flancs)
-      if ( i > 0 )  then
+      if ( i > 1 )  then
          moved = mov * (self%grid%Az_vol(i-1) / self%grid%Az_vol(i)) ! for the next step
+         write(6,*) moved
       else
          moved = mov ! we are about to exit anyway.
       end if
