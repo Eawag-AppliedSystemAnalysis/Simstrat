@@ -21,7 +21,9 @@ module strat_forcing
       class(ModelParam), pointer :: param
       character(len=:), allocatable  :: file  ! Forcing file name
       integer :: current_year ! Current year of simulation, used for zenith angle dependent water albedo
-      real(RK) :: elapsed_days   ! Elapsed_days since starting year, used for zenith angle dependent water albedo
+      logical :: leap_year
+      integer :: current_month ! Current month of simulation, used for zenith angle dependent water albedo
+      real(RK) :: current_day ! Current day of simulation, used for zenith angle dependent water albedo
    contains
       procedure, pass :: init => forcing_init
       procedure, pass :: read => forcing_read
@@ -471,100 +473,130 @@ contains
    end subroutine
 
    subroutine forcing_init_albedo(self, state, sim_cfg)
-    implicit none
-    class(ForcingModule) :: self
-    class(ModelState) :: state
-    class(SimConfig) :: sim_cfg
+      implicit none
+      class(ForcingModule) :: self
+      class(ModelState) :: state
+      class(SimConfig) :: sim_cfg
 
-    self%current_year = sim_cfg%start_year
-    self%elapsed_days = 0
+      call init_calendar(sim_cfg%start_year, state%datum, self%current_year, self%leap_year, self%current_month, self%current_day)
 
-    ! Monthly albedo data according to Grishchenko, in Cogley 1979
-    if (self%param%Lat > 0)  then ! Northern hemisphere (1.000 if no sun)
-      state%albedo_data(9,1:12) = [1.000_RK, 0.301_RK, 0.333_RK, 0.253_RK, 0.167_RK, 0.133_RK, 0.150_RK, 0.226_RK, 0.317_RK, 0.301_RK, 1.000_RK, 1.000_RK]
-      state%albedo_data(8,1:12) = [0.301_RK, 0.337_RK, 0.266_RK, 0.178_RK, 0.138_RK, 0.123_RK, 0.132_RK, 0.163_RK, 0.238_RK, 0.329_RK, 0.301_RK, 1.000_RK]
-      state%albedo_data(7,1:12) = [0.340_RK, 0.281_RK, 0.185_RK, 0.122_RK, 0.099_RK, 0.095_RK, 0.097_RK, 0.113_RK, 0.163_RK, 0.254_RK, 0.336_RK, 0.325_RK]
-      state%albedo_data(6,1:12) = [0.263_RK, 0.193_RK, 0.127_RK, 0.093_RK, 0.080_RK, 0.077_RK, 0.079_RK, 0.088_RK, 0.114_RK, 0.174_RK, 0.249_RK, 0.294_RK]
-      state%albedo_data(5,1:12) = [0.178_RK, 0.131_RK, 0.095_RK, 0.077_RK, 0.071_RK, 0.070_RK, 0.070_RK, 0.075_RK, 0.088_RK, 0.120_RK, 0.169_RK, 0.198_RK]
-      state%albedo_data(4,1:12) = [0.121_RK, 0.097_RK, 0.078_RK, 0.069_RK, 0.066_RK, 0.065_RK, 0.066_RK, 0.068_RK, 0.075_RK, 0.091_RK, 0.116_RK, 0.132_RK]
-      state%albedo_data(3,1:12) = [0.091_RK, 0.079_RK, 0.070_RK, 0.065_RK, 0.064_RK, 0.064_RK, 0.064_RK, 0.064_RK, 0.068_RK, 0.076_RK, 0.089_RK, 0.097_RK]
-      state%albedo_data(2,1:12) = [0.076_RK, 0.070_RK, 0.065_RK, 0.063_RK, 0.063_RK, 0.064_RK, 0.063_RK, 0.063_RK, 0.064_RK, 0.069_RK, 0.075_RK, 0.079_RK]
-      state%albedo_data(1,1:12) = [0.069_RK, 0.065_RK, 0.063_RK, 0.063_RK, 0.065_RK, 0.066_RK, 0.065_RK, 0.063_RK, 0.063_RK, 0.065_RK, 0.068_RK, 0.070_RK]
+      ! Monthly albedo data according to Grishchenko, in Cogley 1979
+      if (self%param%Lat > 0)  then ! Northern hemisphere (1.000 if no sun)
+         state%albedo_data(9,1:12) = [1.000_RK, 0.301_RK, 0.333_RK, 0.253_RK, 0.167_RK, 0.133_RK, 0.150_RK, 0.226_RK, 0.317_RK, 0.301_RK, 1.000_RK, 1.000_RK]
+         state%albedo_data(8,1:12) = [0.301_RK, 0.337_RK, 0.266_RK, 0.178_RK, 0.138_RK, 0.123_RK, 0.132_RK, 0.163_RK, 0.238_RK, 0.329_RK, 0.301_RK, 1.000_RK]
+         state%albedo_data(7,1:12) = [0.340_RK, 0.281_RK, 0.185_RK, 0.122_RK, 0.099_RK, 0.095_RK, 0.097_RK, 0.113_RK, 0.163_RK, 0.254_RK, 0.336_RK, 0.325_RK]
+         state%albedo_data(6,1:12) = [0.263_RK, 0.193_RK, 0.127_RK, 0.093_RK, 0.080_RK, 0.077_RK, 0.079_RK, 0.088_RK, 0.114_RK, 0.174_RK, 0.249_RK, 0.294_RK]
+         state%albedo_data(5,1:12) = [0.178_RK, 0.131_RK, 0.095_RK, 0.077_RK, 0.071_RK, 0.070_RK, 0.070_RK, 0.075_RK, 0.088_RK, 0.120_RK, 0.169_RK, 0.198_RK]
+         state%albedo_data(4,1:12) = [0.121_RK, 0.097_RK, 0.078_RK, 0.069_RK, 0.066_RK, 0.065_RK, 0.066_RK, 0.068_RK, 0.075_RK, 0.091_RK, 0.116_RK, 0.132_RK]
+         state%albedo_data(3,1:12) = [0.091_RK, 0.079_RK, 0.070_RK, 0.065_RK, 0.064_RK, 0.064_RK, 0.064_RK, 0.064_RK, 0.068_RK, 0.076_RK, 0.089_RK, 0.097_RK]
+         state%albedo_data(2,1:12) = [0.076_RK, 0.070_RK, 0.065_RK, 0.063_RK, 0.063_RK, 0.064_RK, 0.063_RK, 0.063_RK, 0.064_RK, 0.069_RK, 0.075_RK, 0.079_RK]
+         state%albedo_data(1,1:12) = [0.069_RK, 0.065_RK, 0.063_RK, 0.063_RK, 0.065_RK, 0.066_RK, 0.065_RK, 0.063_RK, 0.063_RK, 0.065_RK, 0.068_RK, 0.070_RK]
 
-      if (self%param%Lat < 10) then
-        state%lat_number = 1
-      else if (self%param%Lat < 20) then
-        state%lat_number = 2
-      else if (self%param%Lat < 30) then
-        state%lat_number = 3
-      else if (self%param%Lat < 40) then
-        state%lat_number = 4
-      else if (self%param%Lat < 50) then
-        state%lat_number = 5
-      else if (self%param%Lat < 60) then
-        state%lat_number = 6
-      else if (self%param%Lat < 60) then
-        state%lat_number = 6
-      else if (self%param%Lat < 70) then
-        state%lat_number = 7
-      else if (self%param%Lat < 80) then
-        state%lat_number = 8
-      else
-        state%lat_number = 9
+         if (self%param%Lat < 10) then
+           state%lat_number = 1
+         else if (self%param%Lat < 20) then
+           state%lat_number = 2
+         else if (self%param%Lat < 30) then
+           state%lat_number = 3
+         else if (self%param%Lat < 40) then
+           state%lat_number = 4
+         else if (self%param%Lat < 50) then
+           state%lat_number = 5
+         else if (self%param%Lat < 60) then
+           state%lat_number = 6
+         else if (self%param%Lat < 60) then
+           state%lat_number = 6
+         else if (self%param%Lat < 70) then
+           state%lat_number = 7
+         else if (self%param%Lat < 80) then
+           state%lat_number = 8
+         else
+           state%lat_number = 9
+         end if
+
+      else  ! Southern hemisphere (1.000 if no sun)
+         state%albedo_data(9,1:12) = [0.150_RK, 0.226_RK, 0.317_RK, 0.301_RK, 1.000_RK, 1.000_RK, 1.000_RK, 0.301_RK, 0.333_RK, 0.253_RK, 0.167_RK, 0.133_RK]
+         state%albedo_data(8,1:12) = [0.132_RK, 0.163_RK, 0.238_RK, 0.329_RK, 0.301_RK, 1.000_RK, 0.301_RK, 0.337_RK, 0.266_RK, 0.178_RK, 0.138_RK, 0.123_RK]
+         state%albedo_data(7,1:12) = [0.097_RK, 0.113_RK, 0.163_RK, 0.254_RK, 0.336_RK, 0.325_RK, 0.340_RK, 0.281_RK, 0.185_RK, 0.122_RK, 0.099_RK, 0.095_RK]
+         state%albedo_data(6,1:12) = [0.079_RK, 0.088_RK, 0.114_RK, 0.174_RK, 0.249_RK, 0.294_RK, 0.263_RK, 0.193_RK, 0.127_RK, 0.093_RK, 0.080_RK, 0.077_RK]
+         state%albedo_data(5,1:12) = [0.070_RK, 0.075_RK, 0.088_RK, 0.120_RK, 0.169_RK, 0.198_RK, 0.178_RK, 0.131_RK, 0.095_RK, 0.077_RK, 0.071_RK, 0.070_RK]
+         state%albedo_data(4,1:12) = [0.066_RK, 0.068_RK, 0.075_RK, 0.091_RK, 0.116_RK, 0.132_RK, 0.121_RK, 0.097_RK, 0.078_RK, 0.069_RK, 0.066_RK, 0.065_RK]
+         state%albedo_data(3,1:12) = [0.064_RK, 0.064_RK, 0.068_RK, 0.076_RK, 0.089_RK, 0.097_RK, 0.091_RK, 0.079_RK, 0.070_RK, 0.065_RK, 0.064_RK, 0.064_RK]
+         state%albedo_data(2,1:12) = [0.063_RK, 0.063_RK, 0.064_RK, 0.069_RK, 0.075_RK, 0.079_RK, 0.076_RK, 0.070_RK, 0.065_RK, 0.063_RK, 0.063_RK, 0.064_RK]
+         state%albedo_data(1,1:12) = [0.065_RK, 0.063_RK, 0.063_RK, 0.065_RK, 0.068_RK, 0.070_RK, 0.069_RK, 0.065_RK, 0.063_RK, 0.063_RK, 0.065_RK, 0.066_RK]
+
+         if (self%param%Lat > -10) then
+           state%lat_number = 1
+         else if (self%param%Lat > -20) then
+           state%lat_number = 2
+         else if (self%param%Lat > -30) then
+           state%lat_number = 3
+         else if (self%param%Lat > -40) then
+           state%lat_number = 4
+         else if (self%param%Lat > -50) then
+           state%lat_number = 5
+         else if (self%param%Lat > -60) then
+           state%lat_number = 6
+         else if (self%param%Lat > -60) then
+           state%lat_number = 6
+         else if (self%param%Lat > -70) then
+           state%lat_number = 7
+         else if (self%param%Lat > -80) then
+           state%lat_number = 8
+         else
+           state%lat_number = 9
+         end if
       end if
 
-    else  ! Southern hemisphere (1.000 if no sun)
-      state%albedo_data(9,1:12) = [0.150_RK, 0.226_RK, 0.317_RK, 0.301_RK, 1.000_RK, 1.000_RK, 1.000_RK, 0.301_RK, 0.333_RK, 0.253_RK, 0.167_RK, 0.133_RK]
-      state%albedo_data(8,1:12) = [0.132_RK, 0.163_RK, 0.238_RK, 0.329_RK, 0.301_RK, 1.000_RK, 0.301_RK, 0.337_RK, 0.266_RK, 0.178_RK, 0.138_RK, 0.123_RK]
-      state%albedo_data(7,1:12) = [0.097_RK, 0.113_RK, 0.163_RK, 0.254_RK, 0.336_RK, 0.325_RK, 0.340_RK, 0.281_RK, 0.185_RK, 0.122_RK, 0.099_RK, 0.095_RK]
-      state%albedo_data(6,1:12) = [0.079_RK, 0.088_RK, 0.114_RK, 0.174_RK, 0.249_RK, 0.294_RK, 0.263_RK, 0.193_RK, 0.127_RK, 0.093_RK, 0.080_RK, 0.077_RK]
-      state%albedo_data(5,1:12) = [0.070_RK, 0.075_RK, 0.088_RK, 0.120_RK, 0.169_RK, 0.198_RK, 0.178_RK, 0.131_RK, 0.095_RK, 0.077_RK, 0.071_RK, 0.070_RK]
-      state%albedo_data(4,1:12) = [0.066_RK, 0.068_RK, 0.075_RK, 0.091_RK, 0.116_RK, 0.132_RK, 0.121_RK, 0.097_RK, 0.078_RK, 0.069_RK, 0.066_RK, 0.065_RK]
-      state%albedo_data(3,1:12) = [0.064_RK, 0.064_RK, 0.068_RK, 0.076_RK, 0.089_RK, 0.097_RK, 0.091_RK, 0.079_RK, 0.070_RK, 0.065_RK, 0.064_RK, 0.064_RK]
-      state%albedo_data(2,1:12) = [0.063_RK, 0.063_RK, 0.064_RK, 0.069_RK, 0.075_RK, 0.079_RK, 0.076_RK, 0.070_RK, 0.065_RK, 0.063_RK, 0.063_RK, 0.064_RK]
-      state%albedo_data(1,1:12) = [0.065_RK, 0.063_RK, 0.063_RK, 0.065_RK, 0.068_RK, 0.070_RK, 0.069_RK, 0.065_RK, 0.063_RK, 0.063_RK, 0.065_RK, 0.066_RK]
+   end subroutine
 
-      if (self%param%Lat > -10) then
-        state%lat_number = 1
-      else if (self%param%Lat > -20) then
-        state%lat_number = 2
-      else if (self%param%Lat > -30) then
-        state%lat_number = 3
-      else if (self%param%Lat > -40) then
-        state%lat_number = 4
-      else if (self%param%Lat > -50) then
-        state%lat_number = 5
-      else if (self%param%Lat > -60) then
-        state%lat_number = 6
-      else if (self%param%Lat > -60) then
-        state%lat_number = 6
-      else if (self%param%Lat > -70) then
-        state%lat_number = 7
-      else if (self%param%Lat > -80) then
-        state%lat_number = 8
+   subroutine forcing_update_albedo(self, state)
+      implicit none
+      class(ForcingModule) :: self
+      class(ModelState) :: state
+
+      ! Local variables
+      real(RK) :: albedo_start, albedo_end
+      integer :: previous_month, next_month
+
+      ! Determine current calendar day and month
+      call update_calendar(self%current_year, self%leap_year, self%current_month, self%current_day, state%dt)
+
+      ! Determine albedo as a function of latitude and month according to Grishchenko (in Cogley 1979)
+      ! Linear interpolation, assuming that the monthly data is representative of the 15. of each month (also for months with 28, 29 and 31 days)
+      ! There is still a small jump in the albedo value when the month changes. Solving this problem would require a more sophisticated interpolation
+      ! or even a continuous function. But the jump is very small and occurs during the night, when anyways no sun light is reaching the lake.
+      
+      ! If date before 16th of current month
+      if (self%current_day < 16) then
+         if(self%current_month == 1) then
+            previous_month = 12
+         else
+            previous_month = self%current_month - 1
+         end if
+
+         ! Get albedo values for previous and current month
+         albedo_start = state%albedo_data(state%lat_number, previous_month)
+         albedo_end = state%albedo_data(state%lat_number, self%current_month)
+
+         ! Linear interpolation
+         state%albedo_water = albedo_start + (self%current_day + 15) * (albedo_end - albedo_start)/30
       else
-        state%lat_number = 9
+         if(self%current_month == 12) then
+            next_month = 1
+         else
+            next_month = self%current_month + 1
+         end if
+
+         ! Get albedo values for current and next month
+         albedo_start = state%albedo_data(state%lat_number, self%current_month)
+         albedo_end = state%albedo_data(state%lat_number, next_month)
+
+         ! Linear interpolation
+         state%albedo_water = albedo_start + (self%current_day - 15) * (albedo_end - albedo_start)/30
       end if
-    end if
 
-  end subroutine
-
-  subroutine forcing_update_albedo(self, state)
-    implicit none
-    class(ForcingModule) :: self
-    class(ModelState) :: state
-
-    ! Local variables
-    integer :: month
-    real(RK) :: albedo_start, albedo_end
-
-    ! Determine current month
-    call date_to_month(self%current_year, self%elapsed_days, state%datum, month)
-
-    ! Determine albedo as a function of latitude and month according to Grishchenko (in Cogley 1979)
-    state%albedo_water = state%albedo_data(state%lat_number, month)
-
-  end subroutine
+   end subroutine
 
 end module strat_forcing
 
