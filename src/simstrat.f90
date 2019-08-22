@@ -76,8 +76,12 @@ program simstrat_main
                          simdata%input_cfg%ForcingName, &
                          simdata%grid)
 
-   ! Initialize albedo data used for water albedo calculation
-   call mod_forcing%init_albedo(simdata%model, simdata%sim_cfg)
+   ! Initialize albedo data used for water albedo calculation, if switch is off
+   if (simdata%model_cfg%user_defined_water_albedo) then
+      simdata%model%albedo_water = simdata%model_param%wat_albedo
+   else
+      call mod_forcing%init_albedo(simdata%model, simdata%sim_cfg)
+   end if
 
    ! Initialize absorption module
    call mod_absorption%init(simdata%model_cfg, &
@@ -210,7 +214,9 @@ contains
          ! ************************************
 
          ! Update water albedo
-         call mod_forcing%update_albedo(simdata%model)
+         if (.not. simdata%model_cfg%user_defined_water_albedo) then
+            call mod_forcing%update_albedo(simdata%model)
+         end if
          
          ! Update forcing
          call mod_forcing%update(simdata%model)

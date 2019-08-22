@@ -69,6 +69,7 @@ module strat_simdata
       integer :: stability_func
       integer :: flux_condition
       integer :: forcing_mode
+      logical :: user_defined_water_albedo
       logical :: use_filtered_wind
       integer :: seiche_normalization
       integer :: wind_drag_model
@@ -96,6 +97,7 @@ module strat_simdata
       real(RK) :: p_lw
       real(RK) :: p_windf
       real(RK) :: beta_sol
+      real(RK) :: wat_albedo
       real(RK) :: p_albedo
       real(RK) :: freez_temp
       real(RK) :: snow_temp
