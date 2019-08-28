@@ -324,16 +324,23 @@ contains
             days_left = days_left - days_per_month(i)
          else
             current_month = i
-            current_day = days_left -1
+            current_day = days_left
             exit
          end if
       end do
 
+      leap_year = .false.
       ! Determine if current year is a leap year
-      if (mod(current_year,4)==0 .and. .not. mod(current_year,100)==0) then
+      if (mod(current_year,4)==0) then
          leap_year = .true.
-      else
-         leap_year = .false.
+
+         if (mod(current_year,100)==0) then
+            leap_year = .false.
+
+            if (mod(current_year,400)==0) then
+               leap_year = .true.
+            end if
+         end if
       end if
 
    end subroutine
@@ -372,11 +379,18 @@ contains
             current_month = 1
             current_year = current_year + 1
 
-            ! Check for leap year
-            if (mod(current_year,4)==0 .and. .not. mod(current_year,100)==0) then
+            leap_year = .false.
+            ! Determine if current year is a leap year
+            if (mod(current_year,4)==0) then
                leap_year = .true.
-            else
-               leap_year = .false.
+
+               if (mod(current_year,100)==0) then
+                  leap_year = .false.
+
+                  if (mod(current_year,400)==0) then
+                     leap_year = .true.
+                  end if
+               end if
             end if
          end if
       else

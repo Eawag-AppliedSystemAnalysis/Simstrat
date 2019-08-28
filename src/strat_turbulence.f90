@@ -101,8 +101,8 @@ contains
             distrib(i) = max(state%NN(i)**param%q_NN, minNN)/grid%Az(i)*grid%dAz(i - 1)
          end do
 
-         ! Determine a_seiche (in case split_a_seiche is true)
-         if (self%model_cfg%split_a_seiche) then
+         ! Determine a_seiche
+         if (self%model_cfg%split_a_seiche) then   ! If a_seiche is splitted seasonally
 
             ! If maximum stratification (N2) is higher than threshold
             if (maxval(state%NN(2:ubnd_fce - 1)) >= param%strat_sumr) then
@@ -112,6 +112,8 @@ contains
             else if (maxval(state%NN(2:ubnd_fce - 1)) < param%strat_sumr) then
                a_seiche_local = param%a_seiche_w
             end if
+         else  ! If a_seiche is not splitted
+            a_seiche_local = param%a_seiche
          end if
 
          ! Exit function if a_seiche is 0
