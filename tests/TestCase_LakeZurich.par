@@ -24,6 +24,7 @@
     "StabilityFunction"       : 2,                      ! 1: constant, 2: quasi-equilibrium
     "FluxCondition"           : 1,                      ! 0: Dirichlet condition, 1: no-flux
     "Forcing"                 : 3,                      ! 1: Wind + Temp + SolRad, 2: 1 + VapP, 3: 2 + Cloud, 4: Wind + HeatFlux + SolRad, 5: 2 + Incoming Long Wave
+    "UserDefinedWaterAlbedo"  : false,                  ! True: Computed monthly water albedo values from Grishchenko are used, False: Water albedo is user defined (below) and constant
     "UseFilteredWind"         : false,                  ! Switch to activate filtered wind (needs one more column in forcing file)
     "SeicheNormalization"     : 2,                      ! 1: max N2, 2: integral
     "WindDragModel"           : 3,                      ! 1: constant, 2: ocean (increasing), 3: lake (Wüest and Lorke, 2003)
@@ -68,6 +69,7 @@
     "p_lw"          : 1.1978,                           ! Fit parameter for absorption of IR radiation from sky [-]
     "p_windf"       : 1,                                ! Fit parameter for convective and latent heat fluxes [-]
     "beta_sol"      : 0.3,                              ! Fraction of short-wave radiation directly absorbed as heat by water [-]
+    "wat_albedo"    : 0.08,                             ! User defined water albedo [-] (only used if UserDefinedWaterAlbedo = true)
     "p_albedo"      : 1,                                ! Fit parameter for albedo of ice, snow-ice and snow [-] (only used if IceModel = 1)
     "freez_temp"    : 0.00,                             ! Freezing temperature of water [°C] (only used if IceModel = 1)
     "snow_temp"     : 1                                 ! Temperature of snow [°C] (only used if IceModel = 1 and SnowModel = 1)

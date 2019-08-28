@@ -278,91 +278,124 @@ contains
       str_real = adjustl(str_real)
    end function str_real
 
-   subroutine date_to_month(current_year, elapsed_days, input_date, month)
+
+   ! Initialize the calender (day, month and year) based on the given starting year and and start datum
+   subroutine init_calendar(start_year, datum, current_year, leap_year, current_month, current_day)
       implicit none
-      integer, intent(inout) :: current_year
-      real(RK), intent(inout) :: elapsed_days
-      real(RK), intent(in) :: input_date
-      integer, intent(out) :: month
+      integer, intent(in) :: start_year
+      real(RK), intent(in) :: datum
+      integer, intent(inout) :: current_year, current_month
+      logical, intent(inout) :: leap_year
+      real(RK), intent(inout) :: current_day
 
-      integer :: days_per_year, day
-
-      days_per_year = 0
-      day = 0
-
-      ! Find out which year
+      ! Local variables
+      real(RK) :: elapsed_days, days_left, days_per_year
+      integer :: i
+      integer, dimension(12) :: days_per_month
+      
+      ! Determine current year
+      current_year = start_year
+      elapsed_days = 0
       do
-         ! Check for leap year
          if (mod(current_year,4)==0 .and. .not. mod(current_year,100)==0) then
             days_per_year = 366
          else
             days_per_year = 365
          end if
 
-         if ((elapsed_days + days_per_year) < input_date) then
+         if ((elapsed_days + days_per_year) < datum) then
             elapsed_days = elapsed_days + days_per_year
             current_year = current_year + 1
          else
             exit
          end if
       end do
-      day = input_date - elapsed_days
+      days_left = datum - elapsed_days
 
-      ! Find out which month
-      if (days_per_year == 366) then
-         if (day < 32) then
-            month = 1
-         else if (day < 61) then
-            month = 2
-         else if (day < 92) then
-            month = 3
-         else if (day < 122) then
-            month = 4
-         else if (day < 153) then
-            month = 5
-         else if (day < 183) then
-            month = 6
-         else if (day < 214) then
-            month = 7
-         else if (day < 245) then
-            month = 8
-         else if (day < 275) then
-            month = 9
-         else if (day < 306) then
-            month = 10
-         else if (day < 336) then
-            month = 11
+      ! Determine current month and day
+      if (leap_year) then
+         days_per_month = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+      else
+         days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+      end if
+
+      do i=1,12
+         if (days_left > days_per_month(i)) then
+            days_left = days_left - days_per_month(i)
          else
-            month = 12
+            current_month = i
+            current_day = days_left
+            exit
+         end if
+      end do
+
+      leap_year = .false.
+      ! Determine if current year is a leap year
+      if (mod(current_year,4)==0) then
+         leap_year = .true.
+
+         if (mod(current_year,100)==0) then
+            leap_year = .false.
+
+            if (mod(current_year,400)==0) then
+               leap_year = .true.
+            end if
          end if
       end if
-         
-      if (days_per_year == 365) then
-         if (day < 32) then
-            month = 1
-         else if (day < 60) then
-            month = 2
-         else if (day < 91) then
-            month = 3
-         else if (day < 121) then
-            month = 4
-         else if (day < 152) then
-            month = 5
-         else if (day < 182) then
-            month = 6
-         else if (day < 213) then
-            month = 7
-         else if (day < 244) then
-            month = 8
-         else if (day < 274) then
-            month = 9
-         else if (day < 305) then
-            month = 10
-         else if (day < 335) then
-            month = 11
-         else
-            month = 12
+
+   end subroutine
+
+
+   ! Update calendar month and day (used for albedo assignment)
+   subroutine update_calendar(current_year, leap_year, current_month, current_day, dt)
+      implicit none
+      integer, intent(inout) :: current_year, current_month
+      logical, intent(inout) :: leap_year
+      real(RK), intent(inout) :: current_day
+      real(RK), intent(in) :: dt
+
+      ! Local variables
+      integer, dimension(12) :: days_per_month
+      real(RK) :: current_day_new
+
+
+      ! Prepare day per month arrays
+      if (leap_year) then
+         days_per_month = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+      else
+         days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+      end if
+      
+      ! Update current day
+      current_day_new = current_day + dt/24/60/60
+
+      ! If new month is reached
+      if (ceiling(current_day_new) > days_per_month(current_month)) then
+         current_month = current_month + 1
+         current_day = current_day_new - floor(current_day_new)
+
+         ! If new year is reached
+         if (current_month > 12) then
+            current_month = 1
+            current_year = current_year + 1
+
+            leap_year = .false.
+            ! Determine if current year is a leap year
+            if (mod(current_year,4)==0) then
+               leap_year = .true.
+
+               if (mod(current_year,100)==0) then
+                  leap_year = .false.
+
+                  if (mod(current_year,400)==0) then
+                     leap_year = .true.
+                  end if
+               end if
+            end if
          end if
+      else
+         ! If not a new month, just go on counting
+         current_day = current_day_new
       end if
 
    end subroutine

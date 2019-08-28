@@ -570,6 +570,7 @@ contains
          call par_file%get("ModelConfig.StabilityFunction", model_cfg%stability_func, found); call check_field(found, 'ModelConfig.StabilityFunction', ParName)
          call par_file%get("ModelConfig.FluxCondition", model_cfg%flux_condition, found); call check_field(found, 'ModelConfig.FluxCondition', ParName)
          call par_file%get("ModelConfig.Forcing", model_cfg%forcing_mode, found); call check_field(found, 'ModelConfig.Forcing', ParName)
+         call par_file%get("ModelConfig.UserDefinedWaterAlbedo", model_cfg%user_defined_water_albedo, found); call check_field(found, 'ModelConfig.UserDefinedWaterAlbedo', ParName)
          call par_file%get("ModelConfig.UseFilteredWind", model_cfg%use_filtered_wind, found); call check_field(found, 'ModelConfig.UseFilteredWind', ParName)
          call par_file%get("ModelConfig.SeicheNormalization", model_cfg%seiche_normalization, found); call check_field(found, 'ModelConfig.SeicheNormalization', ParName)
          call par_file%get("ModelConfig.WindDragModel", model_cfg%wind_drag_model, found); call check_field(found, 'ModelConfig.WindDragModel', ParName)
@@ -622,6 +623,11 @@ contains
          call par_file%get("ModelParameters.p_lw", model_param%p_lw, found); call check_field(found, 'ModelParameters.p_lw', ParName)
          call par_file%get("ModelParameters.p_windf", model_param%p_windf, found); call check_field(found, 'ModelParameters.p_windf', ParName)
          call par_file%get("ModelParameters.beta_sol", model_param%beta_sol, found); call check_field(found, 'ModelParameters.beta_sol', ParName)
+
+         ! Get water albedo value if switch is on
+         if (model_cfg%user_defined_water_albedo) then
+            call par_file%get("ModelParameters.wat_albedo", model_param%wat_albedo, found); call check_field(found, 'ModelParameters.wat_albedo', ParName)
+         end if
          if (model_cfg%ice_model == 1) then
            call par_file%get("ModelParameters.p_albedo", model_param%p_albedo, found); call check_field(found, 'ModelParameters.p_albedo', ParName)
            call par_file%get("ModelParameters.freez_temp", model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_temp', ParName)
