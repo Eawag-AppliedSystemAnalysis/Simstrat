@@ -149,8 +149,8 @@ contains
 
          ! Allocate memory for AED2 state and inflow matrix used by Simstrat
          state%AED2_state => self%cc
-         allocate(state%AED2_inflow(self%grid%nz_grid, n_vars + n_vars_ben))
-         state%n_AED2 = n_vars_ben ! + n_vars_ben, Add benthic variables or not?
+         allocate(state%AED2_inflow(self%grid%nz_grid, n_vars)) ! Add benthic variables or not?
+         state%n_AED2 = n_vars ! + n_vars_ben, Add benthic variables or not?
 
          ! Define column pointer (which is the object that is handed over to AED2 at every timestep)
          ! It containes external (Simstrat) variables like T and S, but also the variables of this (SimstratAED2) module
