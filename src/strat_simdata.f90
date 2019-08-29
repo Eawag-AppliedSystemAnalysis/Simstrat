@@ -96,7 +96,6 @@ module strat_simdata
       logical :: particle_mobility
       logical :: bioshade_feedback
       real(RK) :: background_extinction
-      logical :: repair_state
       integer :: benthic_mode
       integer :: n_zones
       real(RK), dimension(:), allocatable :: zone_heights

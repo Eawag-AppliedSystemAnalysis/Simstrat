@@ -333,13 +333,11 @@ subroutine check_states(self)
             if ( aed2_get_var(i, tv) ) then
                if ( .not. (tv%diag .or. tv%extern) ) then
                   v = v + 1
-                  if ( self%aed2_cfg%repair_state ) then
-                     if ( .not. ieee_is_nan(self%min_(v)) ) then
-                        if ( self%cc(lev, v) < self%min_(v) ) self%cc(lev, v) = self%min_(v);
-                     end if
-                     if ( .not. ieee_is_nan(self%max_(v)) ) then
-                        if ( self%cc(lev, v) > self%max_(v) ) self%cc(lev, v) = self%max_(v)
-                     end if
+                  if ( .not. ieee_is_nan(self%min_(v)) ) then
+                    if ( self%cc(lev, v) < self%min_(v) ) self%cc(lev, v) = self%min_(v);
+                  end if
+                  if ( .not. ieee_is_nan(self%max_(v)) ) then
+                    if ( self%cc(lev, v) > self%max_(v) ) self%cc(lev, v) = self%max_(v)
                   end if
                end if
             end if
