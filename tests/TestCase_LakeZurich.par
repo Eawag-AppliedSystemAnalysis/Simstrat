@@ -11,7 +11,7 @@
     "Inflow salinity"     : "TestCase_LakeZurich/Sinp.dat"
   },
   "Output" : {
-    "Path"  : "TestCases_Results/",                     ! Path to result folder
+    "Path"  : "TestCase_LakeZurich/Results/",                     ! Path to result folder
     "Depths" : 1,                                       ! Output depths can be an integer (interpreted as interval in m), a list with depths or a path to a file (containing an integer or a list)
     "Times"  : 96,                                      ! Output times can be a number (interpreted as frequency 1/days), a list with times or a path to a file (containing a number or a list)
     "OutputDepthReference": "surface"                   ! "surface": depth of output variables is referenced to lake level, "bottom": depth of output variables is referenced to lake bottom
@@ -28,16 +28,16 @@
     "UseFilteredWind"         : false,                  ! Switch to activate filtered wind (needs one more column in forcing file)
     "SeicheNormalization"     : 2,                      ! 1: max N2, 2: integral
     "WindDragModel"           : 3,                      ! 1: constant, 2: ocean (increasing), 3: lake (Wüest and Lorke, 2003)
-    "InflowMode"              : 1,                      ! 0: no inflow, 1: inflow depths are chosen manually, 2: inflow is density-driven
+    "InflowMode"              : 0,                      ! 0: no inflow, 1: inflow depths are chosen manually, 2: inflow is density-driven
     "PressureGradients"       : 0,                      ! 0: off, 1: Svensson 1978
     "IceModel"                : 1,                      ! Switch to turn on/off the ice model
     "SnowModel"               : 1                       ! Switch to turn on/off the snow model (needs ice model and an additional column in forcing)
   },
   "AED2Config" : {
-    "AED2ConfigFile"          : "aed2.nml",             ! AED2 config file
-    "PathAED2initial"         : "AED2_initcond/",       ! Folder with initial conditions of biochemical variables
-    "PathAED2inflow"          : "AED2_inflow/",         ! Folder with inflow files of biochemical variables
-    "PathAED2output"          : "AED2_output/",         ! AED2 output folder
+    "AED2ConfigFile"          : "TestCase_LakeZurich/aed2.nml",             ! AED2 config file
+    "PathAED2initial"         : "TestCase_LakeZurich/AED2_initcond/",       ! Folder with initial conditions of biochemical variables
+    "PathAED2inflow"          : "TestCase_LakeZurich/AED2_inflow/",         ! Folder with inflow files of biochemical variables
+    "PathAED2output"          : "TestCase_LakeZurich/AED2_output/",         ! AED2 output folder
     "ParticleMobility"        : 0,                      ! 0: particle mobility is off, 1: particle mobility is on
     "BioshadeFeedback"        : 0,                      ! 0: light absorption coefficients are read from Simstrat input file, 1: light absorption is calculated from biochemical variables
     "BackgroundExtinction"    : 0.2,                    ! Background extinction added to biochemical absorption (only used if bioshadeFeedback is 1)
