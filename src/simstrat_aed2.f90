@@ -438,7 +438,7 @@ contains
       !# (2) SURFACE FLUXES
       !# Calculate temporal derivatives due to air-water exchange.
       if (.not. (state%total_ice_h > 0)) then !# no surface exchange under ice cover
-         call aed2_calculate_surface(self%column, self%grid%nz_occupied)
+         !call aed2_calculate_surface(self%column, self%grid%nz_occupied)
 
          !# Distribute the fluxes into pelagic surface layer
          self%flux_pel(self%grid%nz_occupied, :) = self%flux_pel(self%grid%nz_occupied, :) + self%flux_atm(:)/self%grid%h(self%grid%nz_occupied)
