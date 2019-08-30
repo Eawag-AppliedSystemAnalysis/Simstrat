@@ -13,7 +13,9 @@ libs = ../lib/libaed2/obj/aed2_bio_utils.o
 	   ../lib/libaed2/obj/aed2_common.o
 	   ../lib/libaed2/obj/aed2_core.o
 	   ../lib/libaed2/obj/aed2_csv_reader.o
+	   ../lib/libaed2/obj/aed2_dummy.o
 	   ../lib/libaed2/obj/aed2_nitrogen.o
+	   ../lib/libaed2/obj/aed2_noncohesive.o
 	   ../lib/libaed2/obj/aed2_organic_matter.o
 	   ../lib/libaed2/obj/aed2_oxygen.o
 	   ../lib/libaed2/obj/aed2_phosphorus.o
