@@ -158,6 +158,7 @@ module strat_simdata
       real(RK), dimension(:), pointer :: absorb_vol ! Absorption coeff on vol grid [m-1]
       real(RK) :: u10, v10, Wf ! Wind speeds, wind factor
       real(RK), pointer :: uv10 ! pointer attribute needed for AED2
+      real(RK), pointer :: rain ! pointer attribute needed for AED2, rain is not calculated in Simstrat for the moment, but required by AED2
       real(RK) :: drag, u_taus ! Drag
       real(RK), pointer :: u_taub ! pointer attribute needed for AED2
       real(RK) :: tx, ty ! Shear stress
@@ -317,6 +318,8 @@ contains
       ! init pointers
       allocate(self%uv10)
       self%uv10 = 0.0_RK
+      allocate(self%rain)
+      self%rain = 0.0_RK
       allocate(self%u_taub)
       self%u_taub = 0.0_RK
 

@@ -197,10 +197,11 @@ subroutine define_column(self, state)
                case ( 'depth' )       ; column(av)%cell => self%grid%z_volume
                case ( 'sed_zone' )    ; column(av)%cell_sheet => self%sed_zones(1)
                case ( 'wind_speed' )  ; column(av)%cell_sheet => state%uv10
+               case ( 'rain')         ; column(av)%cell_sheet => state%rain
                case ( 'par_sf' )      ; column(av)%cell_sheet => state%rad0
                case ( 'taub' )        ; column(av)%cell_sheet => state%u_taub
                case ( 'lake_depth' )  ; column(av)%cell_sheet => self%grid%lake_level
-               case ( 'layer_area' )  ; column(av)%cell => self%grid%Az_vol; write(6,*) self%grid%Az_vol
+               case ( 'layer_area' )  ; column(av)%cell => self%grid%Az_vol
                case default ; call error("External variable "//TRIM(tvar%name)//" not found.")
             end select
          elseif ( tvar%diag ) then  !# Diagnostic variable
@@ -275,6 +276,7 @@ subroutine check_data(self)
             case ( 'depth' )       ; tvar%found = .true.
             case ( 'sed_zone' )    ; tvar%found = .true.
             case ( 'wind_speed' )  ; tvar%found = .true.
+            case ( 'rain' )        ; tvar%found = .true.
             case ( 'par_sf' )      ; tvar%found = .true.
             case ( 'taub' )        ; tvar%found = .true.
             case ( 'lake_depth' )  ; tvar%found = .true.

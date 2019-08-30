@@ -41,9 +41,9 @@
     "ParticleMobility"        : 0,                      ! 0: particle mobility is off, 1: particle mobility is on
     "BioshadeFeedback"        : 0,                      ! 0: light absorption coefficients are read from Simstrat input file, 1: light absorption is calculated from biochemical variables
     "BackgroundExtinction"    : 0.2,                    ! Background extinction added to biochemical absorption (only used if bioshadeFeedback is 1)
-    "BenthicMode"             : 0,
-    "NZones"                  : 1,
-    "ZoneHeights"             : [1,2,3]
+    "BenthicMode"             : 0,                      ! Not implemented
+    "NZones"                  : 1,                      ! Not implemented
+    "ZoneHeights"             : [1,2,3]                 ! Not implemented
   },
   "Simulation" : {
     "Timestep s"        : 300,                          ! Simulation timestep in seconds

@@ -300,9 +300,6 @@ contains
    end subroutine
 
    subroutine calculate_fluxes(self, state)
-      !-------------------------------------------------------------------------------
-      ! Checks the current values of all state variables and repairs these
-      !-------------------------------------------------------------------------------
       use,intrinsic :: ieee_arithmetic
 
       ! Arguments
