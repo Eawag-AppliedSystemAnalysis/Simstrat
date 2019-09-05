@@ -6,9 +6,9 @@ For now we have:
 
 | Library Name | Version / Date             | License | Linking      |
 |--------------|----------------------------|---------|--------------|
-| csv_fortran  | 7.1 /19.07.2019			| BSD	  | static       |
-| json_fortan  | ??           				| BSD 	  | static       |
-| libaed2	   | 1.3 /20.08.2019			| GPL-3.0 | static       |
+| csv_fortran  | 1.1.0 / 05.09.2019			| BSD	  | static       |
+| json_fortan  | 7.1.0 / 19.07.2019         | BSD 	  | static       |
+| libaed2	   | 1.3.2 / 05.09.2019			| GPL-3.0 | static       |
 
 Please note that the first two libraries are hard copies, while the `libaed2` library is a submodule, added in the first place as
 ~~~bash
