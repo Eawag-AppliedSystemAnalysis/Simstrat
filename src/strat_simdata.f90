@@ -6,6 +6,7 @@ module strat_simdata
    use strat_kinds
    use strat_grid
    use strat_consts
+   use utilities
    implicit none
    private
 
@@ -168,6 +169,8 @@ module strat_simdata
 
    contains
       procedure, pass :: init => model_state_init
+      procedure, pass :: save => save_model_state
+      procedure, pass :: load => load_model_state
    end type
 
    ! Structure that encapsulates a full program state
@@ -277,6 +280,131 @@ contains
       self%hv = 0.0_RK
       self%rad0 = 0.0_RK
 
+   end subroutine
+
+   ! save model state unformatted
+   subroutine save_model_state(self, file_path)
+      implicit none
+      class(ModelState), intent(inout) :: self
+      character(len=*), intent(in) :: file_path
+
+      open(80, file=file_path, Form='unformatted', Action='Write')
+
+      write(80) self%i, self%j, self%output_counter, self%model_step_counter
+      write(80) self%datum, self%dt, self%first_timestep
+      call save_array(80, self%U)
+      call save_array(80, self%V)
+      call save_array(80, self%dS)
+      call save_matrix(80, self%Q_inp)
+      call save_array(80, self%rho)
+      call save_array(80, self%k)
+      call save_array(80, self%ko)
+      call save_array(80, self%avh)
+      call save_array(80, self%eps)
+      call save_array(80, self%num)
+      call save_array(80, self%nuh)
+      call save_array(80, self%P)
+      call save_array(80, self%B)
+      call save_array(80, self%NN)
+      call save_array(80, self%cmue1)
+      call save_array(80, self%cmue2)
+      call save_array(80, self%P_Seiche)
+      write(80) self%E_Seiche, self%gamma
+      call save_array(80, self%absorb)
+      write(80) self%u10, self%v10, self%uv10, self%Wf
+      write(80) self%u_taub, self%drag, self%u_taus
+      write(80) self%tx, self%ty
+      write(80) self%C10
+      write(80) self%SST, self%heat, self%heat_snow, self%heat_ice, self%heat_snowice
+      write(80) self%T_atm
+      call save_array(80, self%rad)
+      call save_array(80, self%Q_vert)
+      write(80) self%albedo_data
+      write(80) self%albedo_water
+      write(80) self%lat_number
+      write(80) self%snow_h
+      write(80) self%total_ice_h
+      write(80) self%black_ice_h
+      write(80) self%white_ice_h
+      write(80) self%snow_dens
+      write(80) self%ice_temp
+      write(80) self%precip
+      write(80) self%ha
+      write(80) self%hw
+      write(80) self%hk
+      write(80) self%hv
+      write(80) self%rad0
+      write(80) self%cde, self%cm0
+      write(80) self%fsed
+      call save_array(80, self%fgeo_add)
+      write(80) self%has_advection
+      write(80) self%has_surface_input, self%has_deep_input
+      write(80) self%nz_input
+
+      close(80)
+   end subroutine
+
+   ! load model state unformatted
+   subroutine load_model_state(self, file_path)
+      implicit none
+      class(ModelState), intent(inout) :: self
+      character(len=*), intent(in) :: file_path
+
+      open(81, file=file_path, Form='unformatted', Action='Read')
+
+      read(81) self%i, self%j, self%output_counter, self%model_step_counter
+      read(81) self%datum, self%dt, self%first_timestep
+      self%U = read_array(81)
+      self%V = read_array(81)
+      self%dS = read_array(81)
+      self%Q_inp = read_matrix(81)
+      self%rho = read_array(81)
+      self%k = read_array(81)
+      self%ko = read_array(81)
+      self%avh = read_array(81)
+      self%eps = read_array(81)
+      self%num = read_array(81)
+      self%nuh = read_array(81)
+      self%P = read_array(81)
+      self%B = read_array(81)
+      self%NN = read_array(81)
+      self%cmue1 = read_array(81)
+      self%cmue2 = read_array(81)
+      self%P_Seiche = read_array(81)
+      read(81) self%E_Seiche, self%gamma
+      self%absorb = read_array(81)
+      read(81) self%u10, self%v10, self%uv10, self%Wf
+      read(81) self%u_taub, self%drag, self%u_taus
+      read(81) self%tx, self%ty
+      read(81) self%C10
+      read(81) self%SST, self%heat, self%heat_snow, self%heat_ice, self%heat_snowice
+      read(81) self%T_atm
+      self%rad = read_array(81)
+      self%Q_vert = read_array(81)
+      read(81) self%albedo_data
+      read(81) self%albedo_water
+      read(81) self%lat_number
+      read(81) self%snow_h
+      read(81) self%total_ice_h
+      read(81) self%black_ice_h
+      read(81) self%white_ice_h
+      read(81) self%snow_dens
+      read(81) self%ice_temp
+      read(81) self%precip
+      read(81) self%ha
+      read(81) self%hw
+      read(81) self%hk
+      read(81) self%hv
+      read(81) self%rad0
+      read(81) self%cde, self%cm0
+      read(81) self%fsed
+      self%fgeo_add = read_array(81)
+      read(81) self%has_advection
+      read(81) self%has_surface_input, self%has_deep_input
+      read(81) self%nz_input
+
+
+      close(81)
    end subroutine
 
 end module strat_simdata

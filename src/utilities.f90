@@ -400,4 +400,44 @@ contains
 
    end subroutine
 
+   subroutine save_array(output_unit, array)
+      implicit none
+      integer, intent(in) :: output_unit
+      real(RK), dimension(:), allocatable, intent(in) :: array
+
+      write(output_unit) size(array)
+      write(output_unit) array
+   end subroutine
+
+   function read_array(input_unit) result (array)
+      implicit none
+      integer, intent(in) :: input_unit
+      real(RK), dimension(:), allocatable :: array
+      integer :: array_size
+
+      read(input_unit) array_size
+      allocate(array(array_size))
+      read(input_unit) array
+   end function
+
+   subroutine save_matrix(output_unit, matrix)
+      implicit none
+      integer, intent(in) :: output_unit
+      real(RK), dimension(:, :), allocatable, intent(in) :: matrix
+
+      write(output_unit) size(matrix, 1), size(matrix, 2)
+      write(output_unit) matrix
+   end subroutine
+
+   function read_matrix(input_unit) result (matrix)
+      implicit none
+      integer, intent(in) :: input_unit
+      real(RK), dimension(:, :), allocatable :: matrix
+      integer :: matrix_size_1, matrix_size_2
+
+      read(input_unit) matrix_size_1, matrix_size_2
+      allocate(matrix(matrix_size_1, matrix_size_2))
+      read(input_unit) matrix
+   end function
+
 end module utilities
