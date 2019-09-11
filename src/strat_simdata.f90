@@ -294,6 +294,8 @@ contains
       write(80) self%datum, self%dt
       call save_array(80, self%U)
       call save_array(80, self%V)
+      call save_array(80, self%T)
+      call save_array(80, self%S)
       call save_array(80, self%dS)
       call save_matrix(80, self%Q_inp)
       call save_array(80, self%rho)
@@ -356,6 +358,8 @@ contains
       read(81) self%datum, self%dt
       self%U = read_array(81)
       self%V = read_array(81)
+      self%T = read_array(81)
+      self%S = read_array(81)
       self%dS = read_array(81)
       self%Q_inp = read_matrix(81)
       self%rho = read_array(81)
