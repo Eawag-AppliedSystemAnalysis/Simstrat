@@ -145,6 +145,12 @@ contains
 
    subroutine run_simulation()
       ! Run the simulation loop
+      logical :: file_exists
+      inquire (file="snapshot.dat", exist=file_exists)
+      if (file_exists) then
+         call simdata%model%load("snapshot.dat")
+         call ok("Simulation snapshot successfully read, datum: "//toStr(simdata%model%datum))
+      end if
 
       ! Write initial conditions
       call logger%log(simdata%model%datum)
@@ -297,6 +303,7 @@ contains
          ! This logical is used to do some allocation in the forcing, absorption and lateral subroutines during the first timestep
          simdata%model%first_timestep = .false.
       end do
+      call simdata%model%save("snapshot.dat")
 
       if (simdata%sim_cfg%disp_simulation/=0) then
          write(6,*)
