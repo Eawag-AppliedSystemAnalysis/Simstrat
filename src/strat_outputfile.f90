@@ -199,6 +199,7 @@ contains
       logical :: status_ok, exist_output_folder
       integer :: i, exitstat
       character(len=256) :: mkdirCmd
+      character(len=:), allocatable :: file_path
 
       self%n_depths = size(output_config%zout)
 
@@ -224,19 +225,20 @@ contains
       allocate (self%output_files(1:self%n_vars))
 
       do i = 1, self%n_vars
+         file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat'
          if (self%output_config%output_vars(i)%volume_grid) then
             !Variable on volume grid
-            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=self%n_depths+1, status_ok=status_ok)
+            call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, status_ok=status_ok)
             call self%output_files(i)%add('')
             call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
          else if (self%output_config%output_vars(i)%face_grid) then
             ! Variable on face grid
-            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=self%n_depths+1, status_ok=status_ok)
+            call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, status_ok=status_ok)
             call self%output_files(i)%add('')
             call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
          else
             !Variable at surface
-            call self%output_files(i)%open(output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat', n_cols=1 + 1, status_ok=status_ok)
+            call self%output_files(i)%open(file_path, n_cols=1 + 1, status_ok=status_ok)
             call self%output_files(i)%add('')
             call self%output_files(i)%add(grid%z_face(grid%ubnd_fce), real_fmt='(F12.3)')
          end if
