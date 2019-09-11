@@ -291,7 +291,7 @@ contains
       open(80, file=file_path, Form='unformatted', Action='Write')
 
       write(80) self%i, self%j, self%output_counter, self%model_step_counter
-      write(80) self%datum, self%dt, self%first_timestep
+      write(80) self%datum, self%dt
       call save_array(80, self%U)
       call save_array(80, self%V)
       call save_array(80, self%dS)
@@ -353,7 +353,7 @@ contains
       open(81, file=file_path, Form='unformatted', Action='Read')
 
       read(81) self%i, self%j, self%output_counter, self%model_step_counter
-      read(81) self%datum, self%dt, self%first_timestep
+      read(81) self%datum, self%dt
       self%U = read_array(81)
       self%V = read_array(81)
       self%dS = read_array(81)
