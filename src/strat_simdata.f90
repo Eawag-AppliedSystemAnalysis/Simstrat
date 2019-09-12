@@ -107,7 +107,7 @@ module strat_simdata
    ! Model state (this is actually the simulation data!!!)
    type, public :: ModelState
       ! Iteration variables
-      integer :: i, j, output_counter, model_step_counter
+      integer :: output_counter, model_step_counter
       real(RK) :: datum, dt
       logical :: first_timestep = .true.
 
@@ -290,8 +290,7 @@ contains
 
       open(80, file=file_path, Form='unformatted', Action='Write')
 
-      write(80) self%i, self%j, self%output_counter, self%model_step_counter
-      write(80) self%datum, self%dt
+      write(80) self%output_counter, self%model_step_counter, self%datum
       call save_array(80, self%U)
       call save_array(80, self%V)
       call save_array(80, self%T)
@@ -354,8 +353,7 @@ contains
 
       open(81, file=file_path, Form='unformatted', Action='Read')
 
-      read(81) self%i, self%j, self%output_counter, self%model_step_counter
-      read(81) self%datum, self%dt
+      read(81) self%output_counter, self%model_step_counter, self%datum
       self%U = read_array(81)
       self%V = read_array(81)
       self%T = read_array(81)
@@ -406,7 +404,6 @@ contains
       read(81) self%has_advection
       read(81) self%has_surface_input, self%has_deep_input
       read(81) self%nz_input
-
 
       close(81)
    end subroutine

@@ -149,11 +149,11 @@ contains
       inquire (file="snapshot.dat", exist=file_exists)
       if (file_exists) then
          call simdata%model%load("snapshot.dat")
-         call ok("Simulation snapshot successfully read, datum: "//toStr(simdata%model%datum))
+         call ok("Simulation snapshot successfully read")
+      else
+         call logger%log(simdata%model%datum)
       end if
 
-      ! Write initial conditions
-      call logger%log(simdata%model%datum)
 
       ! Run simulation until end datum or until no more results are required by the output time file
       do while (simdata%model%datum<simdata%sim_cfg%end_datum .and. simdata%model%output_counter<=size(simdata%output_cfg%tout))
