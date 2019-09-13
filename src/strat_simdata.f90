@@ -43,7 +43,9 @@ module strat_simdata
       real(RK), dimension(:), allocatable :: tout
       real(RK), dimension(:), allocatable :: n_timesteps_between_tout
       real(RK), dimension(:), allocatable :: adjusted_timestep
-      logical :: write_to_file
+      logical :: write_to_file, output_all
+      integer :: number_output_vars
+      character(len=20), dimension(:), allocatable :: output_var_names ! Names of output variables
       class(LogVariable), dimension(:), allocatable :: output_vars
 
       integer :: output_time_type, output_depth_type, thinning_interval
