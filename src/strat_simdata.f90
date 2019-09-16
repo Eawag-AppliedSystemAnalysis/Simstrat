@@ -184,6 +184,8 @@ module strat_simdata
       type(StaggeredGrid), public :: grid
    contains
       procedure, pass :: init => simulation_data_init
+      procedure, pass :: save => save_simulation_data
+      procedure, pass :: load => load_simulation_data
    end type
 
 contains
@@ -192,7 +194,28 @@ contains
       integer, intent(in) :: state_size
       ! Init model data structures
       call self%model%init(state_size)
+   end subroutine
 
+   subroutine save_simulation_data(self, file_path)
+      implicit none
+      class(SimulationData), intent(inout) :: self
+      character(len=*), intent(in) :: file_path
+
+      open(80, file=file_path, Form='unformatted', Action='Write')
+      call self%grid%save()
+      call save_model_state(self%model)
+      close(80)
+   end subroutine
+
+   subroutine load_simulation_data(self, file_path)
+      implicit none
+      class(SimulationData), intent(inout) :: self
+      character(len=*), intent(in) :: file_path
+
+      open(81, file=file_path, Form='unformatted', Action='Read')
+      call self%grid%load()
+      call load_model_state(self%model)
+      close(81)
    end subroutine
 
    ! Allocates all arrays of the model state in the correct size
@@ -283,12 +306,9 @@ contains
    end subroutine
 
    ! save model state unformatted
-   subroutine save_model_state(self, file_path)
+   subroutine save_model_state(self)
       implicit none
       class(ModelState), intent(inout) :: self
-      character(len=*), intent(in) :: file_path
-
-      open(80, file=file_path, Form='unformatted', Action='Write')
 
       write(80) self%output_counter, self%model_step_counter, self%datum
       call save_array(80, self%U)
@@ -341,17 +361,12 @@ contains
       write(80) self%has_advection
       write(80) self%has_surface_input, self%has_deep_input
       write(80) self%nz_input
-
-      close(80)
    end subroutine
 
    ! load model state unformatted
-   subroutine load_model_state(self, file_path)
+   subroutine load_model_state(self)
       implicit none
       class(ModelState), intent(inout) :: self
-      character(len=*), intent(in) :: file_path
-
-      open(81, file=file_path, Form='unformatted', Action='Read')
 
       read(81) self%output_counter, self%model_step_counter, self%datum
       self%U = read_array(81)
@@ -404,8 +419,6 @@ contains
       read(81) self%has_advection
       read(81) self%has_surface_input, self%has_deep_input
       read(81) self%nz_input
-
-      close(81)
    end subroutine
 
 end module strat_simdata
