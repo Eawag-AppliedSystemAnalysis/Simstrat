@@ -143,145 +143,181 @@ contains
          end if
 
          ! Define variables that should be written
-         allocate (self%simdata%output_cfg%output_vars(23))
+         if (output_cfg%output_all) then
+            output_cfg%number_output_vars = 23
+            output_cfg%output_var_names = [character(len=12) :: 'V','U','T','S','num','nuh','NN','k','eps','P','B','Ps','HA','HW','HK','HV','Rad0','TotalIceH','BlackIceH','WhiteIceH','SnowH','WaterH','Qvert']
+         else
+            output_cfg%number_output_vars = size(output_cfg%output_var_names)
+         end if
+         allocate (self%simdata%output_cfg%output_vars(output_cfg%number_output_vars))
 
-         ! Horizontal velocity in y direction [m s-1]
-         self%simdata%output_cfg%output_vars(1)%name = "V"
-         self%simdata%output_cfg%output_vars(1)%values => self%simdata%model%V
-         self%simdata%output_cfg%output_vars(1)%volume_grid = .true.
-         self%simdata%output_cfg%output_vars(1)%face_grid = .false.
+         do i=1,output_cfg%number_output_vars
+            select case(trim(output_cfg%output_var_names(i)))
+               case('V')
+                  ! Horizontal velocity in y direction [m s-1]
+                  self%simdata%output_cfg%output_vars(i)%name = "V"
+                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%V
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
 
-         ! Horizontal velocity in x direction [m s-1]
-         self%simdata%output_cfg%output_vars(2)%name = "U"
-         self%simdata%output_cfg%output_vars(2)%values => self%simdata%model%U
-         self%simdata%output_cfg%output_vars(2)%volume_grid = .true.
-         self%simdata%output_cfg%output_vars(2)%face_grid = .false.
+               case('U')
+                  ! Horizontal velocity in x direction [m s-1]
+                  self%simdata%output_cfg%output_vars(i)%name = "U"
+                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%U
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
 
-         ! Temperature [°C]
-         self%simdata%output_cfg%output_vars(3)%name = "T"
-         self%simdata%output_cfg%output_vars(3)%values => self%simdata%model%T
-         self%simdata%output_cfg%output_vars(3)%volume_grid = .true.
-         self%simdata%output_cfg%output_vars(3)%face_grid = .false.
+               case('T')
+                  ! Temperature [°C]
+                  self%simdata%output_cfg%output_vars(i)%name = "T"
+                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%T
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
 
-         ! Salinity [‰]
-         self%simdata%output_cfg%output_vars(4)%name = "S"
-         self%simdata%output_cfg%output_vars(4)%values => self%simdata%model%S
-         self%simdata%output_cfg%output_vars(4)%volume_grid = .true.
-         self%simdata%output_cfg%output_vars(4)%face_grid = .false.
+               case('S')
+                  ! Salinity [‰]
+                  self%simdata%output_cfg%output_vars(i)%name = "S"
+                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%S
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
 
-         ! Turbulent diffusivity for momentum  (viscosity) [m2 s]
-         self%simdata%output_cfg%output_vars(5)%name = "num"
-         self%simdata%output_cfg%output_vars(5)%values => self%simdata%model%num
-         self%simdata%output_cfg%output_vars(5)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(5)%face_grid = .true.
+               case('num')
+                  ! Turbulent diffusivity for momentum  (viscosity) [m2 s]
+                  self%simdata%output_cfg%output_vars(i)%name = "num"
+                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%num
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
-         ! Turbulent diffusivity for temperature [m2 s]
-         self%simdata%output_cfg%output_vars(6)%name = "nuh"
-         self%simdata%output_cfg%output_vars(6)%values => self%simdata%model%nuh
-         self%simdata%output_cfg%output_vars(6)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(6)%face_grid = .true.
+               case('nuh')
+                  ! Turbulent diffusivity for temperature [m2 s]
+                  self%simdata%output_cfg%output_vars(i)%name = "nuh"
+                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%nuh
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
-         ! Brunt-Väisälä frequency [s-1]
-         self%simdata%output_cfg%output_vars(7)%name = "NN"
-         self%simdata%output_cfg%output_vars(7)%values => self%simdata%model%NN
-         self%simdata%output_cfg%output_vars(7)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(7)%face_grid = .true.
+               case('NN')
+                  ! Brunt-Väisälä frequency [s-1]
+                  self%simdata%output_cfg%output_vars(i)%name = "NN"
+                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%NN
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
-         ! Turbulent kinetic energy (TKE) [J kg-1]
-         self%simdata%output_cfg%output_vars(8)%name = "k"
-         self%simdata%output_cfg%output_vars(8)%values => self%simdata%model%k
-         self%simdata%output_cfg%output_vars(8)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(8)%face_grid = .true.
+               case('k')
+                  ! Turbulent kinetic energy (TKE) [J kg-1]
+                  self%simdata%output_cfg%output_vars(i)%name = "k"
+                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%k
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
-         ! TKE dissipation rate [W kg-1]
-         self%simdata%output_cfg%output_vars(9)%name = "eps"
-         self%simdata%output_cfg%output_vars(9)%values => self%simdata%model%eps
-         self%simdata%output_cfg%output_vars(9)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(9)%face_grid = .true.
+               case('eps')
+                  ! TKE dissipation rate [W kg-1]
+                  self%simdata%output_cfg%output_vars(i)%name = "eps"
+                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%eps
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
-         ! Shear stress production P [W kg-1]
-         self%simdata%output_cfg%output_vars(10)%name = "P"
-         self%simdata%output_cfg%output_vars(10)%values => self%simdata%model%P
-         self%simdata%output_cfg%output_vars(10)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(10)%face_grid = .true.
+               case('P')
+                  ! Shear stress production P [W kg-1]
+                  self%simdata%output_cfg%output_vars(i)%name = "P"
+                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%P
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
-         ! Buoyancy production [W kg-1]
-         self%simdata%output_cfg%output_vars(11)%name = "B"
-         self%simdata%output_cfg%output_vars(11)%values => self%simdata%model%B
-         self%simdata%output_cfg%output_vars(11)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(11)%face_grid = .true.
+               case('B')
+                  ! Buoyancy production [W kg-1]
+                  self%simdata%output_cfg%output_vars(i)%name = "B"
+                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%B
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
-         ! Production of TKE due to internal seiching [W kg-1]
-         self%simdata%output_cfg%output_vars(12)%name = "Ps"
-         self%simdata%output_cfg%output_vars(12)%values => self%simdata%model%P_seiche
-         self%simdata%output_cfg%output_vars(12)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(12)%face_grid = .true.
+               case('Ps')
+                  ! Production of TKE due to internal seiching [W kg-1]
+                  self%simdata%output_cfg%output_vars(i)%name = "Ps"
+                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%P_seiche
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
-         ! Infrared radiation from sky [W m-2]
-         self%simdata%output_cfg%output_vars(13)%name = "HA"
-         self%simdata%output_cfg%output_vars(13)%values_surf => self%simdata%model%ha
-         self%simdata%output_cfg%output_vars(13)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(13)%face_grid = .false.
+               case('HA')
+                  ! Infrared radiation from sky [W m-2]
+                  self%simdata%output_cfg%output_vars(i)%name = "HA"
+                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%ha
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
 
-         ! Infrared ratidation from water [W m-2]
-         self%simdata%output_cfg%output_vars(14)%name = "HW"
-         self%simdata%output_cfg%output_vars(14)%values_surf => self%simdata%model%hw
-         self%simdata%output_cfg%output_vars(14)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(14)%face_grid = .false.
+               case('HW')
+                  ! Infrared ratidation from water [W m-2]
+                  self%simdata%output_cfg%output_vars(i)%name = "HW"
+                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%hw
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
 
-         ! Sensible heat flux from water [W m-2]
-         self%simdata%output_cfg%output_vars(15)%name = "HK"
-         self%simdata%output_cfg%output_vars(15)%values_surf => self%simdata%model%hk
-         self%simdata%output_cfg%output_vars(15)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(15)%face_grid = .false.
+               case('HK')
+                  ! Sensible heat flux from water [W m-2]
+                  self%simdata%output_cfg%output_vars(i)%name = "HK"
+                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%hk
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
 
-         ! Latent heat flux from water [W m-2]
-         self%simdata%output_cfg%output_vars(16)%name = "HV"
-         self%simdata%output_cfg%output_vars(16)%values_surf => self%simdata%model%hv
-         self%simdata%output_cfg%output_vars(16)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(16)%face_grid = .false.
+               case('HV')
+                  ! Latent heat flux from water [W m-2]
+                  self%simdata%output_cfg%output_vars(i)%name = "HV"
+                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%hv
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
 
-         ! Solar radiation at surface [W m-2]
-         self%simdata%output_cfg%output_vars(17)%name = "Rad0"
-         self%simdata%output_cfg%output_vars(17)%values_surf => self%simdata%model%rad0
-         self%simdata%output_cfg%output_vars(17)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(17)%face_grid = .false.
+               case('Rad0')
+                  ! Solar radiation at surface [W m-2]
+                  self%simdata%output_cfg%output_vars(i)%name = "Rad0"
+                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%rad0
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
 
-         ! Total ice thickness [m]
-         self%simdata%output_cfg%output_vars(18)%name = "TotalIceH"
-         self%simdata%output_cfg%output_vars(18)%values_surf => self%simdata%model%total_ice_h
-         self%simdata%output_cfg%output_vars(18)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(18)%face_grid = .false.
+               case('TotalIceH')
+                  ! Total ice thickness [m]
+                  self%simdata%output_cfg%output_vars(i)%name = "TotalIceH"
+                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%total_ice_h
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
 
-         ! Black ice thickness [m]
-         self%simdata%output_cfg%output_vars(19)%name = "BlackIceH"
-         self%simdata%output_cfg%output_vars(19)%values_surf => self%simdata%model%black_ice_h
-         self%simdata%output_cfg%output_vars(19)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(19)%face_grid = .false.
+               case('BlackIceH')
+                  ! Black ice thickness [m]
+                  self%simdata%output_cfg%output_vars(i)%name = "BlackIceH"
+                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%black_ice_h
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
 
-         ! White ice (snow ice) thickness [m]
-         self%simdata%output_cfg%output_vars(20)%name = "WhiteIceH"
-         self%simdata%output_cfg%output_vars(20)%values_surf => self%simdata%model%white_ice_h
-         self%simdata%output_cfg%output_vars(20)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(20)%face_grid = .false.
+               case('WhiteIceH')
+                  ! White ice (snow ice) thickness [m]
+                  self%simdata%output_cfg%output_vars(i)%name = "WhiteIceH"
+                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%white_ice_h
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
 
-         ! Snow layer thickness [m]
-         self%simdata%output_cfg%output_vars(21)%name = "SnowH"
-         self%simdata%output_cfg%output_vars(21)%values_surf => self%simdata%model%snow_h
-         self%simdata%output_cfg%output_vars(21)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(21)%face_grid = .false.
+               case('SnowH')
+                  ! Snow layer thickness [m]
+                  self%simdata%output_cfg%output_vars(i)%name = "SnowH"
+                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%snow_h
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
 
-         ! Water level [m]
-         self%simdata%output_cfg%output_vars(22)%name = "WaterH"
-         self%simdata%output_cfg%output_vars(22)%values_surf => self%simdata%grid%lake_level
-         self%simdata%output_cfg%output_vars(22)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(22)%face_grid = .false.
+               case('WaterH')
+                  ! Water level [m]
+                  self%simdata%output_cfg%output_vars(i)%name = "WaterH"
+                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%grid%lake_level
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
 
-         ! Vertical advection [m3 s-1]
-         self%simdata%output_cfg%output_vars(23)%name = "Qvert"
-         self%simdata%output_cfg%output_vars(23)%values => self%simdata%model%Q_vert
-         self%simdata%output_cfg%output_vars(23)%volume_grid = .false.
-         self%simdata%output_cfg%output_vars(23)%face_grid = .true.
+               case('Qvert')
+                  ! Vertical advection [m3 s-1]
+                  self%simdata%output_cfg%output_vars(i)%name = "Qvert"
+                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%Q_vert
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .true.
+
+               case default
+                  call warn('Output variable specified in config file not found: ' // trim(output_cfg%output_var_names(i)))
+            end select
+         end do
 
       end associate
    end subroutine
@@ -448,6 +484,7 @@ contains
       character(kind=CK, len=:), allocatable          :: MorphName, InitName, ForcingName, AbsorpName
       character(kind=CK, len=:), allocatable          :: GridName, zoutName, toutName, PathOut
       character(kind=CK, len=:), allocatable          :: QinpName, QoutName, TinpName, SinpName
+      character(len=20), dimension(:), allocatable :: output_var_names
 
       associate (input_cfg=>self%simdata%input_cfg, &
                  output_cfg=>self%simdata%output_cfg, &
@@ -552,6 +589,10 @@ contains
 
          else
             call error('Invalid field "Output.Times" in par-file.')
+         end if
+         call par_file%get('Output.All', output_cfg%output_all, found); call check_field(found, 'Output.All', ParName)
+         if (.not. output_cfg%output_all) then
+            call par_file%get('Output.Variables', output_var_names, found); output_cfg%output_var_names = output_var_names; call check_field(found, 'Output.Variables', ParName)
          end if
 
          ! Model configuration
