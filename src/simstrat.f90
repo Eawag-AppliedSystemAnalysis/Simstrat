@@ -52,6 +52,7 @@ program simstrat_main
 
    character(len=100) :: arg
    character(len=:), allocatable :: ParName
+   character(len=:), allocatable :: snapshot_file_path
 
    ! Print some information
    write (6, *) 'Simstrat version '//version
@@ -109,6 +110,9 @@ program simstrat_main
                            simdata%grid)
    end if
 
+   ! Binary simulation snapshot file path
+   snapshot_file_path = simdata%output_cfg%PathOut//'/simulation-snapshot.dat'
+
    ! Setup logger
    call logger%initialize(simdata%sim_cfg, simdata%output_cfg, simdata%grid)
 
@@ -144,17 +148,19 @@ program simstrat_main
 contains
 
    subroutine run_simulation()
-      ! Run the simulation loop
       logical :: file_exists
-      inquire (file="snapshot.dat", exist=file_exists)
+
+      call ok("Start day: "//real_to_str(simdata%sim_cfg%start_datum, '(F7.1)'))
+      inquire (file=snapshot_file_path, exist=file_exists)
       if (file_exists) then
-         call load_snapshot("snapshot.dat")
-         call ok("Simulation snapshot successfully read")
+         call load_snapshot(snapshot_file_path)
+         call ok("Simulation snapshot successfully read. Snapshot day:"//real_to_str(simdata%model%datum, '(F7.1)'))
       else
          call logger%log(simdata%model%datum)
       end if
+      call ok("End day: "//real_to_str(simdata%sim_cfg%end_datum, '(F7.1)'))
 
-
+      ! Run the simulation loop
       ! Run simulation until end datum or until no more results are required by the output time file
       do while (simdata%model%datum<simdata%sim_cfg%end_datum .and. simdata%model%output_counter<=size(simdata%output_cfg%tout))
 
@@ -303,7 +309,7 @@ contains
          ! This logical is used to do some allocation in the forcing, absorption and lateral subroutines during the first timestep
          simdata%model%first_timestep = .false.
       end do
-      call save_snapshot("snapshot.dat")
+      call save_snapshot(snapshot_file_path)
 
       if (simdata%sim_cfg%disp_simulation/=0) then
          write(6,*)

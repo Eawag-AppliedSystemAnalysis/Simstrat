@@ -199,7 +199,6 @@ contains
       logical :: status_ok, exist_output_folder
       integer :: i, exitstat
       character(len=256) :: mkdirCmd
-      character(len=:), allocatable :: file_path
 
       self%n_depths = size(output_config%zout)
 
@@ -220,31 +219,51 @@ contains
          end if
 
       end if
+      call open_files(self, output_config, grid)
+
+   end subroutine
+
+   subroutine open_files(self, output_config, grid)
+      implicit none
+      class(InterpolatingLogger), intent(inout) :: self
+      class(OutputConfig), target :: output_config
+      class(StaggeredGrid), target :: grid
+      integer :: i
+      character(len=:), allocatable :: file_path
+      logical :: status_ok, append
 
       if (allocated(self%output_files)) deallocate (self%output_files)
       allocate (self%output_files(1:self%n_vars))
 
       do i = 1, self%n_vars
          file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat'
+         inquire (file=file_path, exist=append)
          if (self%output_config%output_vars(i)%volume_grid) then
             !Variable on volume grid
-            call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, status_ok=status_ok)
-            call self%output_files(i)%add('')
-            call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
+            call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
+            if (.not. append) then
+               call self%output_files(i)%add('')
+               call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
+               call self%output_files(i)%next_row()
+            end if
          else if (self%output_config%output_vars(i)%face_grid) then
             ! Variable on face grid
-            call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, status_ok=status_ok)
-            call self%output_files(i)%add('')
-            call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
+            call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
+            if (.not. append) then
+               call self%output_files(i)%add('')
+               call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
+               call self%output_files(i)%next_row()
+            end if
          else
             !Variable at surface
-            call self%output_files(i)%open(file_path, n_cols=1 + 1, status_ok=status_ok)
-            call self%output_files(i)%add('')
-            call self%output_files(i)%add(grid%z_face(grid%ubnd_fce), real_fmt='(F12.3)')
+            call self%output_files(i)%open(file_path, n_cols=1 + 1, append=append, status_ok=status_ok)
+            if (.not. append) then
+               call self%output_files(i)%add('')
+               call self%output_files(i)%add(grid%z_face(grid%ubnd_fce), real_fmt='(F12.3)')
+               call self%output_files(i)%next_row()
+            end if
          end if
-         call self%output_files(i)%next_row()
       end do
-
    end subroutine
 
    !************************* Log ****************************

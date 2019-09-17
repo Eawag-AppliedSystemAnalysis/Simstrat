@@ -278,6 +278,13 @@ contains
       str_real = adjustl(str_real)
    end function str_real
 
+   character(len=20) function real_to_str(k, fmt)
+      implicit none
+      real(RK), intent(in) :: k
+      character(len=*), intent(in) :: fmt
+      write (real_to_str, fmt) k
+      real_to_str = adjustl(real_to_str)
+   end function
 
    ! Initialize the calender (day, month and year) based on the given starting year and and start datum
    subroutine init_calendar(start_year, datum, current_year, leap_year, current_month, current_day)
