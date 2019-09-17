@@ -148,7 +148,7 @@ contains
       logical :: file_exists
       inquire (file="snapshot.dat", exist=file_exists)
       if (file_exists) then
-         call simdata%load("snapshot.dat")
+         call load_snapshot("snapshot.dat")
          call ok("Simulation snapshot successfully read")
       else
          call logger%log(simdata%model%datum)
@@ -303,7 +303,7 @@ contains
          ! This logical is used to do some allocation in the forcing, absorption and lateral subroutines during the first timestep
          simdata%model%first_timestep = .false.
       end do
-      call simdata%save("snapshot.dat")
+      call save_snapshot("snapshot.dat")
 
       if (simdata%sim_cfg%disp_simulation/=0) then
          write(6,*)
@@ -312,6 +312,28 @@ contains
          write(6,*) ' -------------------------- '
          write(6,*)
       end if
+   end subroutine
+
+   subroutine save_snapshot(file_path)
+      implicit none
+      character(len=*), intent(in) :: file_path
+
+      open(80, file=file_path, Form='unformatted', Action='Write')
+      call simdata%grid%save()
+      call mod_forcing%save()
+      call simdata%model%save()
+      close(80)
+   end subroutine
+
+   subroutine load_snapshot(file_path)
+      implicit none
+      character(len=*), intent(in) :: file_path
+
+      open(81, file=file_path, Form='unformatted', Action='Read')
+      call simdata%grid%load()
+      call mod_forcing%load()
+      call simdata%model%load()
+      close(81)
    end subroutine
 
 end program simstrat_main

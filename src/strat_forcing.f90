@@ -27,6 +27,8 @@ module strat_forcing
    contains
       procedure, pass :: init => forcing_init
       procedure, pass :: read => forcing_read
+      procedure, pass :: save => forcing_save
+      procedure, pass :: load => forcing_load
       procedure, pass :: update => forcing_update
       procedure, pass :: update_coriolis => forcing_update_coriolis
       procedure, pass :: init_albedo => forcing_init_albedo
@@ -50,6 +52,20 @@ contains
 
       if(self%cfg%snow_model == 1) call warn('The snow module is turned on. This module needs precipitation data, note that the last column in the forcing file will be interpreted as precipitation.')
       !If precipitation column is missing in forcing file, Simstrat will read dates as precipitation
+   end subroutine
+
+   subroutine forcing_save(self)
+      implicit none
+      class(ForcingModule), intent(inout) :: self
+
+      write(80) self%current_year, self%leap_year, self%current_month, self%current_day
+   end subroutine
+
+   subroutine forcing_load(self)
+      implicit none
+      class(ForcingModule), intent(inout) :: self
+
+      read(81) self%current_year, self%leap_year, self%current_month, self%current_day
    end subroutine
 
    !Read forcing file to get values A_cur at given datum

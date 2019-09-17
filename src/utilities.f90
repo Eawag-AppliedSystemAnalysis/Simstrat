@@ -412,7 +412,7 @@ contains
    subroutine read_array(input_unit, array)
       implicit none
       integer, intent(in) :: input_unit
-      real(RK), dimension(:), allocatable, intent(inout) :: array
+      real(RK), dimension(:), allocatable, intent(out) :: array
       real(RK), dimension(:), allocatable :: array_internal
       integer :: array_lbound, array_ubound
 
@@ -435,7 +435,7 @@ contains
    subroutine read_matrix(input_unit, matrix)
       implicit none
       integer, intent(in) :: input_unit
-      real(RK), dimension(:, :), allocatable, intent(inout) :: matrix
+      real(RK), dimension(:, :), allocatable, intent(out) :: matrix
       real(RK), dimension(:, :), allocatable :: matrix_internal
       integer :: matrix_lbound_1, matrix_ubound_1, matrix_lbound_2, matrix_ubound_2
 

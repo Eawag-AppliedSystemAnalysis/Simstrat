@@ -184,8 +184,6 @@ module strat_simdata
       type(StaggeredGrid), public :: grid
    contains
       procedure, pass :: init => simulation_data_init
-      procedure, pass :: save => save_simulation_data
-      procedure, pass :: load => load_simulation_data
    end type
 
 contains
@@ -194,28 +192,6 @@ contains
       integer, intent(in) :: state_size
       ! Init model data structures
       call self%model%init(state_size)
-   end subroutine
-
-   subroutine save_simulation_data(self, file_path)
-      implicit none
-      class(SimulationData), intent(inout) :: self
-      character(len=*), intent(in) :: file_path
-
-      open(80, file=file_path, Form='unformatted', Action='Write')
-      call self%grid%save()
-      call save_model_state(self%model)
-      close(80)
-   end subroutine
-
-   subroutine load_simulation_data(self, file_path)
-      implicit none
-      class(SimulationData), intent(inout) :: self
-      character(len=*), intent(in) :: file_path
-
-      open(81, file=file_path, Form='unformatted', Action='Read')
-      call self%grid%load()
-      call load_model_state(self%model)
-      close(81)
    end subroutine
 
    ! Allocates all arrays of the model state in the correct size
@@ -308,7 +284,7 @@ contains
    ! save model state unformatted
    subroutine save_model_state(self)
       implicit none
-      class(ModelState), intent(inout) :: self
+      class(ModelState), intent(in) :: self
 
       write(80) self%output_counter, self%model_step_counter, self%datum
       call save_array(80, self%U)
