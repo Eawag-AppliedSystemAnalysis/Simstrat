@@ -405,39 +405,44 @@ contains
       integer, intent(in) :: output_unit
       real(RK), dimension(:), allocatable, intent(in) :: array
 
-      write(output_unit) size(array)
+      write(output_unit) lbound(array), ubound(array)
       write(output_unit) array
    end subroutine
 
-   function read_array(input_unit) result (array)
+   subroutine read_array(input_unit, array)
       implicit none
       integer, intent(in) :: input_unit
-      real(RK), dimension(:), allocatable :: array
-      integer :: array_size
+      real(RK), dimension(:), allocatable, intent(inout) :: array
+      real(RK), dimension(:), allocatable :: array_internal
+      integer :: array_lbound, array_ubound
 
-      read(input_unit) array_size
-      allocate(array(array_size))
-      read(input_unit) array
-   end function
+      read(input_unit) array_lbound, array_ubound
+      allocate (array_internal(array_lbound:array_ubound))
+      read(input_unit) array_internal(array_lbound:array_ubound)
+      call move_alloc(array_internal, array)
+   end subroutine
+
 
    subroutine save_matrix(output_unit, matrix)
       implicit none
       integer, intent(in) :: output_unit
       real(RK), dimension(:, :), allocatable, intent(in) :: matrix
 
-      write(output_unit) size(matrix, 1), size(matrix, 2)
+      write(output_unit) lbound(matrix, 1), ubound(matrix, 1), lbound(matrix, 2), ubound(matrix, 2)
       write(output_unit) matrix
    end subroutine
 
-   function read_matrix(input_unit) result (matrix)
+   subroutine read_matrix(input_unit, matrix)
       implicit none
       integer, intent(in) :: input_unit
-      real(RK), dimension(:, :), allocatable :: matrix
-      integer :: matrix_size_1, matrix_size_2
+      real(RK), dimension(:, :), allocatable, intent(inout) :: matrix
+      real(RK), dimension(:, :), allocatable :: matrix_internal
+      integer :: matrix_lbound_1, matrix_ubound_1, matrix_lbound_2, matrix_ubound_2
 
-      read(input_unit) matrix_size_1, matrix_size_2
-      allocate(matrix(matrix_size_1, matrix_size_2))
-      read(input_unit) matrix
-   end function
+      read(input_unit) matrix_lbound_1, matrix_ubound_1, matrix_lbound_2, matrix_ubound_2
+      allocate (matrix_internal(matrix_lbound_1:matrix_ubound_1, matrix_lbound_2:matrix_ubound_2))
+      read(input_unit) matrix_internal(matrix_lbound_1:matrix_ubound_1, matrix_lbound_2:matrix_ubound_2)
+      call move_alloc(matrix_internal, matrix)
+   end subroutine
 
 end module utilities

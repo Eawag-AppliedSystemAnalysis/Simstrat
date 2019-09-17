@@ -369,35 +369,35 @@ contains
       class(ModelState), intent(inout) :: self
 
       read(81) self%output_counter, self%model_step_counter, self%datum
-      self%U = read_array(81)
-      self%V = read_array(81)
-      self%T = read_array(81)
-      self%S = read_array(81)
-      self%dS = read_array(81)
-      self%Q_inp = read_matrix(81)
-      self%rho = read_array(81)
-      self%k = read_array(81)
-      self%ko = read_array(81)
-      self%avh = read_array(81)
-      self%eps = read_array(81)
-      self%num = read_array(81)
-      self%nuh = read_array(81)
-      self%P = read_array(81)
-      self%B = read_array(81)
-      self%NN = read_array(81)
-      self%cmue1 = read_array(81)
-      self%cmue2 = read_array(81)
-      self%P_Seiche = read_array(81)
+      call read_array(81, self%U)
+      call read_array(81, self%V)
+      call read_array(81, self%T)
+      call read_array(81, self%S)
+      call read_array(81, self%dS)
+      call read_matrix(81, self%Q_inp)
+      call read_array(81, self%rho)
+      call read_array(81, self%k)
+      call read_array(81, self%ko)
+      call read_array(81, self%avh)
+      call read_array(81, self%eps)
+      call read_array(81, self%num)
+      call read_array(81, self%nuh)
+      call read_array(81, self%P)
+      call read_array(81, self%B)
+      call read_array(81, self%NN)
+      call read_array(81, self%cmue1)
+      call read_array(81, self%cmue2)
+      call read_array(81, self%P_Seiche)
       read(81) self%E_Seiche, self%gamma
-      self%absorb = read_array(81)
+      call read_array(81, self%absorb)
       read(81) self%u10, self%v10, self%uv10, self%Wf
       read(81) self%u_taub, self%drag, self%u_taus
       read(81) self%tx, self%ty
       read(81) self%C10
       read(81) self%SST, self%heat, self%heat_snow, self%heat_ice, self%heat_snowice
       read(81) self%T_atm
-      self%rad = read_array(81)
-      self%Q_vert = read_array(81)
+      call read_array(81, self%rad)
+      call read_array(81, self%Q_vert)
       read(81) self%albedo_data
       read(81) self%albedo_water
       read(81) self%lat_number
@@ -415,7 +415,7 @@ contains
       read(81) self%rad0
       read(81) self%cde, self%cm0
       read(81) self%fsed
-      self%fgeo_add = read_array(81)
+      call read_array(81, self%fgeo_add)
       read(81) self%has_advection
       read(81) self%has_surface_input, self%has_deep_input
       read(81) self%nz_input
