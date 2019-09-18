@@ -21,7 +21,6 @@ module strat_forcing
       class(ModelParam), pointer :: param
       character(len=:), allocatable  :: file  ! Forcing file name
       integer :: current_year ! Current year of simulation, used for zenith angle dependent water albedo
-      logical :: leap_year
       integer :: current_month ! Current month of simulation, used for zenith angle dependent water albedo
       real(RK) :: current_day ! Current day of simulation, used for zenith angle dependent water albedo
    contains
@@ -58,14 +57,14 @@ contains
       implicit none
       class(ForcingModule), intent(inout) :: self
 
-      write(80) self%current_year, self%leap_year, self%current_month, self%current_day
+      write(80) self%current_year, self%current_month, self%current_day
    end subroutine
 
    subroutine forcing_load(self)
       implicit none
       class(ForcingModule), intent(inout) :: self
 
-      read(81) self%current_year, self%leap_year, self%current_month, self%current_day
+      read(81) self%current_year, self%current_month, self%current_day
    end subroutine
 
    !Read forcing file to get values A_cur at given datum
@@ -494,7 +493,7 @@ contains
       class(ModelState) :: state
       class(SimConfig) :: sim_cfg
 
-      call init_calendar(sim_cfg%start_year, state%datum, self%current_year, self%leap_year, self%current_month, self%current_day)
+      call init_calendar(sim_cfg%start_year, state%datum, self%current_year, self%current_month, self%current_day)
 
       ! Monthly albedo data according to Grishchenko, in Cogley 1979
       if (self%param%Lat > 0)  then ! Northern hemisphere (1.000 if no sun)
@@ -576,7 +575,7 @@ contains
       integer :: previous_month, next_month
 
       ! Determine current calendar day and month
-      call update_calendar(self%current_year, self%leap_year, self%current_month, self%current_day, state%dt)
+      call update_calendar(self%current_year, self%current_month, self%current_day, state%dt)
 
       ! Determine albedo as a function of latitude and month according to Grishchenko (in Cogley 1979)
       ! Linear interpolation, assuming that the monthly data is representative of the 15. of each month (also for months with 28, 29 and 31 days)

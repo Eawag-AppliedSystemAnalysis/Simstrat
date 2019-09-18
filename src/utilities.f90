@@ -286,14 +286,29 @@ contains
       real_to_str = adjustl(real_to_str)
    end function
 
+   pure logical function is_leap_year(year)
+      integer, intent(in) :: year
+      is_leap_year = mod(year, 4) == 0 .and. (.not. mod(year, 100) == 0 .or. mod(year, 400) == 0)
+   end function
+
+   pure function calc_days_per_month(year) result(days_per_month)
+      integer, intent(in) :: year
+      integer, dimension(12) :: days_per_month
+
+      if (is_leap_year(year)) then
+         days_per_month = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+      else
+         days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+      end if
+   end function
+
    ! Initialize the calender (day, month and year) based on the given starting year and and start datum
-   subroutine init_calendar(start_year, datum, current_year, leap_year, current_month, current_day)
+   subroutine init_calendar(start_year, datum, current_year, current_month, current_day)
       implicit none
       integer, intent(in) :: start_year
       real(RK), intent(in) :: datum
-      integer, intent(inout) :: current_year, current_month
-      logical, intent(inout) :: leap_year
-      real(RK), intent(inout) :: current_day
+      integer, intent(out) :: current_year, current_month
+      real(RK), intent(out) :: current_day
 
       ! Local variables
       real(RK) :: elapsed_days, days_left, days_per_year
@@ -304,7 +319,7 @@ contains
       current_year = start_year
       elapsed_days = 0
       do
-         if (mod(current_year,4)==0 .and. .not. mod(current_year,100)==0) then
+         if (is_leap_year(current_year)) then
             days_per_year = 366
          else
             days_per_year = 365
@@ -320,11 +335,7 @@ contains
       days_left = datum - elapsed_days
 
       ! Determine current month and day
-      if (leap_year) then
-         days_per_month = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-      else
-         days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-      end if
+      days_per_month = calc_days_per_month(current_year)
 
       do i=1,12
          if (days_left > days_per_month(i)) then
@@ -335,29 +346,13 @@ contains
             exit
          end if
       end do
-
-      leap_year = .false.
-      ! Determine if current year is a leap year
-      if (mod(current_year,4)==0) then
-         leap_year = .true.
-
-         if (mod(current_year,100)==0) then
-            leap_year = .false.
-
-            if (mod(current_year,400)==0) then
-               leap_year = .true.
-            end if
-         end if
-      end if
-
    end subroutine
 
 
    ! Update calendar month and day (used for albedo assignment)
-   subroutine update_calendar(current_year, leap_year, current_month, current_day, dt)
+   subroutine update_calendar(current_year, current_month, current_day, dt)
       implicit none
       integer, intent(inout) :: current_year, current_month
-      logical, intent(inout) :: leap_year
       real(RK), intent(inout) :: current_day
       real(RK), intent(in) :: dt
 
@@ -367,11 +362,7 @@ contains
 
 
       ! Prepare day per month arrays
-      if (leap_year) then
-         days_per_month = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-      else
-         days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-      end if
+      days_per_month = calc_days_per_month(current_year)
       
       ! Update current day
       current_day_new = current_day + dt/24/60/60
@@ -385,20 +376,6 @@ contains
          if (current_month > 12) then
             current_month = 1
             current_year = current_year + 1
-
-            leap_year = .false.
-            ! Determine if current year is a leap year
-            if (mod(current_year,4)==0) then
-               leap_year = .true.
-
-               if (mod(current_year,100)==0) then
-                  leap_year = .false.
-
-                  if (mod(current_year,400)==0) then
-                     leap_year = .true.
-                  end if
-               end if
-            end if
          end if
       else
          ! If not a new month, just go on counting
