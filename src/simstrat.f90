@@ -53,6 +53,7 @@ program simstrat_main
    character(len=100) :: arg
    character(len=:), allocatable :: ParName
    character(len=:), allocatable :: snapshot_file_path
+   logical :: snapshot_file_exists
 
    ! Print some information
    write (6, *) 'Simstrat version '//version
@@ -110,11 +111,12 @@ program simstrat_main
                            simdata%grid)
    end if
 
-   ! Binary simulation snapshot file path
+   ! Binary simulation snapshot file
    snapshot_file_path = simdata%output_cfg%PathOut//'/simulation-snapshot.dat'
+   inquire (file=snapshot_file_path, exist=snapshot_file_exists)
 
    ! Setup logger
-   call logger%initialize(simdata%sim_cfg, simdata%output_cfg, simdata%grid)
+   call logger%initialize(simdata%sim_cfg, simdata%output_cfg, simdata%grid, snapshot_file_exists)
 
    ! Initialize simulation modules
    call mod_stability%init(simdata%grid, simdata%model_cfg, simdata%model_param)
@@ -148,11 +150,9 @@ program simstrat_main
 contains
 
    subroutine run_simulation()
-      logical :: file_exists
 
       call ok("Start day: "//real_to_str(simdata%sim_cfg%start_datum, '(F7.1)'))
-      inquire (file=snapshot_file_path, exist=file_exists)
-      if (file_exists) then
+      if (snapshot_file_exists) then
          call load_snapshot(snapshot_file_path)
          call ok("Simulation snapshot successfully read. Snapshot day:"//real_to_str(simdata%model%datum, '(F7.1)'))
       else

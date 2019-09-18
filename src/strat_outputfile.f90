@@ -42,21 +42,23 @@ module strat_outputfile
 contains
 
   ! Abstract interface definitions
-   subroutine generic_log_init(self, sim_config, output_config, grid)
+   subroutine generic_log_init(self, sim_config, output_config, grid, snapshot_file_exists)
       implicit none
 
       class(SimstratOutputLogger), intent(inout) :: self
       class(SimConfig), target :: sim_config
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
+      logical, intent(in) :: snapshot_file_exists
 
    end subroutine
 
-   subroutine generic_init_files(self, output_config, grid)
+   subroutine generic_init_files(self, output_config, grid, snapshot_file_exists)
       implicit none
       class(SimstratOutputLogger), intent(inout) :: self
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
+      logical, intent(in) :: snapshot_file_exists
 
    end subroutine
 
@@ -76,12 +78,13 @@ contains
    !************************* Init logging ****************************
 
    ! Init logging for interpolating logger
-   subroutine log_init_interpolating(self, sim_config, output_config, grid)
+   subroutine log_init_interpolating(self, sim_config, output_config, grid, snapshot_file_exists)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
       class(SimConfig), target :: sim_config
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
+      logical, intent(in) :: snapshot_file_exists
 
       integer :: i, j, n_output_times
       real(RK), dimension(size(output_config%tout)) :: tout_test ! Array to test if computed tout with
@@ -184,17 +187,18 @@ contains
       end if
       call ok('Output depths successfully read')
 
-      call self%init_files(output_config, grid)
+      call self%init_files(output_config, grid, snapshot_file_exists)
    end subroutine
 
    !************************* Init files ****************************
 
    ! Initialize files for interpolating logger
-   subroutine init_files_interpolating(self, output_config, grid)
+   subroutine init_files_interpolating(self, output_config, grid, snapshot_file_exists)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
+      logical, intent(in) :: snapshot_file_exists
 
       logical :: status_ok, exist_output_folder
       integer :: i, exitstat
@@ -219,15 +223,16 @@ contains
          end if
 
       end if
-      call open_files(self, output_config, grid)
+      call open_files(self, output_config, grid, snapshot_file_exists)
 
    end subroutine
 
-   subroutine open_files(self, output_config, grid)
+   subroutine open_files(self, output_config, grid, snapshot_file_exists)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
+      logical, intent(in) :: snapshot_file_exists
       integer :: i
       character(len=:), allocatable :: file_path
       logical :: status_ok, append
@@ -238,6 +243,7 @@ contains
       do i = 1, self%n_vars
          file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat'
          inquire (file=file_path, exist=append)
+         append = append .and. snapshot_file_exists
          if (self%output_config%output_vars(i)%volume_grid) then
             !Variable on volume grid
             call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
