@@ -327,6 +327,7 @@ contains
       open(80, file=file_path, Form='unformatted', Action='Write')
       call simdata%grid%save()
       call mod_forcing%save()
+      call mod_lateral%save()
       call simdata%model%save()
       close(80)
    end subroutine
@@ -338,6 +339,7 @@ contains
       open(81, file=file_path, Form='unformatted', Action='Read')
       call simdata%grid%load()
       call mod_forcing%load()
+      call mod_lateral%load()
       call simdata%model%load()
       close(81)
    end subroutine
