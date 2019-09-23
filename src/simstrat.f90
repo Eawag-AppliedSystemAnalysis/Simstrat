@@ -162,7 +162,8 @@ contains
 
       ! Run the simulation loop
       ! Run simulation until end datum or until no more results are required by the output time file
-      do while (simdata%model%datum<simdata%sim_cfg%end_datum .and. simdata%model%output_counter<=size(simdata%output_cfg%tout))
+      do while (simdata%model%datum + simdata%model%dt/86400 < simdata%sim_cfg%end_datum &
+                .and. simdata%model%output_counter <= size(simdata%output_cfg%tout))
 
          ! ****************************************
          ! ***** Update counters and timestep *****
