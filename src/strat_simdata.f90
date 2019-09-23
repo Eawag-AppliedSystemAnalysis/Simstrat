@@ -108,6 +108,9 @@ module strat_simdata
    type, public :: ModelState
       ! Iteration variables
       integer :: output_counter, model_step_counter
+      integer :: current_year ! Current year of simulation, used for zenith angle dependent water albedo
+      integer :: current_month ! Current month of simulation, used for zenith angle dependent water albedo
+      real(RK) :: current_day ! Current day of simulation, used for zenith angle dependent water albedo
       real(RK) :: datum, dt
       logical :: first_timestep = .true.
 
@@ -286,7 +289,8 @@ contains
       implicit none
       class(ModelState), intent(in) :: self
 
-      write(80) self%output_counter, self%model_step_counter, self%datum
+      write(80) self%output_counter, self%model_step_counter
+      write(80) self%current_year, self%current_month, self%current_day, self%datum
       call save_array(80, self%U)
       call save_array(80, self%V)
       call save_array(80, self%T)
@@ -344,7 +348,8 @@ contains
       implicit none
       class(ModelState), intent(inout) :: self
 
-      read(81) self%output_counter, self%model_step_counter, self%datum
+      read(81) self%output_counter, self%model_step_counter
+      read(81) self%current_year, self%current_month, self%current_day, self%datum
       call read_array(81, self%U)
       call read_array(81, self%V)
       call read_array(81, self%T)

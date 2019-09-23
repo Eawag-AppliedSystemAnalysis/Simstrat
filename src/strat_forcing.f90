@@ -20,14 +20,9 @@ module strat_forcing
       class(StaggeredGrid), pointer :: grid
       class(ModelParam), pointer :: param
       character(len=:), allocatable  :: file  ! Forcing file name
-      integer :: current_year ! Current year of simulation, used for zenith angle dependent water albedo
-      integer :: current_month ! Current month of simulation, used for zenith angle dependent water albedo
-      real(RK) :: current_day ! Current day of simulation, used for zenith angle dependent water albedo
    contains
       procedure, pass :: init => forcing_init
       procedure, pass :: read => forcing_read
-      procedure, pass :: save => forcing_save
-      procedure, pass :: load => forcing_load
       procedure, pass :: update => forcing_update
       procedure, pass :: update_coriolis => forcing_update_coriolis
       procedure, pass :: init_albedo => forcing_init_albedo
@@ -51,20 +46,6 @@ contains
 
       if(self%cfg%snow_model == 1) call warn('The snow module is turned on. This module needs precipitation data, note that the last column in the forcing file will be interpreted as precipitation.')
       !If precipitation column is missing in forcing file, Simstrat will read dates as precipitation
-   end subroutine
-
-   subroutine forcing_save(self)
-      implicit none
-      class(ForcingModule), intent(inout) :: self
-
-      write(80) self%current_year, self%current_month, self%current_day
-   end subroutine
-
-   subroutine forcing_load(self)
-      implicit none
-      class(ForcingModule), intent(inout) :: self
-
-      read(81) self%current_year, self%current_month, self%current_day
    end subroutine
 
    !Read forcing file to get values A_cur at given datum
@@ -493,7 +474,7 @@ contains
       class(ModelState) :: state
       class(SimConfig) :: sim_cfg
 
-      call init_calendar(sim_cfg%start_year, state%datum, self%current_year, self%current_month, self%current_day)
+      call init_calendar(sim_cfg%start_year, state%datum, state%current_year, state%current_month, state%current_day)
 
       ! Monthly albedo data according to Grishchenko, in Cogley 1979
       if (self%param%Lat > 0)  then ! Northern hemisphere (1.000 if no sun)
@@ -575,7 +556,7 @@ contains
       integer :: previous_month, next_month
 
       ! Determine current calendar day and month
-      call update_calendar(self%current_year, self%current_month, self%current_day, state%dt)
+      call update_calendar(state%current_year, state%current_month, state%current_day, state%dt)
 
       ! Determine albedo as a function of latitude and month according to Grishchenko (in Cogley 1979)
       ! Linear interpolation, assuming that the monthly data is representative of the 15. of each month (also for months with 28, 29 and 31 days)
@@ -583,32 +564,32 @@ contains
       ! or even a continuous function. But the jump is very small and occurs during the night, when anyways no sun light is reaching the lake.
       
       ! If date before 16th of current month
-      if (self%current_day < 16) then
-         if(self%current_month == 1) then
+      if (state%current_day < 16) then
+         if(state%current_month == 1) then
             previous_month = 12
          else
-            previous_month = self%current_month - 1
+            previous_month = state%current_month - 1
          end if
 
          ! Get albedo values for previous and current month
          albedo_start = state%albedo_data(state%lat_number, previous_month)
-         albedo_end = state%albedo_data(state%lat_number, self%current_month)
+         albedo_end = state%albedo_data(state%lat_number, state%current_month)
 
          ! Linear interpolation
-         state%albedo_water = albedo_start + (self%current_day + 15) * (albedo_end - albedo_start)/30
+         state%albedo_water = albedo_start + (state%current_day + 15) * (albedo_end - albedo_start)/30
       else
-         if(self%current_month == 12) then
+         if(state%current_month == 12) then
             next_month = 1
          else
-            next_month = self%current_month + 1
+            next_month = state%current_month + 1
          end if
 
          ! Get albedo values for current and next month
-         albedo_start = state%albedo_data(state%lat_number, self%current_month)
+         albedo_start = state%albedo_data(state%lat_number, state%current_month)
          albedo_end = state%albedo_data(state%lat_number, next_month)
 
          ! Linear interpolation
-         state%albedo_water = albedo_start + (self%current_day - 15) * (albedo_end - albedo_start)/30
+         state%albedo_water = albedo_start + (state%current_day - 15) * (albedo_end - albedo_start)/30
       end if
 
    end subroutine
