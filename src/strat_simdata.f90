@@ -42,7 +42,7 @@ module strat_simdata
       character(len=:), allocatable :: output_depth_reference
       real(RK), dimension(:), allocatable :: zout, zout_read
       real(RK), dimension(:), allocatable :: tout
-      real(RK), dimension(:), allocatable :: n_timesteps_between_tout
+      integer, dimension(:), allocatable :: n_timesteps_between_tout
       real(RK), dimension(:), allocatable :: adjusted_timestep
       logical :: write_to_file
       class(LogVariable), dimension(:), allocatable :: output_vars

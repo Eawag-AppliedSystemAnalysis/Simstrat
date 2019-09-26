@@ -110,8 +110,11 @@ contains
          ! Compute number of timesteps between simulation start and first output time
          output_config%n_timesteps_between_tout(1) = (output_config%tout(1) - sim_config%start_datum)*86400/sim_config%timestep
 
+         ! Compute number of timesteps between simulation start and first output time
+         output_config%n_timesteps_between_tout(1) = int((output_config%tout(1) - sim_config%start_datum)*86400/sim_config%timestep + 0.5)
+
          ! If number of timesteps = 0
-         if (int(output_config%n_timesteps_between_tout(1)) == 0) then
+         if (output_config%n_timesteps_between_tout(1) == 0) then
             output_config%adjusted_timestep(1) = (output_config%tout(1) - sim_config%start_datum)*86400
             tout_test(1) = sim_config%start_datum + output_config%adjusted_timestep(1)/86400
 
@@ -120,20 +123,20 @@ contains
             call warn('First output time is equal to simulation start time')
          else
             ! If number of timesteps > 0
-            output_config%adjusted_timestep(1) = ((output_config%tout(1) - sim_config%start_datum)*86400)/int(output_config%n_timesteps_between_tout(1))
+            output_config%adjusted_timestep(1) = ((output_config%tout(1) - sim_config%start_datum)*86400)/output_config%n_timesteps_between_tout(1)
             tout_test(1) = sim_config%start_datum
             ! Add up adjusted timestep, the resulting tout_test(1) should be equal to tout(1)
-            do j = 1, int(output_config%n_timesteps_between_tout(1))
+            do j = 1, output_config%n_timesteps_between_tout(1)
                 tout_test(1) = tout_test(1) + output_config%adjusted_timestep(1)/86400
             end do
          end if
 
          ! Compute number of timesteps between subsequent output times
          do i=2,n_output_times
-            output_config%n_timesteps_between_tout(i) = (output_config%tout(i) - tout_test(i-1))*86400/sim_config%timestep
+            output_config%n_timesteps_between_tout(i) = int((output_config%tout(i) - tout_test(i-1))*86400/sim_config%timestep + 0.5)
 
             ! If number of timesteps = 0
-            if (int(output_config%n_timesteps_between_tout(i))==0) then
+            if (output_config%n_timesteps_between_tout(i)==0) then
                output_config%adjusted_timestep(i) = (output_config%tout(i) - tout_test(i-1))*86400
                tout_test(i) = tout_test(i-1) + output_config%adjusted_timestep(i)/86400
 
@@ -142,10 +145,10 @@ contains
                call warn('At least one time interval for the model output is smaller than the simulation timestep')
             else
                ! If number of timesteps > 0
-               output_config%adjusted_timestep(i) = ((output_config%tout(i) - tout_test(i-1))*86400)/int(output_config%n_timesteps_between_tout(i))
+               output_config%adjusted_timestep(i) = ((output_config%tout(i) - tout_test(i-1))*86400)/output_config%n_timesteps_between_tout(i)
                tout_test(i) = tout_test(i-1)
                ! Add up adjusted timesteps. The resulting tout_test(i) should be equal to tout(i)
-               do j = 1, int(output_config%n_timesteps_between_tout(i))
+               do j = 1, output_config%n_timesteps_between_tout(i)
                   tout_test(i) = tout_test(i) + output_config%adjusted_timestep(i)/86400
                end do
             end if
