@@ -54,6 +54,7 @@ program simstrat_main
    character(len=:), allocatable :: ParName
    character(len=:), allocatable :: snapshot_file_path
    logical :: snapshot_file_exists
+   integer(8) :: simulation_end_time
 
    ! Print some information
    write (6, *) 'Simstrat version '//version
@@ -111,6 +112,7 @@ program simstrat_main
                            simdata%grid)
    end if
 
+   simulation_end_time = int((simdata%sim_cfg%end_datum - simdata%sim_cfg%start_datum) * 86400 + 0.5)
    ! Binary simulation snapshot file
    snapshot_file_path = simdata%output_cfg%PathOut//'/simulation-snapshot.dat'
    inquire (file=snapshot_file_path, exist=snapshot_file_exists)
@@ -162,7 +164,7 @@ contains
 
       ! Run the simulation loop
       ! Run simulation until end datum or until no more results are required by the output time file
-      do while (simdata%model%datum + simdata%model%dt/86400 < simdata%sim_cfg%end_datum &
+      do while (simdata%model%simulation_time < simulation_end_time &
                 .and. simdata%model%output_counter <= size(simdata%output_cfg%tout))
 
          ! ****************************************
@@ -220,7 +222,8 @@ contains
          end if
 
          ! Advance to the next timestep
-         simdata%model%datum = simdata%model%datum + simdata%model%dt/86400
+         simdata%model%simulation_time = simdata%model%simulation_time + simdata%sim_cfg%timestep
+         simdata%model%datum = simdata%sim_cfg%start_datum + real(simdata%model%simulation_time, RK) / 86400
 
          ! ************************************
          ! ***** Compute next model state *****

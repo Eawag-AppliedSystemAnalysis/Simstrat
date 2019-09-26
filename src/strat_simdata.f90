@@ -112,6 +112,7 @@ module strat_simdata
       integer :: current_month ! Current month of simulation, used for zenith angle dependent water albedo
       real(RK) :: current_day ! Current day of simulation, used for zenith angle dependent water albedo
       real(RK) :: datum, dt
+      integer(8) :: simulation_time
       logical :: first_timestep = .true.
 
       ! Variables located on z_cent grid

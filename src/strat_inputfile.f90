@@ -328,6 +328,7 @@ contains
          model%dt = self%simdata%sim_cfg%timestep
          model%model_step_counter = 0
          model%output_counter = 1
+         model%simulation_time = 0
       end associate
    end subroutine
 
