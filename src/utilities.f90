@@ -429,4 +429,11 @@ contains
       call move_alloc(matrix_internal, matrix)
    end subroutine
 
+   pure real(RK) function datum(start_datum, simulation_time)
+      implicit none
+      real(RK), intent(in) :: start_datum
+      integer(8), intent(in) :: simulation_time
+
+      datum = start_datum + real(simulation_time, RK) / 86400
+   end function
 end module utilities

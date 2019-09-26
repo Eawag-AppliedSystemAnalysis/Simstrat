@@ -21,6 +21,7 @@ module strat_outputfile
       type(csv_file), dimension(:), allocatable :: output_files
       integer, public :: n_depths
       integer, public :: n_vars
+      real(RK), dimension(:,:), allocatable :: last_iteration_data
 
    contains
       procedure(generic_log_init), deferred, pass(self), public :: initialize
@@ -62,11 +63,12 @@ contains
 
    end subroutine
 
-   subroutine generic_log(self, datum)
+   subroutine generic_log(self, simulation_time, simulation_time_for_next_output)
       implicit none
 
       class(SimstratOutputLogger), intent(inout) :: self
-      real(RK), intent(in) :: datum
+      integer(8) :: simulation_time
+      integer(8), intent(inout) :: simulation_time_for_next_output
    end subroutine
 
    subroutine generic_log_close(self)
@@ -108,9 +110,6 @@ contains
          allocate(output_config%n_timesteps_between_tout(n_output_times), output_config%adjusted_timestep(n_output_times))
 
          ! Compute number of timesteps between simulation start and first output time
-         output_config%n_timesteps_between_tout(1) = (output_config%tout(1) - sim_config%start_datum)*86400/sim_config%timestep
-
-         ! Compute number of timesteps between simulation start and first output time
          output_config%n_timesteps_between_tout(1) = int((output_config%tout(1) - sim_config%start_datum)*86400/sim_config%timestep + 0.5)
 
          ! If number of timesteps = 0
@@ -146,6 +145,7 @@ contains
             else
                ! If number of timesteps > 0
                output_config%adjusted_timestep(i) = ((output_config%tout(i) - tout_test(i-1))*86400)/output_config%n_timesteps_between_tout(i)
+               print *,i,output_config%n_timesteps_between_tout(i),output_config%adjusted_timestep(i),output_config%tout(i),tout_test(i-1),output_config%tout(i) - tout_test(i-1)
                tout_test(i) = tout_test(i-1)
                ! Add up adjusted timesteps. The resulting tout_test(i) should be equal to tout(i)
                do j = 1, output_config%n_timesteps_between_tout(i)
@@ -208,6 +208,8 @@ contains
       character(len=256) :: mkdirCmd
 
       self%n_depths = size(output_config%zout)
+      allocate (self%last_iteration_data(self%n_vars, self%n_depths))
+      self%last_iteration_data = 0
 
       ! Check if output directory exists
       inquire(file=output_config%PathOut,exist=exist_output_folder)
@@ -278,35 +280,65 @@ contains
    !************************* Log ****************************
 
    ! Log current state on interpolated grid at specific times
-   subroutine log_interpolating(self, datum)
+   subroutine log_interpolating(self, simulation_time, simulation_time_for_next_output)
       implicit none
 
       class(InterpolatingLogger), intent(inout) :: self
-      real(RK), intent(in) :: datum
+      integer(8) :: simulation_time
+      integer(8), intent(inout) :: simulation_time_for_next_output
       !workaround gfortran bug => cannot pass allocatable array to csv file
       real(RK), dimension(self%n_depths) :: values_on_zout
       integer :: i
+      logical :: write_to_file
+
+      write_to_file = (simulation_time_for_next_output < simulation_time + self%sim_config%timestep)
+      if (write_to_file) then
+         if (self%output_config%thinning_interval == 0) then
+            do i = 1, size(self%output_config%simulation_times_for_output)
+               if (self%output_config%simulation_times_for_output(i) > simulation_time_for_next_output) then
+                  simulation_time_for_next_output = self%output_config%simulation_times_for_output(i)
+                  exit
+               end if
+            end do
+         else
+            simulation_time_for_next_output = simulation_time_for_next_output &
+                  + self%output_config%thinning_interval * self%sim_config%timestep
+         end if
+      end if
 
       do i = 1, self%n_vars
          ! Write datum
-         call self%output_files(i)%add(datum, real_fmt='(F12.4)')
+         if (write_to_file) then
+            call self%output_files(i)%add(datum(self%sim_config%start_datum, simulation_time), real_fmt='(F12.4)')
+         end if
          ! If on volume or faces grid
          if (self%output_config%output_vars(i)%volume_grid) then
             ! Interpolate state on volume grid
             call self%grid%interpolate_from_vol(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-            ! Write state
-            call self%output_files(i)%add(values_on_zout, real_fmt='(ES14.4)')
+            if (write_to_file) then
+               ! Write state
+               call self%output_files(i)%add(values_on_zout, real_fmt='(ES14.4)')
+            end if
+            self%last_iteration_data(i, 1:self%n_depths) = values_on_zout
          else if (self%output_config%output_vars(i)%face_grid) then
             ! Interpolate state on face grid
             call self%grid%interpolate_from_face(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-            ! Write state
-            call self%output_files(i)%add(values_on_zout, real_fmt='(ES14.4)')
+            if (write_to_file) then
+               ! Write state
+               call self%output_files(i)%add(values_on_zout, real_fmt='(ES14.4)')
+            end if
+            self%last_iteration_data(i, 1:self%n_depths) = values_on_zout
          else
             ! If only value at surface
-            call self%output_files(i)%add(self%output_config%output_vars(i)%values_surf, real_fmt='(ES14.4)')
+            if (write_to_file) then
+               call self%output_files(i)%add(self%output_config%output_vars(i)%values_surf, real_fmt='(ES14.4)')
+            end if
+            self%last_iteration_data(i, 1) = self%output_config%output_vars(i)%values_surf
          end if
-         ! Advance to next row
-         call self%output_files(i)%next_row()
+         if (write_to_file) then
+            ! Advance to next row
+            call self%output_files(i)%next_row()
+         end if
       end do
    end subroutine
 

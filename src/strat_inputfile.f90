@@ -83,6 +83,7 @@ contains
       integer :: i
 
       associate (model=>self%simdata%model, &
+                 sim_cfg=>self%simdata%sim_cfg, &
                  output_cfg=>self%simdata%output_cfg)
 
          ! Read output depths from file if path is specified in parfile
@@ -141,6 +142,11 @@ contains
                output_cfg%thinning_interval = 0
             endif
          end if
+         if (output_cfg%thinning_interval == 0) then
+            allocate (output_cfg%simulation_times_for_output(size(output_cfg%tout)))
+            output_cfg%simulation_times_for_output = int((output_cfg%tout - sim_cfg%start_datum) * 86400 + 0.5)
+         end if
+
 
          ! Define variables that should be written
          allocate (self%simdata%output_cfg%output_vars(23))
@@ -329,6 +335,7 @@ contains
          model%model_step_counter = 0
          model%output_counter = 1
          model%simulation_time = 0
+         model%simulation_time_for_next_output = 0
       end associate
    end subroutine
 
@@ -533,12 +540,12 @@ contains
          end if
 
          ! Output times
-         ! Check type of input: string for path, array for depth list and integer for interval
+         ! Check type of input: string for path, array for times list and integer for interval
          call par_file%info('Output.Times',found,output_cfg%output_time_type,n_children_dummy)
          ! Treat different input possibilities for output times
          if (output_cfg%output_time_type == 7) then ! Path name
             call par_file%get('Output.Times', toutName, found); output_cfg%toutName = toutName; call check_field(found, 'Output.Times', ParName)
-         else if (output_cfg%output_time_type == 3) then ! Output depths are given
+         else if (output_cfg%output_time_type == 3) then ! Output times are given
             call par_file%get('Output.Times', output_cfg%tout, found); call check_field(found, 'Output.Times', ParName)
             output_cfg%thinning_interval = 0
 

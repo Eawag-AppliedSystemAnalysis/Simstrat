@@ -156,9 +156,9 @@ contains
       call ok("Start day: "//real_to_str(simdata%sim_cfg%start_datum, '(F7.1)'))
       if (snapshot_file_exists) then
          call load_snapshot(snapshot_file_path)
-         call ok("Simulation snapshot successfully read. Snapshot day:"//real_to_str(simdata%model%datum, '(F7.1)'))
+         call ok("Simulation snapshot successfully read. Snapshot day: "//real_to_str(simdata%model%datum, '(F7.1)'))
       else
-         call logger%log(simdata%model%datum)
+         call logger%log(simdata%model%simulation_time, simdata%model%simulation_time_for_next_output)
       end if
       call ok("End day: "//real_to_str(simdata%sim_cfg%end_datum, '(F7.1)'))
 
@@ -185,7 +185,7 @@ contains
                ! Log initial state if first output time corresponds to simulation start
                if (simdata%model%dt < 1e-6) then
                   ! Log initial conditions and display
-                  call logger%log(simdata%model%datum)
+                  call logger%log(simdata%model%simulation_time, simdata%model%simulation_time_for_next_output)
                   if (simdata%sim_cfg%disp_simulation > 0) then
                      write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%lake_level, &
                      simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
@@ -223,7 +223,7 @@ contains
 
          ! Advance to the next timestep
          simdata%model%simulation_time = simdata%model%simulation_time + simdata%sim_cfg%timestep
-         simdata%model%datum = simdata%sim_cfg%start_datum + real(simdata%model%simulation_time, RK) / 86400
+         simdata%model%datum = datum(simdata%sim_cfg%start_datum, simdata%model%simulation_time)
 
          ! ************************************
          ! ***** Compute next model state *****
@@ -291,9 +291,7 @@ contains
          end if
 
          ! Call logger to write files
-         if (simdata%output_cfg%write_to_file) then
-            call logger%log(simdata%model%datum)
-         end if
+         call logger%log(simdata%model%simulation_time, simdata%model%simulation_time_for_next_output)
 
          ! ***********************************
          ! ***** Log to file and display *****

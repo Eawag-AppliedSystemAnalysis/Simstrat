@@ -42,6 +42,7 @@ module strat_simdata
       character(len=:), allocatable :: output_depth_reference
       real(RK), dimension(:), allocatable :: zout, zout_read
       real(RK), dimension(:), allocatable :: tout
+      integer(8), dimension(:), allocatable :: simulation_times_for_output
       integer, dimension(:), allocatable :: n_timesteps_between_tout
       real(RK), dimension(:), allocatable :: adjusted_timestep
       logical :: write_to_file
@@ -112,7 +113,7 @@ module strat_simdata
       integer :: current_month ! Current month of simulation, used for zenith angle dependent water albedo
       real(RK) :: current_day ! Current day of simulation, used for zenith angle dependent water albedo
       real(RK) :: datum, dt
-      integer(8) :: simulation_time
+      integer(8) :: simulation_time, simulation_time_for_next_output
       logical :: first_timestep = .true.
 
       ! Variables located on z_cent grid
@@ -291,7 +292,7 @@ contains
       class(ModelState), intent(in) :: self
 
       write(80) self%output_counter, self%model_step_counter
-      write(80) self%current_year, self%current_month, self%current_day, self%datum
+      write(80) self%current_year, self%current_month, self%current_day, self%datum, self%simulation_time, self%simulation_time_for_next_output
       call save_array(80, self%U)
       call save_array(80, self%V)
       call save_array(80, self%T)
@@ -350,7 +351,7 @@ contains
       class(ModelState), intent(inout) :: self
 
       read(81) self%output_counter, self%model_step_counter
-      read(81) self%current_year, self%current_month, self%current_day, self%datum
+      read(81) self%current_year, self%current_month, self%current_day, self%datum, self%simulation_time, self%simulation_time_for_next_output
       call read_array(81, self%U)
       call read_array(81, self%V)
       call read_array(81, self%T)
