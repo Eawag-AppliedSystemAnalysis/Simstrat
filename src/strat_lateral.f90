@@ -72,41 +72,50 @@ contains
    subroutine lateral_generic_save(self)
       implicit none
       class(GenericLateralModule) :: self
+      logical :: has_allocated
 
       write (80) self%number_of_lines_read
       write (80) self%tb_start, self%tb_end
       write (80) self%eof, self%nval, self%nval_deep, self%nval_surface
-      call save_matrix(80, self%z_Inp)
-      call save_matrix(80, self%Q_start)
-      call save_matrix(80, self%Qs_start)
-      call save_matrix(80, self%Q_end)
-      call save_matrix(80, self%Qs_end)
-      call save_matrix(80, self%Q_read_start)
-      call save_matrix(80, self%Q_read_end)
-      call save_matrix(80, self%Inp_read_start)
-      call save_matrix(80, self%Inp_read_end)
-      call save_matrix(80, self%Qs_read_start)
-      call save_matrix(80, self%Qs_read_end)
+      has_allocated = allocated(self%z_Inp)
+      write (80) has_allocated
+      if (has_allocated) then
+         call save_matrix(80, self%z_Inp)
+         call save_matrix(80, self%Q_start)
+         call save_matrix(80, self%Qs_start)
+         call save_matrix(80, self%Q_end)
+         call save_matrix(80, self%Qs_end)
+         call save_matrix(80, self%Q_read_start)
+         call save_matrix(80, self%Q_read_end)
+         call save_matrix(80, self%Inp_read_start)
+         call save_matrix(80, self%Inp_read_end)
+         call save_matrix(80, self%Qs_read_start)
+         call save_matrix(80, self%Qs_read_end)
+      end if
    end subroutine
 
    subroutine lateral_generic_load(self)
       implicit none
       class(GenericLateralModule) :: self
+      logical :: has_allocated
 
       read (81) self%number_of_lines_read
       read (81) self%tb_start, self%tb_end
       read (81) self%eof, self%nval, self%nval_deep, self%nval_surface
-      call read_matrix(81, self%z_Inp)
-      call read_matrix(81, self%Q_start)
-      call read_matrix(81, self%Qs_start)
-      call read_matrix(81, self%Q_end)
-      call read_matrix(81, self%Qs_end)
-      call read_matrix(81, self%Q_read_start)
-      call read_matrix(81, self%Q_read_end)
-      call read_matrix(81, self%Inp_read_start)
-      call read_matrix(81, self%Inp_read_end)
-      call read_matrix(81, self%Qs_read_start)
-      call read_matrix(81, self%Qs_read_end)
+      read (81) has_allocated
+      if (has_allocated) then
+         call read_matrix(81, self%z_Inp)
+         call read_matrix(81, self%Q_start)
+         call read_matrix(81, self%Qs_start)
+         call read_matrix(81, self%Q_end)
+         call read_matrix(81, self%Qs_end)
+         call read_matrix(81, self%Q_read_start)
+         call read_matrix(81, self%Q_read_end)
+         call read_matrix(81, self%Inp_read_start)
+         call read_matrix(81, self%Inp_read_end)
+         call read_matrix(81, self%Qs_read_start)
+         call read_matrix(81, self%Qs_read_end)
+      end if
    end subroutine
 
 

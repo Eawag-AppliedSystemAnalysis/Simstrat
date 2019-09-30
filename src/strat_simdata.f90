@@ -44,7 +44,6 @@ module strat_simdata
       real(RK), dimension(:), allocatable :: tout
       integer(8), dimension(:), allocatable :: simulation_times_for_output
       integer, dimension(:), allocatable :: n_timesteps_between_tout
-      real(RK), dimension(:), allocatable :: adjusted_timestep
       logical :: write_to_file
       class(LogVariable), dimension(:), allocatable :: output_vars
 
@@ -108,7 +107,6 @@ module strat_simdata
    ! Model state (this is actually the simulation data!!!)
    type, public :: ModelState
       ! Iteration variables
-      integer :: output_counter, model_step_counter
       integer :: current_year ! Current year of simulation, used for zenith angle dependent water albedo
       integer :: current_month ! Current month of simulation, used for zenith angle dependent water albedo
       real(RK) :: current_day ! Current day of simulation, used for zenith angle dependent water albedo
@@ -291,7 +289,6 @@ contains
       implicit none
       class(ModelState), intent(in) :: self
 
-      write(80) self%output_counter, self%model_step_counter
       write(80) self%current_year, self%current_month, self%current_day, self%datum, self%simulation_time, self%simulation_time_for_next_output
       call save_array(80, self%U)
       call save_array(80, self%V)
@@ -350,7 +347,6 @@ contains
       implicit none
       class(ModelState), intent(inout) :: self
 
-      read(81) self%output_counter, self%model_step_counter
       read(81) self%current_year, self%current_month, self%current_day, self%datum, self%simulation_time, self%simulation_time_for_next_output
       call read_array(81, self%U)
       call read_array(81, self%V)

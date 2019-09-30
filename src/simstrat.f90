@@ -165,61 +165,8 @@ contains
       ! Run the simulation loop
       ! Run simulation until end datum or until no more results are required by the output time file
       do while (simdata%model%simulation_time < simulation_end_time &
-                .and. simdata%model%output_counter <= size(simdata%output_cfg%tout))
-
-         ! ****************************************
-         ! ***** Update counters and timestep *****
-         ! ****************************************
-
-         ! Increase iteration counter
-         simdata%model%model_step_counter = simdata%model%model_step_counter + 1
-
-         ! If output times are specified in file
-         if(simdata%output_cfg%thinning_interval==0) then
-            ! At the first iteration or always after the model output was logged
-            if (simdata%model%model_step_counter==1) then
-               ! Adjust timestep so that the next output time is on the "time grid"
-               simdata%model%dt = simdata%output_cfg%adjusted_timestep(simdata%model%output_counter)
-               ! Don't log anymore until the next output time is reached
-               simdata%output_cfg%write_to_file = .false.
-               ! Log initial state if first output time corresponds to simulation start
-               if (simdata%model%dt < 1e-6) then
-                  ! Log initial conditions and display
-                  call logger%log(simdata%model%simulation_time, simdata%model%simulation_time_for_next_output)
-                  if (simdata%sim_cfg%disp_simulation > 0) then
-                     write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%lake_level, &
-                     simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
-                  end if
-                  ! Update counters and timestep
-                  simdata%model%model_step_counter = simdata%model%model_step_counter + 1
-                  simdata%model%output_counter = simdata%model%output_counter + 1
-                  simdata%model%dt = simdata%output_cfg%adjusted_timestep(simdata%model%output_counter)
-               end if
-
-            else if (simdata%output_cfg%write_to_file) then
-               ! Adjust timestep so that the next output time is on the "time grid"
-               simdata%model%dt = simdata%output_cfg%adjusted_timestep(simdata%model%output_counter)
-               ! Don't log anymore until the next output time is reached
-               simdata%output_cfg%write_to_file = .false.
-            end if
-
-            ! If the next output time is reached
-            if(simdata%model%model_step_counter==sum(int(simdata%output_cfg%n_timesteps_between_tout(1:simdata%model%output_counter)))) then
-               ! Increase output counter
-               simdata%model%output_counter = simdata%model%output_counter + 1
-               ! Log next model state
-               simdata%output_cfg%write_to_file = .true.
-            end if
-         else ! If output frequency is given in file
-            ! If the next output time is reached
-            if(mod(simdata%model%model_step_counter,simdata%output_cfg%thinning_interval)==0) then
-               ! Log next model state
-               simdata%output_cfg%write_to_file = .true.
-            else
-               ! Don't log
-               simdata%output_cfg%write_to_file = .false.
-            end if
-         end if
+                .and. (simdata%output_cfg%thinning_interval > 0 &
+                       .or. logger%counter <= size(simdata%output_cfg%simulation_times_for_output)))
 
          ! Advance to the next timestep
          simdata%model%simulation_time = simdata%model%simulation_time + simdata%sim_cfg%timestep
@@ -256,7 +203,7 @@ contains
          end if
 
          ! Display to screen
-         if (simdata%model%model_step_counter==1 .and. simdata%sim_cfg%disp_simulation/=0) then
+         if (simdata%model%simulation_time==simdata%sim_cfg%timestep .and. simdata%sim_cfg%disp_simulation/=0) then
             write(6,*)
             write(6,*) ' -------------------------- '
             write(6,*) '   SIMULATION IN PROGRESS   '
@@ -327,10 +274,10 @@ contains
       character(len=*), intent(in) :: file_path
 
       open(80, file=file_path, Form='unformatted', Action='Write')
+      call simdata%model%save()
       call simdata%grid%save()
       call mod_absorption%save()
       call mod_lateral%save()
-      call simdata%model%save()
       close(80)
    end subroutine
 
@@ -339,10 +286,10 @@ contains
       character(len=*), intent(in) :: file_path
 
       open(81, file=file_path, Form='unformatted', Action='Read')
+      call simdata%model%load()
       call simdata%grid%load()
       call mod_absorption%load()
       call mod_lateral%load()
-      call simdata%model%load()
       close(81)
    end subroutine
 

@@ -21,6 +21,7 @@ module strat_outputfile
       type(csv_file), dimension(:), allocatable :: output_files
       integer, public :: n_depths
       integer, public :: n_vars
+      integer, public :: counter = 0
       real(RK), dimension(:,:), allocatable :: last_iteration_data
 
    contains
@@ -39,6 +40,18 @@ module strat_outputfile
       procedure, pass(self), public :: log => log_interpolating
       procedure, pass(self), public :: close => log_close
    end type
+
+   type, private :: OutputHelper
+      real(RK) :: w0, w1, output_datum
+      logical write_to_file
+   contains
+      procedure, pass :: init => output_helper_init
+      procedure, pass :: add_datum => output_helper_add_datum
+      procedure, pass :: add_data_array => output_helper_add_data_array
+      procedure, pass :: add_data_scalar => output_helper_add_data_scalar
+      procedure, pass :: next_row => output_helper_next_row
+   end type
+
 
 contains
 
@@ -99,60 +112,12 @@ contains
 
       ! If output times are given in file
       if (output_config%thinning_interval == 0) then
-      ! Number of output times specified in file
-      n_output_times = size(output_config%tout)
+         ! Number of output times specified in file
+         n_output_times = size(output_config%tout)
          ! If Simulation start larger than output times, abort.
          if (sim_config%start_datum > output_config%tout(1)) then
             call error('Simulation start time is larger than first output time.')
          end if
-
-         ! Allocate arrays for number of timesteps between output times and adjusted timestep
-         allocate(output_config%n_timesteps_between_tout(n_output_times), output_config%adjusted_timestep(n_output_times))
-
-         ! Compute number of timesteps between simulation start and first output time
-         output_config%n_timesteps_between_tout(1) = int((output_config%tout(1) - sim_config%start_datum)*86400/sim_config%timestep + 0.5)
-
-         ! If number of timesteps = 0
-         if (output_config%n_timesteps_between_tout(1) == 0) then
-            output_config%adjusted_timestep(1) = (output_config%tout(1) - sim_config%start_datum)*86400
-            tout_test(1) = sim_config%start_datum + output_config%adjusted_timestep(1)/86400
-
-            ! Set to 1, as the adjusted timestep has to be used once, otherwise the model does not advance
-            output_config%n_timesteps_between_tout(1) = 1
-            call warn('First output time is equal to simulation start time')
-         else
-            ! If number of timesteps > 0
-            output_config%adjusted_timestep(1) = ((output_config%tout(1) - sim_config%start_datum)*86400)/output_config%n_timesteps_between_tout(1)
-            tout_test(1) = sim_config%start_datum
-            ! Add up adjusted timestep, the resulting tout_test(1) should be equal to tout(1)
-            do j = 1, output_config%n_timesteps_between_tout(1)
-                tout_test(1) = tout_test(1) + output_config%adjusted_timestep(1)/86400
-            end do
-         end if
-
-         ! Compute number of timesteps between subsequent output times
-         do i=2,n_output_times
-            output_config%n_timesteps_between_tout(i) = int((output_config%tout(i) - tout_test(i-1))*86400/sim_config%timestep + 0.5)
-
-            ! If number of timesteps = 0
-            if (output_config%n_timesteps_between_tout(i)==0) then
-               output_config%adjusted_timestep(i) = (output_config%tout(i) - tout_test(i-1))*86400
-               tout_test(i) = tout_test(i-1) + output_config%adjusted_timestep(i)/86400
-
-               ! Set to 1, as the adjusted timestep has to be used once, otherwise the model does not advance
-               output_config%n_timesteps_between_tout(i) = 1
-               call warn('At least one time interval for the model output is smaller than the simulation timestep')
-            else
-               ! If number of timesteps > 0
-               output_config%adjusted_timestep(i) = ((output_config%tout(i) - tout_test(i-1))*86400)/output_config%n_timesteps_between_tout(i)
-               print *,i,output_config%n_timesteps_between_tout(i),output_config%adjusted_timestep(i),output_config%tout(i),tout_test(i-1),output_config%tout(i) - tout_test(i-1)
-               tout_test(i) = tout_test(i-1)
-               ! Add up adjusted timesteps. The resulting tout_test(i) should be equal to tout(i)
-               do j = 1, output_config%n_timesteps_between_tout(i)
-                  tout_test(i) = tout_test(i) + output_config%adjusted_timestep(i)/86400
-               end do
-            end if
-         end do
       end if
 
       if (output_config%thinning_interval>1) write(6,*) 'Interval [days]: ',output_config%thinning_interval*sim_config%timestep/86400.
@@ -288,58 +253,120 @@ contains
       integer(8), intent(inout) :: simulation_time_for_next_output
       !workaround gfortran bug => cannot pass allocatable array to csv file
       real(RK), dimension(self%n_depths) :: values_on_zout
+      type(OutputHelper) :: output_helper
       integer :: i
-      logical :: write_to_file
 
-      write_to_file = (simulation_time_for_next_output < simulation_time + self%sim_config%timestep)
-      if (write_to_file) then
-         if (self%output_config%thinning_interval == 0) then
-            do i = 1, size(self%output_config%simulation_times_for_output)
-               if (self%output_config%simulation_times_for_output(i) > simulation_time_for_next_output) then
-                  simulation_time_for_next_output = self%output_config%simulation_times_for_output(i)
-                  exit
-               end if
-            end do
-         else
-            simulation_time_for_next_output = simulation_time_for_next_output &
-                  + self%output_config%thinning_interval * self%sim_config%timestep
-         end if
-      end if
-
+      call output_helper%init(simulation_time, self%sim_config%timestep, simulation_time_for_next_output, &
+                              self%sim_config%start_datum, self%output_config%thinning_interval, &
+                              self%output_config%simulation_times_for_output, self%counter)
       do i = 1, self%n_vars
-         ! Write datum
-         if (write_to_file) then
-            call self%output_files(i)%add(datum(self%sim_config%start_datum, simulation_time), real_fmt='(F12.4)')
-         end if
+         call output_helper%add_datum(self%output_files(i), "(F12.4)")
          ! If on volume or faces grid
          if (self%output_config%output_vars(i)%volume_grid) then
             ! Interpolate state on volume grid
             call self%grid%interpolate_from_vol(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-            if (write_to_file) then
-               ! Write state
-               call self%output_files(i)%add(values_on_zout, real_fmt='(ES14.4)')
-            end if
-            self%last_iteration_data(i, 1:self%n_depths) = values_on_zout
+            call output_helper%add_data_array(self%output_files(i), i, self%n_depths, self%last_iteration_data, values_on_zout, "(ES14.4)")
          else if (self%output_config%output_vars(i)%face_grid) then
             ! Interpolate state on face grid
             call self%grid%interpolate_from_face(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-            if (write_to_file) then
-               ! Write state
-               call self%output_files(i)%add(values_on_zout, real_fmt='(ES14.4)')
-            end if
-            self%last_iteration_data(i, 1:self%n_depths) = values_on_zout
+            call output_helper%add_data_array(self%output_files(i), i, self%n_depths, self%last_iteration_data, values_on_zout, "(ES14.4)")
          else
-            ! If only value at surface
-            if (write_to_file) then
-               call self%output_files(i)%add(self%output_config%output_vars(i)%values_surf, real_fmt='(ES14.4)')
-            end if
-            self%last_iteration_data(i, 1) = self%output_config%output_vars(i)%values_surf
+            call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%output_vars(i)%values_surf, "(ES14.4)")
          end if
-         if (write_to_file) then
-            ! Advance to next row
-            call self%output_files(i)%next_row()
-         end if
+         call output_helper%next_row(self%output_files(i))
       end do
+   end subroutine
+
+   subroutine output_helper_init(self, simulation_time, timestep, simulation_time_for_next_output, start_datum, &
+                                 thinning_interval, simulation_times_for_output, counter)
+      implicit none
+      class(OutputHelper), intent(inout) :: self
+      integer(8), intent(in) :: simulation_time
+      integer, intent(in) :: timestep
+      integer(8), intent(inout) :: simulation_time_for_next_output
+      real(RK), intent(in) :: start_datum
+      integer, intent(in) :: thinning_interval
+      integer(8), dimension(:), pointer, intent(in) :: simulation_times_for_output
+      integer, intent(inout) :: counter
+      integer :: i
+
+      self%write_to_file = (simulation_time_for_next_output > simulation_time - timestep &
+                      .and. simulation_time_for_next_output <= simulation_time)
+      if (self%write_to_file) then
+         counter = counter + 1
+         self%w1 = (simulation_time - simulation_time_for_next_output) / real(timestep, RK)
+         self%w0 = 1 - self%w1
+         self%output_datum = datum(start_datum, simulation_time_for_next_output)
+         if (thinning_interval == 0) then
+            do i = counter, size(simulation_times_for_output)
+               if (simulation_times_for_output(i) > simulation_time) then
+                  simulation_time_for_next_output = simulation_times_for_output(i)
+                  exit
+               end if
+            end do
+         else
+            simulation_time_for_next_output = simulation_time_for_next_output + thinning_interval * timestep
+         end if
+      end if
+   end subroutine
+
+   subroutine output_helper_add_datum(self, output_file, format)
+      implicit none
+      class(OutputHelper), intent(inout) :: self
+      type(csv_file), intent(inout) :: output_file
+      character(len=*), intent(in) :: format
+
+      if (self%write_to_file) then
+         call output_file%add(self%output_datum, real_fmt=format)
+      end if
+   end subroutine
+
+   subroutine output_helper_add_data_array(self, output_file, index, array_size, last_iteration_data, data, format)
+      implicit none
+      class(OutputHelper), intent(inout) :: self
+      type(csv_file), intent(inout) :: output_file
+      integer, intent(in) :: index, array_size
+      real(RK), dimension(:,:), intent(inout) :: last_iteration_data
+      real(RK), dimension(:), intent(in) :: data
+      character(len=*), intent(in) :: format
+
+      if (self%write_to_file) then
+         if (self%w1 == 0) then
+            call output_file%add(data, real_fmt=format)
+         else
+            call output_file%add(self%w1 * last_iteration_data(index, 1:array_size) + self%w0 * data, real_fmt=format)
+         end if
+      end if
+      last_iteration_data(index, 1:array_size) = data
+   end subroutine
+
+   subroutine output_helper_add_data_scalar(self, output_file, index, last_iteration_data, data, format)
+      implicit none
+      class(OutputHelper), intent(inout) :: self
+      type(csv_file), intent(inout) :: output_file
+      integer, intent(in) :: index
+      real(RK), dimension(:,:), intent(inout) :: last_iteration_data
+      real(RK), intent(in) :: data
+      character(len=*), intent(in) :: format
+
+      if (self%write_to_file) then
+         if (self%w1 == 0) then
+            call output_file%add(data, real_fmt=format)
+         else
+            call output_file%add(self%w1 * last_iteration_data(index, 1) + self%w0 * data, real_fmt=format)
+         end if
+      end if
+      last_iteration_data(index, 1) = data
+   end subroutine
+
+   subroutine output_helper_next_row(self, output_file)
+      implicit none
+      class(OutputHelper), intent(inout) :: self
+      type(csv_file), intent(inout) :: output_file
+
+      if (self%write_to_file) then
+         call output_file%next_row()
+      end if
    end subroutine
 
    !************************* Close ****************************

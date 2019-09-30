@@ -332,8 +332,6 @@ contains
          ! Set up timing
          model%datum = self%simdata%sim_cfg%start_datum
          model%dt = self%simdata%sim_cfg%timestep
-         model%model_step_counter = 0
-         model%output_counter = 1
          model%simulation_time = 0
          model%simulation_time_for_next_output = 0
       end associate
