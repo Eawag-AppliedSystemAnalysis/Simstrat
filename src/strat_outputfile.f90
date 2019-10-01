@@ -29,6 +29,8 @@ module strat_outputfile
       procedure(generic_init_files), deferred, pass(self), public :: init_files
       procedure(generic_log), deferred, pass(self), public :: log   ! Method that is called each loop to write data
       procedure(generic_log_close), deferred, pass(self), public :: close
+      procedure(generic_log_close), deferred, pass(self), public :: save
+      procedure(generic_log_close), deferred, pass(self), public :: load
    end type
 
    ! Logger that interpolates on a specified output grid at specific times.
@@ -39,10 +41,13 @@ module strat_outputfile
       procedure, pass(self), public :: init_files => init_files_interpolating
       procedure, pass(self), public :: log => log_interpolating
       procedure, pass(self), public :: close => log_close
+      procedure, pass(self), public :: save => log_save
+      procedure, pass(self), public :: load => log_load
    end type
 
    type, private :: OutputHelper
       real(RK) :: w0, w1, output_datum
+      real(RK), dimension(:), allocatable :: interpolated_data
       logical write_to_file
    contains
       procedure, pass :: init => output_helper_init
@@ -265,11 +270,11 @@ contains
          if (self%output_config%output_vars(i)%volume_grid) then
             ! Interpolate state on volume grid
             call self%grid%interpolate_from_vol(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-            call output_helper%add_data_array(self%output_files(i), i, self%n_depths, self%last_iteration_data, values_on_zout, "(ES14.4)")
+            call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4)")
          else if (self%output_config%output_vars(i)%face_grid) then
             ! Interpolate state on face grid
             call self%grid%interpolate_from_face(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-            call output_helper%add_data_array(self%output_files(i), i, self%n_depths, self%last_iteration_data, values_on_zout, "(ES14.4)")
+            call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4)")
          else
             call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%output_vars(i)%values_surf, "(ES14.4)")
          end if
@@ -321,11 +326,11 @@ contains
       end if
    end subroutine
 
-   subroutine output_helper_add_data_array(self, output_file, index, array_size, last_iteration_data, data, format)
+   subroutine output_helper_add_data_array(self, output_file, index, last_iteration_data, data, format)
       implicit none
       class(OutputHelper), intent(inout) :: self
       type(csv_file), intent(inout) :: output_file
-      integer, intent(in) :: index, array_size
+      integer, intent(in) :: index
       real(RK), dimension(:,:), intent(inout) :: last_iteration_data
       real(RK), dimension(:), intent(in) :: data
       character(len=*), intent(in) :: format
@@ -334,10 +339,14 @@ contains
          if (self%w1 == 0) then
             call output_file%add(data, real_fmt=format)
          else
-            call output_file%add(self%w1 * last_iteration_data(index, 1:array_size) + self%w0 * data, real_fmt=format)
+            if (.not. allocated(self%interpolated_data)) then
+               allocate (self%interpolated_data(size(data)))
+            end if
+            self%interpolated_data = self%w1 * last_iteration_data(index, :) + self%w0 * data
+            call output_file%add(self%interpolated_data, real_fmt=format)
          end if
       end if
-      last_iteration_data(index, 1:array_size) = data
+      last_iteration_data(index, :) = data
    end subroutine
 
    subroutine output_helper_add_data_scalar(self, output_file, index, last_iteration_data, data, format)
@@ -381,6 +390,20 @@ contains
          call self%output_files(i)%close (status_ok)
       end do
 
+   end subroutine
+
+   subroutine log_save(self)
+      implicit none
+      class(InterpolatingLogger), intent(inout) :: self
+      write(80) self%counter
+      call save_matrix(80, self%last_iteration_data)
+   end subroutine
+
+   subroutine log_load(self)
+      implicit none
+      class(InterpolatingLogger), intent(inout) :: self
+      read(81) self%counter
+      call read_matrix(81, self%last_iteration_data)
    end subroutine
 
 end module

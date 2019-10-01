@@ -112,13 +112,20 @@ program simstrat_main
                            simdata%grid)
    end if
 
-   simulation_end_time = int((simdata%sim_cfg%end_datum - simdata%sim_cfg%start_datum) * 86400 + 0.5)
    ! Binary simulation snapshot file
    snapshot_file_path = simdata%output_cfg%PathOut//'/simulation-snapshot.dat'
    inquire (file=snapshot_file_path, exist=snapshot_file_exists)
 
    ! Setup logger
    call logger%initialize(simdata%sim_cfg, simdata%output_cfg, simdata%grid, snapshot_file_exists)
+
+   ! Calculate simulation_end_time
+   if (simdata%output_cfg%thinning_interval > 0) then
+      simulation_end_time = int((simdata%sim_cfg%end_datum - simdata%sim_cfg%start_datum) * 86400 + 0.5)
+   else
+      simulation_end_time = simdata%output_cfg%simulation_times_for_output( &
+            size(simdata%output_cfg%simulation_times_for_output))
+   end if
 
    ! Initialize simulation modules
    call mod_stability%init(simdata%grid, simdata%model_cfg, simdata%model_param)
@@ -164,9 +171,7 @@ contains
 
       ! Run the simulation loop
       ! Run simulation until end datum or until no more results are required by the output time file
-      do while (simdata%model%simulation_time < simulation_end_time &
-                .and. (simdata%output_cfg%thinning_interval > 0 &
-                       .or. logger%counter <= size(simdata%output_cfg%simulation_times_for_output)))
+      do while (simdata%model%simulation_time < simulation_end_time)
 
          ! Advance to the next timestep
          simdata%model%simulation_time = simdata%model%simulation_time + simdata%sim_cfg%timestep
@@ -278,6 +283,7 @@ contains
       call simdata%grid%save()
       call mod_absorption%save()
       call mod_lateral%save()
+      call logger%save()
       close(80)
    end subroutine
 
@@ -290,6 +296,7 @@ contains
       call simdata%grid%load()
       call mod_absorption%load()
       call mod_lateral%load()
+      call logger%load()
       close(81)
    end subroutine
 
