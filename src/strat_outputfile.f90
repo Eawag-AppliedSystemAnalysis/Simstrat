@@ -29,6 +29,7 @@ module strat_outputfile
       procedure(generic_log_init), deferred, pass(self), public :: initialize
       procedure(generic_init_files), deferred, pass(self), public :: init_files
       procedure(generic_calculate_simulation_time_for_next_output), deferred, pass(self), public :: calculate_simulation_time_for_next_output
+      procedure(generic_log_start), deferred, pass(self), public :: start
       procedure(generic_log), deferred, pass(self), public :: log   ! Method that is called each loop to write data
       procedure(generic_log_close), deferred, pass(self), public :: close
       procedure(generic_log_save), deferred, pass(self), public :: save
@@ -42,6 +43,7 @@ module strat_outputfile
       procedure, pass(self), public :: initialize => log_init_interpolating
       procedure, pass(self), public :: init_files => init_files_interpolating
       procedure, pass(self), public :: calculate_simulation_time_for_next_output => calculate_simulation_time_for_next_output_interpolating
+      procedure, pass(self), public :: start => log_start
       procedure, pass(self), public :: log => log_interpolating
       procedure, pass(self), public :: close => log_close
       procedure, pass(self), public :: save => log_save
@@ -90,10 +92,15 @@ contains
       integer(8), intent(in) :: simulation_time
    end subroutine
 
-   subroutine generic_log(self, simulation_time)
+   subroutine generic_log(self, simdata)
       implicit none
       class(SimstratOutputLogger), intent(inout) :: self
-      integer(8) :: simulation_time
+      class(SimulationData) :: simdata
+   end subroutine
+
+   subroutine generic_log_start(self)
+      implicit none
+      class(SimstratOutputLogger), intent(inout) :: self
    end subroutine
 
    subroutine generic_log_close(self)
@@ -263,6 +270,9 @@ contains
       end do
    end subroutine
 
+   !************************* Calculate next time point ****************************
+
+   ! Calculate time point for next output (if necessary)
    subroutine calculate_simulation_time_for_next_output_interpolating(self, simulation_time)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
@@ -286,19 +296,27 @@ contains
    !************************* Log ****************************
 
    ! Log current state on interpolated grid at specific times
-   subroutine log_interpolating(self, simulation_time)
+   subroutine log_interpolating(self, simdata)
       implicit none
-
       class(InterpolatingLogger), intent(inout) :: self
-      integer(8) :: simulation_time
+      class(SimulationData) :: simdata
       !workaround gfortran bug => cannot pass allocatable array to csv file
       real(RK), dimension(self%n_depths) :: values_on_zout
       type(OutputHelper) :: output_helper
       integer :: i
 
-      call output_helper%init(simulation_time, self%sim_config%timestep, self%simulation_time_for_next_output, &
+      call output_helper%init(simdata%model%simulation_time, self%sim_config%timestep, self%simulation_time_for_next_output, &
                               self%sim_config%start_datum, self%output_config%thinning_interval, &
                               self%output_config%simulation_times_for_output, self%counter)
+      ! Standard display: display when logged: datum, lake surface, T(1), T(surf)
+      if (self%sim_config%disp_simulation == 1 .and. output_helper%write_to_file) then
+         write(6,'(F12.4,F16.4,F20.4,F20.4)') simdata%model%datum, simdata%grid%lake_level, &
+                                              simdata%model%T(simdata%grid%nz_occupied), simdata%model%T(1)
+      ! Extra display: display every iteration: datum, lake surface, T(1), T(surf)
+      else if (self%sim_config%disp_simulation == 2) then
+         write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%lake_level, &
+                                              simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
+      end if
       do i = 1, self%n_vars
          call output_helper%add_datum(self%output_files(i), "(F12.4)")
          ! If on volume or faces grid
@@ -413,6 +431,23 @@ contains
       end if
    end subroutine
 
+   !************************* Start ****************************
+
+   ! Start logging
+   subroutine log_start(self)
+      implicit none
+      class(InterpolatingLogger), intent(inout) :: self
+
+      if (self%sim_config%disp_simulation /= 0) then
+         write(6,*)
+         write(6,*) ' -------------------------- '
+         write(6,*) '   SIMULATION IN PROGRESS   '
+         write(6,*) ' -------------------------- '
+         write(6,*)
+         write(6,'(A12, A20, A20, A20)') 'Time [d]','Surface level [m]','T_surf [degC]','T_bottom [degC]'
+      end if
+   end subroutine
+
    !************************* Close ****************************
 
    ! Close all files
@@ -424,9 +459,18 @@ contains
       do i = 1, self%n_vars
          call self%output_files(i)%close (status_ok)
       end do
-
+      if (self%sim_config%disp_simulation /= 0) then
+         write(6,*)
+         write(6,*) ' -------------------------- '
+         write(6,*) '    SIMULATION COMPLETED    '
+         write(6,*) ' -------------------------- '
+         write(6,*)
+      end if
    end subroutine
 
+   !************************* Save ****************************
+
+   ! Save logger state
    subroutine log_save(self)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
@@ -434,6 +478,10 @@ contains
       call save_matrix(80, self%last_iteration_data)
    end subroutine
 
+
+   !************************* Load ****************************
+
+   ! Load logger state
    subroutine log_load(self)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self

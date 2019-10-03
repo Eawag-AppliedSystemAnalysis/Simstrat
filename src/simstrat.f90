@@ -166,9 +166,10 @@ contains
          call ok("Simulation snapshot successfully read. Snapshot day: "//real_to_str(simdata%model%datum, '(F7.1)'))
          call logger%calculate_simulation_time_for_next_output(simdata%model%simulation_time)
       else
-         call logger%log(simdata%model%simulation_time)
+         call logger%log(simdata)
       end if
       call ok("End day: "//real_to_str(simdata%sim_cfg%end_datum, '(F7.1)'))
+      call logger%start()
 
       ! Run the simulation loop
       ! Run simulation until end datum or until no more results are required by the output time file
@@ -208,16 +209,6 @@ contains
             simdata%grid%lake_level = simdata%grid%z_face(simdata%grid%ubnd_fce)
          end if
 
-         ! Display to screen
-         if (simdata%model%simulation_time==simdata%sim_cfg%timestep .and. simdata%sim_cfg%disp_simulation/=0) then
-            write(6,*)
-            write(6,*) ' -------------------------- '
-            write(6,*) '   SIMULATION IN PROGRESS   '
-            write(6,*) ' -------------------------- '
-            write(6,*)
-            if(simdata%sim_cfg%disp_simulation/=0) write(6,'(A12, A20, A20, A20)') 'Time [d]','Surface level [m]','T_surf [degC]','T_bottom [degC]'
-         end if
-
          ! Update Coriolis
          call mod_forcing%update_coriolis(simdata%model)
 
@@ -244,35 +235,12 @@ contains
          end if
 
          ! Call logger to write files
-         call logger%log(simdata%model%simulation_time)
-
-         ! ***********************************
-         ! ***** Log to file and display *****
-         ! ***********************************
-
-         ! Standard display: display when logged: datum, lake surface, T(1), T(surf)
-         if (simdata%sim_cfg%disp_simulation==1 .and. simdata%output_cfg%write_to_file) then
-            write(6,'(F12.4,F16.4,F20.4,F20.4)') simdata%model%datum, simdata%grid%lake_level, &
-            simdata%model%T(simdata%grid%nz_occupied), simdata%model%T(1)
-
-         ! Extra display: display every iteration: datum, lake surface, T(1), T(surf)
-         else if (simdata%sim_cfg%disp_simulation==2) then
-            write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%lake_level, &
-            simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
-         end if
+         call logger%log(simdata)
 
          ! This logical is used to do some allocation in the forcing, absorption and lateral subroutines during the first timestep
          simdata%model%first_timestep = .false.
       end do
       call save_snapshot(snapshot_file_path)
-
-      if (simdata%sim_cfg%disp_simulation/=0) then
-         write(6,*)
-         write(6,*) ' -------------------------- '
-         write(6,*) '    SIMULATION COMPLETED    '
-         write(6,*) ' -------------------------- '
-         write(6,*)
-      end if
    end subroutine
 
    subroutine save_snapshot(file_path)
