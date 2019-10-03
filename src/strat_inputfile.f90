@@ -83,6 +83,7 @@ contains
       integer :: i
 
       associate (model=>self%simdata%model, &
+                 sim_cfg=>self%simdata%sim_cfg, &
                  output_cfg=>self%simdata%output_cfg)
 
          ! Read output depths from file if path is specified in parfile
@@ -141,6 +142,11 @@ contains
                output_cfg%thinning_interval = 0
             endif
          end if
+         if (output_cfg%thinning_interval == 0) then
+            allocate (output_cfg%simulation_times_for_output(size(output_cfg%tout)))
+            output_cfg%simulation_times_for_output = int((output_cfg%tout - sim_cfg%start_datum) * SECONDS_PER_DAY + 0.5)
+         end if
+
 
          ! Define variables that should be written
          if (output_cfg%output_all) then
@@ -362,8 +368,7 @@ contains
          ! Set up timing
          model%datum = self%simdata%sim_cfg%start_datum
          model%dt = self%simdata%sim_cfg%timestep
-         model%model_step_counter = 0
-         model%output_counter = 1
+         model%simulation_time = 0
       end associate
    end subroutine
 
@@ -569,12 +574,12 @@ contains
          end if
 
          ! Output times
-         ! Check type of input: string for path, array for depth list and integer for interval
+         ! Check type of input: string for path, array for times list and integer for interval
          call par_file%info('Output.Times',found,output_cfg%output_time_type,n_children_dummy)
          ! Treat different input possibilities for output times
          if (output_cfg%output_time_type == 7) then ! Path name
             call par_file%get('Output.Times', toutName, found); output_cfg%toutName = toutName; call check_field(found, 'Output.Times', ParName)
-         else if (output_cfg%output_time_type == 3) then ! Output depths are given
+         else if (output_cfg%output_time_type == 3) then ! Output times are given
             call par_file%get('Output.Times', output_cfg%tout, found); call check_field(found, 'Output.Times', ParName)
             output_cfg%thinning_interval = 0
 
@@ -665,6 +670,7 @@ contains
          call par_file%get("Simulation.Start d", sim_cfg%start_datum, found); call check_field(found, 'Simulation.Start d', ParName)
          call par_file%get("Simulation.End d", sim_cfg%end_datum, found); call check_field(found, 'Simulation.End d', ParName)
          call par_file%get("Simulation.DisplaySimulation", sim_cfg%disp_simulation, found); call check_field(found, 'Simulation.DisplaySimulation', ParName)
+         call par_file%get("Simulation.Continue from last snapshot", sim_cfg%continue_from_snapshot, found)
 
          call par_file%destroy()
 

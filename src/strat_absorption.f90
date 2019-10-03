@@ -22,11 +22,14 @@ module strat_absorption
       real(RK) :: tb_start, tb_end !Start and end time
       real(RK), dimension(:), allocatable :: z_absorb !Read depths
       real(RK), dimension(:), allocatable :: absorb_start, absorb_end !Interpolated start and end values
+      integer :: number_of_lines_read = 0
       integer :: eof, nval
 
    contains
       procedure, pass :: init => absorption_init
       procedure, pass :: update => absorption_update
+      procedure, pass :: save => absorption_save
+      procedure, pass :: load => absorption_load
    end type
 
 contains
@@ -50,7 +53,30 @@ contains
       allocate (self%z_absorb(grid%max_length_input_data))
       allocate (self%absorb_start(grid%nz_grid))
       allocate (self%absorb_end(grid%nz_grid))
+   end subroutine
 
+   subroutine absorption_save(self)
+      implicit none
+      class(AbsorptionModule) :: self
+
+      write (80) self%number_of_lines_read
+      write (80) self%tb_start, self%tb_end
+      write (80) self%eof, self%nval
+      call save_array(80, self%z_absorb)
+      call save_array(80, self%absorb_start)
+      call save_array(80, self%absorb_end)
+   end subroutine
+
+   subroutine absorption_load(self)
+      implicit none
+      class(AbsorptionModule) :: self
+
+      read (81) self%number_of_lines_read
+      read (81) self%tb_start, self%tb_end
+      read (81) self%eof, self%nval
+      call read_array(81, self%z_absorb)
+      call read_array(81, self%absorb_start)
+      call read_array(81, self%absorb_end)
    end subroutine
 
    subroutine absorption_update(self, state)
@@ -76,33 +102,43 @@ contains
 
          if (state%first_timestep) then ! First iteration
             open (30, status='old', file=self%file)
-            eof = 0
+            if (self%number_of_lines_read > 0) then
+               do i = 1, self%number_of_lines_read
+                  read (30, *, end=9) ! skip over already read lines
+               end do
+            else
+               eof = 0
 
-            !Read depths: first line are names, second line is number of depths available
-            read (30, *, end=9)
-            read (30, *, end=9) nval
-            read (30, *, end=9) dummy, (z_absorb(i), i=1, nval)
+               !Read depths: first line are names, second line is number of depths available
+               read (30, *, end=9)
+               call count_read(self)
+               read (30, *, end=9) nval
+               call count_read(self)
+               read (30, *, end=9) dummy, (z_absorb(i), i=1, nval)
+               call count_read(self)
 
-            !Make depths positives
-            do i = 1, nval
-               z_absorb(i) = abs(z_absorb(i))
-            end do
+               !Make depths positives
+               do i = 1, nval
+                  z_absorb(i) = abs(z_absorb(i))
+               end do
 
-            !Read first values
-            read (30, *, end=9) tb_start, (absorb_read_start(i), i=1, nval)
-            if (state%datum < tb_start) call warn('First light attenuation date after simulation start time.')
+               !Read first values
+               read (30, *, end=9) tb_start, (absorb_read_start(i), i=1, nval)
+               call count_read(self)
+               if (state%datum < tb_start) call warn('First light attenuation date after simulation start time.')
 
-            !Interpolate absorb_read_start on z_absorb onto faces of grid
-            call self%grid%interpolate_to_face(z_absorb, absorb_read_start, nval, absorb_start)
+               !Interpolate absorb_read_start on z_absorb onto faces of grid
+               call self%grid%interpolate_to_face(z_absorb, absorb_read_start, nval, absorb_start)
 
-            read (30, *, end=7) tb_end, (absorb_read_end(i), i=1, nval)
+               read (30, *, end=7) tb_end, (absorb_read_end(i), i=1, nval)
+               call count_read(self)
 
-            ! Write to console that file was successfully read
-            call ok('Absorption input file successfully read')
+               ! Write to console that file was successfully read
+               call ok('Absorption input file successfully read')
 
-            ! Do the same for absorb_read_end
-            call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end)
-
+               ! Do the same for absorb_read_end
+               call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end)
+            end if
          end if
 
          if (state%datum <= tb_start .or. eof == 1) then !If datum before first date or end of file reached
@@ -113,6 +149,7 @@ contains
                absorb_start(1:nz) = absorb_end(1:nz)
                !Read next value
                read (30, *, end=7) tb_end, (absorb_read_end(i), i=1, nval)
+               call count_read(self)
                call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end)
             end do
             !Linearly interpolate value at correct datum (for all depths)
@@ -127,9 +164,15 @@ contains
 8        state%absorb(1:nz) = absorb_start(1:nz)           !Take first value of current interval
          return
 
-9        call error('Reading light attenuation file (no data found).')
+9        call error('Reading absorption file (no data found).')
 
       end associate
+   end subroutine
+
+   subroutine count_read(self)
+      implicit none
+      class(AbsorptionModule) :: self
+      self%number_of_lines_read = self%number_of_lines_read + 1
    end subroutine
 
 end module

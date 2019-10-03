@@ -74,10 +74,54 @@ module strat_grid
       procedure, pass :: shrink => grid_shrink      ! Shrink grid by one box (= merge uppermost 2 boxes)
       procedure, pass :: modify_top_box => grid_modify_top_box  ! Change size of topmost box to reflect niveau change
 
-
+      ! Saving & loading methods
+      procedure, pass :: save => grid_save
+      procedure, pass :: load => grid_load
    end type
 
 contains
+
+   subroutine grid_save(self)
+      implicit none
+      class(StaggeredGrid), intent(inout) :: self
+
+      call save_array(80, self%h)
+      call save_array(80, self%z_face)
+      call save_array(80, self%z_volume)
+      call save_array(80, self%Az)
+      call save_array(80, self%dAz)
+      call save_array(80, self%meanint)
+      write(80) self%volume, self%h_old
+      call save_array(80, self%AreaFactor_1)
+      call save_array(80, self%AreaFactor_2)
+      call save_array(80, self%AreaFactor_k1)
+      call save_array(80, self%AreaFactor_k2)
+      call save_array(80, self%AreaFactor_eps)
+      write(80) self%nz_grid, self%nz_occupied, self%max_length_input_data
+      write(80) self%ubnd_vol, self%ubnd_fce, self%length_vol, self%length_fce
+      write(80) self%z_zero, self%lake_level, self%lake_level_old, self%max_depth
+   end subroutine
+
+   subroutine grid_load(self)
+      implicit none
+      class(StaggeredGrid), intent(inout) :: self
+
+      call read_array(81, self%h)
+      call read_array(81, self%z_face)
+      call read_array(81, self%z_volume)
+      call read_array(81, self%Az)
+      call read_array(81, self%dAz)
+      call read_array(81, self%meanint)
+      read(81) self%volume, self%h_old
+      call read_array(81, self%AreaFactor_1)
+      call read_array(81, self%AreaFactor_2)
+      call read_array(81, self%AreaFactor_k1)
+      call read_array(81, self%AreaFactor_k2)
+      call read_array(81, self%AreaFactor_eps)
+      read(81) self%nz_grid, self%nz_occupied, self%max_length_input_data
+      read(81) self%ubnd_vol, self%ubnd_fce, self%length_vol, self%length_fce
+      read(81) self%z_zero, self%lake_level, self%lake_level_old, self%max_depth
+   end subroutine
 
   ! Set up grid at program start
    subroutine grid_init(self, config)
@@ -288,6 +332,7 @@ contains
       h(ubnd_vol) = h(ubnd_vol) + dh
       z_volume(ubnd_vol) = z_volume(ubnd_vol) + 0.5_RK*dh
       z_face(ubnd_fce) = z_face(ubnd_fce) + dh
+!      print *,ubnd_vol,z_volume(ubnd_vol),dh
 
       end associate
    end subroutine
