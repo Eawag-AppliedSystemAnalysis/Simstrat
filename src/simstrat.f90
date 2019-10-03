@@ -121,7 +121,7 @@ program simstrat_main
 
    ! Calculate simulation_end_time
    if (simdata%output_cfg%thinning_interval > 0) then
-      simulation_end_time = int((simdata%sim_cfg%end_datum - simdata%sim_cfg%start_datum) * 86400 + 0.5)
+      simulation_end_time = int((simdata%sim_cfg%end_datum - simdata%sim_cfg%start_datum) * SECONDS_PER_DAY + 0.5)
    else
       simulation_end_time = simdata%output_cfg%simulation_times_for_output( &
             size(simdata%output_cfg%simulation_times_for_output))
@@ -164,8 +164,9 @@ contains
       if (snapshot_file_exists) then
          call load_snapshot(snapshot_file_path)
          call ok("Simulation snapshot successfully read. Snapshot day: "//real_to_str(simdata%model%datum, '(F7.1)'))
+         call logger%calculate_simulation_time_for_next_output(simdata%model%simulation_time)
       else
-         call logger%log(simdata%model%simulation_time, simdata%model%simulation_time_for_next_output)
+         call logger%log(simdata%model%simulation_time)
       end if
       call ok("End day: "//real_to_str(simdata%sim_cfg%end_datum, '(F7.1)'))
 
@@ -243,7 +244,7 @@ contains
          end if
 
          ! Call logger to write files
-         call logger%log(simdata%model%simulation_time, simdata%model%simulation_time_for_next_output)
+         call logger%log(simdata%model%simulation_time)
 
          ! ***********************************
          ! ***** Log to file and display *****

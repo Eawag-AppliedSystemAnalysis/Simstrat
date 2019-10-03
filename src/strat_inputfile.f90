@@ -144,7 +144,7 @@ contains
          end if
          if (output_cfg%thinning_interval == 0) then
             allocate (output_cfg%simulation_times_for_output(size(output_cfg%tout)))
-            output_cfg%simulation_times_for_output = int((output_cfg%tout - sim_cfg%start_datum) * 86400 + 0.5)
+            output_cfg%simulation_times_for_output = int((output_cfg%tout - sim_cfg%start_datum) * SECONDS_PER_DAY + 0.5)
          end if
 
 
@@ -333,7 +333,6 @@ contains
          model%datum = self%simdata%sim_cfg%start_datum
          model%dt = self%simdata%sim_cfg%timestep
          model%simulation_time = 0
-         model%simulation_time_for_next_output = 0
       end associate
    end subroutine
 

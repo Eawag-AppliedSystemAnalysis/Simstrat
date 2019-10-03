@@ -434,6 +434,6 @@ contains
       real(RK), intent(in) :: start_datum
       integer(8), intent(in) :: simulation_time
 
-      datum = start_datum + real(simulation_time, RK) / 86400
+      datum = start_datum + real(simulation_time, RK) / SECONDS_PER_DAY
    end function
 end module utilities

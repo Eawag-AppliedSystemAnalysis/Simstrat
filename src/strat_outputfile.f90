@@ -22,15 +22,17 @@ module strat_outputfile
       integer, public :: n_depths
       integer, public :: n_vars
       integer, public :: counter = 0
+      integer(8), public :: simulation_time_for_next_output = 0
       real(RK), dimension(:,:), allocatable :: last_iteration_data
 
    contains
       procedure(generic_log_init), deferred, pass(self), public :: initialize
       procedure(generic_init_files), deferred, pass(self), public :: init_files
+      procedure(generic_calculate_simulation_time_for_next_output), deferred, pass(self), public :: calculate_simulation_time_for_next_output
       procedure(generic_log), deferred, pass(self), public :: log   ! Method that is called each loop to write data
       procedure(generic_log_close), deferred, pass(self), public :: close
-      procedure(generic_log_close), deferred, pass(self), public :: save
-      procedure(generic_log_close), deferred, pass(self), public :: load
+      procedure(generic_log_save), deferred, pass(self), public :: save
+      procedure(generic_log_load), deferred, pass(self), public :: load
    end type
 
    ! Logger that interpolates on a specified output grid at specific times.
@@ -39,6 +41,7 @@ module strat_outputfile
    contains
       procedure, pass(self), public :: initialize => log_init_interpolating
       procedure, pass(self), public :: init_files => init_files_interpolating
+      procedure, pass(self), public :: calculate_simulation_time_for_next_output => calculate_simulation_time_for_next_output_interpolating
       procedure, pass(self), public :: log => log_interpolating
       procedure, pass(self), public :: close => log_close
       procedure, pass(self), public :: save => log_save
@@ -81,17 +84,30 @@ contains
 
    end subroutine
 
-   subroutine generic_log(self, simulation_time, simulation_time_for_next_output)
+   subroutine generic_calculate_simulation_time_for_next_output(self, simulation_time)
       implicit none
+      class(SimstratOutputLogger), intent(inout) :: self
+      integer(8), intent(in) :: simulation_time
+   end subroutine
 
+   subroutine generic_log(self, simulation_time)
+      implicit none
       class(SimstratOutputLogger), intent(inout) :: self
       integer(8) :: simulation_time
-      integer(8), intent(inout) :: simulation_time_for_next_output
    end subroutine
 
    subroutine generic_log_close(self)
       implicit none
+      class(SimstratOutputLogger), intent(inout) :: self
+   end subroutine
 
+   subroutine generic_log_save(self)
+      implicit none
+      class(SimstratOutputLogger), intent(inout) :: self
+   end subroutine
+
+   subroutine generic_log_load(self)
+      implicit none
       class(SimstratOutputLogger), intent(inout) :: self
    end subroutine
 
@@ -125,7 +141,7 @@ contains
          end if
       end if
 
-      if (output_config%thinning_interval>1) write(6,*) 'Interval [days]: ',output_config%thinning_interval*sim_config%timestep/86400.
+      if (output_config%thinning_interval>1) write(6,*) 'Interval [days]: ',output_config%thinning_interval*sim_config%timestep/real(SECONDS_PER_DAY, RK)
       call ok('Output times successfully read')
 
 
@@ -247,21 +263,40 @@ contains
       end do
    end subroutine
 
+   subroutine calculate_simulation_time_for_next_output_interpolating(self, simulation_time)
+      implicit none
+      class(InterpolatingLogger), intent(inout) :: self
+      integer(8), intent(in) :: simulation_time
+      integer :: i
+
+      associate (thinning_interval => self%output_config%thinning_interval, &
+                 timestep => self%sim_config%timestep, &
+                 simulation_times_for_output => self%output_config%simulation_times_for_output)
+         if (thinning_interval == 0) then
+            do i = self%counter, size(simulation_times_for_output)
+               if (simulation_times_for_output(i) > simulation_time) then
+                  self%simulation_time_for_next_output = simulation_times_for_output(i)
+                  exit
+               end if
+            end do
+         end if
+      end associate
+   end subroutine
+
    !************************* Log ****************************
 
    ! Log current state on interpolated grid at specific times
-   subroutine log_interpolating(self, simulation_time, simulation_time_for_next_output)
+   subroutine log_interpolating(self, simulation_time)
       implicit none
 
       class(InterpolatingLogger), intent(inout) :: self
       integer(8) :: simulation_time
-      integer(8), intent(inout) :: simulation_time_for_next_output
       !workaround gfortran bug => cannot pass allocatable array to csv file
       real(RK), dimension(self%n_depths) :: values_on_zout
       type(OutputHelper) :: output_helper
       integer :: i
 
-      call output_helper%init(simulation_time, self%sim_config%timestep, simulation_time_for_next_output, &
+      call output_helper%init(simulation_time, self%sim_config%timestep, self%simulation_time_for_next_output, &
                               self%sim_config%start_datum, self%output_config%thinning_interval, &
                               self%output_config%simulation_times_for_output, self%counter)
       do i = 1, self%n_vars
@@ -395,14 +430,14 @@ contains
    subroutine log_save(self)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
-      write(80) self%counter
+      write(80) self%counter, self%simulation_time_for_next_output
       call save_matrix(80, self%last_iteration_data)
    end subroutine
 
    subroutine log_load(self)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
-      read(81) self%counter
+      read(81) self%counter, self%simulation_time_for_next_output
       call read_matrix(81, self%last_iteration_data)
    end subroutine
 

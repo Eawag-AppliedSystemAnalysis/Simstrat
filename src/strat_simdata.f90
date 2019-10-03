@@ -111,7 +111,7 @@ module strat_simdata
       integer :: current_month ! Current month of simulation, used for zenith angle dependent water albedo
       real(RK) :: current_day ! Current day of simulation, used for zenith angle dependent water albedo
       real(RK) :: datum, dt
-      integer(8) :: simulation_time, simulation_time_for_next_output
+      integer(8) :: simulation_time
       logical :: first_timestep = .true.
 
       ! Variables located on z_cent grid
@@ -289,7 +289,7 @@ contains
       implicit none
       class(ModelState), intent(in) :: self
 
-      write(80) self%current_year, self%current_month, self%current_day, self%datum, self%simulation_time, self%simulation_time_for_next_output
+      write(80) self%current_year, self%current_month, self%current_day, self%datum, self%simulation_time
       call save_array(80, self%U)
       call save_array(80, self%V)
       call save_array(80, self%T)
@@ -347,7 +347,7 @@ contains
       implicit none
       class(ModelState), intent(inout) :: self
 
-      read(81) self%current_year, self%current_month, self%current_day, self%datum, self%simulation_time, self%simulation_time_for_next_output
+      read(81) self%current_year, self%current_month, self%current_day, self%datum, self%simulation_time
       call read_array(81, self%U)
       call read_array(81, self%V)
       call read_array(81, self%T)
