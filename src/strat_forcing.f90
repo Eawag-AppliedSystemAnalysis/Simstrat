@@ -217,7 +217,7 @@ contains
 
             Vap_atm = A_cur(5)
             Cloud = A_cur(6)
-            if (Cloud < 0 .or. Cloud > 1) then
+            if (Cloud < -1e-6 .or. Cloud > 1.000001) then
                write (*,'(A,F12.6)') 'Cloud : ' , Cloud
                write (*,'(A,F12.6)') 'Date  : ' , state%datum
                call error('Cloudiness should always be between 0 and 1.')
