@@ -629,6 +629,7 @@ contains
          call par_file%get("Simulation.Start d", sim_cfg%start_datum, found); call check_field(found, 'Simulation.Start d', ParName)
          call par_file%get("Simulation.End d", sim_cfg%end_datum, found); call check_field(found, 'Simulation.End d', ParName)
          call par_file%get("Simulation.DisplaySimulation", sim_cfg%disp_simulation, found); call check_field(found, 'Simulation.DisplaySimulation', ParName)
+         call par_file%get("Simulation.Continue from last snapshot", sim_cfg%continue_from_snapshot, found)
 
          call par_file%destroy()
 

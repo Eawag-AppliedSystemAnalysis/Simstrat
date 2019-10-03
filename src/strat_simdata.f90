@@ -59,6 +59,7 @@ module strat_simdata
       real(RK) :: start_datum
       real(RK) :: end_datum
       integer :: disp_simulation
+      logical :: continue_from_snapshot = .false.
    end type
 
    ! Model configuration (read from file)

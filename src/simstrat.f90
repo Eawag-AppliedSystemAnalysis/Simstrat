@@ -53,7 +53,7 @@ program simstrat_main
    character(len=100) :: arg
    character(len=:), allocatable :: ParName
    character(len=:), allocatable :: snapshot_file_path
-   logical :: snapshot_file_exists
+   logical :: continue_from_snapshot = .false.
    integer(8) :: simulation_end_time
 
    ! Print some information
@@ -114,10 +114,13 @@ program simstrat_main
 
    ! Binary simulation snapshot file
    snapshot_file_path = simdata%output_cfg%PathOut//'/simulation-snapshot.dat'
-   inquire (file=snapshot_file_path, exist=snapshot_file_exists)
+   if (simdata%sim_cfg%continue_from_snapshot) then
+      inquire (file=snapshot_file_path, exist=continue_from_snapshot)
+      print *,"continue from snapshot",continue_from_snapshot
+   end if
 
    ! Setup logger
-   call logger%initialize(simdata%sim_cfg, simdata%output_cfg, simdata%grid, snapshot_file_exists)
+   call logger%initialize(simdata%sim_cfg, simdata%output_cfg, simdata%grid, continue_from_snapshot)
 
    ! Calculate simulation_end_time
    if (simdata%output_cfg%thinning_interval > 0) then
@@ -161,7 +164,7 @@ contains
    subroutine run_simulation()
 
       call ok("Start day: "//real_to_str(simdata%sim_cfg%start_datum, '(F7.1)'))
-      if (snapshot_file_exists) then
+      if (continue_from_snapshot) then
          call load_snapshot(snapshot_file_path)
          call ok("Simulation snapshot successfully read. Snapshot day: "//real_to_str(simdata%model%datum, '(F7.1)'))
          call logger%calculate_simulation_time_for_next_output(simdata%model%simulation_time)
