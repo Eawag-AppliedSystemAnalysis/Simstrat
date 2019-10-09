@@ -296,7 +296,7 @@ contains
          Az(ubnd_fce) = Az(ubnd_fce) + dAz(ubnd_vol)*dh
       end if
 
-      Az_vol = Az_vol(ubnd_vol) + dAz(ubnd_vol)*dh
+      Az_vol(ubnd_vol) = Az_vol(ubnd_vol) + dAz(ubnd_vol)*dh
 
       h(ubnd_vol) = h(ubnd_vol) + dh
       z_volume(ubnd_vol) = z_volume(ubnd_vol) + 0.5_RK*dh

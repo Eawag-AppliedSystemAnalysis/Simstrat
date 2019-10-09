@@ -430,7 +430,7 @@ contains
                !# & distribute bottom flux into pelagic over bottom box (i.e., divide by layer height).
                !# scaled to proportion of area that is "bottom"
                self%flux_pel(lev, :) = max(-1.0 * self%cc(lev, :), self%flux_pel(lev, :)/self%grid%h(lev))
-               self%flux_pel(lev, :) = self%flux_pel(lev, :) * (self%grid%Az_vol(lev) - self%grid%Az_vol(lev - 1))/self%grid%Az_vol(lev)
+               self%flux_pel(lev, :) = self%flux_pel(lev, :) * (self%grid%Az(lev) - self%grid%Az(lev - 1))/self%grid%Az(lev)
             end do
          end if
       end if
