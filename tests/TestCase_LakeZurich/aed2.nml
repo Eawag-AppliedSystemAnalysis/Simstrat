@@ -1,14 +1,14 @@
 &aed2_models
     models =
        !-->  NUTRIENT/CHEMISTRY modules  <--!
-             !'aed2_sedflux',
              'aed2_tracer',
+			 'aed2_noncohesive',
              'aed2_oxygen',
              'aed2_carbon',
              'aed2_silica',
              'aed2_nitrogen',
              'aed2_phosphorus',
-             'aed2_organic_matter',
+             !'aed2_organic_matter',
        !plus 'aed2_seddiagenesis',
        !-->  BIOLOGY modules  <--!
              !'aed2_phytoplankton',
@@ -28,7 +28,6 @@
        !plus 'aed2_habitat'
 /
 
-
 !###############################################################################
 ! TRC: aed2_tracer
 !-------------------------------------------------------------------------------
@@ -39,27 +38,42 @@
 !-------------------------------------------------------------------------------
 &aed2_tracer
    !-- Optional retention time tracer
-    retention_time = .true.
-   !-- Select number of tracers/ss's and their decay/sedflux/light properties
+   !retention_time = .true.
+   !-- Select number of tracers and their decay/sedflux/light properties
     num_tracers = 1
     decay = 0,0
     Fsed = 0,0
-    Ke_ss = 0.06,0.063
-   !-- Configure sediment resuspension
-    settling = 3
-    w_ss = -0.000001
-    d_ss = 4e-6,1e-5
-    rho_ss = 1.5e3,1.8e3
-   !-- Configure sediment resuspension
-    resuspension = 1
-    fs = 0.7
-    epsilon = 0.0250
-    tau_0 = 0.03
-    tau_r = 1.0
-    Ktau_0 = 0.001
-    macrophyte_link_var = 'MAC_chara'
 /
 
+!###############################################################################
+! NCS: aed2_noncohesive
+!
+! Refer to the below link for module settings & parameter details:
+! http://aquatic.science.uwa.edu.au/research/models/AED/aed_tracer.html
+!
+!-------------------------------------------------------------------------------
+&aed2_noncohesive
+   !-- Select SS groups and their light attenuation
+    num_ss       = 1
+    ss_initial   = 1,1
+    Ke_ss        = 0.06,0.063
+   !-- Configure particle settling
+    settling     = 1
+    w_ss         = -0.03,-0.001
+    d_ss         = 2e-6,1e-5
+    rho_ss       = 1.5e3,1.8e3
+   !-- Configure sediment resuspension
+    resuspension = 0
+    epsilon      = 0.0070
+    tau_0        = 0.03, 0.03
+    tau_r        = 1.0
+    Ktau_0       = 0.001
+    macrophyte_link_var = ''
+   !-- Configure sediment mass
+    simSedimentMass= .false.
+    fs           = 0.4,0.4
+    sed_porosity = 0.6
+/
 
 !###############################################################################
 ! OXY: aed2_oxygen - AED oxygen model
@@ -78,16 +92,16 @@
 !
 ! NOTE: Processes such as photosynthesis and bacterial respiration from other
 !       AED modules should be configured to use the following names:
-!        aed_oxygen_oxy
+!        aed2_oxygen_oxy
 !
 ! DIAGNOSTICS:
 !
 !-------------------------------------------------------------------------------
 &aed2_oxygen
-   oxy_initial = 225.0
-   Fsed_oxy = -40.0
-   Ksed_oxy = 100.0
-   theta_sed_oxy = 1.08
+   oxy_initial = 225.0	
+   Fsed_oxy = -12.0	! From data
+   Ksed_oxy = 100.0	! Default
+   theta_sed_oxy = 1.08	! Default
    oxy_min = 0
    oxy_max = 500
 /
@@ -140,21 +154,28 @@
 &aed2_carbon
    !-- DIC and pH
    dic_initial = 1600.5
-   Fsed_dic = 14.0
+   Fsed_dic = 3.0
    Ksed_dic = 20.0
    theta_sed_dic = 1.08
+   !Fsed_dic_variable = 'Fsed_dic'
    pH_initial = 7.5
-   atmco2 = 390e-6
+   atm_co2 = 410e-6
+   co2_model = 1
+   alk_mode = 1
    ionic = 0.1
+   co2_piston_model = 1
    !-- CH4
    ch4_initial = 27.6
    Rch4ox = 0.01
    Kch4ox = 0.5
    vTch4ox = 1.08
-   Fsed_ch4 = 0.5
+   Fsed_ch4 = 22
    Ksed_ch4 = 100.0
    theta_sed_ch4 = 1.08
    methane_reactant_variable='OXY_oxy'
+   !Fsed_ch4_variable = 'Fsed_ch4'
+   atm_ch4 = 1.9e-6    !atm
+   ch4_piston_model = 1
 /
 
 
@@ -170,7 +191,7 @@
 !-------------------------------------------------------------------------------
 &aed2_silica
    rsi_initial = 12.5
-   Fsed_rsi = 0.
+   Fsed_rsi = 1.8
    Ksed_rsi = 50.0
    theta_sed_rsi = 1.08
    silica_reactant_variable='OXY_oxy'
@@ -223,36 +244,54 @@
 !
 !-------------------------------------------------------------------------------
 &aed2_nitrogen
-   ! Initial values
+  !-- Initial values
    amm_initial = 12.7
    nit_initial = 23.5
    n2o_initial = 23.5
-   ! Reaction rates of core pathways
-   Rnitrif = 0.12
+  !-- Nitrification
+   Rnitrif =  0.1
    Knitrif = 78.1
-   theta_nitrif = 1.08,
-   nitrif_reactant_variable='OXY_oxy',
-   Rdenit = 0.26,
-   Kdenit = 2.0,
-   theta_denit = 1.08,
-   Ranammox = 0.001,
-   Kanmx_nit = 2.0,
-   Kanmx_amm = 2.0,
+   theta_nitrif = 1.08
+   nitrif_reactant_variable = 'OXY_oxy'
+   nitrif_ph_variable = ''
+   simNitrfpH = .false.
+   Rnh4o2 = 1.0          ! sames as Rnitrif?
+   Rno2o2 = 1.0
+  !-- N2O reactionss
+   simN2O = 0
+   Rn2o = 0.05
+   Kpart_ammox = 1.0
+   Kin_deamm = 1.0
+   atm_n2o = 0.32e-6     ! atm
+   n2o_piston_model = 4
+  !-- Annamox
+   Rnh4no2 = 1.0         ! same as Ranammox?
+   Ranammox = 0.001
+   Kanmx_nit = 2.0
+   Kanmx_amm = 2.0
+  !-- De-nitrification
+   Rdenit = 0.26
+   Kdenit = 2.0
+   theta_denit = 1.08
    Rdnra = 0.01,
    Kdnra_oxy = 2.0,
-   ! N2O option reaction rates
-   simN2O = .false.
-   Rn2o = 0.05,
-   Cn2o_atm = 0.32  ! ppm
-   !-- Sediment fluxes
-   Fsed_amm = 3.5,
-   Ksed_amm = 25.0,
-   Fsed_nit = -4.5,
-   Ksed_nit = 100.0,
-   Fsed_n2o = -4.5,
-   Ksed_n2o = 100.0,
-   theta_sed_amm = 1.08,
-   theta_sed_nit = 1.08,
+  !-- Atmospheric deposition
+   simDryDeposition = .true.
+   atm_din_dd = 0.5
+   simWetDeposition = .false.
+   atm_din_conc = 0.5
+  !-- Sediment fluxes
+   Fsed_amm =   3.5
+   Ksed_amm =  25.0
+   Fsed_nit =  -0.5
+   Ksed_nit = 100.0
+   Fsed_n2o =   0.0
+   Ksed_n2o = 100.0
+   theta_sed_amm = 1.08
+   theta_sed_nit = 1.08
+  !Fsed_amm_variable = 'SDF_Fsed_amm'
+  !Fsed_nit_variable = 'SDF_Fsed_nit'
+  !Fsed_n2o_variable = 'SDF_Fsed_n2o'
 /
 
 
@@ -298,21 +337,29 @@
 !
 !-------------------------------------------------------------------------------
 &aed2_phosphorus
+  !-- Initial value
    frp_initial = 0.29
+  !-- Sediment flux
    Fsed_frp = 0.08
-   Ksed_frp = 80.0
-   theta_sed_frp = 1.08
+   Ksed_frp = 50.0
+   theta_sed_frp = 1.10
    phosphorus_reactant_variable ='OXY_oxy'
-   !Fsed_frp_variable ='SDF_Fsed_frp'
-   simPO4Adsorption = .true.
+  !Fsed_frp_variable ='SDF_Fsed_frp'
+  !-- PO4 adsorption
+   simPO4Adsorption = .false.
    ads_use_external_tss = .false.
-   po4sorption_target_variable ='TRC_ss1'
+   po4sorption_target_variable ='NCS_ss1'
    PO4AdsorptionModel = 1
    Kpo4p = 0.1
    ads_use_pH = .false.
    Kadsratio= 1.0
    Qmax = 1.0
-   w_po4ads = -9999
+   w_po4ads = -9999     ! Note: -9999 links PO4-ad settling to target_variable
+  !-- Atmospheric deposition
+   simDryDeposition = .true.
+   atm_pip_dd = 0.00
+   simWetDeposition = .false.
+   atm_frp_conc = 0.00
 /
 
 
@@ -368,75 +415,90 @@
 !-------------------------------------------------------------------------------
 &aed2_organic_matter
    !-- Initial concentrations for OM variables (mmol/m3)
-          poc_initial  = 78.5
-          doc_initial  = 39.9
-          pon_initial  = 8.3
-          don_initial  = 1.3
-          pop_initial  = 8.3
-          dop_initial  = 1.5
-          docr_initial = 350.00
-          donr_initial = 13.0
-          dopr_initial = 3.0
-          cpom_initial = 100.00
+     poc_initial  =  78.5
+     doc_initial  =  39.9
+     pon_initial  =   8.3
+     don_initial  =   1.3
+     pop_initial  =   8.3
+     dop_initial  =   1.5
+     docr_initial = 350.0
+     donr_initial =  13.0
+     dopr_initial =   3.0
+     cpom_initial = 100.0
    !-- Breakdown and mineralisation (basic pool)
-          Rpoc_hydrol  = 0.05
-          Rdoc_minerl  = 0.001
-          Rpon_hydrol  = 0.05
-          Rdon_minerl  = 0.005
-          Rpop_hydrol  = 0.05
-          Rdop_minerl  = 0.001
-          theta_hydrol = 1.08
-          theta_minerl = 1.08
-          Kpom_hydrol  = 31.25
-          Kdom_minerl  = 31.25
-          doc_miner_reactant_variable='OXY_oxy'
-          doc_miner_product_variable=''
-          don_miner_product_variable='NIT_amm'
-          dop_miner_product_variable='PHS_frp'
-          !-- Refractory organic matter (optional)
-          simRPools    = .false.
-          Rdocr_miner  = 0.0001
-          Rdonr_miner  = 0.0001
-          Rdopr_miner  = 0.0001
-          Rcpom_bdown  = 0.0001
-          X_cpom_n     = 0.0005
-          X_cpom_p     = 0.0001
-          !-- Light related parameters
-          KeDOM        = 0.000005
-          KePOM        = 0.00096
-          KeDOMR       = 0.10000    ! = 1 (assuming KeDOMR is applied to CDOM in /m)
-          KeCPOM       = 0.00096    ! = 0.08 (/m)/(mg/L)  /83.3  (mmol/m3)/(mg/L)
-          simphotolysis = .false. !.true.
-          !photo_fmin
-          photo_c      = 0.75
-          !-- Particle settling parameters
-          settling     = 3
-          w_pom        = -0.06
-          d_pom        = 2e-6
-          rho_pom      = 1.12e3
-          w_cpom       = -0.01
-          d_cpom       = 1e-5
-          rho_cpom     = 1.3e3
-          !-- Sediment interaction parameters (basic model)
-          resuspension = 1
-          resus_link   = 'TRC_resus'
-          sedimentOMfrac = 0.5
-          Xsc = 0.5
-          Xsn = 0.05
-          Xsp = 0.005
-          Fsed_doc = 2.0
-          Fsed_don = 1.0
-          Fsed_dop = 0.020
-         !Fsed_doc_variable,
-         !Fsed_dop_variable,
-         !Fsed_don_variable,
-          Ksed_dom = 4.5
-          theta_sed_dom = 1.08
-          !-- Other options
-          extra_diag = .false. !.true.
-          !poc_min, poc_max, doc_min, doc_max
-          !pon_min, pon_max, don_min, don_max
-          !pop_min, pop_max, dop_min, dop_max
+     Rpoc_hydrol  =   0.05
+     Rdoc_minerl  =   0.001
+     Rpon_hydrol  =   0.05
+     Rdon_minerl  =   0.005
+     Rpop_hydrol  =   0.05
+     Rdop_minerl  =   0.001
+     theta_hydrol =   1.08
+     theta_minerl =   1.08
+     Kpom_hydrol  =  31.25
+     Kdom_minerl  =  31.25
+     simDenitrification = 1
+     dom_miner_oxy_reactant_var = 'OXY_oxy'
+   ! dom_miner_no2_reactant_var = 'NIT_no2'
+   ! dom_miner_n2o_reactant_var = 'NIT_n2o'
+   ! dom_miner_fe3_reactant_var = 'GEO_feiii'
+   ! dom_miner_so4_reactant_var = 'GEO_so4'
+   ! dom_miner_ch4_reactant_var = 'CAR_ch4'
+     doc_miner_product_variable = ''
+     don_miner_product_variable = 'NIT_amm'
+     dop_miner_product_variable = 'PHS_frp'
+     dom_miner_nit_reactant_var = 'NIT_nit'
+     f_an = 1.
+     K_nit               = 10.0
+   ! Kin_denitrat        = 20.0
+   ! Kin_denitrit        = 0.297
+   ! Kin_denitrous       = 0.205
+   ! Klim_denitrit       = 1
+   ! Klim_denitrous      = 1
+   ! Kpart_denitrit      = 1
+
+   !-- Refractory organic matter (optional)
+     simRPools    = .false.
+     Rdomr_minerl = 0.0001
+     Rcpom_bdown  = 0.0001
+     X_cpom_n     = 0.0005
+     X_cpom_p     = 0.0001
+
+    !-- Light related parameters
+     KeDOM         = 0.000005
+     KePOM         = 0.00096
+     KeDOMR        = 0.10000    ! = 1 (assuming KeDOMR is applied to CDOM in /m)
+     KeCPOM        = 0.00096    ! = 0.08 (/m)/(mg/L)  /83.3  (mmol/m3)/(mg/L)
+     simphotolysis = .false.    ! .true.
+    !photo_fmin
+     photo_c       = 0.75
+
+    !-- Particle settling parameters
+     settling     =  3
+     w_pom        = -0.06
+     d_pom        =  1e-5
+     rho_pom      = 1.2e3
+     w_cpom       = -0.01
+     d_cpom       =  1e-5
+     rho_cpom     = 1.4e3
+
+    !-- Sediment interaction parameters (basic model)
+     resuspension = 0
+     resus_link   = 'NCS_resus'
+     sedimentOMfrac = 0.0002
+     Xsc = 0.5
+     Xsn = 0.05
+     Xsp = 0.005
+     Fsed_doc = 0.0
+     Fsed_don = 0.0
+     Fsed_dop = 0.0
+     Ksed_dom = 4.5
+     theta_sed_dom = 1.08
+     !Fsed_doc_variable = 'SDF_Fsed_doc'
+     !Fsed_don_variable = 'SDF_Fsed_don'
+     !Fsed_dop_variable = 'SDF_Fsed_dop'
+
+     !-- Other options
+      extra_diag = .false. !.true.
 /
 
 
@@ -476,36 +538,36 @@
 !-------------------------------------------------------------------------------
 &aed2_phytoplankton
 !-- Configure phytoplankton groups to simulate
-  num_phytos = 1
-  the_phytos = 1
+  num_phytos = 4
+  the_phytos = 1,3,7,8
   settling =   1
 !-- Benthic phytoplankton group (microphytobenthos)
-  do_mpb = 1
-  R_mpbg = 0.5
-  R_mpbr = 0.05
-  I_Kmpb = 100.
-  mpb_max = 2000.
-  resuspension = 0.45
-  resus_link   = 'TRC_resus'
-  n_zones = 4
-  active_zones = 2,3,4,5
+  do_mpb       =   0
+  R_mpbg       =   0.50
+  R_mpbr       =   0.05
+  I_Kmpb       = 100.00
+  mpb_max      =1000.00
+  resuspension =   0.0, 0.0, 0.0
+  resus_link   =  ''
+  n_zones      =   1
+  active_zones =   1
 !-- Set link variables to other modules
-  p_excretion_target_variable='OGM_dop'
-  n_excretion_target_variable='OGM_don'
-  c_excretion_target_variable='OGM_doc'
+  p_excretion_target_variable ='OGM_dop'
+  n_excretion_target_variable ='OGM_don'
+  c_excretion_target_variable ='OGM_doc'
   si_excretion_target_variable=''
-  p_mortality_target_variable='OGM_pop'
-  n_mortality_target_variable='OGM_pon'
-  c_mortality_target_variable='OGM_poc'
+  p_mortality_target_variable ='OGM_pop'
+  n_mortality_target_variable ='OGM_pon'
+  c_mortality_target_variable ='OGM_poc'
   si_mortality_target_variable=''
-  p1_uptake_target_variable='PHS_frp'
-  n1_uptake_target_variable='NIT_nit'
-  n2_uptake_target_variable='NIT_amm'
-  si_uptake_target_variable='SIL_rsi'
-  do_uptake_target_variable='OXY_oxy'
-  c_uptake_target_variable=''
+  p1_uptake_target_variable   ='PHS_frp'
+  n1_uptake_target_variable   ='NIT_nit'
+  n2_uptake_target_variable   ='NIT_amm'
+  si_uptake_target_variable   ='SIL_rsi'
+  do_uptake_target_variable   ='OXY_oxy'
+c_uptake_target_variable ='CAR_dic'
 !-- General options
-  dbase = './AED2/aed2_phyto_pars.nml'
+  dbase = './LakeGeneva/aed2_phyto_pars.nml'
   extra_diag = .false.
  !zerolimitfudgefactor = ??
   min_rho = 900.
