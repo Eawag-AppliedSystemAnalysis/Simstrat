@@ -52,6 +52,9 @@ program simstrat_main
 
    character(len=100) :: arg
    character(len=:), allocatable :: ParName
+   character(len=:), allocatable :: snapshot_file_path
+   logical :: continue_from_snapshot = .false.
+   integer(8) :: simulation_end_time
 
    ! Print some information
    write (6, *) 'Simstrat version '//version
@@ -109,8 +112,23 @@ program simstrat_main
                            simdata%grid)
    end if
 
+   ! Binary simulation snapshot file
+   snapshot_file_path = simdata%output_cfg%PathOut//'/simulation-snapshot.dat'
+   if (simdata%sim_cfg%continue_from_snapshot) then
+      inquire (file=snapshot_file_path, exist=continue_from_snapshot)
+      print *,"continue from snapshot",continue_from_snapshot
+   end if
+
    ! Setup logger
-   call logger%initialize(simdata%sim_cfg, simdata%output_cfg, simdata%grid)
+   call logger%initialize(simdata%sim_cfg, simdata%output_cfg, simdata%grid, continue_from_snapshot)
+
+   ! Calculate simulation_end_time
+   if (simdata%output_cfg%thinning_interval > 0) then
+      simulation_end_time = int((simdata%sim_cfg%end_datum - simdata%sim_cfg%start_datum) * SECONDS_PER_DAY + 0.5)
+   else
+      simulation_end_time = simdata%output_cfg%simulation_times_for_output( &
+            size(simdata%output_cfg%simulation_times_for_output))
+   end if
 
    ! Initialize simulation modules
    call mod_stability%init(simdata%grid, simdata%model_cfg, simdata%model_param)
@@ -144,70 +162,25 @@ program simstrat_main
 contains
 
    subroutine run_simulation()
+
+      call ok("Start day: "//real_to_str(simdata%sim_cfg%start_datum, '(F7.1)'))
+      if (continue_from_snapshot) then
+         call load_snapshot(snapshot_file_path)
+         call ok("Simulation snapshot successfully read. Snapshot day: "//real_to_str(simdata%model%datum, '(F7.1)'))
+         call logger%calculate_simulation_time_for_next_output(simdata%model%simulation_time)
+      else
+         call logger%log(simdata)
+      end if
+      call ok("End day: "//real_to_str(simdata%sim_cfg%end_datum, '(F7.1)'))
+      call logger%start()
+
       ! Run the simulation loop
-
-      ! Write initial conditions
-      call logger%log(simdata%model%datum)
-
       ! Run simulation until end datum or until no more results are required by the output time file
-      do while (simdata%model%datum<simdata%sim_cfg%end_datum .and. simdata%model%output_counter<=size(simdata%output_cfg%tout))
-
-         ! ****************************************
-         ! ***** Update counters and timestep *****
-         ! ****************************************
-
-         ! Increase iteration counter
-         simdata%model%model_step_counter = simdata%model%model_step_counter + 1
-
-         ! If output times are specified in file
-         if(simdata%output_cfg%thinning_interval==0) then
-            ! At the first iteration or always after the model output was logged
-            if (simdata%model%model_step_counter==1) then
-               ! Adjust timestep so that the next output time is on the "time grid"
-               simdata%model%dt = simdata%output_cfg%adjusted_timestep(simdata%model%output_counter)
-               ! Don't log anymore until the next output time is reached
-               simdata%output_cfg%write_to_file = .false.
-               ! Log initial state if first output time corresponds to simulation start
-               if (simdata%model%dt < 1e-6) then
-                  ! Log initial conditions and display
-                  call logger%log(simdata%model%datum)
-                  if (simdata%sim_cfg%disp_simulation > 0) then
-                     write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%lake_level, &
-                     simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
-                  end if
-                  ! Update counters and timestep
-                  simdata%model%model_step_counter = simdata%model%model_step_counter + 1
-                  simdata%model%output_counter = simdata%model%output_counter + 1
-                  simdata%model%dt = simdata%output_cfg%adjusted_timestep(simdata%model%output_counter)
-               end if
-
-            else if (simdata%output_cfg%write_to_file) then
-               ! Adjust timestep so that the next output time is on the "time grid"
-               simdata%model%dt = simdata%output_cfg%adjusted_timestep(simdata%model%output_counter)
-               ! Don't log anymore until the next output time is reached
-               simdata%output_cfg%write_to_file = .false.
-            end if
-
-            ! If the next output time is reached
-            if(simdata%model%model_step_counter==sum(int(simdata%output_cfg%n_timesteps_between_tout(1:simdata%model%output_counter)))) then
-               ! Increase output counter
-               simdata%model%output_counter = simdata%model%output_counter + 1
-               ! Log next model state
-               simdata%output_cfg%write_to_file = .true.
-            end if
-         else ! If output frequency is given in file
-            ! If the next output time is reached
-            if(mod(simdata%model%model_step_counter,simdata%output_cfg%thinning_interval)==0) then
-               ! Log next model state
-               simdata%output_cfg%write_to_file = .true.
-            else
-               ! Don't log
-               simdata%output_cfg%write_to_file = .false.
-            end if
-         end if
+      do while (simdata%model%simulation_time < simulation_end_time)
 
          ! Advance to the next timestep
-         simdata%model%datum = simdata%model%datum + simdata%model%dt/86400
+         simdata%model%simulation_time = simdata%model%simulation_time + simdata%sim_cfg%timestep
+         simdata%model%datum = datum(simdata%sim_cfg%start_datum, simdata%model%simulation_time)
 
          ! ************************************
          ! ***** Compute next model state *****
@@ -239,16 +212,6 @@ contains
             simdata%grid%lake_level = simdata%grid%z_face(simdata%grid%ubnd_fce)
          end if
 
-         ! Display to screen
-         if (simdata%model%model_step_counter==1 .and. simdata%sim_cfg%disp_simulation/=0) then
-            write(6,*)
-            write(6,*) ' -------------------------- '
-            write(6,*) '   SIMULATION IN PROGRESS   '
-            write(6,*) ' -------------------------- '
-            write(6,*)
-            if(simdata%sim_cfg%disp_simulation/=0) write(6,'(A12, A20, A20, A20)') 'Time [d]','Surface level [m]','T_surf [degC]','T_bottom [degC]'
-         end if
-
          ! Update Coriolis
          call mod_forcing%update_coriolis(simdata%model)
 
@@ -275,36 +238,38 @@ contains
          end if
 
          ! Call logger to write files
-         if (simdata%output_cfg%write_to_file) then
-            call logger%log(simdata%model%datum)
-         end if
-
-         ! ***********************************
-         ! ***** Log to file and display *****
-         ! ***********************************
-
-         ! Standard display: display when logged: datum, lake surface, T(1), T(surf)
-         if (simdata%sim_cfg%disp_simulation==1 .and. simdata%output_cfg%write_to_file) then
-            write(6,'(F12.4,F16.4,F20.4,F20.4)') simdata%model%datum, simdata%grid%lake_level, &
-            simdata%model%T(simdata%grid%nz_occupied), simdata%model%T(1)
-
-         ! Extra display: display every iteration: datum, lake surface, T(1), T(surf)
-         else if (simdata%sim_cfg%disp_simulation==2) then
-            write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%lake_level, &
-            simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
-         end if
+         call logger%log(simdata)
 
          ! This logical is used to do some allocation in the forcing, absorption and lateral subroutines during the first timestep
          simdata%model%first_timestep = .false.
       end do
+      call save_snapshot(snapshot_file_path)
+   end subroutine
 
-      if (simdata%sim_cfg%disp_simulation/=0) then
-         write(6,*)
-         write(6,*) ' -------------------------- '
-         write(6,*) '    SIMULATION COMPLETED    '
-         write(6,*) ' -------------------------- '
-         write(6,*)
-      end if
+   subroutine save_snapshot(file_path)
+      implicit none
+      character(len=*), intent(in) :: file_path
+
+      open(80, file=file_path, Form='unformatted', Action='Write')
+      call simdata%model%save()
+      call simdata%grid%save()
+      call mod_absorption%save()
+      call mod_lateral%save()
+      call logger%save()
+      close(80)
+   end subroutine
+
+   subroutine load_snapshot(file_path)
+      implicit none
+      character(len=*), intent(in) :: file_path
+
+      open(81, file=file_path, Form='unformatted', Action='Read')
+      call simdata%model%load()
+      call simdata%grid%load()
+      call mod_absorption%load()
+      call mod_lateral%load()
+      call logger%load()
+      close(81)
    end subroutine
 
 end program simstrat_main

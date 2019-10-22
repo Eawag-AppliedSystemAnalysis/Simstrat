@@ -36,11 +36,12 @@
     "SnowModel"               : 1                       ! Switch to turn on/off the snow model (needs ice model and an additional column in forcing)
   },
   "Simulation" : {
-    "Timestep s"        : 300,                          ! Simulation timestep in seconds
-    "Start year"        : 1900,                         ! Starting year
-    "Start d"           : 35001,                        ! Simulation start in days since 01.01. of starting year
-    "End d"             : 35732,                        ! Simulation end
-    "DisplaySimulation" : 1                             ! 0: No display, 1: Display when output is written, 2: Display every iteration
+    "Timestep s"                  : 300,                ! Simulation timestep in seconds
+    "Start year"                  : 1900,               ! Starting year
+    "Start d"                     : 35001,              ! Simulation start in days since 01.01. of starting year
+    "End d"                       : 35732,              ! Simulation end
+    "DisplaySimulation"           : 0,                  ! 0: No display, 1: Display when output is written, 2: Display every iteration
+    "Continue from last snapshot" : true                ! If true simulation continues from last snapshot (if present in output folder). Default: false
   },
   "ModelParameters" : {
     "lat"           : 47.3,                             ! Latitude in [°]
