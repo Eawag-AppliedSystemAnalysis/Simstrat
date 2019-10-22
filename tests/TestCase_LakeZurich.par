@@ -53,7 +53,6 @@
     "c10"           : 1,                                ! Wind drag coefficient, a physical constant around 0.001 if WindDragModel = 1 and a calibration parameter around 1 if WindDragModel = 2 or 3
     "cd"            : 0.002,                            ! Bottom drag coefficient [-]
     "hgeo"          : 0.1,                              ! Geothermal heat flux [W/m2]
-    "k_min"         : 1e-30,                            ! Minimum value for TKE [J/kg]
     "p_sw"          : 1,                                ! Fit parameter for absorption of short wave radiation from sky [-]
     "p_lw"          : 1.1978,                           ! Fit parameter for absorption of IR radiation from sky [-]
     "p_windf"       : 1,                                ! Fit parameter for convective and latent heat fluxes [-]

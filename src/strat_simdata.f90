@@ -94,7 +94,6 @@ module strat_simdata
       real(RK) :: C10_constant
       real(RK) :: CD
       real(RK) :: fgeo
-      real(RK) :: k_min
       real(RK) :: p_sw
       real(RK) :: p_lw
       real(RK) :: p_windf

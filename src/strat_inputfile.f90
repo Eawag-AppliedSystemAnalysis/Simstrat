@@ -643,7 +643,6 @@ contains
 
          call par_file%get("ModelParameters.cd", model_param%CD, found); call check_field(found, 'ModelParameters.cd', ParName)
          call par_file%get("ModelParameters.hgeo", model_param%fgeo, found); call check_field(found, 'ModelParameters.hgeo', ParName)
-         call par_file%get("ModelParameters.k_min", model_param%k_min, found); call check_field(found, 'ModelParameters.k_min', ParName)
          call par_file%get("ModelParameters.p_sw", model_param%p_sw, found); call check_field(found, 'ModelParameters.p_sw', ParName)
          call par_file%get("ModelParameters.p_lw", model_param%p_lw, found); call check_field(found, 'ModelParameters.p_lw', ParName)
          call par_file%get("ModelParameters.p_windf", model_param%p_windf, found); call check_field(found, 'ModelParameters.p_windf', ParName)
