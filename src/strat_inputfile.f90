@@ -31,7 +31,6 @@ module strat_inputfile
       procedure, pass(self), public :: read_grid_config
       procedure, pass(self), public :: setup_model
       procedure, pass(self), public :: setup_output_conf
-      procedure, pass(self), public :: check_advection
    end type SimstratSimulationFactory
 
 contains
@@ -64,9 +63,6 @@ contains
 
       ! Init rest of model
       call self%setup_model()
-
-      ! Check input files for advection
-      call self%check_advection()
 
       ! Set output configuration
       call self%setup_output_conf()
@@ -658,7 +654,6 @@ contains
 
          call par_file%get("ModelParameters.cd", model_param%CD, found); call check_field(found, 'ModelParameters.cd', ParName)
          call par_file%get("ModelParameters.hgeo", model_param%fgeo, found); call check_field(found, 'ModelParameters.hgeo', ParName)
-         call par_file%get("ModelParameters.k_min", model_param%k_min, found); call check_field(found, 'ModelParameters.k_min', ParName)
          call par_file%get("ModelParameters.p_sw", model_param%p_sw, found); call check_field(found, 'ModelParameters.p_sw', ParName)
          call par_file%get("ModelParameters.p_lw", model_param%p_lw, found); call check_field(found, 'ModelParameters.p_lw', ParName)
          call par_file%get("ModelParameters.p_windf", model_param%p_windf, found); call check_field(found, 'ModelParameters.p_windf', ParName)
@@ -781,75 +776,5 @@ contains
          call error('Field '//field_name//' not found in '//file_name)
       end if
    end subroutine check_field
-
-   ! Set has_advection to 1 if any inflow/outflow file contains data, otherwise to 0
-   subroutine check_advection(self)
-      implicit none
-      class(SimstratSimulationFactory) :: self
-
-      ! Local variables
-      character(200) :: line
-      integer :: nval_line(1:2)
-      integer  :: i, j, fnum(1:4), nval(1:4), nval_deep, nval_surface, if_adv
-      real(RK) :: dummy, z_Inp_dummy(1:self%simdata%grid%max_length_input_data)
-
-      open (41, status='old', file=self%simdata%input_cfg%QinpName)
-      open (42, status='old', file=self%simdata%input_cfg%QoutName)
-      open (43, status='old', file=self%simdata%input_cfg%TinpName)
-      open (44, status='old', file=self%simdata%input_cfg%SinpName)
-
-      fnum = [41, 42, 43, 44]
-      if_adv = 0
-      nval = 0
-      do i = 1, 4
-         self%simdata%model%has_surface_input(i) = .FALSE.
-         self%simdata%model%has_deep_input(i) = .FALSE.
-
-         read (fnum(i), *, end=8) ! Skip header (description of columns)
-         read (fnum(i), "(A)", end=8) line ! Read number of input depths (static)
-         nval_surface = 0
-
-         ! Read one value, aborts and goes to line 8 if no value is present
-         read(line,*,end=8) nval_line(1)
-         ! Read 2 values, aborts and goes to line 7 if only one value is present (no surface inflow)
-         read(line,*,end=7) nval_line(1:2)
-         nval_surface = nval_line(2)
-         if (nval_surface > 0) then
-            self%simdata%model%has_surface_input(i) = .TRUE.
-         end if
-
-7        nval_deep = nval_line(1)
-
-         if (nval_deep > 0) then
-            self%simdata%model%has_deep_input(i) = .TRUE.
-         end if
-         nval(i) = nval_deep + nval_surface
-         read (fnum(i), *, end=8) dummy, (z_Inp_dummy(j), j=1, nval(i)) ! Read input depths
-         goto 9
-8        if_adv = if_adv + 1    ! +1 in case there is no data in the file
-9        rewind(fnum(i))
-      end do
-
-      if (if_adv == 4) then   ! If all input files are empty
-         self%simdata%model%has_advection = .FALSE.
-         call warn('Advection is turned off since the input files were found to be empty. Check if you use the right line feed (\n) if they are not empty.')
-      else
-         self%simdata%model%has_advection = .TRUE.
-         self%simdata%model%nz_input = maxval(nval)
-      end if
-
-      self%simdata%model%has_deep_input_AED2 = .FALSE.
-      if (self%simdata%model%has_deep_input(1)) then
-         self%simdata%model%has_deep_input_AED2 = .TRUE.
-      end if
-
-      self%simdata%model%has_surface_input_AED2 = .FALSE.
-
-      if (self%simdata%model%has_surface_input(1)) then
-         self%simdata%model%has_surface_input_AED2 = .TRUE.
-      end if
-
-      return
-   end subroutine check_advection
 
 end module strat_inputfile

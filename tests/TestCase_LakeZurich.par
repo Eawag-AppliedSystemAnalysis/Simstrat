@@ -20,7 +20,7 @@
   },
   "ModelConfig" : {
     "MaxLengthInputData"      : 1000,                   ! Maximum length of input data (initial conditions, bathymetry, grid etc.)
-    "CoupleAED2"              : true,                  ! Switch to turn on/off the biochemical model AED2
+    "CoupleAED2"              : false,                  ! Switch to turn on/off the biochemical model AED2
     "TurbulenceModel"         : 1,                      ! 1: k-epsilon, 2: Mellor-Yamada
     "SplitSeicheParameter"    : true,                   ! True: Use a_seiche if N2 exceeds strat_sumr and a_seiche_w otherwise, False: Always use a_seiche
     "StabilityFunction"       : 2,                      ! 1: constant, 2: quasi-equilibrium
@@ -30,7 +30,7 @@
     "UseFilteredWind"         : false,                  ! Switch to activate filtered wind (needs one more column in forcing file)
     "SeicheNormalization"     : 2,                      ! 1: max N2, 2: integral
     "WindDragModel"           : 3,                      ! 1: constant, 2: ocean (increasing), 3: lake (Wüest and Lorke, 2003)
-    "InflowMode"              : 0,                      ! 0: no inflow, 1: inflow depths are chosen manually, 2: inflow is density-driven
+    "InflowMode"              : 1,                      ! 0: no inflow, 1: inflow depths are chosen manually, 2: inflow is density-driven
     "PressureGradients"       : 0,                      ! 0: off, 1: Svensson 1978
     "IceModel"                : 1,                      ! Switch to turn on/off the ice model
     "SnowModel"               : 1                       ! Switch to turn on/off the snow model (needs ice model and an additional column in forcing)
@@ -65,7 +65,6 @@
     "c10"           : 1,                                ! Wind drag coefficient, a physical constant around 0.001 if WindDragModel = 1 and a calibration parameter around 1 if WindDragModel = 2 or 3
     "cd"            : 0.002,                            ! Bottom drag coefficient [-]
     "hgeo"          : 0.1,                              ! Geothermal heat flux [W/m2]
-    "k_min"         : 1e-30,                            ! Minimum value for TKE [J/kg]
     "p_sw"          : 1,                                ! Fit parameter for absorption of short wave radiation from sky [-]
     "p_lw"          : 1.1978,                           ! Fit parameter for absorption of IR radiation from sky [-]
     "p_windf"       : 1,                                ! Fit parameter for convective and latent heat fluxes [-]

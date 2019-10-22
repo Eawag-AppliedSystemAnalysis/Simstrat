@@ -20,7 +20,7 @@
 
     ! *** Further parameters controlling water dynamic ***
      real(RK), parameter     :: Prndtl = 0.8_RK ! Prandtl number for air??
-     real(RK)                :: k_min = 1.0e-9_RK ! Min value allowed for turbulent kinetic energy (read from file!?->useless here)
+     real(RK), parameter     :: k_min = 1.0e-30_RK ! Min value allowed for turbulent kinetic energy (read from file!?->useless here)
      real(RK), parameter     :: eps_min = 1.0e-30_RK ! Min value allowed for TKE dissipation
      real(RK), parameter     :: avh_min = 1.0e-8_RK ! Min value allowed for turbulent viscosity at boundaries
 

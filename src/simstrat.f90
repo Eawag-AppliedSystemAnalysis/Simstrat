@@ -91,32 +91,28 @@ program simstrat_main
                             simdata%input_cfg%AbsorpName, &
                             simdata%grid)
 
-! If there is advection (due to inflow)
-   if (simdata%model%has_advection .and. simdata%model_cfg%inflow_mode > 0) then
-      ! initialize advection module
-      call mod_advection%init(simdata%model_cfg, &
-                           simdata%model_param, &
-                           simdata%grid)
-
-      ! initialize lateral module based on configuration
-      if (simdata%model_cfg%inflow_mode == 2) then
-
-         ! Gravity based inflow
-         mod_lateral => mod_lateral_rho
-      else
-         ! User defined inflow depths
-         mod_lateral => mod_lateral_normal
-      end if
-      call mod_lateral%init(simdata%model_cfg, &
-                           simdata%model_param, &
-                           simdata%grid)
-   else
-      call warn('Lake in-/outflow is turned off')
-   end if
-
    ! Initialize biochemical model "AED2" if used
    if (simdata%model_cfg%couple_aed2) then
       call mod_aed2%init(simdata%model, simdata%grid, simdata%model_cfg, simdata%aed2_cfg)
+   end if
+
+   ! If there is advection (due to inflow)
+   if (simdata%model_cfg%inflow_mode > 0) then
+      ! initialize advection module
+      call mod_advection%init(simdata%model, simdata%model_cfg, simdata%model_param, simdata%grid)
+
+      ! initialize lateral module based on configuration
+      if (simdata%model_cfg%inflow_mode == 1) then
+
+         ! Gravity based inflow
+         mod_lateral => mod_lateral_normal
+      else if (simdata%model_cfg%inflow_mode == 2) then
+         ! User defined inflow depths
+         mod_lateral => mod_lateral_rho
+      end if
+      call mod_lateral%init(simdata%model, simdata%model_cfg, simdata%input_cfg, simdata%aed2_cfg, simdata%model_param, simdata%grid)
+   else
+      call warn('Lake in-/outflow is turned off')
    end if
 
    ! Setup logger
@@ -244,11 +240,12 @@ contains
          call mod_stability%update(simdata%model)
 
          ! If there is inflow/outflow do advection part
-         if (simdata%model%has_advection .and. simdata%model_cfg%inflow_mode > 0) then
+         if (simdata%model_cfg%inflow_mode > 0) then
             ! Treat inflow/outflow
             call mod_lateral%update(simdata%model)
             ! Set old lake level (before it is changed by advection module)
             simdata%grid%lake_level_old = simdata%grid%z_face(simdata%grid%ubnd_fce)
+
             ! Update lake advection using the inflow/outflow data
             call mod_advection%update(simdata%model)
             ! Update lake level

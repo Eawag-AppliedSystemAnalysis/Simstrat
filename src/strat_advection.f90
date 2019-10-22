@@ -28,16 +28,29 @@ module strat_advection
 
 contains
 
-   subroutine advection_init(self, model_config, model_param, grid)
+   subroutine advection_init(self, state, model_config, model_param, grid)
       implicit none
       class(AdvectionModule) :: self
+      class(ModelState) :: state
       class(StaggeredGrid), target :: grid
       class(ModelConfig), target :: model_config
       class(ModelParam), target :: model_param
 
+      ! Local variables
+      integer :: i
+
       self%cfg => model_config
       self%param => model_param
       self%grid => grid
+
+      if (self%cfg%couple_aed2) then
+         do i = 1, state%n_AED2
+            select case(trim(state%AED2_names(i)))
+            case('CAR_pH')
+               state%n_pH = i
+            end select
+         end do
+      end if
 
    end subroutine
 
@@ -61,7 +74,6 @@ contains
                  h=>self%grid%h, &
                  Q_vert=>state%Q_vert, &
                  AED2_state=>state%AED2_state, &
-                 AED2_inflow=>state%AED2_inflow, &
                  ubnd_vol=>self%grid%ubnd_vol, &
                  ubnd_fce=>self%grid%ubnd_fce)
 
@@ -263,12 +275,17 @@ contains
 
          ! Add change to the state variable
          do i=1,state%n_AED2
-            dAED2(1:ubnd_vol,i) = dAED2(1:ubnd_vol,i) + state%AED2_inflow(1:ubnd_vol,i) + state%Q_inp(2, 1:ubnd_vol)*AED2_state(1:ubnd_vol,i)
+            dAED2(1:ubnd_vol,i) = dAED2(1:ubnd_vol,i) + state%Q_inp(n_simstrat + i, 1:ubnd_vol) + state%Q_inp(2, 1:ubnd_vol)*AED2_state(1:ubnd_vol,i)
             AED2_state(1:ubnd_vol,i) = AED2_state(1:ubnd_vol,i) + AreaFactor_adv(1:ubnd_vol)*dAED2(1:ubnd_vol,i)
          end do
 
          ! Variation of variables due to change in volume
          AED2_state(ubnd_vol,:) = AED2_state(ubnd_vol,:)*h(ubnd_vol)/(h(ubnd_vol) + dh)
+
+         ! Transform [H] back to pH
+         if(self%cfg%couple_aed2) then
+            AED2_state(:,state%n_pH) = -log10(AED2_state(:,state%n_pH))
+         end if
 
       end associate
    end subroutine
