@@ -38,6 +38,8 @@ def is_equal(x, y, tol=1e-8):
         min, max = (x, y) if abs(x) < abs(y) else (y,x)
         return abs(min/max - 1) < tol
 
+def join_paths(prefix, path):
+    return "%s/%s" % (prefix, path)
 
 class Tester(object):
     def __init__(self):
@@ -52,10 +54,10 @@ class Tester(object):
         return 0
 
     def input_file(self, file):
-        return os.path.join(INPUT_DATA_FOLDER, file)
+        return join_paths(INPUT_DATA_FOLDER, file)
     
     def output_file(self, variable):
-        return os.path.join(ACTUAL_RESULTS_FOLDER, "%s_out.dat" % variable)
+        return join_paths(ACTUAL_RESULTS_FOLDER, "%s_out.dat" % variable)
 
     def log_title(self, title):
         print()
@@ -74,7 +76,7 @@ class Tester(object):
         self.log_step("Clean up")
         for f in os.listdir(ACTUAL_RESULTS_FOLDER):
             if f.endswith(".dat"):
-                os.remove(os.path.join(ACTUAL_RESULTS_FOLDER, f))
+                os.remove(join_paths(ACTUAL_RESULTS_FOLDER, f))
         if os.path.exists(self.input_file("forcing.dat")):
             os.remove(self.input_file("forcing.dat"))
 
@@ -153,12 +155,12 @@ class Tester(object):
     def assert_equal_outputs(self):
         for f in os.listdir(EXPECTED_RESULTS_FOLDER):
             if f.endswith("_out.dat"):
-                actual_file = os.path.join(ACTUAL_RESULTS_FOLDER, f)
+                actual_file = join_paths(ACTUAL_RESULTS_FOLDER, f)
                 if os.path.exists(actual_file):
-                    expected_lines = read_lines(os.path.join(EXPECTED_RESULTS_FOLDER, f))
-                    actual_lines = read_lines(os.path.join(ACTUAL_RESULTS_FOLDER, f))
+                    expected_lines = read_lines(join_paths(EXPECTED_RESULTS_FOLDER, f))
+                    actual_lines = read_lines(join_paths(ACTUAL_RESULTS_FOLDER, f))
                     if actual_lines != expected_lines:
-                        error_report = os.path.join(ERROR_FOLDER, "%s.html" % f)
+                        error_report = join_paths(ERROR_FOLDER, "%s.html" % f)
                         self.fail("Output %s: Actual output (%s lines) differ from expected (%s lines). For more details see %s" 
                              % (f, len(actual_lines), len(expected_lines), error_report))
                         differ = difflib.HtmlDiff()
@@ -182,10 +184,10 @@ class Tester(object):
         self.log_step("Check output for time %s" % time)
         for f in os.listdir(EXPECTED_RESULTS_FOLDER):
             if f.endswith("_out.dat"):
-                actual_file = os.path.join(ACTUAL_RESULTS_FOLDER, f)
+                actual_file = join_paths(ACTUAL_RESULTS_FOLDER, f)
                 if os.path.exists(actual_file):
-                    expected_line = self.read_line(os.path.join(EXPECTED_RESULTS_FOLDER, f), time)
-                    actual_line = self.read_line(os.path.join(ACTUAL_RESULTS_FOLDER, f), time)
+                    expected_line = self.read_line(join_paths(EXPECTED_RESULTS_FOLDER, f), time)
+                    actual_line = self.read_line(join_paths(ACTUAL_RESULTS_FOLDER, f), time)
                     if actual_line != expected_line:
                         self.fail("%s: expected\n%s\nbut was\n%s" % (f, expected_line, actual_line))
                 else:
