@@ -7,18 +7,20 @@ Pre-built binaries are available [here](https://github.com/Eawag-AppliedSystemAn
 
 ## Build Simstrat
 
-### Linux or MacOS environment
-We suggest to setup the building environment using Docker; a complete step-by-step guide to use a docker container is available
+### Docker building environment on Linux, MacOS, Win Linux host systems
+You can setup the building environment using Docker; a complete step-by-step guide to use a docker container is available
 [here](misc/docker_build_env).
 
-Once the building environment is setup, you can build simstrat with the provided build script. More details [here](build).
 
-### Windows environment
+### Manual building environment on Windows
 Please install the required packages listed below (System requirements) and then from terminal navigate into `build` folder and run 
 
+### Build
+Once the building environment is setup, you can build Simstrat from the `/build` folder with:
 ~~~bash
 FoBiS.py build
 ~~~
+More building details [here](build).
 
 **System requirements**
 
