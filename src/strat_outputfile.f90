@@ -344,7 +344,7 @@ contains
       integer(8), intent(inout) :: simulation_time_for_next_output
       real(RK), intent(in) :: start_datum
       integer, intent(in) :: thinning_interval
-      integer(8), dimension(:), pointer, intent(in) :: simulation_times_for_output
+      integer(8), dimension(:), allocatable, intent(in) :: simulation_times_for_output
       integer, intent(inout) :: counter
       integer :: i
 

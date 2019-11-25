@@ -396,14 +396,11 @@ contains
    subroutine read_array(input_unit, array)
       implicit none
       integer, intent(in) :: input_unit
-      real(RK), dimension(:), allocatable, intent(out) :: array
-      real(RK), dimension(:), allocatable :: array_internal
+      real(RK), dimension(:), allocatable, intent(inout) :: array
       integer :: array_lbound, array_ubound
 
       read(input_unit) array_lbound, array_ubound
-      allocate (array_internal(array_lbound:array_ubound))
-      read(input_unit) array_internal(array_lbound:array_ubound)
-      call move_alloc(array_internal, array)
+      read(input_unit) array(array_lbound:array_ubound)
    end subroutine
 
 
@@ -419,14 +416,14 @@ contains
    subroutine read_matrix(input_unit, matrix)
       implicit none
       integer, intent(in) :: input_unit
-      real(RK), dimension(:, :), allocatable, intent(out) :: matrix
-      real(RK), dimension(:, :), allocatable :: matrix_internal
+      real(RK), dimension(:, :), allocatable, intent(inout) :: matrix
       integer :: matrix_lbound_1, matrix_ubound_1, matrix_lbound_2, matrix_ubound_2
 
       read(input_unit) matrix_lbound_1, matrix_ubound_1, matrix_lbound_2, matrix_ubound_2
-      allocate (matrix_internal(matrix_lbound_1:matrix_ubound_1, matrix_lbound_2:matrix_ubound_2))
-      read(input_unit) matrix_internal(matrix_lbound_1:matrix_ubound_1, matrix_lbound_2:matrix_ubound_2)
-      call move_alloc(matrix_internal, matrix)
+      if (.not. allocated(matrix)) then
+         allocate (matrix(matrix_lbound_1:matrix_ubound_1, matrix_lbound_2:matrix_ubound_2))
+      end if
+      read(input_unit) matrix(matrix_lbound_1:matrix_ubound_1, matrix_lbound_2:matrix_ubound_2)
    end subroutine
 
    pure real(RK) function datum(start_datum, simulation_time)
