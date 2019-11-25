@@ -1,4 +1,3 @@
-import difflib
 import math
 import os
 import shutil
@@ -157,17 +156,13 @@ class Tester(object):
             if f.endswith("_out.dat"):
                 actual_file = join_paths(ACTUAL_RESULTS_FOLDER, f)
                 if os.path.exists(actual_file):
-                    expected_lines = read_lines(join_paths(EXPECTED_RESULTS_FOLDER, f))
-                    actual_lines = read_lines(join_paths(ACTUAL_RESULTS_FOLDER, f))
+                    expected_result_file = join_paths(EXPECTED_RESULTS_FOLDER, f)
+                    expected_lines = read_lines(expected_result_file)
+                    actual_result_file = join_paths(ACTUAL_RESULTS_FOLDER, f)
+                    actual_lines = read_lines(actual_result_file)
                     if actual_lines != expected_lines:
-                        error_report = join_paths(ERROR_FOLDER, "%s.html" % f)
-                        self.fail("Output %s: Actual output (%s lines) differ from expected (%s lines). For more details see %s" 
-                             % (f, len(actual_lines), len(expected_lines), error_report))
-                        differ = difflib.HtmlDiff()
-                        html = differ.make_file(expected_lines, actual_lines)
-                        os.makedirs(ERROR_FOLDER, exist_ok=True)
-                        with open(error_report, 'w') as f:
-                            f.write(html)
+                        self.fail("Output %s: Actual output (%s lines) differ from expected (%s lines). For more details compare %s with %s" 
+                             % (f, len(actual_lines), len(expected_lines), actual_result_file, expected_result_file))
                 else:
                     self.fail("Output file %s missing" % actual_file)
 
