@@ -1,3 +1,4 @@
+import csv
 import math
 import os
 import shutil
@@ -39,6 +40,26 @@ def is_equal(x, y, tol=1e-8):
 
 def join_paths(prefix, path):
     return "%s/%s" % (prefix, path)
+
+class Data(object):
+    def __init__(self, name):
+        self.name = name
+        self.header = None
+        self.rows = []
+
+    def handle_row(self, row):
+        if self.header is None:
+            self.header = row
+        else:
+            self.rows.append([float(c) for c in row])
+
+def read_data(file_path):
+    data = Data(file_path)
+    with open(file_path, 'r') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            data.handle_row(row)
+    return data
 
 class Tester(object):
     def __init__(self):
@@ -156,15 +177,48 @@ class Tester(object):
             if f.endswith("_out.dat"):
                 actual_file = join_paths(ACTUAL_RESULTS_FOLDER, f)
                 if os.path.exists(actual_file):
-                    expected_result_file = join_paths(EXPECTED_RESULTS_FOLDER, f)
-                    expected_lines = read_lines(expected_result_file)
-                    actual_result_file = join_paths(ACTUAL_RESULTS_FOLDER, f)
-                    actual_lines = read_lines(actual_result_file)
-                    if actual_lines != expected_lines:
-                        self.fail("Output %s: Actual output (%s lines) differ from expected (%s lines). For more details compare %s with %s" 
-                             % (f, len(actual_lines), len(expected_lines), actual_result_file, expected_result_file))
+                    self.assert_almost_equal_result(f)
                 else:
                     self.fail("Output file %s missing" % actual_file)
+
+    def assert_almost_equal_result(self, file):
+        expected_result_file = join_paths(EXPECTED_RESULTS_FOLDER, file)
+        expected_result = read_data(expected_result_file)
+        actual_result_file = join_paths(ACTUAL_RESULTS_FOLDER, file)
+        actual_result = read_data(actual_result_file)
+        if actual_result.header != expected_result.header:
+            self.fail("Actual header in %s differs from expected header in %s."
+                      % (actual_result_file, expected_result_file))
+        elif len(actual_result.rows) != len(expected_result.rows):
+            self.fail("Actual file %s has %s rows but expected file %s has % rows."
+                      % (actual_result_file, len(actual_result.rows), expected_result_file, len(expected_result.rows)))
+        else:
+            for i in range(len(actual_result.rows)):
+                actual_row = actual_result.rows[i]
+                expected_row = expected_result.rows[i]
+                if len(actual_row) != len(expected_row):
+                    self.fail("Actual row at %s in %s has %s cells but expected row at %s in %s has %s cells."
+                              % (actual_row[0], actual_result_file, len(actual_row), 
+                                 expected_row[0], expected_result_file, len(expected_row)))
+                    break
+                if actual_row[0] != expected_row[0]:
+                    self.fail("Actual row at %s in %s but expected row at %s in %s."
+                              % (actual_row[0], actual_result_file, expected_row[0], expected_result_file))
+                    break
+                max_absolute_diff = 0
+                max_relative_diff = 0
+                for j in range(1, len(actual_row)):
+                    ac = actual_row[j]
+                    ec = expected_row[j]
+                    absolute_diff = abs(ac - ec)
+                    max_absolute_diff = max(max_absolute_diff, absolute_diff)
+                    if absolute_diff > 0:
+                        max_relative_diff = max(max_relative_diff, absolute_diff / max(abs(ac), abs(ec)))
+                if max_relative_diff > 1e-3:
+                    print("%s @ %.3f: %.2e, %.2e" % (file, actual_row[0], max_absolute_diff, max_relative_diff))
+                    if max_absolute_diff > 1e-10:
+                        self.fail("%s @ %.3f: max error = %.2e, max rel error = %.2e" 
+                                  % (file, actual_row[0], max_absolute_diff, max_relative_diff))
 
     def assert_equal_lists(self, actual_list, expected_list, list_name):
         if len(actual_list) != len(expected_list):
