@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends apt-utils \
 gfortran gfortran-mingw-w64 nano less tree python3 python3-pip doxygen git graphviz locales
 
 # install some needed python modules
-RUN pip3 install setuptools wheel
+RUN pip3 install setuptools wheel future
 RUN pip3 install FoBiS.py ford pygooglechart
 
 # set alternatives for the compiler

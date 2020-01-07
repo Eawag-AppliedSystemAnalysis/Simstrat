@@ -46,7 +46,7 @@ To run the Zurichsee testcase, go to the tests folder and use the script `./run_
 
 > **N.B.** you can use one-line command to call the script from the root repository folder, e.g.
 ~~~bash
-cd build; ./build.sh; cd -
+cd build; ./run_testcase.sh; cd -
 ~~~
 
 Enjoy your Simstrat simulations!

@@ -23,7 +23,7 @@ module strat_transport
 
 contains
 
-  ! method to assign external source
+  ! Method to assign external source
    subroutine transport_assign_external_source(self, dVar)
       class(TransportModVar), intent(inout) :: self
       real(RK), dimension(:), target :: dVar
@@ -43,7 +43,7 @@ contains
          !!!!!!!! Define sources !!!!!!!!
          sources = self%dVar ! We only have a generic, external source!
 
-         ! no explicit boundary conditions
+         ! No explicit boundary conditions
          boundaries(1:ubnd_vol) = 0
 
       end associate

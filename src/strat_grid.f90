@@ -74,10 +74,54 @@ module strat_grid
       procedure, pass :: shrink => grid_shrink      ! Shrink grid by one box (= merge uppermost 2 boxes)
       procedure, pass :: modify_top_box => grid_modify_top_box  ! Change size of topmost box to reflect niveau change
 
-
+      ! Saving & loading methods
+      procedure, pass :: save => grid_save
+      procedure, pass :: load => grid_load
    end type
 
 contains
+
+   subroutine grid_save(self)
+      implicit none
+      class(StaggeredGrid), intent(inout) :: self
+
+      call save_array(80, self%h)
+      call save_array(80, self%z_face)
+      call save_array(80, self%z_volume)
+      call save_array(80, self%Az)
+      call save_array(80, self%dAz)
+      call save_array(80, self%meanint)
+      write(80) self%volume, self%h_old
+      call save_array(80, self%AreaFactor_1)
+      call save_array(80, self%AreaFactor_2)
+      call save_array(80, self%AreaFactor_k1)
+      call save_array(80, self%AreaFactor_k2)
+      call save_array(80, self%AreaFactor_eps)
+      write(80) self%nz_grid, self%nz_occupied, self%max_length_input_data
+      write(80) self%ubnd_vol, self%ubnd_fce, self%length_vol, self%length_fce
+      write(80) self%z_zero, self%lake_level, self%lake_level_old, self%max_depth
+   end subroutine
+
+   subroutine grid_load(self)
+      implicit none
+      class(StaggeredGrid), intent(inout) :: self
+
+      call read_array(81, self%h)
+      call read_array(81, self%z_face)
+      call read_array(81, self%z_volume)
+      call read_array(81, self%Az)
+      call read_array(81, self%dAz)
+      call read_array(81, self%meanint)
+      read(81) self%volume, self%h_old
+      call read_array(81, self%AreaFactor_1)
+      call read_array(81, self%AreaFactor_2)
+      call read_array(81, self%AreaFactor_k1)
+      call read_array(81, self%AreaFactor_k2)
+      call read_array(81, self%AreaFactor_eps)
+      read(81) self%nz_grid, self%nz_occupied, self%max_length_input_data
+      read(81) self%ubnd_vol, self%ubnd_fce, self%length_vol, self%length_fce
+      read(81) self%z_zero, self%lake_level, self%lake_level_old, self%max_depth
+   end subroutine
 
   ! Set up grid at program start
    subroutine grid_init(self, config)
@@ -143,32 +187,22 @@ contains
          ! Grid size given through number of grid_read
          self%nz_grid = config%nz_grid
 
-         !Include top value if not included
+         ! If top value not included
          if (config%grid_read(1) /= (config%max_depth - self%z_zero)) then
             call error('Top value '//trim(toStr(config%max_depth - self%z_zero))//' is not included in grid file!')
-            !warn('Grid top value is smaller than in morphology file and added automatically '
-            !self%nz_grid=self%nz_grid + 1
-            !do i = self%nz_grid,1,-1
-            !   config%grid_read(i)=config%grid_read(i - 1)
-            !end do
-            !config%grid_read(1)=0.0_RK
          end if
 
-         !If maxdepth grid larger than morphology
+         !If maxdepth of grid larger than morphology
          if (config%grid_read(self%nz_grid + 1) < -self%z_zero) then
             call error('Grid invalid: maxdepth of grid larger than morphology!')
-            !do while ((config%grid_read(self%nz_grid)>config%depth).and.(self%nz_grid>0.))
-            !    self%nz_grid=self%nz_grid-1
-            !end do
          end if
 
-         !Include bottom value if not included
+         ! If bottom value not included
          if (config%grid_read(self%nz_grid + 1) > -self%z_zero) then
             call error('Bottom value '//trim(toStr(-self%z_zero))//' is not included in grid file!')
-            !self%nz_grid=self%nz_grid+1
-            !config%grid_read(self%nz_grid)=config%depth
          end if
 
+         ! Check for monotonously decreasing grid values
          do i=2,self%nz_grid
             if ((config%grid_read(i) - config%grid_read(i-1)) > 0) then
                call error('Grid input values are not monotonously decreasing')
@@ -176,7 +210,7 @@ contains
          end do
       end if
 
-      !Construct H
+      ! Construct h
       allocate (self%h(0:self%nz_grid + 1))
       self%h(0) = 0 ! Note that h(0) has no physical meaning but helps with some calculations
       self%h(self%nz_grid + 1) = 0 ! Note that h(nz_grid + 1) has no physical meaning but helps with some calculations
@@ -197,7 +231,7 @@ contains
       class(StaggeredGrid), intent(inout) :: self
       integer :: i
 
-      !Compute position of layer center and top
+      ! Compute position of layer center and top
       self%z_volume(1) = 0.0_RK
       self%z_face(1) = 0.0_RK
       do i = 1, self%nz_grid
@@ -258,7 +292,6 @@ contains
                  h=>self%h, &
                  nz=>self%nz_occupied)
 
-         !todo: Verify array indexes and boundaries (especially h)
          self%AreaFactor_1(1:nz) = -4*Az(1:nz)/(h(1:nz) + h(0:nz - 1))/h(1:nz)/(Az(2:nz + 1) + Az(1:nz))
          self%AreaFactor_2(1:nz) = -4*Az(2:nz + 1)/(h(1:nz) + h(2:nz + 1))/h(1:nz)/(Az(2:nz + 1) + Az(1:nz))
          self%AreaFactor_k1(1:nz - 1) = -(Az(2:nz) + Az(1:nz - 1))/(h(1:nz - 1) + h(2:nz))/h(1:nz - 1)/Az(2:nz)
@@ -276,6 +309,7 @@ contains
       end associate
    end subroutine grid_update_area_factors
 
+   ! Modify size of topmost box
    subroutine grid_modify_top_box(self, dh)
       implicit none
       class(StaggeredGrid), intent(inout) :: self
@@ -298,6 +332,7 @@ contains
       h(ubnd_vol) = h(ubnd_vol) + dh
       z_volume(ubnd_vol) = z_volume(ubnd_vol) + 0.5_RK*dh
       z_face(ubnd_fce) = z_face(ubnd_fce) + dh
+!      print *,ubnd_vol,z_volume(ubnd_vol),dh
 
       end associate
    end subroutine
@@ -316,7 +351,7 @@ contains
                   nz_occupied=>self%nz_occupied, &
                   Az=>self%Az)
 
-         ! update grid
+         ! Update grid
          z_face(ubnd_fce - 1) = z_face(ubnd_fce) + dh
          z_volume(ubnd_vol - 1) = 0.5_RK*(z_face(ubnd_fce - 1) + z_face(ubnd_fce - 2))
 
@@ -325,15 +360,15 @@ contains
          self%h_old = h(ubnd_vol - 1)
          h(ubnd_vol - 1) = (z_face(ubnd_fce - 1) - z_face(ubnd_fce - 2))
 
-         ! update number of occupied cells
+         ! Update number of occupied cells
          nz_occupied = nz_occupied - 1
-         ! update boundaries (ubnd_fce and ubnd_vol)
+         ! Update boundaries (ubnd_fce and ubnd_vol)
          call self%update_nz()
 
       end associate
    end subroutine
 
-   !Grow grid (mainly used by advection)
+   ! Grow grid (mainly used by advection)
    subroutine grid_grow(self, dh)
       implicit none
       class(StaggeredGrid), intent(inout) :: self
@@ -361,7 +396,7 @@ contains
          Az(ubnd_fce) = Az(ubnd_fce - 1) + h(ubnd_vol)*dAz(ubnd_vol)
          Az(ubnd_fce + 1) = Az(ubnd_fce) + h(ubnd_vol + 1)*dAz(ubnd_vol + 1)
 
-         ! update number of occupied cells
+         ! Update number of occupied cells
          nz_occupied = nz_occupied + 1
 
          call self%update_nz()
@@ -387,10 +422,10 @@ contains
             if (z_face(i) >= (z_zero - new_depth)) then ! If above initial water level
                zmax = z_face(i)
 
-               ! set top face to new water level
+               ! Set top face to new water level
                z_face(i) = z_zero - new_depth
 
-               !Adjust new volume center of cell i-1 (belonging to upper face i)
+               ! Adjust new volume center of cell i-1 (belonging to upper face i)
                z_volume(i - 1) = (z_face(i) + z_face(i - 1))/2
                h(i - 1) = z_face(i) - z_face(i - 1)
 

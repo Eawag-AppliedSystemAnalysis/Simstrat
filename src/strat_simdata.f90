@@ -6,6 +6,7 @@ module strat_simdata
    use strat_kinds
    use strat_grid
    use strat_consts
+   use utilities
    implicit none
    private
 
@@ -41,9 +42,11 @@ module strat_simdata
       character(len=:), allocatable :: output_depth_reference
       real(RK), dimension(:), allocatable :: zout, zout_read
       real(RK), dimension(:), allocatable :: tout
-      real(RK), dimension(:), allocatable :: n_timesteps_between_tout
-      real(RK), dimension(:), allocatable :: adjusted_timestep
-      logical :: write_to_file
+      integer(8), dimension(:), allocatable :: simulation_times_for_output
+      integer, dimension(:), allocatable :: n_timesteps_between_tout
+      logical :: write_to_file, output_all
+      integer :: number_output_vars
+      character(len=20), dimension(:), allocatable :: output_var_names ! Names of output variables
       class(LogVariable), dimension(:), allocatable :: output_vars
 
       integer :: output_time_type, output_depth_type, thinning_interval
@@ -54,9 +57,11 @@ module strat_simdata
    ! Simulation configuration
    type, public :: SimConfig
       integer :: timestep
+      integer :: start_year
       real(RK) :: start_datum
       real(RK) :: end_datum
       integer :: disp_simulation
+      logical :: continue_from_snapshot = .false.
    end type
 
    ! Model configuration (read from file)
@@ -64,9 +69,11 @@ module strat_simdata
       integer :: max_length_input_data
       logical :: couple_aed2
       integer :: turbulence_model
+      logical :: split_a_seiche
       integer :: stability_func
       integer :: flux_condition
       integer :: forcing_mode
+      logical :: user_defined_water_albedo
       logical :: use_filtered_wind
       integer :: seiche_normalization
       integer :: wind_drag_model
@@ -82,24 +89,31 @@ module strat_simdata
       real(RK) :: Lat
       real(RK) :: p_air
       real(RK) :: a_seiche
+      real(RK) :: a_seiche_w
+      real(RK) :: strat_sumr
       real(RK) :: q_NN
       real(RK) :: f_wind
       real(RK) :: C10_constant
       real(RK) :: CD
       real(RK) :: fgeo
-      real(RK) :: k_min
-      real(RK) :: p_radin
+      real(RK) :: p_sw
+      real(RK) :: p_lw
       real(RK) :: p_windf
-      real(RK) :: p_albedo     
-      real(RK) :: freez_temp 
-      real(RK) :: snow_temp      
+      real(RK) :: beta_sol
+      real(RK) :: wat_albedo
+      real(RK) :: p_albedo
+      real(RK) :: freez_temp
+      real(RK) :: snow_temp
    end type
 
    ! Model state (this is actually the simulation data!!!)
    type, public :: ModelState
       ! Iteration variables
-      integer :: i, j, output_counter, model_step_counter
+      integer :: current_year ! Current year of simulation, used for zenith angle dependent water albedo
+      integer :: current_month ! Current month of simulation, used for zenith angle dependent water albedo
+      real(RK) :: current_day ! Current day of simulation, used for zenith angle dependent water albedo
       real(RK) :: datum, dt
+      integer(8) :: simulation_time
       logical :: first_timestep = .true.
 
       ! Variables located on z_cent grid
@@ -109,7 +123,7 @@ module strat_simdata
       real(RK), dimension(:), allocatable :: dS ! Source/sink for salinity
       real(RK), dimension(:, :), allocatable :: Q_inp ! Horizontal inflow [m^3/s]
       real(RK), dimension(:), allocatable :: rho ! Water density [kg/m^3]
-   
+
       ! Variables located on z_upp grid
       real(RK), dimension(:), allocatable :: k, ko ! Turbulent kinetic energy (TKE) [J/kg]
       real(RK), dimension(:), allocatable :: avh
@@ -128,37 +142,40 @@ module strat_simdata
       real(RK) :: tx, ty ! Shear stress
       real(RK) :: C10 ! Wind drag coefficient
       real(RK) :: SST, heat, heat_snow, heat_ice, heat_snowice! Sea surface temperature and heat flux
-      !real(RK) :: rad0 ! Solar radiation at surface
-      real(RK) :: T_atm ! Air temp at surface   
+      real(RK) :: T_atm ! Air temp at surface
       real(RK), dimension(:), allocatable :: rad ! Solar radiation (in water)
       real(RK), dimension(:), allocatable :: Q_vert ! Vertical exchange between boxes
+      real(RK), dimension(9,12) :: albedo_data  ! Experimental monthly albedo data for determination of current water albedo
+      real(RK) :: albedo_water   ! Current water albedo
+      integer :: lat_number ! Latitude band (used for determination of albedo)
 
       ! Snow and Ice
       real(RK), allocatable :: snow_h ! Snow layer height [m]
       real(RK), allocatable :: total_ice_h ! Total ice layer height [m]
-      real(RK), allocatable :: black_ice_h ! Black ice layer height [m]   
-      real(RK), allocatable :: white_ice_h ! Snowice layer height [m]      
-      real(RK) :: snow_dens ! snow density [kg m-3]   
-      real(RK) :: ice_temp ! ice temperature [°C]
-      real(RK) :: precip ! precipiation in water eqvivalent hight [m] 
-   
-      !For saving heatflux 
+      real(RK), allocatable :: black_ice_h ! Black ice layer height [m]
+      real(RK), allocatable :: white_ice_h ! Snowice layer height [m]
+      real(RK) :: snow_dens ! Snow density [kg m-3]
+      real(RK) :: ice_temp ! Ice temperature [°C]
+      real(RK) :: precip ! Precipiation in water eqvivalent hight [m]
+
+      !For saving heatflux
       real(RK), allocatable :: ha ! Incoming long wave [W m-2]
       real(RK), allocatable :: hw ! Outgoing long wave [W m-2]
       real(RK), allocatable :: hk ! Sensible flux [W m-2]
       real(RK), allocatable :: hv ! Latent heat [W m-2]
       real(RK), allocatable :: rad0 !  Solar radiation at surface  [W m-2]
-   
+
       real(RK) :: cde, cm0
       real(RK) ::  fsed
       real(RK), dimension(:), allocatable     :: fgeo_add
       logical :: has_advection
       logical, dimension(1:4) :: has_surface_input, has_deep_input
       integer :: nz_input
-      !logical :: has_salinity_grad, has_salinity
 
    contains
       procedure, pass :: init => model_state_init
+      procedure, pass :: save => save_model_state
+      procedure, pass :: load => load_model_state
    end type
 
    ! Structure that encapsulates a full program state
@@ -178,9 +195,8 @@ contains
    subroutine simulation_data_init(self, state_size)
       class(SimulationData), intent(inout) :: self
       integer, intent(in) :: state_size
-      ! init model data structures
+      ! Init model data structures
       call self%model%init(state_size)
-
    end subroutine
 
    ! Allocates all arrays of the model state in the correct size
@@ -217,18 +233,18 @@ contains
       allocate (self%rad(state_size + 1))
       allocate (self%Q_vert(state_size + 1))
 
-      allocate (self%snow_h) 
-      allocate (self%total_ice_h) 
-      allocate (self%black_ice_h) 
+      allocate (self%snow_h)
+      allocate (self%total_ice_h)
+      allocate (self%black_ice_h)
       allocate (self%white_ice_h)
-   
-      allocate (self%ha) 
-      allocate (self%hw) 
-      allocate (self%hk) 
-      allocate (self%hv) 
-      allocate (self%rad0) 
-   
-      ! init to zero
+
+      allocate (self%ha)
+      allocate (self%hw)
+      allocate (self%hk)
+      allocate (self%hv)
+      allocate (self%rad0)
+
+      ! Init to zero
       self%U = 0.0_RK
       self%V = 0.0_RK
       self%T = 0.0_RK
@@ -253,21 +269,137 @@ contains
       self%absorb = 0.0_RK
       self%rad = 0.0_RK
       self%Q_vert = 0.0_RK
-    
+
       self%snow_h = 0.0_RK
       self%total_ice_h = 0.0_RK
       self%black_ice_h = 0.0_RK
-      self%white_ice_h = 0.0_RK   
-      self%ice_temp = 0.0_RK 
+      self%white_ice_h = 0.0_RK
+      self%ice_temp = 0.0_RK
       self%snow_dens = rho_s_0
       self%precip = 0.0_RK
 
       self%ha = 0.0_RK
       self%hw = 0.0_RK
-      self%hk = 0.0_RK 
-      self%hv = 0.0_RK 
-      self%rad0 = 0.0_RK   
-   
+      self%hk = 0.0_RK
+      self%hv = 0.0_RK
+      self%rad0 = 0.0_RK
+
+   end subroutine
+
+   ! save model state unformatted
+   subroutine save_model_state(self)
+      implicit none
+      class(ModelState), intent(in) :: self
+
+      write(80) self%current_year, self%current_month, self%current_day, self%datum, self%simulation_time
+      call save_array(80, self%U)
+      call save_array(80, self%V)
+      call save_array(80, self%T)
+      call save_array(80, self%S)
+      call save_array(80, self%dS)
+      call save_matrix(80, self%Q_inp)
+      call save_array(80, self%rho)
+      call save_array(80, self%k)
+      call save_array(80, self%ko)
+      call save_array(80, self%avh)
+      call save_array(80, self%eps)
+      call save_array(80, self%num)
+      call save_array(80, self%nuh)
+      call save_array(80, self%P)
+      call save_array(80, self%B)
+      call save_array(80, self%NN)
+      call save_array(80, self%cmue1)
+      call save_array(80, self%cmue2)
+      call save_array(80, self%P_Seiche)
+      write(80) self%E_Seiche, self%gamma
+      call save_array(80, self%absorb)
+      write(80) self%u10, self%v10, self%uv10, self%Wf
+      write(80) self%u_taub, self%drag, self%u_taus
+      write(80) self%tx, self%ty
+      write(80) self%C10
+      write(80) self%SST, self%heat, self%heat_snow, self%heat_ice, self%heat_snowice
+      write(80) self%T_atm
+      call save_array(80, self%rad)
+      call save_array(80, self%Q_vert)
+      write(80) self%albedo_data
+      write(80) self%albedo_water
+      write(80) self%lat_number
+      write(80) self%snow_h
+      write(80) self%total_ice_h
+      write(80) self%black_ice_h
+      write(80) self%white_ice_h
+      write(80) self%snow_dens
+      write(80) self%ice_temp
+      write(80) self%precip
+      write(80) self%ha
+      write(80) self%hw
+      write(80) self%hk
+      write(80) self%hv
+      write(80) self%rad0
+      write(80) self%cde, self%cm0
+      write(80) self%fsed
+      call save_array(80, self%fgeo_add)
+      write(80) self%has_advection
+      write(80) self%has_surface_input, self%has_deep_input
+      write(80) self%nz_input
+   end subroutine
+
+   ! load model state unformatted
+   subroutine load_model_state(self)
+      implicit none
+      class(ModelState), intent(inout) :: self
+
+      read(81) self%current_year, self%current_month, self%current_day, self%datum, self%simulation_time
+      call read_array(81, self%U)
+      call read_array(81, self%V)
+      call read_array(81, self%T)
+      call read_array(81, self%S)
+      call read_array(81, self%dS)
+      call read_matrix(81, self%Q_inp)
+      call read_array(81, self%rho)
+      call read_array(81, self%k)
+      call read_array(81, self%ko)
+      call read_array(81, self%avh)
+      call read_array(81, self%eps)
+      call read_array(81, self%num)
+      call read_array(81, self%nuh)
+      call read_array(81, self%P)
+      call read_array(81, self%B)
+      call read_array(81, self%NN)
+      call read_array(81, self%cmue1)
+      call read_array(81, self%cmue2)
+      call read_array(81, self%P_Seiche)
+      read(81) self%E_Seiche, self%gamma
+      call read_array(81, self%absorb)
+      read(81) self%u10, self%v10, self%uv10, self%Wf
+      read(81) self%u_taub, self%drag, self%u_taus
+      read(81) self%tx, self%ty
+      read(81) self%C10
+      read(81) self%SST, self%heat, self%heat_snow, self%heat_ice, self%heat_snowice
+      read(81) self%T_atm
+      call read_array(81, self%rad)
+      call read_array(81, self%Q_vert)
+      read(81) self%albedo_data
+      read(81) self%albedo_water
+      read(81) self%lat_number
+      read(81) self%snow_h
+      read(81) self%total_ice_h
+      read(81) self%black_ice_h
+      read(81) self%white_ice_h
+      read(81) self%snow_dens
+      read(81) self%ice_temp
+      read(81) self%precip
+      read(81) self%ha
+      read(81) self%hw
+      read(81) self%hk
+      read(81) self%hv
+      read(81) self%rad0
+      read(81) self%cde, self%cm0
+      read(81) self%fsed
+      call read_array(81, self%fgeo_add)
+      read(81) self%has_advection
+      read(81) self%has_surface_input, self%has_deep_input
+      read(81) self%nz_input
    end subroutine
 
 end module strat_simdata

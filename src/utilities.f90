@@ -30,7 +30,7 @@ contains
          return
       end if
 
-      !Assign closest value if out of given grid
+      ! Assign closest value if out of given grid
       posk1 = 1
       do while (zi(posk1) <= z(1))
          yi(posk1) = y(1)
@@ -42,7 +42,7 @@ contains
          posk2 = posk2 - 1
       end do
 
-      !Linear interpolation
+      ! Linear interpolation
       posi = 1
       do i = posk1, posk2
          do while (zi(i) > z(posi + 1))
@@ -54,7 +54,7 @@ contains
       return
    end
 
-   !Interpolation of yi on grid zi (based on the given y on grid z)
+   ! Interpolation of yi on grid zi (based on the given y on grid z)
    !####################################################################
    pure subroutine Interp_nan(z, y, num_z, zi, yi, num_zi)
       !####################################################################
@@ -68,7 +68,7 @@ contains
 
       integer posk1, posk2, posi, i
 
-      !Assign NaN if out of given grid
+      ! Assign NaN if out of given grid
       posk1 = 1
       do while (zi(posk1) < z(1))
          yi(posk1) = 0.0_RK
@@ -79,11 +79,10 @@ contains
       do while (zi(posk2) > z(num_z))
          yi(posk2) = 0.0_RK
          yi(posk2) = ieee_value(yi(posk2), ieee_quiet_nan) ! NaN
-         !yi(posk2) = z(num_z)
          posk2 = posk2 - 1
       end do
 
-      !Linear interpolation
+      ! Linear interpolation
       posi = 1
       do i = posk1, posk2
          do while (zi(i) > z(posi + 1))
@@ -95,7 +94,7 @@ contains
       return
    end subroutine Interp_nan
 
-   !!Integrate discrete function y[x] using the trapezoidal rule
+   !! Integrate discrete function y[x] using the trapezoidal rule
    !!####################################################################
    subroutine Integrate(x, y, inty, num)
       !!####################################################################
@@ -112,7 +111,7 @@ contains
       return
    end
 
-      !Assign nan to values out of current grid
+      ! Assign nan to values out of current grid
    !####################################################################
    pure subroutine Assign_nan(y, ubnd, ubnd_grid)
       !####################################################################
@@ -125,7 +124,7 @@ contains
 
       integer :: i
 
-      !Assign NaN if out of given grid
+      ! Assign NaN if out of given grid
       i = ubnd_grid
       do while (i > ubnd)
          y(i) = 0.0_RK
@@ -198,7 +197,7 @@ contains
    subroutine error(message)
       implicit none
       character(len=*), intent(in) :: message
-      write(*, *) '[ERROR] '//message
+      write(6, *) '[ERROR] '//message
       stop
    end subroutine error
 
@@ -278,5 +277,161 @@ contains
       write (str_real, '(a)') k
       str_real = adjustl(str_real)
    end function str_real
+
+   character(len=20) function real_to_str(k, fmt)
+      implicit none
+      real(RK), intent(in) :: k
+      character(len=*), intent(in) :: fmt
+      write (real_to_str, fmt) k
+      real_to_str = adjustl(real_to_str)
+   end function
+
+   pure logical function is_leap_year(year)
+      integer, intent(in) :: year
+      is_leap_year = mod(year, 4) == 0 .and. (.not. mod(year, 100) == 0 .or. mod(year, 400) == 0)
+   end function
+
+   pure function calc_days_per_month(year) result(days_per_month)
+      integer, intent(in) :: year
+      integer, dimension(12) :: days_per_month
+
+      if (is_leap_year(year)) then
+         days_per_month = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+      else
+         days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+      end if
+   end function
+
+   ! Initialize the calender (day, month and year) based on the given starting year and and start datum
+   subroutine init_calendar(start_year, datum, current_year, current_month, current_day)
+      implicit none
+      integer, intent(in) :: start_year
+      real(RK), intent(in) :: datum
+      integer, intent(out) :: current_year, current_month
+      real(RK), intent(out) :: current_day
+
+      ! Local variables
+      real(RK) :: elapsed_days, days_left, days_per_year
+      integer :: i
+      integer, dimension(12) :: days_per_month
+
+      ! Determine current year
+      current_year = start_year
+      elapsed_days = 0
+      do
+         if (is_leap_year(current_year)) then
+            days_per_year = 366
+         else
+            days_per_year = 365
+         end if
+
+         if ((elapsed_days + days_per_year) < datum) then
+            elapsed_days = elapsed_days + days_per_year
+            current_year = current_year + 1
+         else
+            exit
+         end if
+      end do
+      days_left = datum - elapsed_days
+
+      ! Determine current month and day
+      days_per_month = calc_days_per_month(current_year)
+
+      do i=1,12
+         if (days_left > days_per_month(i)) then
+            days_left = days_left - days_per_month(i)
+         else
+            current_month = i
+            current_day = days_left
+            exit
+         end if
+      end do
+   end subroutine
+
+
+   ! Update calendar month and day (used for albedo assignment)
+   subroutine update_calendar(current_year, current_month, current_day, dt)
+      implicit none
+      integer, intent(inout) :: current_year, current_month
+      real(RK), intent(inout) :: current_day
+      real(RK), intent(in) :: dt
+
+      ! Local variables
+      integer, dimension(12) :: days_per_month
+      real(RK) :: current_day_new
+
+
+      ! Prepare day per month arrays
+      days_per_month = calc_days_per_month(current_year)
+
+      ! Update current day
+      current_day_new = current_day + dt/24/60/60
+
+      ! If new month is reached
+      if (ceiling(current_day_new) > days_per_month(current_month)) then
+         current_month = current_month + 1
+         current_day = current_day_new - floor(current_day_new)
+
+         ! If new year is reached
+         if (current_month > 12) then
+            current_month = 1
+            current_year = current_year + 1
+         end if
+      else
+         ! If not a new month, just go on counting
+         current_day = current_day_new
+      end if
+
+   end subroutine
+
+   subroutine save_array(output_unit, array)
+      implicit none
+      integer, intent(in) :: output_unit
+      real(RK), dimension(:), allocatable, intent(in) :: array
+
+      write(output_unit) lbound(array), ubound(array)
+      write(output_unit) array
+   end subroutine
+
+   subroutine read_array(input_unit, array)
+      implicit none
+      integer, intent(in) :: input_unit
+      real(RK), dimension(:), allocatable, intent(inout) :: array
+      integer :: array_lbound, array_ubound
+
+      read(input_unit) array_lbound, array_ubound
+      read(input_unit) array(array_lbound:array_ubound)
+   end subroutine
+
+
+   subroutine save_matrix(output_unit, matrix)
+      implicit none
+      integer, intent(in) :: output_unit
+      real(RK), dimension(:, :), allocatable, intent(in) :: matrix
+
+      write(output_unit) lbound(matrix, 1), ubound(matrix, 1), lbound(matrix, 2), ubound(matrix, 2)
+      write(output_unit) matrix
+   end subroutine
+
+   subroutine read_matrix(input_unit, matrix)
+      implicit none
+      integer, intent(in) :: input_unit
+      real(RK), dimension(:, :), allocatable, intent(inout) :: matrix
+      integer :: matrix_lbound_1, matrix_ubound_1, matrix_lbound_2, matrix_ubound_2
+
+      read(input_unit) matrix_lbound_1, matrix_ubound_1, matrix_lbound_2, matrix_ubound_2
+      if (.not. allocated(matrix)) then
+         allocate (matrix(matrix_lbound_1:matrix_ubound_1, matrix_lbound_2:matrix_ubound_2))
+      end if
+      read(input_unit) matrix(matrix_lbound_1:matrix_ubound_1, matrix_lbound_2:matrix_ubound_2)
+   end subroutine
+
+   pure real(RK) function datum(start_datum, simulation_time)
+      implicit none
+      real(RK), intent(in) :: start_datum
+      integer(8), intent(in) :: simulation_time
+
+      datum = start_datum + real(simulation_time, RK) / SECONDS_PER_DAY
+   end function
 
 end module utilities

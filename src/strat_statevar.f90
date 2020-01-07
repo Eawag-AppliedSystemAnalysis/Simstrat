@@ -73,13 +73,13 @@ contains
 
   ! Generic interface for method that calculates source terms
   subroutine generic_var_calc_terms(self, state, param, sources, boundaries)
-       class(ModelVariable), intent(inout) :: self
-       class(ModelState), intent(inout) :: state
-       class(ModelParam), intent(inout) :: param
-       real(RK), dimension(:) ::  sources, boundaries
-    end subroutine
+      class(ModelVariable), intent(inout) :: self
+      class(ModelState), intent(inout) :: state
+      class(ModelParam), intent(inout) :: param
+      real(RK), dimension(:) ::  sources, boundaries
+   end subroutine
 
-    ! Generic interface for method that does post solve processing
+   ! Generic interface for method that does post solve processing
    subroutine generic_var_post_solve(self, state)
       class(ModelVariable), intent(inout) :: self
       class(ModelState), intent(inout) :: state

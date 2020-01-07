@@ -47,15 +47,11 @@ contains
       class(TurbulenceModule) :: self
       class(ModelState) :: state
       class(ModelParam) :: param
-      !real(RK), dimension(self%grid%length_fce) :: beta
 
       call self%do_production(state)
 
-      if (param%a_seiche /= 0) then
-         call self%do_seiche(state, param)
-      else
-         state%P_seiche = 0.0_RK
-      end if
+      call self%do_seiche(state, param)
+
 
    end subroutine
 
@@ -72,7 +68,7 @@ contains
          ! Equation 5 (left) of Goudsmit, 2002
          ! P is defined on the inner faces
          state%P = 0
-   state%P(2:ubnd_fce - 1) = (state%U(2:ubnd_vol) - state%U(1:ubnd_vol - 1))**2 + (state%V(2:ubnd_vol) - state%V(1:ubnd_vol - 1))**2
+         state%P(2:ubnd_fce - 1) = (state%U(2:ubnd_vol) - state%U(1:ubnd_vol - 1))**2 + (state%V(2:ubnd_vol) - state%V(1:ubnd_vol - 1))**2
          state%P(2:ubnd_fce - 1) = state%P(2:ubnd_fce - 1)*state%num(2:ubnd_fce - 1)*grid%meanint(1:ubnd_vol - 1)**2
          ! Equation 5 (right) of Goudsmit, 2002
          state%B = 0
@@ -90,7 +86,7 @@ contains
       class(ModelParam) :: param
 
       ! Local variables
-      real(RK) :: W10, PS, PW, f_norm, minNN
+      real(RK) :: W10, PS, PW, f_norm, minNN, a_seiche_local
       real(RK) :: distrib(self%grid%ubnd_fce)
       integer :: i
 
@@ -102,46 +98,67 @@ contains
 
          ! Update distrib on inner faces
          do i = 2, ubnd_fce - 1
-            distrib(i) = max(state%NN(i)**param%q_NN, minNN)/grid%Az(i)*grid%dAz(i-1)
+            distrib(i) = max(state%NN(i)**param%q_NN, minNN)/grid%Az(i)*grid%dAz(i - 1)
          end do
 
-         !calculate Seiche normalization factor
+         ! Determine a_seiche
+         if (self%model_cfg%split_a_seiche) then   ! If a_seiche is splitted seasonally
+
+            ! If maximum stratification (N2) is higher than threshold
+            if (maxval(state%NN(2:ubnd_fce - 1)) >= param%strat_sumr) then
+               a_seiche_local = param%a_seiche
+
+            ! If maximum stratification (N2) is lower than threshold
+            else if (maxval(state%NN(2:ubnd_fce - 1)) < param%strat_sumr) then
+               a_seiche_local = param%a_seiche_w
+            end if
+         else  ! If a_seiche is not splitted
+            a_seiche_local = param%a_seiche
+         end if
+
+         ! Exit function if a_seiche is 0
+         if (a_seiche_local == 0) then
+            state%P_seiche = 0.0_RK
+            return
+         end if
+
+         ! Calculate Seiche normalization factor
          f_norm = 0.0_RK
-         if (self%model_cfg%seiche_normalization == 1) then !max NN
+         if (self%model_cfg%seiche_normalization == 1) then ! max NN
             f_norm = maxval(state%NN(2:ubnd_fce - 1))
 
             f_norm = (f_norm**param%q_NN)*grid%Az(ubnd_fce)*rho_0
-         else if (self%model_cfg%seiche_normalization == 2) then !integral
+         else if (self%model_cfg%seiche_normalization == 2) then ! integral
             do i = 2, ubnd_fce - 1
-               f_norm = f_norm + distrib(i)*grid%Az(i)*grid%h(i-1)
+               f_norm = f_norm + distrib(i)*grid%Az(i)*grid%h(i - 1)
 
             end do
 
             f_norm = f_norm*rho_0
          end if
 
-         !todo: direct float comparison...? OK?
+         ! todo: direct float comparison...? OK?
          ! why is this code here?
          if (f_norm == 0.) then
             do i = 2, ubnd_fce - 1
-               distrib(i) = 1/grid%h(i-1)
+               distrib(i) = 1/grid%h(i - 1)
             end do
             f_norm = grid%Az(ubnd_fce)*rho_0
          end if
 
-         !Adjust wind params based on configuration
+         ! Adjust wind params based on configuration
          if (self%model_cfg%use_filtered_wind) then !use filtered wind (AG 2014)
-            PW = param%a_seiche*grid%Az(ubnd_fce)*rho_air*state%C10*state%Wf**3
-         else !use real wind
+            PW = a_seiche_local*grid%Az(ubnd_fce)*rho_air*state%C10*state%Wf**3
+         else ! Use real wind
             W10 = sqrt(state%u10**2 + state%v10**2)
-            PW = param%a_seiche*grid%Az(ubnd_fce)*rho_air*state%C10*W10**3
+            PW = a_seiche_local*grid%Az(ubnd_fce)*rho_air*state%C10*W10**3
          end if
 
-         !Update E_Seiche
+         ! Update E_Seiche
          PS = state%E_Seiche**(1.5_RK)*state%gamma
          state%E_Seiche = state%E_Seiche + (PW - PS)*state%dt
 
-         !Limit so that E_Seiche does not become negative
+         ! Limit so that E_Seiche does not become negative
          if (state%E_Seiche < 0.) then
             PS = (PS*state%dt + state%E_Seiche)/state%dt
             state%E_Seiche = 0.0_RK
