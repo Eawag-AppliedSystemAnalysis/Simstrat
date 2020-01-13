@@ -1,0 +1,3 @@
+[submodule "lib/forbear"]
+	path = lib/forbear
+	url = https://github.com/d-vanzo/forbear.git

@@ -191,7 +191,7 @@ contains
    subroutine ok(message)
       implicit none
       character(len=*), intent(in) :: message
-      write(6, *) '[OK] '//message
+      write(*, *) '[OK] '//message
    end subroutine ok
 
    subroutine error(message)
@@ -204,7 +204,7 @@ contains
    subroutine warn(message)
       implicit none
       character(len=*), intent(in) :: message
-      write(6, *) '[WARNING] '//message
+      write(*, *) '[WARNING] '//message
    end subroutine warn
 
    pure function find_index_ordered(array, target_value) result(idx)
@@ -314,7 +314,7 @@ contains
       real(RK) :: elapsed_days, days_left, days_per_year
       integer :: i
       integer, dimension(12) :: days_per_month
-      
+
       ! Determine current year
       current_year = start_year
       elapsed_days = 0
@@ -363,7 +363,7 @@ contains
 
       ! Prepare day per month arrays
       days_per_month = calc_days_per_month(current_year)
-      
+
       ! Update current day
       current_day_new = current_day + dt/24/60/60
 
@@ -433,4 +433,5 @@ contains
 
       datum = start_datum + real(simulation_time, RK) / SECONDS_PER_DAY
    end function
+
 end module utilities

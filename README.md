@@ -6,6 +6,13 @@ Simstrat is a one-dimensional physical lake model for the simulation of stratifi
 Pre-built binaries are available [here](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/releases).
 
 ## Build Simstrat
+After cloning the git repository for the first time,  you need to initialize the 3rd-party libraries with the given script
+~~~bash
+./git_lib_initialize.sh
+~~~
+If you are not using git, you can manually download the library source files from the addresses listed in the `.gitmodules` file and save them into the `lib` subfolder.
+
+
 Before building an executable of Simstrat, you need to setup your building environment. We suggest two alternative options:
 
 ### 1. Setup building environment using Docker
@@ -19,7 +26,7 @@ Please install the following required packages:
 **System requirements**
 
 - [Python](https://www.python.org/) 2.7 or later
-- [FoBiS.py](https://github.com/szaghi/FoBiS) 2.2.6 or later (available via GitHub or pip using `pip install FoBiS.py`)
+- [FoBiS.py](https://github.com/szaghi/FoBiS) 3.0.1 or later (available via GitHub or pip using `pip install FoBiS.py`)
 - 2 compiler options:
     - [Intel Fortran (Intel Parallel Studio XE 2016)](https://software.intel.com/en-us/parallel-studio-xe/choose-download) (commercial)
     - Gfortran 6.3 or later (free)

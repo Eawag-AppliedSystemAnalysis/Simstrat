@@ -23,6 +23,7 @@ program simstrat_main
    use strat_absorption
    use strat_advection
    use strat_lateral
+   use forbear
    use, intrinsic :: ieee_arithmetic
 
    implicit none
@@ -49,6 +50,8 @@ program simstrat_main
    type(LateralModule), target :: mod_lateral_normal
    type(LateralRhoModule), target :: mod_lateral_rho
    class(GenericLateralModule), pointer :: mod_lateral
+   ! Instantiate progress bar object
+   type(bar_object):: bar
 
    character(len=100) :: arg
    character(len=:), allocatable :: ParName
@@ -162,7 +165,17 @@ program simstrat_main
 contains
 
    subroutine run_simulation()
+      ! initialize a bar with the progress percentage counter
+      call bar%initialize(filled_char_string='#', &
+         prefix_string=' Simulation progress |',  &
+         suffix_string='| ', add_progress_percent=.true., &
+         add_date_time=.true., &
+         max_value=(simdata%sim_cfg%end_datum-simdata%sim_cfg%start_datum))
 
+      ! start the progress bar
+      call bar%start
+
+      !! run the marching time loop
       call ok("Start day: "//real_to_str(simdata%sim_cfg%start_datum, '(F7.1)'))
       if (continue_from_snapshot) then
          call load_snapshot(snapshot_file_path)
@@ -190,7 +203,7 @@ contains
          if (.not. simdata%model_cfg%user_defined_water_albedo) then
             call mod_forcing%update_albedo(simdata%model)
          end if
-         
+
          ! Update forcing
          call mod_forcing%update(simdata%model)
 
@@ -242,6 +255,10 @@ contains
 
          ! This logical is used to do some allocation in the forcing, absorption and lateral subroutines during the first timestep
          simdata%model%first_timestep = .false.
+
+         !update the progress bar
+         call bar%update(current=(simdata%model%datum-simdata%sim_cfg%start_datum))
+
       end do
       call save_snapshot(snapshot_file_path)
    end subroutine

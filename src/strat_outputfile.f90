@@ -149,6 +149,7 @@ contains
       end if
 
       if (output_config%thinning_interval>1) write(6,*) 'Interval [days]: ',output_config%thinning_interval*sim_config%timestep/real(SECONDS_PER_DAY, RK)
+
       call ok('Output times successfully read')
 
 

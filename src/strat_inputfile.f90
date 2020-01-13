@@ -449,7 +449,7 @@ contains
          end do
 
 86       if(i==max_length_input_data) then
-            write(6,*) '[WARNING] ','Only first ',max_length_input_data,' values of file read.'
+            write(*,*) '[WARNING] ','Only first ',max_length_input_data,' values of file read.'
          else
             call ok('Morphology file successfully read')
          end if
@@ -632,7 +632,7 @@ contains
          if (model_cfg%split_a_seiche) then
             call par_file%get("ModelParameters.a_seiche_w", model_param%a_seiche_w, found); call check_field(found, 'ModelParameters.a_seiche_w', ParName)
             call par_file%get("ModelParameters.strat_sumr", model_param%strat_sumr, found); call check_field(found, 'ModelParameters.strat_sumr', ParName)
-         end if 
+         end if
          call par_file%get("ModelParameters.q_nn", model_param%q_NN, found); call check_field(found, 'ModelParameters.q_nn', ParName)
          call par_file%get("ModelParameters.f_wind", model_param%f_wind, found); call check_field(found, 'ModelParameters.f_wind', ParName)
 
@@ -708,7 +708,7 @@ contains
          if (num_read < 1) then
             call error('Unable to read initial conditions files (no data found).')
          else if(num_read==max_length_input_data) then
-            write(6,*) '[ERROR] ','Only first ',max_length_input_data,' values of initial data file read.'
+            write(*,*) '[ERROR] ','Only first ',max_length_input_data,' values of initial data file read.'
          end if
 
          close (13)

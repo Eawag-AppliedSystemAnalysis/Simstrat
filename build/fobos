@@ -10,8 +10,10 @@ src=../src/
 colors=False
 quiet=False
 target=simstrat.f90
+output=simstrat
 dependon=../lib/csv_fortran/fobos:release-gnu((direct))
          ../lib/json_fortran/fobos:release-gnu((direct))
+         ../lib/forbear/fobos:static-gnu((direct))
 log=True
 
 [release-gnu-dynamic]
@@ -36,6 +38,7 @@ src=../src/
 colors=False
 quiet=False
 target=simstrat.f90
+output=simstrat
 dependon=../lib/csv_fortran/fobos:release-intel((direct))
          ../lib/json_fortran/fobos:release-intel((direct))
 log=True
@@ -49,8 +52,10 @@ src=../src/
 colors=False
 quiet=False
 target=simstrat.f90
+output=simstrat
 dependon=../lib/csv_fortran/fobos:release-gnu((direct))
          ../lib/json_fortran/fobos:release-gnu((direct))
+         ../lib/forbear/fobos:static-gnu((direct))
 log=True
 
 [debug-gnu-dynamic]
@@ -64,8 +69,15 @@ quiet=False
 target=simstrat.f90
 dependon=../lib/csv_fortran/fobos:release-gnu((direct))
          ../lib/json_fortran/fobos:release-gnu((direct))
+         ../lib/forbear/fobos:static-gnu((direct))
 log=True
 
 [rule-makedoc]
 help = Generate FORD documentation (see /doc/developer folder)
 rule = FoBiS.py rule -ford ../doc/developer/ford/ford_projectfile.md
+
+[rule-purge]
+help = Clean all the libraries (.mod and .obj)
+rule_1 = cd ../lib/csv_fortran  ; FoBiS.py clean; cd -
+rule_2 = cd ../lib/json_fortran ; FoBiS.py clean; cd -
+rule_3 = cd ../lib/forbear      ; FoBiS.py clean; cd -

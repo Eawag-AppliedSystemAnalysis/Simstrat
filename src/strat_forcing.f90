@@ -79,7 +79,7 @@ contains
          read (20, *, end=9)
          read (20, *, end=9) tb_start, (A_s(i), i=1, nval)
          if (datum < tb_start) then
-            write(6,*) '[WARNING] ','First forcing date after simulation start time. datum=', datum,  'start=', tb_start
+            write(*,*) '[WARNING] ','First forcing date after simulation start time. datum=', datum,  'start=', tb_start
          end if
          read (20, *, end=7) tb_end, (A_e(i), i=1, nval)
 
@@ -451,7 +451,7 @@ contains
       real(RK) :: cori
       real(RK), dimension(size(state%U)) :: u_temp
       associate (grid=>self%grid, dt=>state%dt, param=>self%param)
-         
+
          ! Calculate u_taub before changing U resp V
          state%u_taub = sqrt(state%drag*(state%U(1)**2 + state%V(1)**2))
 
@@ -562,7 +562,7 @@ contains
       ! Linear interpolation, assuming that the monthly data is representative of the 15. of each month (also for months with 28, 29 and 31 days)
       ! There is still a small jump in the albedo value when the month changes. Solving this problem would require a more sophisticated interpolation
       ! or even a continuous function. But the jump is very small and occurs during the night, when anyways no sun light is reaching the lake.
-      
+
       ! If date before 16th of current month
       if (state%current_day < 16) then
          if(state%current_month == 1) then

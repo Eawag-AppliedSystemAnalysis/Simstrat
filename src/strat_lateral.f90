@@ -290,7 +290,7 @@ contains
                   ! For plunging input, Inp will be needed later
                   Inp(i,1:self%nval_deep(i)) = self%Inp_read_start(i,1:self%nval_deep(i)) + (datum-self%tb_start(i)) &
                   * (self%Inp_read_end(i,1:self%nval_deep(i)) - self%Inp_read_start(i,1:self%nval_deep(i)))/(self%tb_end(i) - self%tb_start(i))
-              
+
                   ! Surface input is already added to Q_inp; the plunging algorithm will add the deep input further below
                   do j=1,ubnd_fce
                      Q_inp(i,j) = (self%Qs_start(i,j)) + (datum - self%tb_start(i)) &
@@ -566,7 +566,7 @@ contains
             goto 11
 
             ! If no data available
- 9          write(6,*) '[WARNING] ','No data found in ',trim(fname(i)),' file. Check number of depths. Values set to zero.'
+ 9          write(*,*) '[WARNING] ','No data found in ',trim(fname(i)),' file. Check number of depths. Values set to zero.'
             self%eof(i) = 1
             Q_inp(i, 1:ubnd_fce) = 0.0_RK
             self%Q_start(i, 1:ubnd_fce) = 0.0_RK
