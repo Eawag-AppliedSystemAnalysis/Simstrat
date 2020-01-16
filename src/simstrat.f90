@@ -58,6 +58,7 @@ program simstrat_main
    character(len=:), allocatable :: snapshot_file_path
    logical :: continue_from_snapshot = .false.
    integer(8) :: simulation_end_time
+   real(RK) :: new_start_datum
 
    ! Print some information
    write (6, *) 'Simstrat version '//version
@@ -165,27 +166,30 @@ program simstrat_main
 contains
 
    subroutine run_simulation()
-      ! initialize a bar with the progress percentage counter
-      call bar%initialize(filled_char_string='#', &
-         prefix_string=' Simulation progress |',  &
-         suffix_string='| ', add_progress_percent=.true., &
-         add_date_time=.true., &
-         max_value=(simdata%sim_cfg%end_datum-simdata%sim_cfg%start_datum))
-
-      ! start the progress bar
-      call bar%start
 
       !! run the marching time loop
       call ok("Start day: "//real_to_str(simdata%sim_cfg%start_datum, '(F7.1)'))
+      new_start_datum = simdata%sim_cfg%start_datum
       if (continue_from_snapshot) then
          call load_snapshot(snapshot_file_path)
          call ok("Simulation snapshot successfully read. Snapshot day: "//real_to_str(simdata%model%datum, '(F7.1)'))
          call logger%calculate_simulation_time_for_next_output(simdata%model%simulation_time)
+         new_start_datum = simdata%model%datum
       else
          call logger%log(simdata)
       end if
       call ok("End day: "//real_to_str(simdata%sim_cfg%end_datum, '(F7.1)'))
       call logger%start()
+
+      ! initialize a bar with the progress percentage counter
+      call bar%initialize(filled_char_string='#', &
+         prefix_string=' Simulation progress |',  &
+         suffix_string='| ', add_progress_percent=.true., &
+         add_date_time=.true., &
+         max_value=(simdata%sim_cfg%end_datum-new_start_datum))
+
+      ! start the progress bar
+      call bar%start
 
       ! Run the simulation loop
       ! Run simulation until end datum or until no more results are required by the output time file
@@ -257,7 +261,7 @@ contains
          simdata%model%first_timestep = .false.
 
          !update the progress bar
-         call bar%update(current=(simdata%model%datum-simdata%sim_cfg%start_datum))
+         call bar%update(current=(simdata%model%datum-new_start_datum))
 
       end do
       call save_snapshot(snapshot_file_path)
