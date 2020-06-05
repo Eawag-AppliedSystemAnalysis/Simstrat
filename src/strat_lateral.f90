@@ -288,19 +288,19 @@ contains
                ! Linearly interpolate value at correct datum
                if (i/=2) then
                   ! For plunging input, Inp will be needed later
-                  Inp(i,1:self%nval_deep(i)) = self%Inp_read_start(i,1:self%nval_deep(i)) + (datum-self%tb_start(i)) &
-                  * (self%Inp_read_end(i,1:self%nval_deep(i)) - self%Inp_read_start(i,1:self%nval_deep(i)))/(self%tb_end(i) - self%tb_start(i))
+                  Inp(i,1:self%nval_deep(i)) = self%Inp_read_start(i,1:self%nval_deep(i)) + (datum-self%tb_start(i))/(self%tb_end(i) - self%tb_start(i))* &
+                  (self%Inp_read_end(i,1:self%nval_deep(i)) - self%Inp_read_start(i,1:self%nval_deep(i)))
 
                   ! Surface input is already added to Q_inp; the plunging algorithm will add the deep input further below
                   do j=1,ubnd_fce
-                     Q_inp(i,j) = (self%Qs_start(i,j)) + (datum - self%tb_start(i)) &
-                     * (self%Qs_end(i,j) - self%Qs_start(i,j))/(self%tb_end(i) - self%tb_start(i))
+                     Q_inp(i,j) = (self%Qs_start(i,j)) + (datum - self%tb_start(i))/(self%tb_end(i) - self%tb_start(i))* &
+                     (self%Qs_end(i,j) - self%Qs_start(i,j))
                   end do
                else
                   ! For outflow (i==2), both surface and deep inputs are added to Q_inp
                   do j=1,ubnd_fce
-                     Q_inp(i,j) = (self%Q_start(i,j) + self%Qs_start(i,j)) + (datum-self%tb_start(i)) &
-                     * (self%Q_end(i,j) + self%Qs_end(i,j) - self%Q_start(i,j) - self%Qs_start(i,j))/(self%tb_end(i)-self%tb_start(i))
+                     Q_inp(i,j) = (self%Q_start(i,j) + self%Qs_start(i,j)) + (datum-self%tb_start(i))/(self%tb_end(i)-self%tb_start(i))* &
+                     (self%Q_end(i,j) + self%Qs_end(i,j) - self%Q_start(i,j) - self%Qs_start(i,j))
                   end do
                end if
             end if
@@ -555,8 +555,8 @@ contains
 
             ! Linearly interpolate value at correct datum (Q_inp is on face grid)
             do j = 1, ubnd_fce
-               Q_inp(i,j) = (self%Q_start(i,j) + self%Qs_start(i,j)) + (datum-self%tb_start(i)) &
-               * (self%Q_end(i,j) + self%Qs_end(i,j) - self%Q_start(i,j) - self%Qs_start(i,j))/(self%tb_end(i)-self%tb_start(i))
+               Q_inp(i,j) = (self%Q_start(i,j) + self%Qs_start(i,j)) + (datum-self%tb_start(i))/(self%tb_end(i)-self%tb_start(i))* &
+               (self%Q_end(i,j) + self%Qs_end(i,j) - self%Q_start(i,j) - self%Qs_start(i,j))
             end do
             goto 11
 

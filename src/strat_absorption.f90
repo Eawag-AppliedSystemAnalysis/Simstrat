@@ -153,8 +153,7 @@ contains
                call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end)
             end do
             !Linearly interpolate value at correct datum (for all depths)
-            state%absorb(1:nz) = absorb_start(1:nz) + (state%datum - tb_start)*(absorb_end(1:nz) &
-                                 - absorb_start(1:nz))/(tb_end - tb_start)
+            state%absorb(1:nz) = absorb_start(1:nz) + (state%datum - tb_start)/(tb_end - tb_start)*(absorb_end(1:nz) - absorb_start(1:nz))
          end if
          return
 
