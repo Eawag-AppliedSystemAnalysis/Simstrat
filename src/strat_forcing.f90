@@ -194,9 +194,9 @@ contains
             Cloud = 0.5
             if (cfg%use_filtered_wind) state%Wf = A_cur(6) ! AG 2014
             if (cfg%snow_model == 1 .and. cfg%use_filtered_wind) then
-               state%precip = A_cur(7)
+               state%precip = max(A_cur(7),0.0_RK)
             else if (cfg%snow_model == 1) then
-               state%precip = A_cur(6)
+               state%precip = max(A_cur(6),0.0_RK)
             end if
 
          ! Forcing mode 3 (date, U10, V10, T_atm, H_sol, Vap, Clouds)
@@ -226,9 +226,9 @@ contains
             end if
             if (cfg%use_filtered_wind) state%Wf = A_cur(7) !AG 2014
             if (cfg%snow_model == 1 .and. cfg%use_filtered_wind) then
-               state%precip = A_cur(8)
+               state%precip = max(A_cur(8),0.0_RK)
             else if (cfg%snow_model == 1) then
-               state%precip = A_cur(7)
+               state%precip = max(A_cur(7),0.0_RK)
             end if
 
          ! Forcing mode 4 (date, U10, V10, H_net, H_sol)
@@ -267,9 +267,9 @@ contains
             H_A = A_cur(6)
             if (cfg%use_filtered_wind) state%Wf = A_cur(7) ! AG 2014
             if (cfg%snow_model == 1 .and. cfg%use_filtered_wind) then
-               state%precip = A_cur(8)
+               state%precip = max(A_cur(8),0.0_RK)
             else if (cfg%snow_model == 1) then
-               state%precip = A_cur(7)
+               state%precip = max(A_cur(7),0.0_RK)
             end if
          else
             call error('Wrong forcing type (must be 1, 2, 3, 4 or 5).')
