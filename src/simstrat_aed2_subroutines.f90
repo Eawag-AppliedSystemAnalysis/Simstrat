@@ -17,6 +17,8 @@ subroutine allocate_memory(self)
    if (status /= 0) stop 'allocate_memory(): Error allocating (names)'
    allocate(self%bennames(self%n_vars_ben),stat=status)
    if (status /= 0) stop 'allocate_memory(): Error allocating (bennames)'
+   allocate(self%diagnames(self%n_vars_diag),stat=status)
+   if (status /= 0) stop 'allocate_memory(): Error allocating (diagnames)'
 
    ! Now that we know how many vars we need, we can allocate space for them
    allocate(self%cc(self%grid%nz_grid, (self%n_vars + self%n_vars_ben)),stat=status)
@@ -139,6 +141,7 @@ subroutine assign_var_names(self)
          if ( tvar%diag ) then
             if ( .not.  tvar%sheet ) then
                j = j + 1
+               self%diagnames(j) = trim(tvar%name)
                print *,"     D(",j,") AED2 diagnostic 3Dvariable: ", trim(tvar%name)
             end if
          end if
@@ -194,7 +197,7 @@ subroutine define_column(self, state)
                case ( 'uva' )         ; column(av)%cell => self%uva
                case ( 'uvb' )         ; column(av)%cell => self%uvb
                case ( 'pressure' )    ; column(av)%cell => self%pres
-               case ( 'depth' )       ; column(av)%cell => self%grid%z_volume
+               case ( 'depth' )       ; column(av)%cell => self%grid%layer_depth
                case ( 'sed_zone' )    ; column(av)%cell_sheet => self%sed_zones(1)
                case ( 'wind_speed' )  ; column(av)%cell_sheet => state%uv10
                case ( 'rain')         ; column(av)%cell_sheet => state%rain

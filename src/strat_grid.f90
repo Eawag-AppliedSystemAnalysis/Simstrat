@@ -25,7 +25,8 @@ module strat_grid
    type, public :: StaggeredGrid
       real(RK), dimension(:), pointer     :: h        ! Box height
       real(RK), dimension(:), allocatable :: z_face   ! Holds z-values of faces
-      real(RK), dimension(:), pointer     :: z_volume ! Holds z-values of volume centers
+      real(RK), dimension(:), allocatable :: z_volume ! Holds z-values of volume centers
+      real(RK), dimension(:), pointer     :: layer_depth ! Depth of each layer, used by AED2
       real(RK), dimension(:), allocatable :: Az       ! Areas
       real(RK), dimension(:), pointer     :: Az_vol   ! Areas on volume grid (needed or AED2)
       real(RK), dimension(:), allocatable :: dAz      ! Difference of areas
@@ -114,7 +115,7 @@ contains
          ! h is already allocated by grid point init
          allocate (self%z_volume(0:nz_grid)) ! Depth axis with center of boxes
          self%z_volume(0) = 0 ! trick for array access - index not in use
-
+         allocate (self%layer_depth(0:nz_grid)) ! Depth of each box
          allocate (self%z_face(nz_grid + 1)) ! Depth axis with faceer border of boxes
          allocate (self%Az(nz_grid + 1)) ! Az is defined on the faces
          allocate (self%Az_vol(nz_grid)) ! Az_vol is defined on volume grid
@@ -204,6 +205,7 @@ contains
          self%z_face(i - 1) = nint(1e6_RK*self%z_face(i - 1))/1e6_RK
       end do
       self%z_face(self%nz_grid + 1) = nint(1e6_RK*self%z_face(self%nz_grid + 1))/1e6_RK
+      self%layer_depth(1:self%nz_grid) = self%z_zero - self%z_volume(1:self%nz_grid)
 
    end subroutine grid_init_z_axes
 
@@ -285,6 +287,7 @@ contains
                   ubnd_fce=>self%ubnd_fce, &
                   z_volume=>self%z_volume, &
                   ubnd_vol=>self%ubnd_vol, &
+                  layer_depth=>self%layer_depth, &
                   h=>self%h, &
                   Az=>self%Az, &
                   Az_vol=>self%Az_vol, &
@@ -301,6 +304,7 @@ contains
       h(ubnd_vol) = h(ubnd_vol) + dh
       z_volume(ubnd_vol) = z_volume(ubnd_vol) + 0.5_RK*dh
       z_face(ubnd_fce) = z_face(ubnd_fce) + dh
+      layer_depth(1:ubnd_vol) = z_face(ubnd_fce) - z_volume(1:ubnd_vol)
 
       end associate
    end subroutine
@@ -315,6 +319,7 @@ contains
                   ubnd_fce=>self%ubnd_fce, &
                   z_volume=>self%z_volume, &
                   ubnd_vol=>self%ubnd_vol, &
+                  layer_depth=>self%layer_depth, &
                   h=>self%h, &
                   nz_occupied=>self%nz_occupied, &
                   Az=>self%Az, &
@@ -329,6 +334,8 @@ contains
 
          self%h_old = h(ubnd_vol - 1)
          h(ubnd_vol - 1) = (z_face(ubnd_fce - 1) - z_face(ubnd_fce - 2))
+
+         layer_depth(ubnd_vol - 1) = z_face(ubnd_fce - 1) - z_volume(ubnd_vol - 1)
 
          ! Update number of occupied cells
          nz_occupied = nz_occupied - 1
@@ -347,6 +354,7 @@ contains
       associate (z_face=>self%z_face, &
                  ubnd_fce=>self%ubnd_fce, &
                  z_volume=>self%z_volume, &
+                 layer_depth=>self%layer_depth, &
                  ubnd_vol=>self%ubnd_vol, &
                  h=>self%h, &
                  Az=>self%Az, &
@@ -369,6 +377,9 @@ contains
 
          Az_vol(ubnd_vol - 1) = (Az(ubnd_fce - 1) + Az(ubnd_fce - 2))/2
          Az_vol(ubnd_vol) = (Az(ubnd_fce) + Az(ubnd_fce - 1))/2
+
+         layer_depth(ubnd_vol + 1) = z_face(ubnd_fce + 1) - z_volume(ubnd_vol + 1)
+         layer_depth(ubnd_vol) = z_face(ubnd_fce) - z_volume(ubnd_vol)
 
          nz_occupied = nz_occupied + 1
 
