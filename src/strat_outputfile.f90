@@ -22,7 +22,7 @@ module strat_outputfile
       integer, public :: n_depths
       integer, public :: n_vars
       integer, public :: counter = 0
-      integer(8), public :: simulation_time_for_next_output = 0
+      integer(8), public, dimension(2) :: simulation_time_for_next_output = 0
       real(RK), dimension(:,:), allocatable :: last_iteration_data
 
    contains
@@ -89,7 +89,7 @@ contains
    subroutine generic_calculate_simulation_time_for_next_output(self, simulation_time)
       implicit none
       class(SimstratOutputLogger), intent(inout) :: self
-      integer(8), intent(in) :: simulation_time
+      integer(8), dimension(2), intent(in) :: simulation_time
    end subroutine
 
    subroutine generic_log(self, simdata)
@@ -277,16 +277,17 @@ contains
    subroutine calculate_simulation_time_for_next_output_interpolating(self, simulation_time)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
-      integer(8), intent(in) :: simulation_time
+      integer(8), dimension(2), intent(in) :: simulation_time
       integer :: i
 
       associate (thinning_interval => self%output_config%thinning_interval, &
                  timestep => self%sim_config%timestep, &
                  simulation_times_for_output => self%output_config%simulation_times_for_output)
          if (thinning_interval == 0) then
-            do i = self%counter, size(simulation_times_for_output)
-               if (simulation_times_for_output(i) > simulation_time) then
-                  self%simulation_time_for_next_output = simulation_times_for_output(i)
+            do i = self%counter, size(simulation_times_for_output,2)
+               if (simulation_times_for_output(1,i) > simulation_time(1) .or. &
+                  simulation_times_for_output(1,i) == simulation_time(1) .and. simulation_times_for_output(2,i) > simulation_time(2)) then
+                  self%simulation_time_for_next_output = simulation_times_for_output(:,i)
                   exit
                end if
             end do
@@ -306,7 +307,7 @@ contains
       type(OutputHelper) :: output_helper
       integer :: i
 
-      call output_helper%init(simdata%model%simulation_time, self%sim_config%timestep, self%simulation_time_for_next_output, &
+      call output_helper%init(simdata%model%simulation_time, simdata%model%simulation_time_old, self%sim_config%timestep, self%simulation_time_for_next_output, &
                               self%sim_config%start_datum, self%output_config%thinning_interval, &
                               self%output_config%simulation_times_for_output, self%counter)
       ! Standard display: display when logged: datum, lake surface, T(1), T(surf)
@@ -336,35 +337,50 @@ contains
       end do
    end subroutine
 
-   subroutine output_helper_init(self, simulation_time, timestep, simulation_time_for_next_output, start_datum, &
+   subroutine output_helper_init(self, simulation_time, simulation_time_old, timestep, simulation_time_for_next_output, start_datum, &
                                  thinning_interval, simulation_times_for_output, counter)
       implicit none
       class(OutputHelper), intent(inout) :: self
-      integer(8), intent(in) :: simulation_time
+      integer(8), dimension(2), intent(in) :: simulation_time
+      integer(8), dimension(2), intent(in) :: simulation_time_old
       integer, intent(in) :: timestep
-      integer(8), intent(inout) :: simulation_time_for_next_output
+      integer(8), dimension(2), intent(inout) :: simulation_time_for_next_output
       real(RK), intent(in) :: start_datum
       integer, intent(in) :: thinning_interval
-      integer(8), dimension(:), allocatable, intent(in) :: simulation_times_for_output
+      integer(8), dimension(:,:), allocatable, intent(in) :: simulation_times_for_output
       integer, intent(inout) :: counter
-      integer :: i
 
-      self%write_to_file = (simulation_time_for_next_output > simulation_time - timestep &
-                      .and. simulation_time_for_next_output <= simulation_time)
+      ! Local variables
+      integer :: i
+      logical :: write_condition1, write_condition2
+
+      write_condition1 = (simulation_time_for_next_output(1) > simulation_time_old(1) .or. &
+               simulation_time_for_next_output(1) == simulation_time_old(1) .and. simulation_time_for_next_output(2) > simulation_time_old(2))
+      write_condition2 = (simulation_time_for_next_output(1) < simulation_time(1) .or. &
+               simulation_time_for_next_output(1) == simulation_time(1) .and. simulation_time_for_next_output(2) <= simulation_time(2))
+      
+      self%write_to_file = (write_condition1 .and. write_condition2)
+
       if (self%write_to_file) then
          counter = counter + 1
-         self%w1 = (simulation_time - simulation_time_for_next_output) / real(timestep, RK)
+         self%w1 = (simulation_time(1) + simulation_time(2)/SECONDS_PER_DAY &
+            - simulation_time_for_next_output(1) - simulation_time_for_next_output(2)/SECONDS_PER_DAY) / real(timestep, RK)
          self%w0 = 1 - self%w1
          self%output_datum = datum(start_datum, simulation_time_for_next_output)
          if (thinning_interval == 0) then
-            do i = counter, size(simulation_times_for_output)
-               if (simulation_times_for_output(i) > simulation_time) then
-                  simulation_time_for_next_output = simulation_times_for_output(i)
+            do i = counter, size(simulation_times_for_output,2)
+               if (simulation_times_for_output(1,i) > simulation_time(1) .or. &
+                  simulation_times_for_output(1,i) == simulation_time(1) .and. simulation_times_for_output(2,i) > simulation_time(2)) then
+                  simulation_time_for_next_output = simulation_times_for_output(:,i)
                   exit
                end if
             end do
          else
-            simulation_time_for_next_output = simulation_time_for_next_output + thinning_interval * timestep
+            simulation_time_for_next_output(2) = simulation_time_for_next_output(2) + thinning_interval * timestep
+            if (simulation_time_for_next_output(2) >= SECONDS_PER_DAY) then
+               simulation_time_for_next_output(2) = simulation_time_for_next_output(2) - SECONDS_PER_DAY
+               simulation_time_for_next_output(1) = simulation_time_for_next_output(1) + 1
+            end if
          end if
       end if
    end subroutine
@@ -475,7 +491,7 @@ contains
    subroutine log_save(self)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
-      write(80) self%counter, self%simulation_time_for_next_output
+      write(80) self%counter, self%simulation_time_for_next_output(1), self%simulation_time_for_next_output(2)
       call save_matrix(80, self%last_iteration_data)
    end subroutine
 
@@ -486,7 +502,7 @@ contains
    subroutine log_load(self)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
-      read(81) self%counter, self%simulation_time_for_next_output
+      read(81) self%counter, self%simulation_time_for_next_output(1), self%simulation_time_for_next_output(2)
       call read_matrix(81, self%last_iteration_data)
    end subroutine
 

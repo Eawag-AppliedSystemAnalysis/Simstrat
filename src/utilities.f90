@@ -429,9 +429,9 @@ contains
    pure real(RK) function datum(start_datum, simulation_time)
       implicit none
       real(RK), intent(in) :: start_datum
-      integer(8), intent(in) :: simulation_time
+      integer(8), dimension(2), intent(in) :: simulation_time
 
-      datum = start_datum + real(simulation_time, RK) / SECONDS_PER_DAY
+      datum = start_datum + real(simulation_time(1), RK) + real(simulation_time(2), RK) / SECONDS_PER_DAY
    end function
 
 end module utilities

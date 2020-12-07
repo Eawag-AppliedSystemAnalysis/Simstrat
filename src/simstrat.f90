@@ -57,7 +57,7 @@ program simstrat_main
    character(len=:), allocatable :: ParName
    character(len=:), allocatable :: snapshot_file_path
    logical :: continue_from_snapshot = .false.
-   integer(8) :: simulation_end_time
+   integer(8),dimension(2) :: simulation_end_time
    real(RK) :: new_start_datum
 
    ! Print some information
@@ -128,10 +128,11 @@ program simstrat_main
 
    ! Calculate simulation_end_time
    if (simdata%output_cfg%thinning_interval > 0) then
-      simulation_end_time = int((simdata%sim_cfg%end_datum - simdata%sim_cfg%start_datum) * SECONDS_PER_DAY + 0.5)
+      simulation_end_time(1) = int(floor(simdata%sim_cfg%end_datum - simdata%sim_cfg%start_datum))
+      simulation_end_time(2) = int(floor(simdata%sim_cfg%end_datum - simdata%sim_cfg%start_datum - real(simulation_end_time(1), RK)) * SECONDS_PER_DAY + 0.5)
    else
-      simulation_end_time = simdata%output_cfg%simulation_times_for_output( &
-            size(simdata%output_cfg%simulation_times_for_output))
+      simulation_end_time = simdata%output_cfg%simulation_times_for_output(:, &
+            size(simdata%output_cfg%simulation_times_for_output,2))
    end if
 
    ! Initialize simulation modules
@@ -193,10 +194,18 @@ contains
 
       ! Run the simulation loop
       ! Run simulation until end datum or until no more results are required by the output time file
-      do while (simdata%model%simulation_time < simulation_end_time)
+      do while (simdata%model%simulation_time(1) < simulation_end_time(1) .or. &
+         simdata%model%simulation_time(1) == simulation_end_time(1) .and. simdata%model%simulation_time(2) < simulation_end_time(2))
 
          ! Advance to the next timestep
-         simdata%model%simulation_time = simdata%model%simulation_time + simdata%sim_cfg%timestep
+         simdata%model%simulation_time_old = simdata%model%simulation_time
+
+         simdata%model%simulation_time(2) = simdata%model%simulation_time(2) + simdata%sim_cfg%timestep
+         if (simdata%model%simulation_time(2) >= SECONDS_PER_DAY) then
+            simdata%model%simulation_time(1) = simdata%model%simulation_time(1) + 1
+            simdata%model%simulation_time(2) = simdata%model%simulation_time(2) - SECONDS_PER_DAY
+         end if
+
          simdata%model%datum = datum(simdata%sim_cfg%start_datum, simdata%model%simulation_time)
 
          ! ************************************

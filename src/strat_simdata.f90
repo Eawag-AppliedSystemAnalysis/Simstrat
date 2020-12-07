@@ -42,7 +42,7 @@ module strat_simdata
       character(len=:), allocatable :: output_depth_reference
       real(RK), dimension(:), allocatable :: zout, zout_read
       real(RK), dimension(:), allocatable :: tout
-      integer(8), dimension(:), allocatable :: simulation_times_for_output
+      integer(8), dimension(:,:), allocatable :: simulation_times_for_output
       integer, dimension(:), allocatable :: n_timesteps_between_tout
       logical :: write_to_file, output_all
       integer :: number_output_vars
@@ -113,7 +113,7 @@ module strat_simdata
       integer :: current_month ! Current month of simulation, used for zenith angle dependent water albedo
       real(RK) :: current_day ! Current day of simulation, used for zenith angle dependent water albedo
       real(RK) :: datum, dt
-      integer(8) :: simulation_time
+      integer(8), dimension(2) :: simulation_time, simulation_time_old
       logical :: first_timestep = .true.
 
       ! Variables located on z_cent grid
@@ -284,6 +284,8 @@ contains
       self%hv = 0.0_RK
       self%rad0 = 0.0_RK
 
+      self%simulation_time_old = 0
+
    end subroutine
 
    ! save model state unformatted
@@ -291,7 +293,8 @@ contains
       implicit none
       class(ModelState), intent(in) :: self
 
-      write(80) self%current_year, self%current_month, self%current_day, self%datum, self%simulation_time
+      write(80) self%current_year, self%current_month, self%current_day, self%datum
+      write(80) self%simulation_time(1), self%simulation_time(2), self%simulation_time_old(1), self%simulation_time_old(2)
       call save_array(80, self%U)
       call save_array(80, self%V)
       call save_array(80, self%T)
@@ -349,7 +352,8 @@ contains
       implicit none
       class(ModelState), intent(inout) :: self
 
-      read(81) self%current_year, self%current_month, self%current_day, self%datum, self%simulation_time
+      read(81) self%current_year, self%current_month, self%current_day, self%datum
+      read(81) self%simulation_time(1), self%simulation_time(2), self%simulation_time_old(1), self%simulation_time_old(2)
       call read_array(81, self%U)
       call read_array(81, self%V)
       call read_array(81, self%T)
