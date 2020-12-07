@@ -133,6 +133,9 @@ program simstrat_main
    else
       simulation_end_time = simdata%output_cfg%simulation_times_for_output(:, &
             size(simdata%output_cfg%simulation_times_for_output,2))
+      if (simdata%sim_cfg%end_datum < simdata%sim_cfg%start_datum + real(simulation_end_time(1)) + real(simulation_end_time(2))/SECONDS_PER_DAY) then
+         call error('Some of the output times are larger than the simulation duration')
+      end if
    end if
 
    ! Initialize simulation modules
