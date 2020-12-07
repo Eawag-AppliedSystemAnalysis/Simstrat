@@ -16,13 +16,13 @@
     "Times"  : 96,                                      ! Output times can be a number (interpreted as frequency 1/days), a list with times or a path to a file (containing a number or a list)
     "OutputDepthReference": "surface",                  ! "surface": depth of output variables is referenced to lake level, "bottom": depth of output variables is referenced to lake bottom
     "All"   : false,                                    ! True: All variables are written out, false: only variables in list "variables" are written
-    "Variables" : ["U", "V", "T", "S"]                  ! Variables written to file (if "all" = false), example: ["T", "S", "WaterH"]
+    "Variables" : [T", "S","HA","HW","HK","HV"]                  ! Variables written to file (if "all" = false), example: ["T", "S", "WaterH"]
   },
   "ModelConfig" : {
     "MaxLengthInputData"      : 1000,                   ! Maximum length of input data (initial conditions, bathymetry, grid etc.)
     "CoupleAED2"              : false,                  ! Switch to turn on/off the biochemical model AED2
     "TurbulenceModel"         : 1,                      ! 1: k-epsilon, 2: Mellor-Yamada
-    "SplitSeicheParameter"    : true,                   ! True: Use a_seiche if N2 exceeds strat_sumr and a_seiche_w otherwise, False: Always use a_seiche
+    "SplitSeicheParameter"    : false,                   ! True: Use a_seiche if N2 exceeds strat_sumr and a_seiche_w otherwise, False: Always use a_seiche
     "StabilityFunction"       : 2,                      ! 1: constant, 2: quasi-equilibrium
     "FluxCondition"           : 1,                      ! 0: Dirichlet condition, 1: no-flux
     "Forcing"                 : 3,                      ! 1: Wind + Temp + SolRad, 2: 1 + VapP, 3: 2 + Cloud, 4: Wind + HeatFlux + SolRad, 5: 2 + Incoming Long Wave
@@ -41,7 +41,7 @@
     "Start d"                     : 35001,              ! Simulation start in days since 01.01. of starting year
     "End d"                       : 35732,              ! Simulation end
     "DisplaySimulation"           : 0,                  ! 0: No display, 1: Display when output is written, 2: Display every iteration
-    "Continue from last snapshot" : true                ! If true simulation continues from last snapshot (if present in output folder). Default: false
+    "Continue from last snapshot" : false                ! If true simulation continues from last snapshot (if present in output folder). Default: false
   },
   "ModelParameters" : {
     "lat"           : 47.3,                             ! Latitude in [°]
