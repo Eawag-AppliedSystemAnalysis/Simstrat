@@ -431,6 +431,7 @@ contains
       real(RK), intent(in) :: start_datum
       integer(8), dimension(2), intent(in) :: simulation_time
 
+      ! Simulation time is a tuple of 2 integers (days, seconds)
       datum = start_datum + real(simulation_time(1), RK) + real(simulation_time(2), RK) / SECONDS_PER_DAY
    end function
 

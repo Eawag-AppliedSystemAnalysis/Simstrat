@@ -143,6 +143,8 @@ contains
             endif
          end if
          if (output_cfg%thinning_interval == 0) then
+
+            ! User defined output times are transformed to a tuple of 2 integers (days, seconds)
             allocate (output_cfg%simulation_times_for_output(2,size(output_cfg%tout)))
             output_cfg%simulation_times_for_output(1,:) = int(floor(output_cfg%tout - sim_cfg%start_datum))
             output_cfg%simulation_times_for_output(2,:) = int((output_cfg%tout - sim_cfg%start_datum - output_cfg%simulation_times_for_output(1,:))* SECONDS_PER_DAY + 0.5)
@@ -369,7 +371,7 @@ contains
          ! Set up timing
          model%datum = self%simdata%sim_cfg%start_datum
          model%dt = self%simdata%sim_cfg%timestep
-         model%simulation_time_old(2) = -model%dt
+         model%simulation_time_old(2) = -model%dt     ! This is a workaround for correct implementation of simulation time, FB 2020
          model%simulation_time = 0
       end associate
    end subroutine

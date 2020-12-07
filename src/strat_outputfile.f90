@@ -273,7 +273,7 @@ contains
 
    !************************* Calculate next time point ****************************
 
-   ! Calculate time point for next output (if necessary)
+   ! Calculate time point for next output (if necessar)
    subroutine calculate_simulation_time_for_next_output_interpolating(self, simulation_time)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
@@ -354,20 +354,28 @@ contains
       integer :: i
       logical :: write_condition1, write_condition2
 
+      ! Write condition 1: the next output time is larger than the old simulation time
       write_condition1 = (simulation_time_for_next_output(1) > simulation_time_old(1) .or. &
                simulation_time_for_next_output(1) == simulation_time_old(1) .and. simulation_time_for_next_output(2) > simulation_time_old(2))
+      
+      ! Write condition 2: the next output time is smaller or equal to the current simulation time
       write_condition2 = (simulation_time_for_next_output(1) < simulation_time(1) .or. &
                simulation_time_for_next_output(1) == simulation_time(1) .and. simulation_time_for_next_output(2) <= simulation_time(2))
       
       self%write_to_file = (write_condition1 .and. write_condition2)
 
+      ! If both writing conditions are fulfilled
       if (self%write_to_file) then
          counter = counter + 1
-         self%w1 = (simulation_time(1) + simulation_time(2)/SECONDS_PER_DAY &
-            - simulation_time_for_next_output(1) - simulation_time_for_next_output(2)/SECONDS_PER_DAY) / real(timestep, RK)
+
+         ! w1 and w0 are weights for the case where the output time needs to be interpolated from surrounding timesteps
+         self%w1 = ((simulation_time(1) - simulation_time_for_next_output(1))*SECONDS_PER_DAY + &
+          simulation_time(2) - simulation_time_for_next_output(2)) / real(timestep, RK)
          self%w0 = 1 - self%w1
+         ! Save current output time
          self%output_datum = datum(start_datum, simulation_time_for_next_output)
          if (thinning_interval == 0) then
+            ! Look for next output time
             do i = counter, size(simulation_times_for_output,2)
                if (simulation_times_for_output(1,i) > simulation_time(1) .or. &
                   simulation_times_for_output(1,i) == simulation_time(1) .and. simulation_times_for_output(2,i) > simulation_time(2)) then
@@ -376,6 +384,7 @@ contains
                end if
             end do
          else
+            ! Regular output time spacing
             simulation_time_for_next_output(2) = simulation_time_for_next_output(2) + thinning_interval * timestep
             if (simulation_time_for_next_output(2) >= SECONDS_PER_DAY) then
                simulation_time_for_next_output(2) = simulation_time_for_next_output(2) - SECONDS_PER_DAY

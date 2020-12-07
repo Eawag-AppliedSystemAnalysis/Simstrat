@@ -126,13 +126,18 @@ program simstrat_main
    ! Setup logger
    call logger%initialize(simdata%sim_cfg, simdata%output_cfg, simdata%grid, continue_from_snapshot)
 
-   ! Calculate simulation_end_time
+   ! Calculate simulation_end_time, which is a tuple of integers (days, seconds)
+
+   ! If output times are at regular intervals
    if (simdata%output_cfg%thinning_interval > 0) then
       simulation_end_time(1) = int(floor(simdata%sim_cfg%end_datum - simdata%sim_cfg%start_datum))
       simulation_end_time(2) = int(floor(simdata%sim_cfg%end_datum - simdata%sim_cfg%start_datum - real(simulation_end_time(1), RK)) * SECONDS_PER_DAY + 0.5)
+   
+   ! If output times are user defined
    else
       simulation_end_time = simdata%output_cfg%simulation_times_for_output(:, &
             size(simdata%output_cfg%simulation_times_for_output,2))
+      
       if (simdata%sim_cfg%end_datum < simdata%sim_cfg%start_datum + real(simulation_end_time(1)) + real(simulation_end_time(2))/SECONDS_PER_DAY) then
          call error('Some of the output times are larger than the simulation duration')
       end if
@@ -197,6 +202,7 @@ contains
 
       ! Run the simulation loop
       ! Run simulation until end datum or until no more results are required by the output time file
+      ! Simulation time is a tuple of 2 integers (days, seconds)
       do while (simdata%model%simulation_time(1) < simulation_end_time(1) .or. &
          simdata%model%simulation_time(1) == simulation_end_time(1) .and. simdata%model%simulation_time(2) < simulation_end_time(2))
 
@@ -204,6 +210,8 @@ contains
          simdata%model%simulation_time_old = simdata%model%simulation_time
 
          simdata%model%simulation_time(2) = simdata%model%simulation_time(2) + simdata%sim_cfg%timestep
+
+         ! If second counter is larger than 86400, change day
          if (simdata%model%simulation_time(2) >= SECONDS_PER_DAY) then
             simdata%model%simulation_time(1) = simdata%model%simulation_time(1) + 1
             simdata%model%simulation_time(2) = simdata%model%simulation_time(2) - SECONDS_PER_DAY
