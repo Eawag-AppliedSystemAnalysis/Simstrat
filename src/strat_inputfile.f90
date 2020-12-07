@@ -632,7 +632,6 @@ contains
          call par_file%get("ModelParameters.lat", model_param%Lat, found); call check_field(found, 'ModelParameters.lat', ParName)
          call par_file%get("ModelParameters.p_air", model_param%p_air, found); call check_field(found, 'ModelParameters.p_air', ParName)
          call par_file%get("ModelParameters.a_seiche", model_param%a_seiche, found); call check_field(found, 'ModelParameters.a_seiche', ParName)
-         call par_file%get("ModelParameters.a_seiche", model_param%a_seiche, found); call check_field(found, 'ModelParameters.a_seiche', ParName)
          if (model_cfg%split_a_seiche) then
             call par_file%get("ModelParameters.a_seiche_w", model_param%a_seiche_w, found); call check_field(found, 'ModelParameters.a_seiche_w', ParName)
             call par_file%get("ModelParameters.strat_sumr", model_param%strat_sumr, found); call check_field(found, 'ModelParameters.strat_sumr', ParName)
