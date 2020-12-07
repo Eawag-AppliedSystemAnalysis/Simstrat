@@ -120,7 +120,7 @@ program simstrat_main
    snapshot_file_path = simdata%output_cfg%PathOut//'/simulation-snapshot.dat'
    if (simdata%sim_cfg%continue_from_snapshot) then
       inquire (file=snapshot_file_path, exist=continue_from_snapshot)
-      print *,"continue from snapshot",continue_from_snapshot
+      print *,"Snapshot is available and used",continue_from_snapshot
    end if
 
    ! Setup logger
