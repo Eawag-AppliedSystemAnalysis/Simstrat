@@ -1,5 +1,5 @@
 [modes]
-modes = release-gnu release-intel debug-gnu
+modes = release-gnu release-gnu-dynamic release-intel debug-gnu debug-gnu-dynamic
 
 [release-gnu]
 compiler=Gnu
@@ -32,8 +32,24 @@ include = ../lib/libaed2/mod/
 colors=False
 quiet=False
 target=simstrat.f90
+output=simstrat
 dependon=../lib/csv_fortran/fobos:release-gnu((direct))
          ../lib/json_fortran/fobos:release-gnu((direct))
+         ../lib/forbear/fobos:static-gnu((direct))
+log=True
+
+[release-gnu-dynamic]
+compiler=Gnu
+cflags=-c -O2 -std=f2008 -ffree-line-length-none
+lflags=-dynamic-libgcc -dynamic-libgfortran -dynamic
+build_dir=.
+src=../src/
+colors=False
+quiet=False
+target=simstrat.f90
+dependon=../lib/csv_fortran/fobos:release-gnu((direct))
+         ../lib/json_fortran/fobos:release-gnu((direct))
+         ../lib/forbear/fobos:static-gnu((direct))
 log=True
 
 [release-intel]
@@ -45,6 +61,7 @@ src=../src/
 colors=False
 quiet=False
 target=simstrat.f90
+output=simstrat
 dependon=../lib/csv_fortran/fobos:release-intel((direct))
          ../lib/json_fortran/fobos:release-intel((direct))
 log=True
@@ -58,11 +75,32 @@ src=../src/
 colors=False
 quiet=False
 target=simstrat.f90
+output=simstrat
 dependon=../lib/csv_fortran/fobos:release-gnu((direct))
          ../lib/json_fortran/fobos:release-gnu((direct))
+         ../lib/forbear/fobos:static-gnu((direct))
 log=True
 
+[debug-gnu-dynamic]
+compiler=Gnu
+cflags=-c -O2 -std=f2008 -ffree-line-length-none -g -ffpe-trap=overflow,zero -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans
+lflags=-dynamic-libgcc -dynamic-libgfortran -dynamic
+build_dir=.
+src=../src/
+colors=False
+quiet=False
+target=simstrat.f90
+dependon=../lib/csv_fortran/fobos:release-gnu((direct))
+         ../lib/json_fortran/fobos:release-gnu((direct))
+         ../lib/forbear/fobos:static-gnu((direct))
+log=True
 
 [rule-makedoc]
 help = Generate FORD documentation (see /doc/developer folder)
 rule = FoBiS.py rule -ford ../doc/developer/ford/ford_projectfile.md
+
+[rule-purge]
+help = Clean all the libraries (.mod and .obj)
+rule_1 = cd ../lib/csv_fortran  ; FoBiS.py clean; cd -
+rule_2 = cd ../lib/json_fortran ; FoBiS.py clean; cd -
+rule_3 = cd ../lib/forbear      ; FoBiS.py clean; cd -

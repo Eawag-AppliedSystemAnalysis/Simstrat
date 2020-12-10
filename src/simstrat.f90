@@ -24,6 +24,7 @@ program simstrat_main
    use strat_advection
    use simstrat_aed2
    use strat_lateral
+   use forbear
    use, intrinsic :: ieee_arithmetic
 
    implicit none
@@ -51,9 +52,15 @@ program simstrat_main
    type(LateralModule), target :: mod_lateral_normal
    type(LateralRhoModule), target :: mod_lateral_rho
    class(GenericLateralModule), pointer :: mod_lateral
+   ! Instantiate progress bar object
+   type(bar_object):: bar
 
    character(len=100) :: arg
    character(len=:), allocatable :: ParName
+   character(len=:), allocatable :: snapshot_file_path
+   logical :: continue_from_snapshot = .false.
+   integer(8),dimension(2) :: simulation_end_time
+   real(RK) :: new_start_datum
 
    ! Print some information
    write (6, *) 'Simstrat version '//version
@@ -115,8 +122,32 @@ program simstrat_main
       call warn('Lake in-/outflow is turned off')
    end if
 
+   ! Binary simulation snapshot file
+   snapshot_file_path = simdata%output_cfg%PathOut//'/simulation-snapshot.dat'
+   if (simdata%sim_cfg%continue_from_snapshot) then
+      inquire (file=snapshot_file_path, exist=continue_from_snapshot)
+      print *,"Snapshot is available and used",continue_from_snapshot
+   end if
+
    ! Setup logger
-   call logger%initialize(simdata%model, simdata%sim_cfg, simdata%model_cfg, simdata%aed2_cfg, simdata%output_cfg, simdata%grid)
+   call logger%initialize(simdata%model, simdata%sim_cfg, simdata%model_cfg, simdata%aed2_cfg, simdata%output_cfg, simdata%grid, continue_from_snapshot)
+
+   ! Calculate simulation_end_time, which is a tuple of integers (days, seconds)
+
+   ! If output times are at regular intervals
+   if (simdata%output_cfg%thinning_interval > 0) then
+      simulation_end_time(1) = int(floor(simdata%sim_cfg%end_datum - simdata%sim_cfg%start_datum))
+      simulation_end_time(2) = int(floor(simdata%sim_cfg%end_datum - simdata%sim_cfg%start_datum - real(simulation_end_time(1), RK)) * SECONDS_PER_DAY + 0.5)
+   
+   ! If output times are user defined
+   else
+      simulation_end_time = simdata%output_cfg%simulation_times_for_output(:, &
+            size(simdata%output_cfg%simulation_times_for_output,2))
+      
+      if (simdata%sim_cfg%end_datum < simdata%sim_cfg%start_datum + real(simulation_end_time(1)) + real(simulation_end_time(2))/SECONDS_PER_DAY) then
+         call error('Some of the output times are larger than the simulation duration')
+      end if
+   end if
 
    ! Initialize simulation modules
    call mod_stability%init(simdata%grid, simdata%model_cfg, simdata%model_param)
@@ -150,70 +181,49 @@ program simstrat_main
 contains
 
    subroutine run_simulation()
+
+      !! run the marching time loop
+      call ok("Start day: "//real_to_str(simdata%sim_cfg%start_datum, '(F7.1)'))
+      new_start_datum = simdata%sim_cfg%start_datum
+      if (continue_from_snapshot) then
+         call load_snapshot(snapshot_file_path)
+         call ok("Simulation snapshot successfully read. Snapshot day: "//real_to_str(simdata%model%datum, '(F7.1)'))
+         call logger%calculate_simulation_time_for_next_output(simdata%model%simulation_time)
+         new_start_datum = simdata%model%datum
+      else
+         call logger%log(simdata)
+      end if
+      call ok("End day: "//real_to_str(simdata%sim_cfg%end_datum, '(F7.1)'))
+      call logger%start()
+
+      ! initialize a bar with the progress percentage counter
+      call bar%initialize(filled_char_string='#', &
+         prefix_string=' Simulation progress |',  &
+         suffix_string='| ', add_progress_percent=.true., &
+         add_date_time=.true., &
+         max_value=(simdata%sim_cfg%end_datum-new_start_datum))
+
+      ! start the progress bar
+      call bar%start
+
       ! Run the simulation loop
-
-      ! Write initial conditions
-      call logger%log(simdata%model%datum)
-
       ! Run simulation until end datum or until no more results are required by the output time file
-      do while (simdata%model%datum<simdata%sim_cfg%end_datum .and. simdata%model%output_counter<=size(simdata%output_cfg%tout))
-
-         ! ****************************************
-         ! ***** Update counters and timestep *****
-         ! ****************************************
-
-         ! Increase iteration counter
-         simdata%model%model_step_counter = simdata%model%model_step_counter + 1
-
-         ! If output times are specified in file
-         if(simdata%output_cfg%thinning_interval==0) then
-            ! At the first iteration or always after the model output was logged
-            if (simdata%model%model_step_counter==1) then
-               ! Adjust timestep so that the next output time is on the "time grid"
-               simdata%model%dt = simdata%output_cfg%adjusted_timestep(simdata%model%output_counter)
-               ! Don't log anymore until the next output time is reached
-               simdata%output_cfg%write_to_file = .false.
-               ! Log initial state if first output time corresponds to simulation start
-               if (simdata%model%dt < 1e-6) then
-                  ! Log initial conditions and display
-                  call logger%log(simdata%model%datum)
-                  if (simdata%sim_cfg%disp_simulation > 0) then
-                     write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%lake_level, &
-                     simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
-                  end if
-                  ! Update counters and timestep
-                  simdata%model%model_step_counter = simdata%model%model_step_counter + 1
-                  simdata%model%output_counter = simdata%model%output_counter + 1
-                  simdata%model%dt = simdata%output_cfg%adjusted_timestep(simdata%model%output_counter)
-               end if
-
-            else if (simdata%output_cfg%write_to_file) then
-               ! Adjust timestep so that the next output time is on the "time grid"
-               simdata%model%dt = simdata%output_cfg%adjusted_timestep(simdata%model%output_counter)
-               ! Don't log anymore until the next output time is reached
-               simdata%output_cfg%write_to_file = .false.
-            end if
-
-            ! If the next output time is reached
-            if(simdata%model%model_step_counter==sum(int(simdata%output_cfg%n_timesteps_between_tout(1:simdata%model%output_counter)))) then
-               ! Increase output counter
-               simdata%model%output_counter = simdata%model%output_counter + 1
-               ! Log next model state
-               simdata%output_cfg%write_to_file = .true.
-            end if
-         else ! If output frequency is given in file
-            ! If the next output time is reached
-            if(mod(simdata%model%model_step_counter,simdata%output_cfg%thinning_interval)==0) then
-               ! Log next model state
-               simdata%output_cfg%write_to_file = .true.
-            else
-               ! Don't log
-               simdata%output_cfg%write_to_file = .false.
-            end if
-         end if
+      ! Simulation time is a tuple of 2 integers (days, seconds)
+      do while (simdata%model%simulation_time(1) < simulation_end_time(1) .or. &
+         simdata%model%simulation_time(1) == simulation_end_time(1) .and. simdata%model%simulation_time(2) < simulation_end_time(2))
 
          ! Advance to the next timestep
-         simdata%model%datum = simdata%model%datum + simdata%model%dt/86400
+         simdata%model%simulation_time_old = simdata%model%simulation_time
+
+         simdata%model%simulation_time(2) = simdata%model%simulation_time(2) + simdata%sim_cfg%timestep
+
+         ! If second counter is larger than 86400, change day
+         if (simdata%model%simulation_time(2) >= SECONDS_PER_DAY) then
+            simdata%model%simulation_time(1) = simdata%model%simulation_time(1) + 1
+            simdata%model%simulation_time(2) = simdata%model%simulation_time(2) - SECONDS_PER_DAY
+         end if
+
+         simdata%model%datum = datum(simdata%sim_cfg%start_datum, simdata%model%simulation_time)
 
          ! ************************************
          ! ***** Compute next model state *****
@@ -223,7 +233,7 @@ contains
          if (.not. simdata%model_cfg%user_defined_water_albedo) then
             call mod_forcing%update_albedo(simdata%model)
          end if
-         
+
          ! Update forcing
          call mod_forcing%update(simdata%model)
 
@@ -250,16 +260,6 @@ contains
             call mod_advection%update(simdata%model)
             ! Update lake level
             simdata%grid%lake_level = simdata%grid%z_face(simdata%grid%ubnd_fce)
-         end if
-
-         ! Display to screen
-         if (simdata%model%model_step_counter==1 .and. simdata%sim_cfg%disp_simulation/=0) then
-            write(6,*)
-            write(6,*) ' -------------------------- '
-            write(6,*) '   SIMULATION IN PROGRESS   '
-            write(6,*) ' -------------------------- '
-            write(6,*)
-            if(simdata%sim_cfg%disp_simulation/=0) write(6,'(A12, A20, A20, A20)') 'Time [d]','Surface level [m]','T_surf [degC]','T_bottom [degC]'
          end if
 
          ! Update Coriolis
@@ -293,36 +293,42 @@ contains
          end if
 
          ! Call logger to write files
-         if (simdata%output_cfg%write_to_file) then
-            call logger%log(simdata%model%datum)
-         end if
-
-         ! ***********************************
-         ! ***** Log to file and display *****
-         ! ***********************************
-
-         ! Standard display: display when logged: datum, lake surface, T(1), T(surf)
-         if (simdata%sim_cfg%disp_simulation==1 .and. simdata%output_cfg%write_to_file) then
-            write(6,'(F12.4,F16.4,F20.4,F20.4)') simdata%model%datum, simdata%grid%lake_level, &
-            simdata%model%T(simdata%grid%nz_occupied), simdata%model%T(1)
-
-         ! Extra display: display every iteration: datum, lake surface, T(1), T(surf)
-         else if (simdata%sim_cfg%disp_simulation==2) then
-            write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%lake_level, &
-            simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
-         end if
+         call logger%log(simdata)
 
          ! This logical is used to do some allocation in the forcing, absorption and lateral subroutines during the first timestep
          simdata%model%first_timestep = .false.
-      end do
 
-      if (simdata%sim_cfg%disp_simulation/=0) then
-         write(6,*)
-         write(6,*) ' -------------------------- '
-         write(6,*) '    SIMULATION COMPLETED    '
-         write(6,*) ' -------------------------- '
-         write(6,*)
-      end if
+         !update the progress bar
+         call bar%update(current=(simdata%model%datum-new_start_datum))
+
+      end do
+      call save_snapshot(snapshot_file_path)
+   end subroutine
+
+   subroutine save_snapshot(file_path)
+      implicit none
+      character(len=*), intent(in) :: file_path
+
+      open(80, file=file_path, Form='unformatted', Action='Write')
+      call simdata%model%save()
+      call simdata%grid%save()
+      call mod_absorption%save()
+      call mod_lateral%save()
+      call logger%save()
+      close(80)
+   end subroutine
+
+   subroutine load_snapshot(file_path)
+      implicit none
+      character(len=*), intent(in) :: file_path
+
+      open(81, file=file_path, Form='unformatted', Action='Read')
+      call simdata%model%load()
+      call simdata%grid%load()
+      call mod_absorption%load()
+      call mod_lateral%load()
+      call logger%load()
+      close(81)
    end subroutine
 
 end program simstrat_main

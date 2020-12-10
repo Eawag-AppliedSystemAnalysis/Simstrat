@@ -192,7 +192,7 @@ contains
    subroutine ok(message)
       implicit none
       character(len=*), intent(in) :: message
-      write(6, *) '[OK] '//message
+      write(*, *) '[OK] '//message
    end subroutine ok
 
    subroutine error(message)
@@ -205,7 +205,7 @@ contains
    subroutine warn(message)
       implicit none
       character(len=*), intent(in) :: message
-      write(6, *) '[WARNING] '//message
+      write(*, *) '[WARNING] '//message
    end subroutine warn
 
    pure function find_index_ordered(array, target_value) result(idx)
@@ -279,26 +279,48 @@ contains
       str_real = adjustl(str_real)
    end function str_real
 
+   character(len=20) function real_to_str(k, fmt)
+      implicit none
+      real(RK), intent(in) :: k
+      character(len=*), intent(in) :: fmt
+      write (real_to_str, fmt) k
+      real_to_str = adjustl(real_to_str)
+   end function
+
+   pure logical function is_leap_year(year)
+      integer, intent(in) :: year
+      is_leap_year = mod(year, 4) == 0 .and. (.not. mod(year, 100) == 0 .or. mod(year, 400) == 0)
+   end function
+
+   pure function calc_days_per_month(year) result(days_per_month)
+      integer, intent(in) :: year
+      integer, dimension(12) :: days_per_month
+
+      if (is_leap_year(year)) then
+         days_per_month = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+      else
+         days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+      end if
+   end function
 
    ! Initialize the calender (day, month and year) based on the given starting year and and start datum
-   subroutine init_calendar(start_year, datum, current_year, leap_year, current_month, current_day)
+   subroutine init_calendar(start_year, datum, current_year, current_month, current_day)
       implicit none
       integer, intent(in) :: start_year
       real(RK), intent(in) :: datum
-      integer, intent(inout) :: current_year, current_month
-      logical, intent(inout) :: leap_year
-      real(RK), intent(inout) :: current_day
+      integer, intent(out) :: current_year, current_month
+      real(RK), intent(out) :: current_day
 
       ! Local variables
       real(RK) :: elapsed_days, days_left, days_per_year
       integer :: i
       integer, dimension(12) :: days_per_month
-      
+
       ! Determine current year
       current_year = start_year
       elapsed_days = 0
       do
-         if (mod(current_year,4)==0 .and. .not. mod(current_year,100)==0) then
+         if (is_leap_year(current_year)) then
             days_per_year = 366
          else
             days_per_year = 365
@@ -314,11 +336,7 @@ contains
       days_left = datum - elapsed_days
 
       ! Determine current month and day
-      if (leap_year) then
-         days_per_month = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-      else
-         days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-      end if
+      days_per_month = calc_days_per_month(current_year)
 
       do i=1,12
          if (days_left > days_per_month(i)) then
@@ -329,29 +347,13 @@ contains
             exit
          end if
       end do
-
-      leap_year = .false.
-      ! Determine if current year is a leap year
-      if (mod(current_year,4)==0) then
-         leap_year = .true.
-
-         if (mod(current_year,100)==0) then
-            leap_year = .false.
-
-            if (mod(current_year,400)==0) then
-               leap_year = .true.
-            end if
-         end if
-      end if
-
    end subroutine
 
 
    ! Update calendar month and day (used for albedo assignment)
-   subroutine update_calendar(current_year, leap_year, current_month, current_day, dt)
+   subroutine update_calendar(current_year, current_month, current_day, dt)
       implicit none
       integer, intent(inout) :: current_year, current_month
-      logical, intent(inout) :: leap_year
       real(RK), intent(inout) :: current_day
       real(RK), intent(in) :: dt
 
@@ -361,12 +363,8 @@ contains
 
 
       ! Prepare day per month arrays
-      if (leap_year) then
-         days_per_month = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-      else
-         days_per_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-      end if
-      
+      days_per_month = calc_days_per_month(current_year)
+
       ! Update current day
       current_day_new = current_day + dt/24/60/60
 
@@ -379,20 +377,6 @@ contains
          if (current_month > 12) then
             current_month = 1
             current_year = current_year + 1
-
-            leap_year = .false.
-            ! Determine if current year is a leap year
-            if (mod(current_year,4)==0) then
-               leap_year = .true.
-
-               if (mod(current_year,100)==0) then
-                  leap_year = .false.
-
-                  if (mod(current_year,400)==0) then
-                     leap_year = .true.
-                  end if
-               end if
-            end if
          end if
       else
          ! If not a new month, just go on counting
@@ -418,5 +402,76 @@ contains
 
       rho = rho_0*(rho0t + rho0st)
    end subroutine
+
+
+   subroutine save_array(output_unit, array)
+      implicit none
+      integer, intent(in) :: output_unit
+      real(RK), dimension(:), allocatable, intent(in) :: array
+
+      write(output_unit) lbound(array), ubound(array)
+      write(output_unit) array
+   end subroutine
+
+   subroutine save_array_pointer(output_unit, array)
+      implicit none
+      integer, intent(in) :: output_unit
+      real(RK), dimension(:), pointer, intent(in) :: array
+
+      write(output_unit) lbound(array), ubound(array)
+      write(output_unit) array
+   end subroutine
+
+   subroutine read_array(input_unit, array)
+      implicit none
+      integer, intent(in) :: input_unit
+      real(RK), dimension(:), allocatable, intent(inout) :: array
+      integer :: array_lbound, array_ubound
+
+      read(input_unit) array_lbound, array_ubound
+      read(input_unit) array(array_lbound:array_ubound)
+   end subroutine
+
+   subroutine read_array_pointer(input_unit, array)
+      implicit none
+      integer, intent(in) :: input_unit
+      real(RK), dimension(:), pointer, intent(inout) :: array
+      integer :: array_lbound, array_ubound
+
+      read(input_unit) array_lbound, array_ubound
+      read(input_unit) array(array_lbound:array_ubound)
+   end subroutine
+
+
+   subroutine save_matrix(output_unit, matrix)
+      implicit none
+      integer, intent(in) :: output_unit
+      real(RK), dimension(:, :), allocatable, intent(in) :: matrix
+
+      write(output_unit) lbound(matrix, 1), ubound(matrix, 1), lbound(matrix, 2), ubound(matrix, 2)
+      write(output_unit) matrix
+   end subroutine
+
+   subroutine read_matrix(input_unit, matrix)
+      implicit none
+      integer, intent(in) :: input_unit
+      real(RK), dimension(:, :), allocatable, intent(inout) :: matrix
+      integer :: matrix_lbound_1, matrix_ubound_1, matrix_lbound_2, matrix_ubound_2
+
+      read(input_unit) matrix_lbound_1, matrix_ubound_1, matrix_lbound_2, matrix_ubound_2
+      if (.not. allocated(matrix)) then
+         allocate (matrix(matrix_lbound_1:matrix_ubound_1, matrix_lbound_2:matrix_ubound_2))
+      end if
+      read(input_unit) matrix(matrix_lbound_1:matrix_ubound_1, matrix_lbound_2:matrix_ubound_2)
+   end subroutine
+
+   pure real(RK) function datum(start_datum, simulation_time)
+      implicit none
+      real(RK), intent(in) :: start_datum
+      integer(8), dimension(2), intent(in) :: simulation_time
+
+      ! Simulation time is a tuple of 2 integers (days, seconds)
+      datum = start_datum + real(simulation_time(1), RK) + real(simulation_time(2), RK) / SECONDS_PER_DAY
+   end function
 
 end module utilities

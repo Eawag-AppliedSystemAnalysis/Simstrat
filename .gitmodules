@@ -1,3 +1,6 @@
 [submodule "lib/libaed2"]
 	path = lib/libaed2
 	url = https://github.com/AquaticEcoDynamics/libaed2.git
+[submodule "lib/forbear"]
+	path = lib/forbear
+	url = https://github.com/d-vanzo/forbear.git

@@ -20,10 +20,6 @@ module strat_forcing
       class(StaggeredGrid), pointer :: grid
       class(ModelParam), pointer :: param
       character(len=:), allocatable  :: file  ! Forcing file name
-      integer :: current_year ! Current year of simulation, used for zenith angle dependent water albedo
-      logical :: leap_year
-      integer :: current_month ! Current month of simulation, used for zenith angle dependent water albedo
-      real(RK) :: current_day ! Current day of simulation, used for zenith angle dependent water albedo
    contains
       procedure, pass :: init => forcing_init
       procedure, pass :: read => forcing_read
@@ -83,7 +79,7 @@ contains
          read (20, *, end=9)
          read (20, *, end=9) tb_start, (A_s(i), i=1, nval)
          if (datum < tb_start) then
-            write(6,*) '[WARNING] ','First forcing date after simulation start time. datum=', datum,  'start=', tb_start
+            write(*,*) '[WARNING] ','First forcing date after simulation start time. datum=', datum,  'start=', tb_start
          end if
          read (20, *, end=7) tb_end, (A_e(i), i=1, nval)
 
@@ -100,7 +96,7 @@ contains
             read (20, *, end=7) tb_end, (A_e(i), i=1, nval)
          end do
          ! Linearly interpolate values at correct datum
-         A_cur(1:nval) = A_s(1:nval) + (datum - tb_start)*(A_e(1:nval) - A_s(1:nval))/(tb_end - tb_start)
+         A_cur(1:nval) = A_s(1:nval) + (datum - tb_start)/(tb_end - tb_start)*(A_e(1:nval) - A_s(1:nval))
       end if
       return
 
@@ -167,7 +163,7 @@ contains
          state%v10 = A_cur(2)*param%f_wind ! MS 2014: added f_wind
          state%uv10 = sqrt(state%u10**2 + state%v10**2) ! AG 2014
          state%SST = A_cur(3) ! Lake surface temperature
-         state%rad0 = A_cur(4)*(1 - state%albedo_water)*(1 - param%beta_sol) ! MS: added beta_sol and albedo_water
+         state%rad0 = max(A_cur(4)*(1 - state%albedo_water)*(1 - param%beta_sol),0.0_RK) ! MS: added beta_sol and albedo_water
          state%heat = 0.0_RK
          state%T_atm = 0.0_RK
          state%precip = 0.0_RK
@@ -182,13 +178,14 @@ contains
             state%u10 = A_cur(1)*param%f_wind ! MS 2014: added f_wind
             state%v10 = A_cur(2)*param%f_wind ! MS 2014: added f_wind
             state%T_atm = A_cur(3)
+            A_cur(4) = max(A_cur(4),0.0_RK)  ! To avoid negative values because of numerical problems
 
             if (state%black_ice_h > 0 .and. state%white_ice_h == 0 .and. state%snow_h == 0) then ! Ice
-               F_glob = (A_cur(4)*(1 - ice_albedo)) * param%p_albedo
+               F_glob = A_cur(4)*(1 - ice_albedo) * param%p_albedo
             else if (state%white_ice_h > 0 .and. state%snow_h == 0) then ! Snowice
-               F_glob = (A_cur(4)*(1 - snowice_albedo)) * param%p_albedo
+               F_glob = A_cur(4)*(1 - snowice_albedo) * param%p_albedo
             else if (state%snow_h > 0) then ! Snow
-               F_glob = (A_cur(4)*(1 - snow_albedo)) * param%p_albedo
+               F_glob = A_cur(4)*(1 - snow_albedo) * param%p_albedo
             else ! Water
                F_glob = A_cur(4)*(1 - state%albedo_water) * param%p_sw
             end if
@@ -197,9 +194,9 @@ contains
             Cloud = 0.5
             if (cfg%use_filtered_wind) state%Wf = A_cur(6) ! AG 2014
             if (cfg%snow_model == 1 .and. cfg%use_filtered_wind) then
-               state%precip = A_cur(7)
+               state%precip = max(A_cur(7),0.0_RK)
             else if (cfg%snow_model == 1) then
-               state%precip = A_cur(6)
+               state%precip = max(A_cur(6),0.0_RK)
             end if
 
          ! Forcing mode 3 (date, U10, V10, T_atm, H_sol, Vap, Clouds)
@@ -208,29 +205,30 @@ contains
             state%u10 = A_cur(1)*param%f_wind ! MS 2014: added f_wind
             state%v10 = A_cur(2)*param%f_wind ! MS 2014: added f_wind
             state%T_atm = A_cur(3)
+            A_cur(4) = max(A_cur(4),0.0_RK)  ! To avoid negative values because of numerical problems
 
             if (state%black_ice_h > 0 .and. state%white_ice_h == 0 .and. state%snow_h == 0) then ! Ice
-               F_glob = (A_cur(4)*(1 - ice_albedo)) * param%p_albedo
+               F_glob = A_cur(4)*(1 - ice_albedo) * param%p_albedo
             else if (state%white_ice_h > 0 .and. state%snow_h == 0) then ! Snowice
-               F_glob = (A_cur(4)*(1 - snowice_albedo)) * param%p_albedo
+               F_glob = A_cur(4)*(1 - snowice_albedo) * param%p_albedo
             else if (state%snow_h > 0) then ! Snow
-               F_glob = (A_cur(4)*(1 - snow_albedo)) * param%p_albedo
+               F_glob = A_cur(4)*(1 - snow_albedo) * param%p_albedo
             else ! Water
                F_glob = A_cur(4)*(1 - state%albedo_water) * param%p_sw
             end if
 
             Vap_atm = A_cur(5)
             Cloud = A_cur(6)
-            if (Cloud < 0 .or. Cloud > 1) then
+            if (Cloud < -1e-6 .or. Cloud > 1.000001) then
                write (*,'(A,F12.6)') 'Cloud : ' , Cloud
                write (*,'(A,F12.6)') 'Date  : ' , state%datum
                call error('Cloudiness should always be between 0 and 1.')
             end if
             if (cfg%use_filtered_wind) state%Wf = A_cur(7) !AG 2014
             if (cfg%snow_model == 1 .and. cfg%use_filtered_wind) then
-               state%precip = A_cur(8)
+               state%precip = max(A_cur(8),0.0_RK)
             else if (cfg%snow_model == 1) then
-               state%precip = A_cur(7)
+               state%precip = max(A_cur(7),0.0_RK)
             end if
 
          ! Forcing mode 4 (date, U10, V10, H_net, H_sol)
@@ -243,7 +241,7 @@ contains
             state%u10 = A_cur(1)*param%f_wind ! MS 2014: added f_wind
             state%v10 = A_cur(2)*param%f_wind ! MS 2014: added f_wind
             heat0 = A_cur(3) ! MS 2014
-            F_glob = A_cur(4)*(1 - state%albedo_water) * param%p_sw
+            F_glob = max(A_cur(4)*(1 - state%albedo_water) * param%p_sw,0.0_RK)
             state%T_atm = 0.0_RK
             if (cfg%use_filtered_wind) state%Wf = A_cur(5) ! AG 2014
 
@@ -253,13 +251,14 @@ contains
             state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
             state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
             state%T_atm = A_cur(3)
+            A_cur(4) = max(A_cur(4),0.0_RK)  ! To avoid negative values because of numerical problems
 
             if (state%black_ice_h > 0 .and. state%white_ice_h == 0 .and. state%snow_h == 0) then ! Ice
-               F_glob = (A_cur(4)*(1 - ice_albedo)) * param%p_albedo
+               F_glob = A_cur(4)*(1 - ice_albedo) * param%p_albedo
             else if (state%white_ice_h > 0 .and. state%snow_h == 0) then ! Snowice
-               F_glob = (A_cur(4)*(1 - snowice_albedo)) * param%p_albedo
+               F_glob = A_cur(4)*(1 - snowice_albedo) * param%p_albedo
             else if (state%snow_h > 0) then ! Snow
-               F_glob = (A_cur(4)*(1 - snow_albedo)) * param%p_albedo
+               F_glob = A_cur(4)*(1 - snow_albedo) * param%p_albedo
             else ! Water
                F_glob = A_cur(4)*(1 - state%albedo_water) * param%p_sw
             end if
@@ -268,9 +267,9 @@ contains
             H_A = A_cur(6)
             if (cfg%use_filtered_wind) state%Wf = A_cur(7) ! AG 2014
             if (cfg%snow_model == 1 .and. cfg%use_filtered_wind) then
-               state%precip = A_cur(8)
+               state%precip = max(A_cur(8),0.0_RK)
             else if (cfg%snow_model == 1) then
-               state%precip = A_cur(7)
+               state%precip = max(A_cur(7),0.0_RK)
             end if
          else
             call error('Wrong forcing type (must be 1, 2, 3, 4 or 5).')
@@ -455,7 +454,7 @@ contains
       real(RK) :: cori
       real(RK), dimension(size(state%U)) :: u_temp
       associate (grid=>self%grid, dt=>state%dt, param=>self%param)
-         
+
          ! Calculate u_taub before changing U resp V
          state%u_taub = sqrt(state%drag*(state%U(1)**2 + state%V(1)**2))
 
@@ -478,7 +477,7 @@ contains
       class(ModelState) :: state
       class(SimConfig) :: sim_cfg
 
-      call init_calendar(sim_cfg%start_year, state%datum, self%current_year, self%leap_year, self%current_month, self%current_day)
+      call init_calendar(sim_cfg%start_year, state%datum, state%current_year, state%current_month, state%current_day)
 
       ! Monthly albedo data according to Grishchenko, in Cogley 1979
       if (self%param%Lat > 0)  then ! Northern hemisphere (1.000 if no sun)
@@ -560,40 +559,40 @@ contains
       integer :: previous_month, next_month
 
       ! Determine current calendar day and month
-      call update_calendar(self%current_year, self%leap_year, self%current_month, self%current_day, state%dt)
+      call update_calendar(state%current_year, state%current_month, state%current_day, state%dt)
 
       ! Determine albedo as a function of latitude and month according to Grishchenko (in Cogley 1979)
       ! Linear interpolation, assuming that the monthly data is representative of the 15. of each month (also for months with 28, 29 and 31 days)
       ! There is still a small jump in the albedo value when the month changes. Solving this problem would require a more sophisticated interpolation
       ! or even a continuous function. But the jump is very small and occurs during the night, when anyways no sun light is reaching the lake.
-      
+
       ! If date before 16th of current month
-      if (self%current_day < 16) then
-         if(self%current_month == 1) then
+      if (state%current_day < 16) then
+         if(state%current_month == 1) then
             previous_month = 12
          else
-            previous_month = self%current_month - 1
+            previous_month = state%current_month - 1
          end if
 
          ! Get albedo values for previous and current month
          albedo_start = state%albedo_data(state%lat_number, previous_month)
-         albedo_end = state%albedo_data(state%lat_number, self%current_month)
+         albedo_end = state%albedo_data(state%lat_number, state%current_month)
 
          ! Linear interpolation
-         state%albedo_water = albedo_start + (self%current_day + 15) * (albedo_end - albedo_start)/30
+         state%albedo_water = albedo_start + (state%current_day + 15) * (albedo_end - albedo_start)/30
       else
-         if(self%current_month == 12) then
+         if(state%current_month == 12) then
             next_month = 1
          else
-            next_month = self%current_month + 1
+            next_month = state%current_month + 1
          end if
 
          ! Get albedo values for current and next month
-         albedo_start = state%albedo_data(state%lat_number, self%current_month)
+         albedo_start = state%albedo_data(state%lat_number, state%current_month)
          albedo_end = state%albedo_data(state%lat_number, next_month)
 
          ! Linear interpolation
-         state%albedo_water = albedo_start + (self%current_day - 15) * (albedo_end - albedo_start)/30
+         state%albedo_water = albedo_start + (state%current_day - 15) * (albedo_end - albedo_start)/30
       end if
 
    end subroutine

@@ -6,6 +6,7 @@ module strat_simdata
    use strat_kinds
    use strat_grid
    use strat_consts
+   use utilities
    implicit none
    private
 
@@ -47,8 +48,8 @@ module strat_simdata
       character(len=:), allocatable :: output_depth_reference
       real(RK), dimension(:), allocatable :: zout, zout_read
       real(RK), dimension(:), allocatable :: tout
-      real(RK), dimension(:), allocatable :: n_timesteps_between_tout
-      real(RK), dimension(:), allocatable :: adjusted_timestep
+      integer(8), dimension(:,:), allocatable :: simulation_times_for_output
+      integer, dimension(:), allocatable :: n_timesteps_between_tout
       logical :: write_to_file, output_all
       integer :: number_output_vars
       character(len=20), dimension(:), allocatable :: output_var_names ! Names of output variables
@@ -67,6 +68,7 @@ module strat_simdata
       real(RK) :: start_datum
       real(RK) :: end_datum
       integer :: disp_simulation
+      logical :: continue_from_snapshot = .false.
    end type
 
    ! Model configuration (read from file)
@@ -128,8 +130,11 @@ module strat_simdata
    ! Model state (self is actually the simulation data!!!)
    type, public :: ModelState
       ! Iteration variables
-      integer :: i, j, output_counter, model_step_counter
+      integer :: current_year ! Current year of simulation, used for zenith angle dependent water albedo
+      integer :: current_month ! Current month of simulation, used for zenith angle dependent water albedo
+      real(RK) :: current_day ! Current day of simulation, used for zenith angle dependent water albedo
       real(RK) :: datum, dt
+      integer(8), dimension(2) :: simulation_time, simulation_time_old
       logical :: first_timestep = .true.
 
       ! Variables located on z_cent grid
@@ -199,6 +204,8 @@ module strat_simdata
 
    contains
       procedure, pass :: init => model_state_init
+      procedure, pass :: save => save_model_state
+      procedure, pass :: load => load_model_state
    end type
 
    ! Structure that encapsulates a full program state
@@ -221,7 +228,6 @@ contains
       integer, intent(in) :: state_size
       ! Init model data structures
       call self%model%init(state_size)
-
    end subroutine
 
    ! Allocates all arrays of the model state in the correct size
@@ -320,6 +326,120 @@ contains
       allocate(self%u_taub)
       self%u_taub = 0.0_RK
 
+      self%simulation_time_old = 0
+
+   end subroutine
+
+   ! save model state unformatted
+   subroutine save_model_state(self)
+      implicit none
+      class(ModelState), intent(in) :: self
+
+      write(80) self%current_year, self%current_month, self%current_day, self%datum
+      write(80) self%simulation_time(1), self%simulation_time(2), self%simulation_time_old(1), self%simulation_time_old(2)
+      call save_array(80, self%U)
+      call save_array(80, self%V)
+      call save_array_pointer(80, self%T)
+      call save_array_pointer(80, self%S)
+      call save_array(80, self%dS)
+      call save_matrix(80, self%Q_inp)
+      call save_array_pointer(80, self%rho)
+      call save_array(80, self%k)
+      call save_array(80, self%ko)
+      call save_array(80, self%avh)
+      call save_array(80, self%eps)
+      call save_array(80, self%num)
+      call save_array(80, self%nuh)
+      call save_array(80, self%P)
+      call save_array(80, self%B)
+      call save_array(80, self%NN)
+      call save_array(80, self%cmue1)
+      call save_array(80, self%cmue2)
+      call save_array(80, self%P_Seiche)
+      write(80) self%E_Seiche, self%gamma
+      call save_array(80, self%absorb)
+      write(80) self%u10, self%v10, self%uv10, self%Wf
+      write(80) self%u_taub, self%drag, self%u_taus
+      write(80) self%tx, self%ty
+      write(80) self%C10
+      write(80) self%SST, self%heat, self%heat_snow, self%heat_ice, self%heat_snowice
+      write(80) self%T_atm
+      call save_array(80, self%rad)
+      call save_array(80, self%Q_vert)
+      write(80) self%albedo_data
+      write(80) self%albedo_water
+      write(80) self%lat_number
+      write(80) self%snow_h
+      write(80) self%total_ice_h
+      write(80) self%black_ice_h
+      write(80) self%white_ice_h
+      write(80) self%snow_dens
+      write(80) self%ice_temp
+      write(80) self%precip
+      write(80) self%ha
+      write(80) self%hw
+      write(80) self%hk
+      write(80) self%hv
+      write(80) self%rad0
+      write(80) self%cde, self%cm0
+      write(80) self%fsed
+      call save_array(80, self%fgeo_add)
+   end subroutine
+
+   ! load model state unformatted
+   subroutine load_model_state(self)
+      implicit none
+      class(ModelState), intent(inout) :: self
+
+      read(81) self%current_year, self%current_month, self%current_day, self%datum
+      read(81) self%simulation_time(1), self%simulation_time(2), self%simulation_time_old(1), self%simulation_time_old(2)
+      call read_array(81, self%U)
+      call read_array(81, self%V)
+      call read_array_pointer(81, self%T)
+      call read_array_pointer(81, self%S)
+      call read_array(81, self%dS)
+      call read_matrix(81, self%Q_inp)
+      call read_array_pointer(81, self%rho)
+      call read_array(81, self%k)
+      call read_array(81, self%ko)
+      call read_array(81, self%avh)
+      call read_array(81, self%eps)
+      call read_array(81, self%num)
+      call read_array(81, self%nuh)
+      call read_array(81, self%P)
+      call read_array(81, self%B)
+      call read_array(81, self%NN)
+      call read_array(81, self%cmue1)
+      call read_array(81, self%cmue2)
+      call read_array(81, self%P_Seiche)
+      read(81) self%E_Seiche, self%gamma
+      call read_array(81, self%absorb)
+      read(81) self%u10, self%v10, self%uv10, self%Wf
+      read(81) self%u_taub, self%drag, self%u_taus
+      read(81) self%tx, self%ty
+      read(81) self%C10
+      read(81) self%SST, self%heat, self%heat_snow, self%heat_ice, self%heat_snowice
+      read(81) self%T_atm
+      call read_array(81, self%rad)
+      call read_array(81, self%Q_vert)
+      read(81) self%albedo_data
+      read(81) self%albedo_water
+      read(81) self%lat_number
+      read(81) self%snow_h
+      read(81) self%total_ice_h
+      read(81) self%black_ice_h
+      read(81) self%white_ice_h
+      read(81) self%snow_dens
+      read(81) self%ice_temp
+      read(81) self%precip
+      read(81) self%ha
+      read(81) self%hw
+      read(81) self%hk
+      read(81) self%hv
+      read(81) self%rad0
+      read(81) self%cde, self%cm0
+      read(81) self%fsed
+      call read_array(81, self%fgeo_add)
    end subroutine
 
 end module strat_simdata

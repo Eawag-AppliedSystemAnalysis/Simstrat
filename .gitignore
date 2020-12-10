@@ -5,12 +5,8 @@
 *.mod
 
 ## Building stuff
-bin/*
-!bin/README.md
-
 build/**/*
 !build/README.md
-!build/build.sh
 !build/fobos
 
 lib/json_fortran/build/

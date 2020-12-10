@@ -79,6 +79,7 @@ contains
       integer :: i
 
       associate (model=>self%simdata%model, &
+                 sim_cfg=>self%simdata%sim_cfg, &
                  output_cfg=>self%simdata%output_cfg)
 
          ! Read output depths from file if path is specified in parfile
@@ -137,6 +138,14 @@ contains
                output_cfg%thinning_interval = 0
             endif
          end if
+         if (output_cfg%thinning_interval == 0) then
+
+            ! User defined output times are transformed to a tuple of 2 integers (days, seconds)
+            allocate (output_cfg%simulation_times_for_output(2,size(output_cfg%tout)))
+            output_cfg%simulation_times_for_output(1,:) = int(floor(output_cfg%tout - sim_cfg%start_datum))
+            output_cfg%simulation_times_for_output(2,:) = int((output_cfg%tout - sim_cfg%start_datum - output_cfg%simulation_times_for_output(1,:))* SECONDS_PER_DAY + 0.5)
+         end if
+
 
          ! Define variables that should be written
          if (output_cfg%output_all) then
@@ -358,8 +367,8 @@ contains
          ! Set up timing
          model%datum = self%simdata%sim_cfg%start_datum
          model%dt = self%simdata%sim_cfg%timestep
-         model%model_step_counter = 0
-         model%output_counter = 1
+         model%simulation_time_old(2) = -model%dt     ! This is a workaround for correct implementation of simulation time, FB 2020
+         model%simulation_time = 0
       end associate
    end subroutine
 
@@ -440,7 +449,7 @@ contains
          end do
 
 86       if(i==max_length_input_data) then
-            write(6,*) '[WARNING] ','Only first ',max_length_input_data,' values of file read.'
+            write(*,*) '[WARNING] ','Only first ',max_length_input_data,' values of file read.'
          else
             call ok('Morphology file successfully read')
          end if
@@ -566,12 +575,12 @@ contains
          end if
 
          ! Output times
-         ! Check type of input: string for path, array for depth list and integer for interval
+         ! Check type of input: string for path, array for times list and integer for interval
          call par_file%info('Output.Times',found,output_cfg%output_time_type,n_children_dummy)
          ! Treat different input possibilities for output times
          if (output_cfg%output_time_type == 7) then ! Path name
             call par_file%get('Output.Times', toutName, found); output_cfg%toutName = toutName; call check_field(found, 'Output.Times', ParName)
-         else if (output_cfg%output_time_type == 3) then ! Output depths are given
+         else if (output_cfg%output_time_type == 3) then ! Output times are given
             call par_file%get('Output.Times', output_cfg%tout, found); call check_field(found, 'Output.Times', ParName)
             output_cfg%thinning_interval = 0
 
@@ -634,11 +643,10 @@ contains
          call par_file%get("ModelParameters.lat", model_param%Lat, found); call check_field(found, 'ModelParameters.lat', ParName)
          call par_file%get("ModelParameters.p_air", model_param%p_air, found); call check_field(found, 'ModelParameters.p_air', ParName)
          call par_file%get("ModelParameters.a_seiche", model_param%a_seiche, found); call check_field(found, 'ModelParameters.a_seiche', ParName)
-         call par_file%get("ModelParameters.a_seiche", model_param%a_seiche, found); call check_field(found, 'ModelParameters.a_seiche', ParName)
          if (model_cfg%split_a_seiche) then
             call par_file%get("ModelParameters.a_seiche_w", model_param%a_seiche_w, found); call check_field(found, 'ModelParameters.a_seiche_w', ParName)
             call par_file%get("ModelParameters.strat_sumr", model_param%strat_sumr, found); call check_field(found, 'ModelParameters.strat_sumr', ParName)
-         end if 
+         end if
          call par_file%get("ModelParameters.q_nn", model_param%q_NN, found); call check_field(found, 'ModelParameters.q_nn', ParName)
          call par_file%get("ModelParameters.f_wind", model_param%f_wind, found); call check_field(found, 'ModelParameters.f_wind', ParName)
 
@@ -675,6 +683,7 @@ contains
          call par_file%get("Simulation.Start d", sim_cfg%start_datum, found); call check_field(found, 'Simulation.Start d', ParName)
          call par_file%get("Simulation.End d", sim_cfg%end_datum, found); call check_field(found, 'Simulation.End d', ParName)
          call par_file%get("Simulation.DisplaySimulation", sim_cfg%disp_simulation, found); call check_field(found, 'Simulation.DisplaySimulation', ParName)
+         call par_file%get("Simulation.Continue from last snapshot", sim_cfg%continue_from_snapshot, found)
 
          call par_file%destroy()
 
@@ -713,7 +722,7 @@ contains
          if (num_read < 1) then
             call error('Unable to read initial conditions files (no data found).')
          else if(num_read==max_length_input_data) then
-            write(6,*) '[ERROR] ','Only first ',max_length_input_data,' values of initial data file read.'
+            write(*,*) '[ERROR] ','Only first ',max_length_input_data,' values of initial data file read.'
          end if
 
          close (13)
