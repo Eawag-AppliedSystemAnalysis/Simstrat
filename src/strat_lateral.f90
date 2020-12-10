@@ -60,55 +60,6 @@ contains
       class(ModelState) :: state
    end subroutine
 
-   subroutine lateral_generic_save(self)
-      implicit none
-      class(GenericLateralModule) :: self
-      logical :: has_allocated
-
-      write (80) self%number_of_lines_read
-      write (80) self%tb_start, self%tb_end
-      write (80) self%eof, self%nval, self%nval_deep, self%nval_surface
-      has_allocated = allocated(self%z_Inp)
-      write (80) has_allocated
-      if (has_allocated) then
-         call save_matrix(80, self%z_Inp)
-         call save_matrix(80, self%Q_start)
-         call save_matrix(80, self%Qs_start)
-         call save_matrix(80, self%Q_end)
-         call save_matrix(80, self%Qs_end)
-         call save_matrix(80, self%Q_read_start)
-         call save_matrix(80, self%Q_read_end)
-         call save_matrix(80, self%Inp_read_start)
-         call save_matrix(80, self%Inp_read_end)
-         call save_matrix(80, self%Qs_read_start)
-         call save_matrix(80, self%Qs_read_end)
-      end if
-   end subroutine
-
-   subroutine lateral_generic_load(self)
-      implicit none
-      class(GenericLateralModule) :: self
-      logical :: has_allocated
-
-      read (81) self%number_of_lines_read
-      read (81) self%tb_start, self%tb_end
-      read (81) self%eof, self%nval, self%nval_deep, self%nval_surface
-      read (81) has_allocated
-      if (has_allocated) then
-         call read_matrix(81, self%z_Inp)
-         call read_matrix(81, self%Q_start)
-         call read_matrix(81, self%Qs_start)
-         call read_matrix(81, self%Q_end)
-         call read_matrix(81, self%Qs_end)
-         call read_matrix(81, self%Q_read_start)
-         call read_matrix(81, self%Q_read_end)
-         call read_matrix(81, self%Inp_read_start)
-         call read_matrix(81, self%Inp_read_end)
-         call read_matrix(81, self%Qs_read_start)
-         call read_matrix(81, self%Qs_read_end)
-      end if
-   end subroutine
-
    subroutine lateral_generic_init(self, state, model_config, input_config, aed2_config, model_param, grid)
       implicit none
       class(GenericLateralModule) :: self
@@ -148,6 +99,7 @@ contains
       allocate(self%tb_end(self%n_vars))
       allocate(self%fnum(self%n_vars))
       allocate(self%number_of_lines_read(self%n_vars))
+      self%number_of_lines_read = 0
 
       allocate (self%z_Inp(1:self%n_vars,1:self%max_n_inflows)) ! Input depths read from file
       allocate (self%Inp_read_start(1:self%n_vars,1:self%max_n_inflows))  ! Input read from file
@@ -176,6 +128,66 @@ contains
          end do
       end if
    end subroutine
+
+   subroutine lateral_generic_save(self)
+      implicit none
+      class(GenericLateralModule) :: self
+      logical :: has_allocated
+
+      has_allocated = allocated(self%z_Inp)
+
+      if (has_allocated) then
+         write (80) has_allocated
+         call save_integer_array(80, self%number_of_lines_read)
+         call save_integer_array(80, self%eof)
+         call save_integer_array(80, self%nval)
+         call save_integer_array(80, self%nval_deep)
+         call save_integer_array(80, self%nval_surface)
+         call save_array(80, self%tb_start)
+         call save_array(80, self%tb_end)
+         call save_matrix(80, self%z_Inp)
+         call save_matrix(80, self%Q_start)
+         call save_matrix(80, self%Qs_start)
+         call save_matrix(80, self%Q_end)
+         call save_matrix(80, self%Qs_end)
+         call save_matrix(80, self%Q_read_start)
+         call save_matrix(80, self%Q_read_end)
+         call save_matrix(80, self%Inp_read_start)
+         call save_matrix(80, self%Inp_read_end)
+         call save_matrix(80, self%Qs_read_start)
+         call save_matrix(80, self%Qs_read_end)
+      end if
+   end subroutine
+
+   subroutine lateral_generic_load(self)
+      implicit none
+      class(GenericLateralModule) :: self
+      logical :: has_allocated
+
+      has_allocated = allocated(self%z_Inp)
+
+      if (has_allocated) then
+         write (80) has_allocated
+         call read_integer_array(80, self%number_of_lines_read)
+         call read_integer_array(80, self%eof)
+         call read_integer_array(80, self%nval)
+         call read_integer_array(80, self%nval_deep)
+         call read_integer_array(80, self%nval_surface)
+         call read_array(80, self%tb_start)
+         call read_array(80, self%tb_end)
+         call read_matrix(81, self%z_Inp)
+         call read_matrix(81, self%Q_start)
+         call read_matrix(81, self%Qs_start)
+         call read_matrix(81, self%Q_end)
+         call read_matrix(81, self%Qs_end)
+         call read_matrix(81, self%Q_read_start)
+         call read_matrix(81, self%Q_read_end)
+         call read_matrix(81, self%Inp_read_start)
+         call read_matrix(81, self%Inp_read_end)
+         call read_matrix(81, self%Qs_read_start)
+         call read_matrix(81, self%Qs_read_end)
+      end if
+   end subroutine
       
       
    ! Implementation for lateral rho
@@ -192,7 +204,6 @@ contains
       real(RK) :: AED2_in(state%n_AED2)
       integer :: i, j, k, i1, i2, l, status
       character(len=100) :: fname
-      logical :: first
 
 
       associate (datum=>state%datum, &
@@ -241,6 +252,7 @@ contains
 
                   ! Read number of deep and surface columns
                   read(self%fnum(i), *, end=9) self%nval_deep(i), self%nval_surface(i)
+                  call count_read(self, i)
 
                   ! Check whether there is deep inflow (fixed) or surface inflow (varies with lake level)
                   if (self%nval_deep(i) > 0) then
@@ -560,6 +572,7 @@ contains
                   ! Open file and start to read
                   self%eof(i) = 0
                   read (self%fnum(i), *, end=9) ! Skip first row: description of columns
+                  call count_read(self, i)
 
                   ! Number of deep (fixed) and surface inputs to read
                   read (self%fnum(i), *, end=9) self%nval_deep(i), self%nval_surface(i)
@@ -625,7 +638,7 @@ contains
 
                   call ok('Input file successfully read: '//fname)
                end if ! if number of lines read
-            else ! first
+            else ! idx = 1
                if (self%at_start(i)) then
                   do l = 1, self%number_of_lines_read(i)
                      read (self%fnum(i), *, end=9) ! Skip already read and processed lines
@@ -709,7 +722,7 @@ contains
          end do
 
          ! Only if biochemistry enabled: Transform pH to [H] for physical mixing processes
-         if (self%couple_aed2 .and.state%n_pH > 0) then
+         if (self%couple_aed2 .and. state%n_pH > 0) then
             ! current pH profile
             state%AED2_state(:,state%n_pH) = 10.**(-state%AED2_state(:,state%n_pH))
             do i=1,ubnd_vol
@@ -729,6 +742,7 @@ contains
       implicit none
       class(GenericLateralModule) :: self
       integer i
+      
       self%number_of_lines_read(i) = self%number_of_lines_read(i) + 1
    end subroutine
 

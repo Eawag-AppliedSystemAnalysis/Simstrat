@@ -244,8 +244,28 @@ contains
             call execute_command_line('mkdir Results')
             output_config%PathOut = 'Results'
          end if
-
       end if
+
+
+      ! Same for AED2
+      if (self%model_config%couple_aed2) then
+         ! Check if output directory exists
+         inquire(file=self%aed2_config%path_aed2_output//'/',exist=exist_output_folder)
+         ! Create AED2 output folder if it does not exist
+         if(.not. exist_output_folder) then
+            call warn('Result folder does not exist, create folder according to config file...')
+            mkdirCmd = 'mkdir '//trim(output_config%PathOut)
+            call execute_command_line(mkdirCmd, exitstat = exitstat)
+
+            ! mkdir does not seem to accept a path to a folder in execute_command_line, thus a default result folder "Results" will be generated in this case.
+            if (exitstat==1) then
+               call warn('Result path specified in config file could not be generated. Default result folder "ResultsAED2" was generated instead.')
+               call execute_command_line('mkdir Results')
+               output_config%PathOut = 'ResultsAED2'
+            end if
+         end if
+      end if
+
       call open_files(self, output_config, grid, snapshot_file_exists)
 
    end subroutine
@@ -297,31 +317,19 @@ contains
 
       ! AED2 part
       if (self%model_config%couple_aed2) then
-        ! Check if output directory exists
-        inquire(file=self%aed2_config%path_aed2_output//'/',exist=exist_output_folder)
-        ! Create AED2 output folder if it does not exist
-        if(.not. exist_output_folder) then
-         call warn('Result folder does not exist, create folder according to config file...')
-         mkdirCmd = 'mkdir '//trim(output_config%PathOut)
-         call execute_command_line(mkdirCmd, exitstat = exitstat)
-
-         ! mkdir does not seem to accept a path to a folder in execute_command_line, thus a default result folder "Results" will be generated in this case.
-         if (exitstat==1) then
-            call warn('Result path specified in config file could not be generated. Default result folder "ResultsAED2" was generated instead.')
-            call execute_command_line('mkdir Results')
-            output_config%PathOut = 'ResultsAED2'
-         end if
-       end if
-
-        do i = 1, self%n_vars_AED2
+         do i = 1, self%n_vars_AED2
             file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_aed2%names(i))//'_out.dat'
             inquire (file=file_path, exist=append)
+
             append = append .and. snapshot_file_exists
-            call self%output_files(i + self%n_vars)%open(self%aed2_config%path_aed2_output//'/'//trim(self%output_config%output_vars_aed2%names(i))//'_out.dat', n_cols=self%n_depths + 1, status_ok=status_ok)
-            call self%output_files(i + self%n_vars)%add('')
-            call self%output_files(i + self%n_vars)%add(self%output_config%zout, real_fmt='(F12.3)')
-            call self%output_files(i + self%n_vars)%next_row()
-        end do
+            call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
+            if (.not. append) then
+               call self%output_files(i + self%n_vars)%open(self%aed2_config%path_aed2_output//'/'//trim(self%output_config%output_vars_aed2%names(i))//'_out.dat', n_cols=self%n_depths + 1, status_ok=status_ok)
+               call self%output_files(i + self%n_vars)%add('')
+               call self%output_files(i + self%n_vars)%add(self%output_config%zout, real_fmt='(F12.3)')
+               call self%output_files(i + self%n_vars)%next_row()
+            end if
+         end do
       end if
 
    end subroutine
@@ -338,6 +346,7 @@ contains
       associate (thinning_interval => self%output_config%thinning_interval, &
                  timestep => self%sim_config%timestep, &
                  simulation_times_for_output => self%output_config%simulation_times_for_output)
+
          if (thinning_interval == 0) then
             do i = self%counter, size(simulation_times_for_output,2)
                if (simulation_times_for_output(1,i) > simulation_time(1) .or. &
@@ -392,18 +401,18 @@ contains
       end do
 
       if (self%model_config%couple_aed2) then
-        do i = 1, self%n_vars_AED2
-          ! Write datum
-          call self%output_files(i + self%n_vars)%add(datum, real_fmt='(F12.4)')
-          ! Interpolate state on volume grid
-          call self%grid%interpolate_from_vol(self%output_config%output_vars_aed2%values(:,i), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-          ! Write state
-          call self%output_files(i + self%n_vars)%add(values_on_zout, real_fmt='(ES14.4)')
-          ! Advance to next row
-          call self%output_files(i + self%n_vars)%next_row()
-        end do
+         do i = 1, self%n_vars_AED2
+            ! Write datum
+            call output_helper%add_datum(self%output_files(i), "(F12.4)")
+            ! Interpolate state on volume grid
+            call self%grid%interpolate_from_vol(self%output_config%output_vars_aed2%values(:,i), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
+            ! Write state
+            call output_helper%add_data_array(self%output_files(i + self%n_vars), i + self%n_vars, self%last_iteration_data, values_on_zout, "(ES14.4)")
+            ! Advance to next row
+            call output_helper%next_row(self%output_files(i + self%n_vars))
+         end do
       end if
-end subroutine
+   end subroutine
 
    subroutine output_helper_init(self, simulation_time, simulation_time_old, timestep, simulation_time_for_next_output, start_datum, &
                                  thinning_interval, simulation_times_for_output, counter)

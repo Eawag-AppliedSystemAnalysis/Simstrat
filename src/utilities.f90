@@ -413,6 +413,15 @@ contains
       write(output_unit) array
    end subroutine
 
+   subroutine save_integer_array(output_unit, array)
+      implicit none
+      integer, intent(in) :: output_unit
+      integer, dimension(:), allocatable, intent(in) :: array
+
+      write(output_unit) lbound(array), ubound(array)
+      write(output_unit) array
+   end subroutine
+
    subroutine save_array_pointer(output_unit, array)
       implicit none
       integer, intent(in) :: output_unit
@@ -426,6 +435,16 @@ contains
       implicit none
       integer, intent(in) :: input_unit
       real(RK), dimension(:), allocatable, intent(inout) :: array
+      integer :: array_lbound, array_ubound
+
+      read(input_unit) array_lbound, array_ubound
+      read(input_unit) array(array_lbound:array_ubound)
+   end subroutine
+
+   subroutine read_integer_array(input_unit, array)
+      implicit none
+      integer, intent(in) :: input_unit
+      integer, dimension(:), allocatable, intent(inout) :: array
       integer :: array_lbound, array_ubound
 
       read(input_unit) array_lbound, array_ubound
