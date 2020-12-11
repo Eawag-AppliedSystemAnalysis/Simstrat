@@ -129,7 +129,7 @@ contains
                if (state%datum < tb_start) call warn('First light attenuation date after simulation start time.')
 
                !Interpolate absorb_read_start on z_absorb onto faces of grid
-               call self%grid%interpolate_to_face(z_absorb, absorb_read_start, nval, absorb_start(1:nz + 1))
+               call self%grid%interpolate_to_face(z_absorb, absorb_read_start, nval, absorb_start)
 
                read (30, *, end=7) tb_end, (absorb_read_end(i), i=1, nval)
                call count_read(self)
@@ -138,7 +138,7 @@ contains
                call ok('Absorption input file successfully read')
 
                ! Do the same for absorb_read_end
-               call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end(1:nz + 1))
+               call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end)
             end if
          end if
 
@@ -147,17 +147,16 @@ contains
          else
             do while (state%datum > tb_end) !Move to appropriate interval to get correct value
                tb_start = tb_end
-               absorb_start(1:nz + 1) = absorb_end(1:nz + 1)
+               absorb_start(1:nz) = absorb_end(1:nz)
                !Read next value
                read (30, *, end=7) tb_end, (absorb_read_end(i), i=1, nval)
                call count_read(self)
-               call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end(1:nz + 1))
+               call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end)
             end do
             !Linearly interpolate value at correct datum (for all depths)
-            state%absorb(1:nz + 1) = absorb_start(1:nz + 1) + (state%datum - tb_start)*(absorb_end(1:nz + 1) &
-                                 - absorb_start(1:nz + 1))/(tb_end - tb_start)
+            state%absorb(1:nz) = absorb_start(1:nz) + (state%datum - tb_start)/(tb_end - tb_start)*(absorb_end(1:nz)  - absorb_start(1:nz))
 
-            call self%grid%interpolate_to_vol(self%grid%z_face,state%absorb(1:nz + 1),nz + 1,state%absorb_vol(1:nz + 1))
+            call self%grid%interpolate_to_vol(self%grid%z_face,state%absorb(1:nz),nz + 1,state%absorb_vol(1:nz))
          end if
          return
 

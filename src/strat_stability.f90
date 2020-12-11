@@ -76,15 +76,14 @@ contains
       real(RK), dimension(:), intent(inout) :: NN, rho
 
       ! Local variables
-      real(RK) :: buoy(self%grid%length_fce)
-      real(RK) :: rho0t(self%grid%length_fce), rho0st(self%grid%length_fce)
+      real(RK) :: buoy(self%grid%length_vol)
       integer :: i
 
       associate (grd=>self%grid)
 
          do i = 1, grd%ubnd_vol
             call calc_density(rho(i),T(i),S(i))
-            buoy(i) = -g*(rho(i) - rho_0)/rho_0
+            buoy(i) = -g*(rho(i)/rho_0 - 1.0_RK)
          end do
 
          NN(2:grd%ubnd_fce - 1) = grd%meanint(1:grd%ubnd_vol - 1)*(buoy(2:grd%ubnd_fce - 1) - buoy(1:grd%ubnd_fce - 2))

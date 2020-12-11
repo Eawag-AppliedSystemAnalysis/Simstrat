@@ -396,7 +396,7 @@ contains
       ! Local variables
       real(RK) :: rho0t, rho0st
 
-      ! According to Chen Millero, changed according "Double diffusion in Lake Kivu" from Schmid et al., 2010
+      ! According to Chen Millero
       rho0t = 0.9998395_RK + T*(6.7914e-5_RK + T*(-9.0894e-6_RK + T*(1.0171e-7_RK + T*(-1.2846e-9_RK + T*(1.1592e-11_RK + T*(-5.0125e-14_RK))))))
       rho0st = (8.181e-4_RK + T*(-3.85e-6_RK + T*(4.96e-8_RK)))*S
 

@@ -64,7 +64,8 @@ program simstrat_main
 
    ! Print some information
    write (6, *) 'Simstrat version '//version
-   write (6, *) 'This software has been developed at eawag - Swiss Federal Institute of Aquatic Science and Technology'
+   write (6, *) 'Coupled with the biogeochemical library AED2'
+   write (6, *) 'This software has been developed at Eawag - Swiss Federal Institute of Aquatic Science and Technology'
    write (6, *) ''
 
    ! Get first cli argument

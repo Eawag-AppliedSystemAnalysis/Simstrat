@@ -14,7 +14,7 @@
      real(RK), parameter     :: z0 = 0.5_RK ! Surface roughness [m]
 
     ! *** Constants for freshwater ***
-     real(RK), parameter     :: rho_0 = 1000_RK ! Mean freshwater density (seawater: 1023) [kg/m3]
+     real(RK), parameter     :: rho_0 = 1000.0_RK ! Mean freshwater density (seawater: 1023) [kg/m3]
      real(RK), parameter     :: cp = 4182_RK ! Mean freshwater heat capacity (seawater: 3992) [J/kg/K]
      real(RK), parameter     :: cp_air = 1005_RK ! Mean air heat capacity [J/kg/K]
 
