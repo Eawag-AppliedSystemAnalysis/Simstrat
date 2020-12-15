@@ -27,10 +27,10 @@ module strat_lateral
       ! global, but only used in the lateral environment:
       real(RK), dimension(:, :), allocatable   :: z_Inp, Q_start, Qs_start, Q_end, Qs_end, Q_read_start, Q_read_end
       real(RK), dimension(:, :), allocatable   :: Inp_read_start, Inp_read_end, Qs_read_start, Qs_read_end
-      real(RK), dimension(:), allocatable  :: tb_start, tb_end ! Input depths, start time, end time
+      real(RK), dimension(:), allocatable  :: tb_start, tb_end ! Start time, end time
       integer, dimension(:), allocatable  :: eof, nval, nval_deep, nval_surface, fnum
       integer, dimension(:), allocatable :: number_of_lines_read
-      logical, dimension(:), allocatable :: has_surface_input, has_deep_input, at_start
+      logical, dimension(:), allocatable :: has_surface_input, has_deep_input
       integer :: n_vars, max_n_inflows
       logical :: couple_aed2
       character(len=100) :: simstrat_path(n_simstrat), aed2_path
@@ -116,7 +116,6 @@ contains
       allocate(state%Q_inp(1:self%n_vars,1:grid%nz_grid + 1))
       allocate(self%has_surface_input(1:self%n_vars))
       allocate(self%has_deep_input(1:self%n_vars))
-      allocate(self%at_start(1:self%n_vars))
 
       ! Get location of pH in AED2 array
       if (self%couple_aed2) then
@@ -143,6 +142,9 @@ contains
          call save_integer_array(80, self%nval)
          call save_integer_array(80, self%nval_deep)
          call save_integer_array(80, self%nval_surface)
+         call save_integer_array(80, self%fnum)
+         call save_logical_array(80, self%has_surface_input)
+         call save_logical_array(80, self%has_deep_input)
          call save_array(80, self%tb_start)
          call save_array(80, self%tb_end)
          call save_matrix(80, self%z_Inp)
@@ -167,14 +169,17 @@ contains
       has_allocated = allocated(self%z_Inp)
 
       if (has_allocated) then
-         write (80) has_allocated
-         call read_integer_array(80, self%number_of_lines_read)
-         call read_integer_array(80, self%eof)
-         call read_integer_array(80, self%nval)
-         call read_integer_array(80, self%nval_deep)
-         call read_integer_array(80, self%nval_surface)
-         call read_array(80, self%tb_start)
-         call read_array(80, self%tb_end)
+         read (81) has_allocated
+         call read_integer_array(81, self%number_of_lines_read)
+         call read_integer_array(81, self%eof)
+         call read_integer_array(81, self%nval)
+         call read_integer_array(81, self%nval_deep)
+         call read_integer_array(81, self%nval_surface)
+         call read_integer_array(81, self%fnum)
+         call read_logical_array(81, self%has_surface_input)
+         call read_logical_array(81, self%has_deep_input)
+         call read_array(81, self%tb_start)
+         call read_array(81, self%tb_end)
          call read_matrix(81, self%z_Inp)
          call read_matrix(81, self%Q_start)
          call read_matrix(81, self%Qs_start)
@@ -216,8 +221,8 @@ contains
                  ubnd_fce=>self%grid%ubnd_fce)
 
          do i=1, self%n_vars
-            if (idx) then
-               if (self%number_of_lines_read(i) == 0) then
+            if (idx) then  ! If first timestep
+               if (self%number_of_lines_read(i) == 0) then ! If start is not from snapshot
                   ! max_n_inflows was set to 1000 automatically. To reduce the size, it is redetermined here.
                   self%max_n_inflows = 0
 
@@ -311,15 +316,26 @@ contains
                      call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))
                   end if
                   call ok('Input file successfully read: '//fname)
-               end if ! if number of lines read
-            else ! idx
-               if (self%at_start(i)) then
+               else ! if start from snapshot
+                  ! Open inflow files
+                  if (i > n_simstrat) then
+                     fname = trim(self%aed2_path)//trim(state%AED2_names(i - n_simstrat))//'_inflow.dat'
+                  else
+                     fname = trim(self%simstrat_path(i))
+                  end if
+                  open(self%fnum(i), action='read', status='old', file=fname)
+                  
+                  if (status .ne. 0) then
+                     call error('File '//fname//' not found.')
+                  else
+                     write(6,*) 'Reading ', fname
+                  end if
                   do l = 1, self%number_of_lines_read(i)
                      read (self%fnum(i), *, end=9) ! Skip already read and processed lines
                   end do
+                  call ok('Input file successfully opened: '//fname)
                end if
-            end if ! idx
-            self%at_start(i) = .false.            
+            end if ! if        
 
             ! If lake level changes and if there is surface inflow, adjust inflow depth to keep relative inflow depth constant
             if ((.not. grid%lake_level == grid%lake_level_old) .and. self%has_surface_input(i)) then
@@ -545,8 +561,8 @@ contains
                  ubnd_Fce=>self%grid%ubnd_fce)
 
          do i=1, self%n_vars
-            if (idx) then
-               if (self%number_of_lines_read(i) == 0) then
+            if (idx) then  ! If first timestep
+               if (self%number_of_lines_read(i) == 0) then  ! If not started from snapshot
                   if (i > n_simstrat) then
                      fname = trim(self%aed2_path)//trim(state%AED2_names(i - n_simstrat))//'_inflow.dat'
                   else
@@ -637,15 +653,21 @@ contains
                   end if
 
                   call ok('Input file successfully read: '//fname)
-               end if ! if number of lines read
-            else ! idx = 1
-               if (self%at_start(i)) then
+               else ! if start from snapshot
+                  ! Open inflow files
+                  if (i > n_simstrat) then
+                     fname = trim(self%aed2_path)//trim(state%AED2_names(i - n_simstrat))//'_inflow.dat'
+                  else
+                     fname = trim(self%simstrat_path(i))
+                  end if
+                  open(self%fnum(i), action='read', status='old', file=fname)
+
                   do l = 1, self%number_of_lines_read(i)
                      read (self%fnum(i), *, end=9) ! Skip already read and processed lines
                   end do
+                  call ok('Input file successfully opened: '//fname)
                end if
             end if ! idx = 1
-            self%at_start(i) = .false.
 
             ! If lake level changes and if there is surface inflow, adjust inflow depth to keep them at the surface
             if ((.not. grid%lake_level == grid%lake_level_old) .and. (self%has_surface_input(i))) then
@@ -691,6 +713,7 @@ contains
                Q_inp(i,j) = (self%Q_start(i,j) + self%Qs_start(i,j)) + (datum-self%tb_start(i))/(self%tb_end(i)-self%tb_start(i))* &
                (self%Q_end(i,j) + self%Qs_end(i,j) - self%Q_start(i,j) - self%Qs_start(i,j))
             end do
+            !write(6,*) i, self%z_Inp(i, self%nval(i)), self%Qs_read_end(i, self%nval(i)), self%nval_surface(i), self%Qs_end(i, ubnd_vol)
             goto 11
 
             ! If end of file reached, set to closest available value
