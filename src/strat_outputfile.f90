@@ -23,8 +23,7 @@ module strat_outputfile
       class(StaggeredGrid), public, pointer ::grid
       type(csv_file), dimension(:), allocatable :: output_files
       integer, public :: n_depths
-      integer, public :: n_vars
-      integer, public :: n_vars_AED2
+      integer, public :: n_vars, n_vars_Simstrat, n_vars_AED2
       integer, public :: counter = 0
       integer(8), public, dimension(2) :: simulation_time_for_next_output = 0
       real(RK), dimension(:,:), allocatable :: last_iteration_data
@@ -152,7 +151,7 @@ contains
       self%aed2_config => aed2_config
       self%output_config => output_config
       self%grid => grid
-      self%n_vars = size(output_config%output_vars)
+      self%n_vars_Simstrat = size(output_config%output_vars)
 
       if (self%model_config%couple_aed2) then
         ! allocate AED2 output structure
@@ -161,6 +160,7 @@ contains
         output_config%output_vars_aed2%values => state%AED2_state
         self%n_vars_AED2 = state%n_AED2
       end if
+      self%n_vars = self%n_vars_Simstrat + self%n_vars_AED2
 
       ! If output times are given in file
       if (output_config%thinning_interval == 0) then
@@ -266,14 +266,15 @@ contains
          end if
       end if
 
-      call open_files(self, output_config, grid, snapshot_file_exists)
+      call open_files(self, output_config, self%aed2_config, grid, snapshot_file_exists)
 
    end subroutine
 
-   subroutine open_files(self, output_config, grid, snapshot_file_exists)
+   subroutine open_files(self, output_config, aed2_config, grid, snapshot_file_exists)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
       class(OutputConfig), target :: output_config
+      class(AED2Config), target :: aed2_config
       class(StaggeredGrid), target :: grid
       logical, intent(in) :: snapshot_file_exists
       integer :: i, exitstat
@@ -282,9 +283,9 @@ contains
       character(len=256) :: mkdirCmd
 
       if (allocated(self%output_files)) deallocate (self%output_files)
-      allocate (self%output_files(1:self%n_vars + self%n_vars_AED2))
+      allocate (self%output_files(1:self%n_vars))
 
-      do i = 1, self%n_vars
+      do i = 1, self%n_vars_Simstrat
          file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat'
          inquire (file=file_path, exist=append)
          append = append .and. snapshot_file_exists
@@ -317,17 +318,16 @@ contains
 
       ! AED2 part
       if (self%model_config%couple_aed2) then
-         do i = 1, self%n_vars_AED2
-            file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_aed2%names(i))//'_out.dat'
+         do i = self%n_vars_Simstrat + 1, self%n_vars
+            file_path = aed2_config%path_aed2_output//'/'//trim(self%output_config%output_vars_aed2%names(i - self%n_vars_Simstrat))//'_out.dat'
             inquire (file=file_path, exist=append)
 
             append = append .and. snapshot_file_exists
             call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
             if (.not. append) then
-               call self%output_files(i + self%n_vars)%open(self%aed2_config%path_aed2_output//'/'//trim(self%output_config%output_vars_aed2%names(i))//'_out.dat', n_cols=self%n_depths + 1, status_ok=status_ok)
-               call self%output_files(i + self%n_vars)%add('')
-               call self%output_files(i + self%n_vars)%add(self%output_config%zout, real_fmt='(F12.3)')
-               call self%output_files(i + self%n_vars)%next_row()
+               call self%output_files(i)%add('')
+               call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
+               call self%output_files(i)%next_row()
             end if
          end do
       end if
@@ -383,7 +383,7 @@ contains
          write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%lake_level, &
                                               simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
       end if
-      do i = 1, self%n_vars
+      do i = 1, self%n_vars_Simstrat
          call output_helper%add_datum(self%output_files(i), "(F12.4)")
          ! If on volume or faces grid
          if (self%output_config%output_vars(i)%volume_grid) then
@@ -400,16 +400,17 @@ contains
          call output_helper%next_row(self%output_files(i))
       end do
 
+      ! AED2 part
       if (self%model_config%couple_aed2) then
-         do i = 1, self%n_vars_AED2
+         do i = self%n_vars_Simstrat + 1, self%n_vars
             ! Write datum
             call output_helper%add_datum(self%output_files(i), "(F12.4)")
             ! Interpolate state on volume grid
-            call self%grid%interpolate_from_vol(self%output_config%output_vars_aed2%values(:,i), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
+            call self%grid%interpolate_from_vol(self%output_config%output_vars_aed2%values(:,i - self%n_vars_Simstrat), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
             ! Write state
-            call output_helper%add_data_array(self%output_files(i + self%n_vars), i + self%n_vars, self%last_iteration_data, values_on_zout, "(ES14.4)")
+            call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4)")
             ! Advance to next row
-            call output_helper%next_row(self%output_files(i + self%n_vars))
+            call output_helper%next_row(self%output_files(i))
          end do
       end if
    end subroutine
@@ -559,6 +560,7 @@ contains
       class(InterpolatingLogger), intent(inout) :: self
       integer :: i
       logical :: status_ok
+
       do i = 1, self%n_vars
          call self%output_files(i)%close (status_ok)
       end do
