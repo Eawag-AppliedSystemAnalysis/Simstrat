@@ -490,6 +490,15 @@ contains
       write(output_unit) matrix
    end subroutine
 
+   subroutine save_matrix_pointer(output_unit, matrix)
+      implicit none
+      integer, intent(in) :: output_unit
+      real(RK), dimension(:, :), pointer, intent(in) :: matrix
+
+      write(output_unit) lbound(matrix, 1), ubound(matrix, 1), lbound(matrix, 2), ubound(matrix, 2)
+      write(output_unit) matrix
+   end subroutine
+
    subroutine read_matrix(input_unit, matrix)
       implicit none
       integer, intent(in) :: input_unit
@@ -500,6 +509,16 @@ contains
       if (.not. allocated(matrix)) then
          allocate (matrix(matrix_lbound_1:matrix_ubound_1, matrix_lbound_2:matrix_ubound_2))
       end if
+      read(input_unit) matrix(matrix_lbound_1:matrix_ubound_1, matrix_lbound_2:matrix_ubound_2)
+   end subroutine
+
+   subroutine read_matrix_pointer(input_unit, matrix)
+      implicit none
+      integer, intent(in) :: input_unit
+      real(RK), dimension(:, :), pointer, intent(inout) :: matrix
+      integer :: matrix_lbound_1, matrix_ubound_1, matrix_lbound_2, matrix_ubound_2
+
+      read(input_unit) matrix_lbound_1, matrix_ubound_1, matrix_lbound_2, matrix_ubound_2
       read(input_unit) matrix(matrix_lbound_1:matrix_ubound_1, matrix_lbound_2:matrix_ubound_2)
    end subroutine
 

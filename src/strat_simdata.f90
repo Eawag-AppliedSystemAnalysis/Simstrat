@@ -143,7 +143,7 @@ module strat_simdata
       real(RK), dimension(:), allocatable :: dS ! Source/sink for salinity
       real(RK), dimension(:, :), allocatable :: Q_inp ! Horizontal inflow [m^3/s]
       real(RK), dimension(:), pointer :: rho ! Water density [kg/m^3]
-      real(RK), dimension(:,:), pointer :: AED2_state ! State matrix of AED2 variables
+      real(RK), dimension(:,:), pointer :: AED2_state ! State matrix of AED2 variables (depth, variable)
       real(RK), dimension(:,:), pointer :: AED2_diagstate ! State matrix of AED2 variables
       character(len=48), dimension(:), pointer :: AED2_names ! Names of AED2 state variables used in the simulation
       character(len=48), dimension(:), pointer :: AED2_diagnames ! Names of AED2 state variables used in the simulation
@@ -357,8 +357,9 @@ contains
       call save_array(80, self%P_Seiche)
       write(80) self%E_Seiche, self%gamma
       call save_array(80, self%absorb)
+      call save_array_pointer(80, self%absorb_vol)
       write(80) self%u10, self%v10, self%uv10, self%Wf
-      write(80) self%u_taub, self%drag, self%u_taus
+      write(80) self%u_taub, self%drag, self%u_taus, self%rain
       write(80) self%tx, self%ty
       write(80) self%C10
       write(80) self%SST, self%heat, self%heat_snow, self%heat_ice, self%heat_snowice
@@ -383,6 +384,8 @@ contains
       write(80) self%cde, self%cm0
       write(80) self%fsed
       call save_array(80, self%fgeo_add)
+      call save_matrix_pointer(80, self%AED2_state)
+      call save_matrix_pointer(80, self%AED2_diagstate)
    end subroutine
 
    ! load model state unformatted
@@ -413,8 +416,9 @@ contains
       call read_array(81, self%P_Seiche)
       read(81) self%E_Seiche, self%gamma
       call read_array(81, self%absorb)
+      call read_array_pointer(81, self%absorb_vol)
       read(81) self%u10, self%v10, self%uv10, self%Wf
-      read(81) self%u_taub, self%drag, self%u_taus
+      read(81) self%u_taub, self%drag, self%u_taus, self%rain
       read(81) self%tx, self%ty
       read(81) self%C10
       read(81) self%SST, self%heat, self%heat_snow, self%heat_ice, self%heat_snowice
@@ -439,6 +443,8 @@ contains
       read(81) self%cde, self%cm0
       read(81) self%fsed
       call read_array(81, self%fgeo_add)
+      call read_matrix_pointer(81, self%AED2_state)
+      call read_matrix_pointer(81, self%AED2_diagstate)
    end subroutine
 
 end module strat_simdata
