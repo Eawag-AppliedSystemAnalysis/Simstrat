@@ -387,7 +387,7 @@ contains
             ! Interpolate state on volume grid
             call self%grid%interpolate_from_vol(self%output_config%output_vars_aed2%values(:,i - self%n_vars_Simstrat), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
             ! Write state
-            call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4)")
+            call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
             ! Advance to next row
             call output_helper%next_row(self%output_files(i))
          end do
