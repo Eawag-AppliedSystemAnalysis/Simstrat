@@ -246,35 +246,14 @@ contains
          end if
       end if
 
-
-      ! Same for AED2
-      if (self%model_config%couple_aed2) then
-         ! Check if output directory exists
-         inquire(file=self%aed2_config%path_aed2_output//'/',exist=exist_output_folder)
-         ! Create AED2 output folder if it does not exist
-         if(.not. exist_output_folder) then
-            call warn('Result folder does not exist, create folder according to config file...')
-            mkdirCmd = 'mkdir '//trim(output_config%PathOut)
-            call execute_command_line(mkdirCmd, exitstat = exitstat)
-
-            ! mkdir does not seem to accept a path to a folder in execute_command_line, thus a default result folder "Results" will be generated in this case.
-            if (exitstat==1) then
-               call warn('Result path specified in config file could not be generated. Default result folder "ResultsAED2" was generated instead.')
-               call execute_command_line('mkdir Results')
-               output_config%PathOut = 'ResultsAED2'
-            end if
-         end if
-      end if
-
-      call open_files(self, output_config, self%aed2_config, grid, snapshot_file_exists)
+      call open_files(self, output_config, grid, snapshot_file_exists)
 
    end subroutine
 
-   subroutine open_files(self, output_config, aed2_config, grid, snapshot_file_exists)
+   subroutine open_files(self, output_config, grid, snapshot_file_exists)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
       class(OutputConfig), target :: output_config
-      class(AED2Config), target :: aed2_config
       class(StaggeredGrid), target :: grid
       logical, intent(in) :: snapshot_file_exists
       integer :: i, exitstat
@@ -319,7 +298,7 @@ contains
       ! AED2 part
       if (self%model_config%couple_aed2) then
          do i = self%n_vars_Simstrat + 1, self%n_vars
-            file_path = aed2_config%path_aed2_output//'/'//trim(self%output_config%output_vars_aed2%names(i - self%n_vars_Simstrat))//'_out.dat'
+            file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_aed2%names(i - self%n_vars_Simstrat))//'_out.dat'
             inquire (file=file_path, exist=append)
 
             append = append .and. snapshot_file_exists

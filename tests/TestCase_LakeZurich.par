@@ -39,7 +39,6 @@
     "AED2ConfigFile"          : "TestCase_LakeZurich/aed2.nml",             ! AED2 config file
     "PathAED2initial"         : "TestCase_LakeZurich/AED2_initcond/",       ! Folder with initial conditions of biochemical variables
     "PathAED2inflow"          : "TestCase_LakeZurich/AED2_inflow/",         ! Folder with inflow files of biochemical variables
-    "PathAED2output"          : "TestCases_Results/",         ! AED2 output folder
     "ParticleMobility"        : 0,                      ! 0: particle mobility is off, 1: particle mobility is on
     "BioshadeFeedback"        : 0,                      ! 0: light absorption coefficients are read from Simstrat input file, 1: light absorption is calculated from biochemical variables
     "BackgroundExtinction"    : 0.2,                    ! Background extinction added to biochemical absorption (only used if bioshadeFeedback is 1)

@@ -96,7 +96,6 @@ module strat_simdata
       character(len=:), allocatable :: aed2_config_file
       character(len=:), allocatable :: path_aed2_initial
       character(len=:), allocatable :: path_aed2_inflow
-      character(len=:), allocatable :: path_aed2_output
       logical :: particle_mobility
       logical :: bioshade_feedback
       real(RK) :: background_extinction
