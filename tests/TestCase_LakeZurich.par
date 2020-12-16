@@ -30,7 +30,7 @@
     "UseFilteredWind"         : false,                  ! Switch to activate filtered wind (needs one more column in forcing file)
     "SeicheNormalization"     : 2,                      ! 1: max N2, 2: integral
     "WindDragModel"           : 3,                      ! 1: constant, 2: ocean (increasing), 3: lake (Wüest and Lorke, 2003)
-    "InflowMode"              : 1,                      ! 0: no inflow, 1: inflow depths are chosen manually, 2: inflow is density-driven
+    "InflowMode"              : 2,                      ! 0: no inflow, 1: inflow depths are chosen manually, 2: inflow is density-driven
     "PressureGradients"       : 0,                      ! 0: off, 1: Svensson 1978
     "IceModel"                : 1,                      ! Switch to turn on/off the ice model
     "SnowModel"               : 1                       ! Switch to turn on/off the snow model (needs ice model and an additional column in forcing)
