@@ -303,7 +303,7 @@ contains
          call bar%update(current=(simdata%model%datum-new_start_datum))
 
       end do
-      call save_snapshot(snapshot_file_path)
+      if (simdata%sim_cfg%continue_from_snapshot) call save_snapshot(snapshot_file_path)
    end subroutine
 
    subroutine save_snapshot(file_path)
