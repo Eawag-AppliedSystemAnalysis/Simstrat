@@ -1,14 +1,14 @@
 &aed2_models
     models =
        !-->  NUTRIENT/CHEMISTRY modules  <--!
-             'aed2_tracer',
-			 'aed2_noncohesive',
+             !'aed2_tracer',
+			 !'aed2_noncohesive',
              'aed2_oxygen',
              'aed2_carbon',
-             'aed2_silica',
-             'aed2_nitrogen',
-             'aed2_phosphorus',
-             'aed2_organic_matter',
+             !'aed2_silica',
+             !'aed2_nitrogen',
+             !'aed2_phosphorus',
+             !'aed2_organic_matter',
        !plus 'aed2_seddiagenesis',
        !-->  BIOLOGY modules  <--!
              !'aed2_phytoplankton',
