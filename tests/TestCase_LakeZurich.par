@@ -31,7 +31,7 @@
     "SeicheNormalization"     : 2,                      ! 1: max N2, 2: integral
     "WindDragModel"           : 3,                      ! 1: constant, 2: ocean (increasing), 3: lake (Wüest and Lorke, 2003)
     "InflowPlacement"         : 0,                      ! 0: inflow depths are chosen manually, 1: inflow is density-driven
-    "PressureGradients"       : 0,                      ! 0: off, 1: Svensson 1978
+    "PressureGradients"       : 0,                      ! 0: off, 1: Svensson 1978, 2: Bottom drag
     "IceModel"                : 1,                      ! Switch to turn on/off the ice model
     "SnowModel"               : 1                       ! Switch to turn on/off the snow model (needs ice model and an additional column in forcing)
   },
