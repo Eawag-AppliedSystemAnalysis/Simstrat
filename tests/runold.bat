@@ -1,1 +1,0 @@
-..\build\simstrat_win_241.exe TestCase_LakeZurich.par
