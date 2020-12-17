@@ -104,3 +104,4 @@ help = Clean all the libraries (.mod and .obj)
 rule_1 = cd ../lib/csv_fortran  ; FoBiS.py clean; cd -
 rule_2 = cd ../lib/json_fortran ; FoBiS.py clean; cd -
 rule_3 = cd ../lib/forbear      ; FoBiS.py clean; cd -
+rule_3 = cd ../lib/libaed2      ; FoBiS.py clean; cd -
