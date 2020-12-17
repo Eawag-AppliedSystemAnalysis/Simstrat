@@ -9,6 +9,7 @@ mingw32-make
 under windows (note that the export command only works in a bash shell) or
 
 ~~~bash
+export F90=gfortran
 make
 ~~~
 
