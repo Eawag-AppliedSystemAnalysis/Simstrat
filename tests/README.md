@@ -13,8 +13,7 @@ under windows, or run:
 .\run_testcase
 ~~~
 
-under linux to start a simulation with the executable "simstrat.exe" and the Simstrat configuration file "TestCase_LakeZurich.par". The results are stored in ´TestCases_Results´. The configuration file of AED2 "aed2.nml" is
-thereby called by the Simstrat configuration file.
+under linux to start a simulation with the executable "simstrat" and the Simstrat configuration file "TestCase_LakeZurich.par". The AED2 configuration file ("aed2.nml") is called by the Simstrat configuration file and the output of the simulation is stored in ´TestCases_Results´.
 
 To check whether changes in the source code caused changes in simulation output run:
 
