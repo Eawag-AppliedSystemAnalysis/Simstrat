@@ -1,5 +1,20 @@
-# How to build Simstrat with FoBiS.py
-From this folder (`build`), run:
+# How to build Simstrat-AED2 with FoBiS.py
+In case the AED2 library is not compiled go to ´lib/libaed2´ and run:
+
+~~~bash
+export F90=gfortran
+mingw32-make
+~~~
+
+under windows or
+
+~~~bash
+make
+~~~
+
+under linux.
+
+Then, from this folder (`build`), run:
 
 ~~~bash
 FoBiS.py -h
