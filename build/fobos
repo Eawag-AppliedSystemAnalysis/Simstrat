@@ -97,7 +97,7 @@ log=True
 
 [rule-makedoc]
 help = Generate FORD documentation (see /doc/developer folder)
-rule = FoBiS.py rule -ford ../doc/developer/ford/ford_projectfile.md
+rule = ford ../doc/developer/ford/ford_projectfile.md
 
 [rule-purge]
 help = Clean all the libraries (.mod and .obj)
