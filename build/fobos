@@ -101,7 +101,11 @@ rule = FoBiS.py rule -ford ../doc/developer/ford/ford_projectfile.md
 
 [rule-purge]
 help = Clean all the libraries (.mod and .obj)
-rule_1 = cd ../lib/csv_fortran  ; FoBiS.py clean; cd -
-rule_2 = cd ../lib/json_fortran ; FoBiS.py clean; cd -
-rule_3 = cd ../lib/forbear      ; FoBiS.py clean; cd -
-rule_4 = cd ../lib/libaed2      ; FoBiS.py clean; cd -
+rule_1 = cd ../lib/csv_fortran
+rule_1b = FoBiS.py clean
+rule_2 = cd ../lib/json_fortran
+rule_2b = FoBiS.py clean
+rule_3 = cd ../lib/forbear
+rule_3b = FoBiS.py clean
+rule_4 = cd ../lib/libaed2
+rule_4b = FoBiS.py clean
