@@ -283,7 +283,7 @@ contains
          AED2_state(ubnd_vol,:) = AED2_state(ubnd_vol,:)*h(ubnd_vol)/(h(ubnd_vol) + dh)
 
          ! Transform [H] back to pH
-         if(self%cfg%couple_aed2) then
+         if(self%cfg%couple_aed2 .and. state%n_pH > 0) then
             AED2_state(:,state%n_pH) = -log10(AED2_state(:,state%n_pH))
          end if
 
