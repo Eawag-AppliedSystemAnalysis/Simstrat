@@ -107,5 +107,4 @@ rule_2 = cd ../lib/json_fortran
 rule_2b = FoBiS.py clean
 rule_3 = cd ../lib/forbear
 rule_3b = FoBiS.py clean
-rule_4 = cd ../lib/libaed2
-rule_4b = FoBiS.py clean
+rule_4 = echo Please clean libaed2 subdirectories lib, mod and obj manually!
