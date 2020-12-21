@@ -35,8 +35,8 @@ subroutine allocate_memory(self)
    allocate(self%flux_pel(self%grid%nz_occupied, self%n_vars + self%n_vars_ben),stat=status)
    if (status /= 0) stop 'allocate_memory(): Error allocating (flux_pel)'
 
-   allocate(self%flux_zone(self%aed2_cfg%n_zones, self%n_vars + self%n_vars_ben),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (flux_zone)'
+   !allocate(self%flux_zone(self%aed2_cfg%n_zones, self%n_vars + self%n_vars_ben),stat=status)
+   !if (status /= 0) stop 'allocate_memory(): Error allocating (flux_zone)'
 
    ! Min, max values
    allocate(self%min_(self%n_vars + self%n_vars_ben),stat=status)

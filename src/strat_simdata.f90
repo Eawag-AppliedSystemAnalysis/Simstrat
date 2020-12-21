@@ -100,7 +100,7 @@ module strat_simdata
       logical :: bioshade_feedback
       real(RK) :: background_extinction
       integer :: benthic_mode
-      integer :: n_zones
+      !integer :: n_zones
       real(RK), dimension(:), allocatable :: zone_heights
    end type
 

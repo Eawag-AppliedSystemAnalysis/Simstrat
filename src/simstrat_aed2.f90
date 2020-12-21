@@ -148,7 +148,7 @@ contains
          ! Allocate memory for AED2 state and inflow matrix used by Simstrat
          state%AED2_state => self%cc
          state%AED2_diagstate => self%cc_diag
-         state%n_AED2 = n_vars ! + n_vars_ben, Add benthic variables or not?
+         state%n_AED2 = n_vars  + n_vars_ben
          state%n_AED2_diag = n_vars_diag
 
          ! Define column pointer (which is the object that is handed over to AED2 at every timestep)
@@ -247,8 +247,9 @@ contains
          end do
       end do
 
-!       ! Now update benthic variables, depending on whether zones are simulated
-!       IF ( benthic_mode .GT. 1 ) THEN
+      ! Now update benthic variables, depending on whether zones are simulated
+      if ( self%aed2_cfg%benthic_mode .gt. 1 ) then
+         call error("The use of sediment zones is currently not implemented in Simstrat-AED2")
 !          ! Loop through benthic state variables to update their mass
 !          DO v = n_vars+1, n_vars+n_vars_ben
 !             ! Loop through each sediment zone
@@ -257,11 +258,11 @@ contains
 !                z_cc(lev, v) = z_cc(lev, v)+ dt_eff*flux_zone(lev, v)
 !             ENDDO
 !          ENDDO
-!       ELSE
-!          DO v = n_vars+1, n_vars+n_vars_ben
-!             cc(1, v) = cc(1, v) + dt_eff*flux_ben(v)
-!          ENDDO
-!       end if
+      else
+         do v = self% n_vars + 1, self%n_vars + self%n_vars_ben
+            self%cc(1, v) = self%cc(1, v) + state%dt*self%flux_ben(v)
+         end do
+      end if
 
 !       ! If simulating sediment zones, distribute cc-sed benthic properties back
 !       !  into main cc array, mainly for plotting
@@ -285,8 +286,8 @@ contains
       ! Local variables
       integer :: lev,zon,v_start,v_end,av,sv,sd
       real(RK) :: scale
-      real(RK), dimension(self%grid%nz_occupied, self%n_vars)    :: flux_pel_pre
-      real(RK), dimension(self%aed2_cfg%n_zones, self%n_vars) :: flux_pel_z
+      !real(RK), dimension(self%grid%nz_occupied, self%n_vars)    :: flux_pel_pre
+      !real(RK), dimension(self%aed2_cfg%n_zones, self%n_vars) :: flux_pel_z
       logical :: splitZone
       type(aed2_variable_t),pointer :: tvar
       !-------------------------------------------------------------------------------
@@ -302,6 +303,7 @@ contains
 
       !# (1) BENTHIC FLUXES
       if ( self%aed2_cfg%benthic_mode .gt. 1 ) then
+         call error("The use of sediment zones is currently not implemented in Simstrat-AED2")
    !          !# Multiple static sediment zones are simulated, and therfore overlying
    !          !# water conditions need to be aggregated from multiple cells/layers, and output flux
    !          !# needs disaggregating from each zone back to the overlying cells/layers
