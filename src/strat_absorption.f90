@@ -1,3 +1,26 @@
+! ---------------------------------------------------------------------------------
+!     Simstrat a physical 1D model for lakes and reservoirs
+!
+!     Developed by:  Group of Applied System Analysis
+!                    Dept. of Surface Waters - Research and Management
+!                    Eawag - Swiss Federal institute of Aquatic Science and Technology
+!
+!     Copyright (C) 2020, Eawag
+!
+!
+!     This program is free software: you can redistribute it and/or modify
+!     it under the terms of the GNU General Public License as published by
+!     the Free Software Foundation, either version 3 of the License, or
+!     (at your option) any later version.
+!
+!     This program is distributed in the hope that it will be useful,
+!     but WITHOUT ANY WARRANTY; without even the implied warranty of
+!     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!     GNU General Public License for more details.
+!
+!     You should have received a copy of the GNU General Public License
+!     along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+! ---------------------------------------------------------------------------------
 !<    +---------------------------------------------------------------+
 !     |  Absorption module
 !     |  - reads and processes absorption input file
@@ -51,8 +74,8 @@ contains
 
       ! Allocate arrays (used to be "save" variables)
       allocate (self%z_absorb(grid%max_length_input_data))
-      allocate (self%absorb_start(grid%nz_grid))
-      allocate (self%absorb_end(grid%nz_grid))
+      allocate (self%absorb_start(grid%nz_grid + 1))
+      allocate (self%absorb_end(grid%nz_grid + 1))
    end subroutine
 
    subroutine absorption_save(self)
@@ -125,6 +148,7 @@ contains
                !Read first values
                read (30, *, end=9) tb_start, (absorb_read_start(i), i=1, nval)
                call count_read(self)
+
                if (state%datum < tb_start) call warn('First light attenuation date after simulation start time.')
 
                !Interpolate absorb_read_start on z_absorb onto faces of grid
@@ -153,7 +177,9 @@ contains
                call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end)
             end do
             !Linearly interpolate value at correct datum (for all depths)
-            state%absorb(1:nz) = absorb_start(1:nz) + (state%datum - tb_start)/(tb_end - tb_start)*(absorb_end(1:nz) - absorb_start(1:nz))
+            state%absorb(1:nz) = absorb_start(1:nz) + (state%datum - tb_start)/(tb_end - tb_start)*(absorb_end(1:nz)  - absorb_start(1:nz))
+
+            call self%grid%interpolate_to_vol(self%grid%z_face,state%absorb(1:nz),nz + 1,state%absorb_vol(1:nz))
          end if
          return
 

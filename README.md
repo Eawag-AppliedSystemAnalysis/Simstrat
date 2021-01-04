@@ -1,11 +1,11 @@
-# Simstrat: a one-dimensional physical lake model
+# Simstrat-AED2: a one-dimensional physical lake model coupled to a biogeochemical library
 
-Simstrat is a one-dimensional physical lake model for the simulation of stratification and mixing in deep stratified lakes. The model was originally developed by Goudsmit et al. (2002) and has been successfully applied to lakes with different physical properties. A k-ε model is used to model turbulent mixing including energy transfer of internal seiches. River or groundwater inflow can be added at specific depths or as density-dependent intrusions. The newest version of Simstrat (see below) can also simulate ice/snow covers.
+Simstrat is a one-dimensional physical lake model for the simulation of stratification and mixing in deep stratified lakes. The model was originally developed by Goudsmit et al. (2002) and has been successfully applied to lakes with different physical properties. A k-ε model is used to model turbulent mixing including energy transfer of internal seiches. River or groundwater inflow can be added at specific depths or as density-dependent intrusions. The newest version of Simstrat can also simulate ice/snow covers and do biogeochemical simulations by using its coupling with AED2 (https://github.com/AquaticEcoDynamics/libaed2). From version 3.0 onwards, Simstrat always includes a coupling to AED2 but the coupling can be turned off using a switch in the configuration file for purely physical simulations.
 
-## Run Simstrat
+## Run Simstrat-AED2
 Pre-built binaries are available [here](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/releases).
 
-## Build Simstrat
+## Build Simstrat-AED2
 After cloning the git repository for the first time,  you need to initialize the 3rd-party libraries with the given script
 ~~~bash
 ./git_lib_initialize.sh

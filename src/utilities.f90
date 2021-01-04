@@ -1,3 +1,26 @@
+! ---------------------------------------------------------------------------------
+!     Simstrat a physical 1D model for lakes and reservoirs
+!
+!     Developed by:  Group of Applied System Analysis
+!                    Dept. of Surface Waters - Research and Management
+!                    Eawag - Swiss Federal institute of Aquatic Science and Technology
+!
+!     Copyright (C) 2020, Eawag
+!
+!
+!     This program is free software: you can redistribute it and/or modify
+!     it under the terms of the GNU General Public License as published by
+!     the Free Software Foundation, either version 3 of the License, or
+!     (at your option) any later version.
+!
+!     This program is distributed in the hope that it will be useful,
+!     but WITHOUT ANY WARRANTY; without even the implied warranty of
+!     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!     GNU General Public License for more details.
+!
+!     You should have received a copy of the GNU General Public License
+!     along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+! ---------------------------------------------------------------------------------
 !<    +---------------------------------------------------------------+
 !     | Generic utilities that are used throughout the code
 !<    +---------------------------------------------------------------+
@@ -5,6 +28,7 @@
 
 module utilities
    use strat_kinds
+   use strat_consts
    implicit none
 
    type, public :: string
@@ -58,7 +82,7 @@ contains
    !####################################################################
    pure subroutine Interp_nan(z, y, num_z, zi, yi, num_zi)
       !####################################################################
-      use, intrinsic :: iso_fortran_env
+      !use, intrinsic :: iso_fortran_env
       use, intrinsic :: ieee_arithmetic
       implicit none
 
@@ -115,7 +139,7 @@ contains
    !####################################################################
    pure subroutine Assign_nan(y, ubnd, ubnd_grid)
       !####################################################################
-      use, intrinsic :: iso_fortran_env
+      !use, intrinsic :: iso_fortran_env
       use, intrinsic :: ieee_arithmetic
       implicit none
 
@@ -384,6 +408,25 @@ contains
 
    end subroutine
 
+   ! Calculate density as a function of T and S
+   subroutine calc_density(rho, T, S)
+      implicit none
+
+      ! Arguments
+      real(RK), intent(in) :: T, S
+      real(RK), intent(out) :: rho
+
+      ! Local variables
+      real(RK) :: rho0t, rho0st
+
+      ! According to Chen Millero
+      rho0t = 0.9998395_RK + T*(6.7914e-5_RK + T*(-9.0894e-6_RK + T*(1.0171e-7_RK + T*(-1.2846e-9_RK + T*(1.1592e-11_RK + T*(-5.0125e-14_RK))))))
+      rho0st = (8.181e-4_RK + T*(-3.85e-6_RK + T*(4.96e-8_RK)))*S
+
+      rho = rho_0*(rho0t + rho0st)
+   end subroutine
+
+
    subroutine save_array(output_unit, array)
       implicit none
       integer, intent(in) :: output_unit
@@ -393,10 +436,67 @@ contains
       write(output_unit) array
    end subroutine
 
+   subroutine save_integer_array(output_unit, array)
+      implicit none
+      integer, intent(in) :: output_unit
+      integer, dimension(:), allocatable, intent(in) :: array
+
+      write(output_unit) lbound(array), ubound(array)
+      write(output_unit) array
+   end subroutine
+
+   subroutine save_logical_array(output_unit, array)
+      implicit none
+      integer, intent(in) :: output_unit
+      logical, dimension(:), allocatable, intent(in) :: array
+
+      write(output_unit) lbound(array), ubound(array)
+      write(output_unit) array
+   end subroutine
+
+   subroutine save_array_pointer(output_unit, array)
+      implicit none
+      integer, intent(in) :: output_unit
+      real(RK), dimension(:), pointer, intent(in) :: array
+
+      write(output_unit) lbound(array), ubound(array)
+      write(output_unit) array
+   end subroutine
+
    subroutine read_array(input_unit, array)
       implicit none
       integer, intent(in) :: input_unit
       real(RK), dimension(:), allocatable, intent(inout) :: array
+      integer :: array_lbound, array_ubound
+
+      read(input_unit) array_lbound, array_ubound
+      read(input_unit) array(array_lbound:array_ubound)
+   end subroutine
+
+   subroutine read_integer_array(input_unit, array)
+      implicit none
+      integer, intent(in) :: input_unit
+      integer, dimension(:), allocatable, intent(inout) :: array
+      integer :: array_lbound, array_ubound
+
+      read(input_unit) array_lbound, array_ubound
+      read(input_unit) array(array_lbound:array_ubound)
+   end subroutine
+
+   subroutine read_logical_array(input_unit, array)
+      implicit none
+      integer, intent(in) :: input_unit
+      logical, dimension(:), allocatable, intent(inout) :: array
+      integer :: array_lbound, array_ubound
+
+      read(input_unit) array_lbound, array_ubound
+      read(input_unit) array(array_lbound:array_ubound)
+   end subroutine
+
+   subroutine read_array_pointer(input_unit, array)
+      implicit none
+      integer, intent(in) :: input_unit
+      real(RK), dimension(:), pointer, intent(inout) :: array
       integer :: array_lbound, array_ubound
 
       read(input_unit) array_lbound, array_ubound
@@ -413,6 +513,15 @@ contains
       write(output_unit) matrix
    end subroutine
 
+   subroutine save_matrix_pointer(output_unit, matrix)
+      implicit none
+      integer, intent(in) :: output_unit
+      real(RK), dimension(:, :), pointer, intent(in) :: matrix
+
+      write(output_unit) lbound(matrix, 1), ubound(matrix, 1), lbound(matrix, 2), ubound(matrix, 2)
+      write(output_unit) matrix
+   end subroutine
+
    subroutine read_matrix(input_unit, matrix)
       implicit none
       integer, intent(in) :: input_unit
@@ -423,6 +532,16 @@ contains
       if (.not. allocated(matrix)) then
          allocate (matrix(matrix_lbound_1:matrix_ubound_1, matrix_lbound_2:matrix_ubound_2))
       end if
+      read(input_unit) matrix(matrix_lbound_1:matrix_ubound_1, matrix_lbound_2:matrix_ubound_2)
+   end subroutine
+
+   subroutine read_matrix_pointer(input_unit, matrix)
+      implicit none
+      integer, intent(in) :: input_unit
+      real(RK), dimension(:, :), pointer, intent(inout) :: matrix
+      integer :: matrix_lbound_1, matrix_ubound_1, matrix_lbound_2, matrix_ubound_2
+
+      read(input_unit) matrix_lbound_1, matrix_ubound_1, matrix_lbound_2, matrix_ubound_2
       read(input_unit) matrix(matrix_lbound_1:matrix_ubound_1, matrix_lbound_2:matrix_ubound_2)
    end subroutine
 

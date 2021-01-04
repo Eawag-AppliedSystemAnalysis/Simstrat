@@ -1,3 +1,26 @@
+! ---------------------------------------------------------------------------------
+!     Simstrat a physical 1D model for lakes and reservoirs
+!
+!     Developed by:  Group of Applied System Analysis
+!                    Dept. of Surface Waters - Research and Management
+!                    Eawag - Swiss Federal institute of Aquatic Science and Technology
+!
+!     Copyright (C) 2020, Eawag
+!
+!
+!     This program is free software: you can redistribute it and/or modify
+!     it under the terms of the GNU General Public License as published by
+!     the Free Software Foundation, either version 3 of the License, or
+!     (at your option) any later version.
+!
+!     This program is distributed in the hope that it will be useful,
+!     but WITHOUT ANY WARRANTY; without even the implied warranty of
+!     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!     GNU General Public License for more details.
+!
+!     You should have received a copy of the GNU General Public License
+!     along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+! ---------------------------------------------------------------------------------
 !<    +---------------------------------------------------------------+
 !     |  Stability Module
 !     |  - Contains methods to update cmue_cn /qe and NN
@@ -8,6 +31,7 @@ module strat_stability
    use strat_consts
    use strat_grid
    use strat_simdata
+   use utilities
    implicit none
    private
 
@@ -75,19 +99,14 @@ contains
       real(RK), dimension(:), intent(inout) :: NN, rho
 
       ! Local variables
-      real(RK) :: buoy(self%grid%length_fce)
-      real(RK) :: rho0t(self%grid%length_fce), rho0st(self%grid%length_fce)
+      real(RK) :: buoy(self%grid%length_vol)
       integer :: i
 
       associate (grd=>self%grid)
 
-         do i = 1, grd%ubnd_fce - 1
-            rho0t(i) = 0.9998395_RK + T(i)*(6.7914e-5_RK + T(i)*(-9.0894e-6_RK + T(i)* &
-                                              (1.0171e-7_RK + T(i)*(-1.2846e-9_RK + T(i)*(1.1592e-11_RK + T(i)*(-5.0125e-14_RK))))))
-            rho0st(i) = (8.181e-4_RK + T(i)*(-3.85e-6_RK + T(i)*(4.96e-8_RK)))*S(i)
-            rho(i) = rho_0*(rho0t(i) + rho0st(i))
-
-            buoy(i) = -g*(rho(i) - rho_0)/rho_0
+         do i = 1, grd%ubnd_vol
+            call calc_density(rho(i),T(i),S(i))
+            buoy(i) = -g*(rho(i)/rho_0 - 1.0_RK)
          end do
 
          NN(2:grd%ubnd_fce - 1) = grd%meanint(1:grd%ubnd_vol - 1)*(buoy(2:grd%ubnd_fce - 1) - buoy(1:grd%ubnd_fce - 2))

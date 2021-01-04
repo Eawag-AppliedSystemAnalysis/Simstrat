@@ -1,3 +1,26 @@
+! ---------------------------------------------------------------------------------
+!     Simstrat a physical 1D model for lakes and reservoirs
+!
+!     Developed by:  Group of Applied System Analysis
+!                    Dept. of Surface Waters - Research and Management
+!                    Eawag - Swiss Federal institute of Aquatic Science and Technology
+!
+!     Copyright (C) 2020, Eawag
+!
+!
+!     This program is free software: you can redistribute it and/or modify
+!     it under the terms of the GNU General Public License as published by
+!     the Free Software Foundation, either version 3 of the License, or
+!     (at your option) any later version.
+!
+!     This program is distributed in the hope that it will be useful,
+!     but WITHOUT ANY WARRANTY; without even the implied warranty of
+!     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!     GNU General Public License for more details.
+!
+!     You should have received a copy of the GNU General Public License
+!     along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+! ---------------------------------------------------------------------------------
 !<  +---------------------------------------------------------------+
 !     Simstrat model for simulation of
 !     vertical transport in lakes and reservoirs
@@ -22,6 +45,7 @@ program simstrat_main
    use strat_transport
    use strat_absorption
    use strat_advection
+   use simstrat_aed2
    use strat_lateral
    use forbear
    use, intrinsic :: ieee_arithmetic
@@ -47,6 +71,7 @@ program simstrat_main
    type(IceModule) :: mod_ice
    type(AbsorptionModule) :: mod_absorption
    type(AdvectionModule) :: mod_advection
+   type(SimstratAED2) :: mod_aed2
    type(LateralModule), target :: mod_lateral_normal
    type(LateralRhoModule), target :: mod_lateral_rho
    class(GenericLateralModule), pointer :: mod_lateral
@@ -62,7 +87,8 @@ program simstrat_main
 
    ! Print some information
    write (6, *) 'Simstrat version '//version
-   write (6, *) 'This software has been developed at eawag - Swiss Federal Institute of Aquatic Science and Technology'
+   write (6, *) 'Coupled with the biogeochemical library AED2'
+   write (6, *) 'This software has been developed at Eawag - Swiss Federal Institute of Aquatic Science and Technology'
    write (6, *) ''
 
    ! Get first cli argument
@@ -96,24 +122,28 @@ program simstrat_main
                             simdata%input_cfg%AbsorpName, &
                             simdata%grid)
 
-   ! If there is advection (due to inflow)
-   if (simdata%model%has_advection) then
-      ! Initialize advection module
-      call mod_advection%init(simdata%model_cfg, &
-                           simdata%model_param, &
-                           simdata%grid)
+   ! Initialize biochemical model "AED2" if used
+   if (simdata%model_cfg%couple_aed2) then
+      call mod_aed2%init(simdata%model, simdata%grid, simdata%model_cfg, simdata%aed2_cfg)
+   end if
 
-      ! Initialize lateral module based on configuration
-      if (simdata%model_cfg%inflow_placement == 1) then
+   ! If there is advection (due to inflow)
+   if (simdata%model_cfg%inflow_mode > 0) then
+      ! initialize advection module
+      call mod_advection%init(simdata%model, simdata%model_cfg, simdata%model_param, simdata%grid)
+
+      ! initialize lateral module based on configuration
+      if (simdata%model_cfg%inflow_mode == 1) then
+
          ! Gravity based inflow
-         mod_lateral => mod_lateral_rho
-      else
-         ! User defined inflow depths
          mod_lateral => mod_lateral_normal
+      else if (simdata%model_cfg%inflow_mode == 2) then
+         ! User defined inflow depths
+         mod_lateral => mod_lateral_rho
       end if
-      call mod_lateral%init(simdata%model_cfg, &
-                           simdata%model_param, &
-                           simdata%grid)
+      call mod_lateral%init(simdata%model, simdata%model_cfg, simdata%input_cfg, simdata%aed2_cfg, simdata%model_param, simdata%grid)
+   else
+      call warn('Lake in-/outflow is turned off')
    end if
 
    ! Binary simulation snapshot file
@@ -124,7 +154,7 @@ program simstrat_main
    end if
 
    ! Setup logger
-   call logger%initialize(simdata%sim_cfg, simdata%output_cfg, simdata%grid, continue_from_snapshot)
+   call logger%initialize(simdata%model, simdata%sim_cfg, simdata%model_cfg, simdata%aed2_cfg, simdata%output_cfg, simdata%grid, continue_from_snapshot)
 
    ! Calculate simulation_end_time, which is a tuple of integers (days, seconds)
 
@@ -231,18 +261,25 @@ contains
          ! Update forcing
          call mod_forcing%update(simdata%model)
 
-         ! Update absorption
-         call mod_absorption%update(simdata%model)
+         ! Update absorption (except if AED2 is off or if AED2 is on but bioshade feedback is off)
+         if (simdata%model_cfg%couple_aed2) then
+            if (.not. simdata%aed2_cfg%bioshade_feedback) then
+               call mod_absorption%update(simdata%model)
+            end if
+         else
+            call mod_absorption%update(simdata%model)
+         end if
 
          ! Update physics
          call mod_stability%update(simdata%model)
 
          ! If there is inflow/outflow do advection part
-         if (simdata%model%has_advection) then
+         if (simdata%model_cfg%inflow_mode > 0) then
             ! Treat inflow/outflow
             call mod_lateral%update(simdata%model)
             ! Set old lake level (before it is changed by advection module)
             simdata%grid%lake_level_old = simdata%grid%z_face(simdata%grid%ubnd_fce)
+
             ! Update lake advection using the inflow/outflow data
             call mod_advection%update(simdata%model)
             ! Update lake level
@@ -272,6 +309,11 @@ contains
          ! Update ice
          if (simdata%model_cfg%ice_model == 1) then
             call mod_ice%update(simdata%model, simdata%model_param)
+         end if
+
+         ! Update biogeochemistry
+         if (simdata%model_cfg%couple_aed2) then
+            call mod_aed2%update(simdata%model)
          end if
 
          ! Call logger to write files

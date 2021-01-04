@@ -1,8 +1,31 @@
-!     +---------------------------------------------------------------+
+! ---------------------------------------------------------------------------------
+!     Simstrat a physical 1D model for lakes and reservoirs
+!
+!     Developed by:  Group of Applied System Analysis
+!                    Dept. of Surface Waters - Research and Management
+!                    Eawag - Swiss Federal institute of Aquatic Science and Technology
+!
+!     Copyright (C) 2020, Eawag
+!
+!
+!     This program is free software: you can redistribute it and/or modify
+!     it under the terms of the GNU General Public License as published by
+!     the Free Software Foundation, either version 3 of the License, or
+!     (at your option) any later version.
+!
+!     This program is distributed in the hope that it will be useful,
+!     but WITHOUT ANY WARRANTY; without even the implied warranty of
+!     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!     GNU General Public License for more details.
+!
+!     You should have received a copy of the GNU General Public License
+!     along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+! ---------------------------------------------------------------------------------
+!<    +---------------------------------------------------------------+
 !     | Inputfile  module
 !     |  - Reads configuration and initial conditions
 !     |  - Sets up simulation data structure!
-!     +---------------------------------------------------------------+
+!<    +---------------------------------------------------------------+
 
 module strat_inputfile
    use strat_kinds
@@ -31,7 +54,6 @@ module strat_inputfile
       procedure, pass(self), public :: read_grid_config
       procedure, pass(self), public :: setup_model
       procedure, pass(self), public :: setup_output_conf
-      procedure, pass(self), public :: check_advection
    end type SimstratSimulationFactory
 
 contains
@@ -64,9 +86,6 @@ contains
 
       ! Init rest of model
       call self%setup_model()
-
-      ! Check input files for advection
-      call self%check_advection()
 
       ! Set output configuration
       call self%setup_output_conf()
@@ -498,6 +517,7 @@ contains
       associate (input_cfg=>self%simdata%input_cfg, &
                  output_cfg=>self%simdata%output_cfg, &
                  model_cfg=>self%simdata%model_cfg, &
+                 aed2_cfg=>self%simdata%aed2_cfg, &
                  sim_cfg=>self%simdata%sim_cfg, &
                  model_param=>self%simdata%model_param)
 
@@ -609,7 +629,7 @@ contains
             model_cfg%max_length_input_data = 1000
             call warn('Variable "ModelConfig.MaxLengthInputData" is not set. Assume a value of 1000')
          end if
-         call par_file%get("ModelConfig.CoupleAED2", self%simdata%model_cfg%couple_aed2, found);
+         call par_file%get("ModelConfig.CoupleAED2", model_cfg%couple_aed2,found);
          if (.not. found) then
             model_cfg%couple_aed2 = .false.
             call warn('Variable "ModelConfig.CoupleAED2" is not set. Assume you do not want to couple simstrat with aed2.')
@@ -623,13 +643,26 @@ contains
          call par_file%get("ModelConfig.UseFilteredWind", model_cfg%use_filtered_wind, found); call check_field(found, 'ModelConfig.UseFilteredWind', ParName)
          call par_file%get("ModelConfig.SeicheNormalization", model_cfg%seiche_normalization, found); call check_field(found, 'ModelConfig.SeicheNormalization', ParName)
          call par_file%get("ModelConfig.WindDragModel", model_cfg%wind_drag_model, found); call check_field(found, 'ModelConfig.WindDragModel', ParName)
-         call par_file%get("ModelConfig.InflowPlacement", model_cfg%inflow_placement, found); call check_field(found, 'ModelConfig.InflowPlacement', ParName)
+         call par_file%get("ModelConfig.InflowMode", model_cfg%inflow_mode, found); call check_field(found, 'ModelConfig.InflowMode', ParName)
          call par_file%get("ModelConfig.PressureGradients", model_cfg%pressure_gradients, found); call check_field(found, 'ModelConfig.PressureGradients', ParName)
          if (model_cfg%pressure_gradients == 1) call error('The option "PressureGradients = 1" is not working. Please choose either "0" or "2".')
          call par_file%get("ModelConfig.IceModel", model_cfg%ice_model, found); call check_field(found, 'ModelConfig.IceModel', ParName)
          call par_file%get("ModelConfig.SnowModel", model_cfg%snow_model, found); call check_field(found, 'ModelConfig.SnowModel', ParName)
 
-         ! Model Parameter
+         ! AED2 configuration (or another biogeochemical model if implemented)
+         if (model_cfg%couple_aed2) then
+            call par_file%get("AED2Config.AED2ConfigFile", aed2_cfg%aed2_config_file,found); call check_field(found, 'AED2Config.AED2ConfigFile', ParName)
+            call par_file%get("AED2Config.PathAED2initial", aed2_cfg%path_aed2_initial,found); call check_field(found, 'AED2Config.PathAED2initial', ParName)
+            call par_file%get("AED2Config.PathAED2inflow", aed2_cfg%path_aed2_inflow,found); call check_field(found, 'AED2Config.PathAED2inflow',ParName)
+            call par_file%get("AED2Config.ParticleMobility", aed2_cfg%particle_mobility,found); call check_field(found, 'AED2Config.ParticleMobility', ParName)
+            call par_file%get("AED2Config.BioshadeFeedback", aed2_cfg%bioshade_feedback,found); call check_field(found, 'AED2Config.BioshadeFeedback', ParName)
+            call par_file%get("AED2Config.BackgroundExtinction", aed2_cfg%background_extinction,found); call check_field(found, 'AED2Config.BackgroundExtinction', ParName)
+            call par_file%get("AED2Config.BenthicMode", aed2_cfg%benthic_mode,found); call check_field(found, 'AED2Config.BenthicMode', ParName)
+            !call par_file%get("AED2Config.NZones", aed2_cfg%n_zones,found); call check_field(found, 'AED2Config.NZones', ParName)
+            !call par_file%get("AED2Config.ZoneHeights", aed2_cfg%zone_heights,found); call check_field(found, 'AED2Config.ZoneHeights', ParName)
+         end if
+
+         !Model Parameter
          call par_file%get("ModelParameters.lat", model_param%Lat, found); call check_field(found, 'ModelParameters.lat', ParName)
          call par_file%get("ModelParameters.p_air", model_param%p_air, found); call check_field(found, 'ModelParameters.p_air', ParName)
          call par_file%get("ModelParameters.a_seiche", model_param%a_seiche, found); call check_field(found, 'ModelParameters.a_seiche', ParName)
@@ -725,7 +758,9 @@ contains
          call grid%update_depth(z_ini_depth)
 
          ! Set initial lake level
+         allocate(grid%lake_level)  ! Allocation is needed because lake_level is defined as pointer for use with AED2
          grid%lake_level = grid%z_face(grid%ubnd_fce)
+
          grid%lake_level_old = grid%lake_level
 
          ! Reverse arrays
@@ -773,64 +808,5 @@ contains
          call error('Field '//field_name//' not found in '//file_name)
       end if
    end subroutine check_field
-
-   ! Set has_advection to 1 if any inflow/outflow file contains data, otherwise to 0
-   subroutine check_advection(self)
-      implicit none
-      class(SimstratSimulationFactory) :: self
-
-      ! Local variables
-      character(200) :: line
-      integer :: nval_line(1:2)
-      integer  :: i, j, fnum(1:4), nval(1:4), nval_deep, nval_surface, if_adv
-      real(RK) :: dummy, z_Inp_dummy(1:self%simdata%grid%max_length_input_data)
-
-      open (41, status='old', file=self%simdata%input_cfg%QinpName)
-      open (42, status='old', file=self%simdata%input_cfg%QoutName)
-      open (43, status='old', file=self%simdata%input_cfg%TinpName)
-      open (44, status='old', file=self%simdata%input_cfg%SinpName)
-
-      fnum = [41, 42, 43, 44]
-      if_adv = 0
-      nval = 0
-      do i = 1, 4
-         self%simdata%model%has_surface_input(i) = .FALSE.
-         self%simdata%model%has_deep_input(i) = .FALSE.
-
-         read (fnum(i), *, end=8) ! Skip header (description of columns)
-         read (fnum(i), "(A)", end=8) line ! Read number of input depths (static)
-         nval_surface = 0
-
-         ! Read one value, aborts and goes to line 8 if no value is present
-         read(line,*,end=8) nval_line(1)
-         ! Read 2 values, aborts and goes to line 7 if only one value is present (no surface inflow)
-         read(line,*,end=7) nval_line(1:2)
-         nval_surface = nval_line(2)
-         if (nval_surface > 0) then
-            self%simdata%model%has_surface_input(i) = .TRUE.
-         end if
-
-7        nval_deep = nval_line(1)
-
-         if (nval_deep > 0) then
-            self%simdata%model%has_deep_input(i) = .TRUE.
-         end if
-         nval(i) = nval_deep + nval_surface
-         read (fnum(i), *, end=8) dummy, (z_Inp_dummy(j), j=1, nval(i)) ! Read input depths
-         goto 9
-8        if_adv = if_adv + 1    ! +1 in case there is no data in the file
-9        rewind(fnum(i))
-      end do
-
-      if (if_adv == 4) then   ! If all input files are empty
-         self%simdata%model%has_advection = .FALSE.
-         call warn('Advection is turned off since the input files were found to be empty. Check if you use the right line feed (\n) if they are not empty.')
-      else
-         self%simdata%model%has_advection = .TRUE.
-         self%simdata%model%nz_input = maxval(nval)
-      end if
-
-      return
-   end subroutine check_advection
 
 end module strat_inputfile

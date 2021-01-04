@@ -1,6 +1,29 @@
-!     +---------------------------------------------------------------+
+! ---------------------------------------------------------------------------------
+!     Simstrat a physical 1D model for lakes and reservoirs
+!
+!     Developed by:  Group of Applied System Analysis
+!                    Dept. of Surface Waters - Research and Management
+!                    Eawag - Swiss Federal institute of Aquatic Science and Technology
+!
+!     Copyright (C) 2020, Eawag
+!
+!
+!     This program is free software: you can redistribute it and/or modify
+!     it under the terms of the GNU General Public License as published by
+!     the Free Software Foundation, either version 3 of the License, or
+!     (at your option) any later version.
+!
+!     This program is distributed in the hope that it will be useful,
+!     but WITHOUT ANY WARRANTY; without even the implied warranty of
+!     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!     GNU General Public License for more details.
+!
+!     You should have received a copy of the GNU General Public License
+!     along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+! ---------------------------------------------------------------------------------
+!<    +---------------------------------------------------------------+
 !     |  Data structure definitions for simulation data
-!     +---------------------------------------------------------------+
+!<    +---------------------------------------------------------------+
 
 module strat_simdata
    use strat_kinds
@@ -34,6 +57,12 @@ module strat_simdata
       logical :: volume_grid, face_grid
    end type
 
+   ! Definition of a AED2 variable to log
+   type, public :: LogVariableAED2
+      character(len=48), pointer, dimension(:) :: names
+      real(RK), dimension(:,:), pointer :: values
+   end type
+
    ! Logging configuration
    type, public :: OutputConfig
       character(len=:), allocatable :: PathOut
@@ -48,6 +77,7 @@ module strat_simdata
       integer :: number_output_vars
       character(len=20), dimension(:), allocatable :: output_var_names ! Names of output variables
       class(LogVariable), dimension(:), allocatable :: output_vars
+      class(LogVariableAED2), allocatable :: output_vars_aed2
 
       integer :: output_time_type, output_depth_type, thinning_interval
       real(RK) :: depth_interval, thinning_interval_read ! thinning_interval_read is a real to make sure that also values
@@ -77,11 +107,24 @@ module strat_simdata
       logical :: use_filtered_wind
       integer :: seiche_normalization
       integer :: wind_drag_model
-      integer :: inflow_placement
+      integer :: inflow_mode
       integer :: pressure_gradients
       logical :: salinity_transport
       integer :: ice_model
       integer :: snow_model
+   end type
+
+   ! AED2 configuration (read from file)
+   type, public :: AED2Config
+      character(len=:), allocatable :: aed2_config_file
+      character(len=:), allocatable :: path_aed2_initial
+      character(len=:), allocatable :: path_aed2_inflow
+      logical :: particle_mobility
+      logical :: bioshade_feedback
+      real(RK) :: background_extinction
+      integer :: benthic_mode
+      !integer :: n_zones
+      real(RK), dimension(:), allocatable :: zone_heights
    end type
 
    ! Model params (read from file)
@@ -106,7 +149,7 @@ module strat_simdata
       real(RK) :: snow_temp
    end type
 
-   ! Model state (this is actually the simulation data!!!)
+   ! Model state (self is actually the simulation data!!!)
    type, public :: ModelState
       ! Iteration variables
       integer :: current_year ! Current year of simulation, used for zenith angle dependent water albedo
@@ -119,16 +162,21 @@ module strat_simdata
       ! Variables located on z_cent grid
       ! Note that for these variables the value at 0 z.b. U(0) is not used
       real(RK), dimension(:), allocatable :: U, V ! Water velocities [m/s]
-      real(RK), dimension(:), allocatable :: T, S ! Temperature [°C], Salinity [‰]
+      real(RK), dimension(:), pointer :: T, S ! Temperature [°C], Salinity [‰]
       real(RK), dimension(:), allocatable :: dS ! Source/sink for salinity
       real(RK), dimension(:, :), allocatable :: Q_inp ! Horizontal inflow [m^3/s]
-      real(RK), dimension(:), allocatable :: rho ! Water density [kg/m^3]
-
+      real(RK), dimension(:), pointer :: rho ! Water density [kg/m^3]
+      real(RK), dimension(:,:), pointer :: AED2_state ! State matrix of AED2 variables (depth, variable)
+      real(RK), dimension(:,:), pointer :: AED2_diagstate ! State matrix of AED2 variables
+      character(len=48), dimension(:), pointer :: AED2_names ! Names of AED2 state variables used in the simulation
+      character(len=48), dimension(:), pointer :: AED2_diagnames ! Names of AED2 state variables used in the simulation
+      integer :: n_pH
+   
       ! Variables located on z_upp grid
       real(RK), dimension(:), allocatable :: k, ko ! Turbulent kinetic energy (TKE) [J/kg]
       real(RK), dimension(:), allocatable :: avh
       real(RK), dimension(:), allocatable :: eps ! TKE dissipation rate [W/kg]
-      real(RK), dimension(:), allocatable :: num, nuh ! Turbulent viscosity (momentum) and diffusivity (temperature)
+      real(RK), dimension(:), allocatable :: num, nuh ! Turbulent viscosity (momentum) and diffusivity(temperature)
       real(RK), dimension(:), allocatable :: P, B ! Shear stress production [W/kg], buoyancy production [W/kg]
       real(RK), dimension(:), allocatable :: NN ! Brunt-Väisälä frequency [s-2]
       real(RK), dimension(:), allocatable :: cmue1, cmue2 ! Model constants
@@ -137,13 +185,18 @@ module strat_simdata
       real(RK) :: gamma ! Proportionality constant for loss of seiche energy
 
       real(RK), dimension(:), allocatable :: absorb ! Absorption coeff [m-1]
-      real(RK) :: u10, v10, uv10, Wf ! Wind speeds, wind factor
-      real(RK) :: u_taub, drag, u_taus ! Drag
+      real(RK), dimension(:), pointer :: absorb_vol ! Absorption coeff on vol grid [m-1]
+      real(RK) :: u10, v10, Wf ! Wind speeds, wind factor
+      real(RK), pointer :: uv10 ! pointer attribute needed for AED2
+      real(RK), pointer :: rain ! pointer attribute needed for AED2, rain is not calculated in Simstrat for the moment, but required by AED2
+      real(RK) :: drag, u_taus ! Drag
+      real(RK), pointer :: u_taub ! pointer attribute needed for AED2
       real(RK) :: tx, ty ! Shear stress
       real(RK) :: C10 ! Wind drag coefficient
       real(RK) :: SST, heat, heat_snow, heat_ice, heat_snowice! Sea surface temperature and heat flux
+
       real(RK) :: T_atm ! Air temp at surface
-      real(RK), dimension(:), allocatable :: rad ! Solar radiation (in water)
+      real(RK), dimension(:), allocatable :: rad, rad_vol ! Solar radiation (in water)
       real(RK), dimension(:), allocatable :: Q_vert ! Vertical exchange between boxes
       real(RK), dimension(9,12) :: albedo_data  ! Experimental monthly albedo data for determination of current water albedo
       real(RK) :: albedo_water   ! Current water albedo
@@ -163,14 +216,13 @@ module strat_simdata
       real(RK), allocatable :: hw ! Outgoing long wave [W m-2]
       real(RK), allocatable :: hk ! Sensible flux [W m-2]
       real(RK), allocatable :: hv ! Latent heat [W m-2]
-      real(RK), allocatable :: rad0 !  Solar radiation at surface  [W m-2]
-
+      real(RK), pointer :: rad0 !  Solar radiation at surface  [W m-2]
+   
       real(RK) :: cde, cm0
       real(RK) ::  fsed
       real(RK), dimension(:), allocatable     :: fgeo_add
-      logical :: has_advection
-      logical, dimension(1:4) :: has_surface_input, has_deep_input
-      integer :: nz_input
+      integer :: n_AED2, n_AED2_diag
+
 
    contains
       procedure, pass :: init => model_state_init
@@ -184,6 +236,7 @@ module strat_simdata
       type(OutputConfig), public  :: output_cfg
       type(SimConfig), public     :: sim_cfg
       type(ModelConfig), public   :: model_cfg
+      type(AED2Config), public    :: aed2_cfg
       type(ModelParam), public    :: model_param
       type(ModelState), public    :: model
       type(StaggeredGrid), public :: grid
@@ -212,7 +265,6 @@ contains
       allocate (self%T(state_size))
       allocate (self%S(state_size))
       allocate (self%dS(state_size))
-      allocate (self%Q_inp(1:4, state_size + 1))
       allocate (self%rho(state_size))
       allocate (self%avh(state_size))
 
@@ -230,7 +282,9 @@ contains
       allocate (self%P_Seiche(state_size + 1))
 
       allocate (self%absorb(state_size + 1))
+      allocate (self%absorb_vol(state_size))
       allocate (self%rad(state_size + 1))
+      allocate (self%rad_vol(state_size))
       allocate (self%Q_vert(state_size + 1))
 
       allocate (self%snow_h)
@@ -250,7 +304,6 @@ contains
       self%T = 0.0_RK
       self%S = 0.0_RK
       self%dS = 0.0_RK
-      self%Q_inp = 0.0_RK
       self%rho = 0.0_RK
 
       self%k = 0.0_RK
@@ -267,7 +320,9 @@ contains
       self%E_Seiche = 0.0_RK
 
       self%absorb = 0.0_RK
+      self%absorb_vol = 0.0_RK
       self%rad = 0.0_RK
+      self%rad_vol = 0.0_RK
       self%Q_vert = 0.0_RK
 
       self%snow_h = 0.0_RK
@@ -276,13 +331,22 @@ contains
       self%white_ice_h = 0.0_RK
       self%ice_temp = 0.0_RK
       self%snow_dens = rho_s_0
-      self%precip = 0.0_RK
-
+      self%precip = 0.0_RK 
+   
       self%ha = 0.0_RK
       self%hw = 0.0_RK
-      self%hk = 0.0_RK
-      self%hv = 0.0_RK
+      self%hk = 0.0_RK 
+      self%hv = 0.0_RK 
       self%rad0 = 0.0_RK
+      self%n_pH = 0
+
+      ! init pointers
+      allocate(self%uv10)
+      self%uv10 = 0.0_RK
+      allocate(self%rain)
+      self%rain = 0.0_RK
+      allocate(self%u_taub)
+      self%u_taub = 0.0_RK
 
       self%simulation_time_old = 0
 
@@ -297,11 +361,11 @@ contains
       write(80) self%simulation_time(1), self%simulation_time(2), self%simulation_time_old(1), self%simulation_time_old(2)
       call save_array(80, self%U)
       call save_array(80, self%V)
-      call save_array(80, self%T)
-      call save_array(80, self%S)
+      call save_array_pointer(80, self%T)
+      call save_array_pointer(80, self%S)
       call save_array(80, self%dS)
       call save_matrix(80, self%Q_inp)
-      call save_array(80, self%rho)
+      call save_array_pointer(80, self%rho)
       call save_array(80, self%k)
       call save_array(80, self%ko)
       call save_array(80, self%avh)
@@ -316,8 +380,9 @@ contains
       call save_array(80, self%P_Seiche)
       write(80) self%E_Seiche, self%gamma
       call save_array(80, self%absorb)
+      call save_array_pointer(80, self%absorb_vol)
       write(80) self%u10, self%v10, self%uv10, self%Wf
-      write(80) self%u_taub, self%drag, self%u_taus
+      write(80) self%u_taub, self%drag, self%u_taus, self%rain
       write(80) self%tx, self%ty
       write(80) self%C10
       write(80) self%SST, self%heat, self%heat_snow, self%heat_ice, self%heat_snowice
@@ -342,9 +407,8 @@ contains
       write(80) self%cde, self%cm0
       write(80) self%fsed
       call save_array(80, self%fgeo_add)
-      write(80) self%has_advection
-      write(80) self%has_surface_input, self%has_deep_input
-      write(80) self%nz_input
+      call save_matrix_pointer(80, self%AED2_state)
+      call save_matrix_pointer(80, self%AED2_diagstate)
    end subroutine
 
    ! load model state unformatted
@@ -356,11 +420,11 @@ contains
       read(81) self%simulation_time(1), self%simulation_time(2), self%simulation_time_old(1), self%simulation_time_old(2)
       call read_array(81, self%U)
       call read_array(81, self%V)
-      call read_array(81, self%T)
-      call read_array(81, self%S)
+      call read_array_pointer(81, self%T)
+      call read_array_pointer(81, self%S)
       call read_array(81, self%dS)
       call read_matrix(81, self%Q_inp)
-      call read_array(81, self%rho)
+      call read_array_pointer(81, self%rho)
       call read_array(81, self%k)
       call read_array(81, self%ko)
       call read_array(81, self%avh)
@@ -375,8 +439,9 @@ contains
       call read_array(81, self%P_Seiche)
       read(81) self%E_Seiche, self%gamma
       call read_array(81, self%absorb)
+      call read_array_pointer(81, self%absorb_vol)
       read(81) self%u10, self%v10, self%uv10, self%Wf
-      read(81) self%u_taub, self%drag, self%u_taus
+      read(81) self%u_taub, self%drag, self%u_taus, self%rain
       read(81) self%tx, self%ty
       read(81) self%C10
       read(81) self%SST, self%heat, self%heat_snow, self%heat_ice, self%heat_snowice
@@ -401,9 +466,8 @@ contains
       read(81) self%cde, self%cm0
       read(81) self%fsed
       call read_array(81, self%fgeo_add)
-      read(81) self%has_advection
-      read(81) self%has_surface_input, self%has_deep_input
-      read(81) self%nz_input
+      call read_matrix_pointer(81, self%AED2_state)
+      call read_matrix_pointer(81, self%AED2_diagstate)
    end subroutine
 
 end module strat_simdata

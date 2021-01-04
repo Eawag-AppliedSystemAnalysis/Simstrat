@@ -3,7 +3,7 @@
     "Initial conditions"  : "TestCase_LakeZurich/initcond_zuri_810107.dat",
     "Grid"                : "TestCase_LakeZurich/Grid.dat",
     "Morphology"          : "TestCase_LakeZurich/morph_zuri.dat",
-    "Forcing"             : "TestCase_LakeZurich/forcing_lake_zurich_1981_2013_waedenswil_homogenized.dat3",
+    "Forcing"             : "TestCase_LakeZurich/forcing_lake_zurich_1981_2013_waedenswil_homogenized.dat",
     "Absorption"          : "TestCase_LakeZurich/absorption_zh_1981_2013.dat",
     "Inflow"              : "TestCase_LakeZurich/Qinp.dat",
     "Outflow"             : "TestCase_LakeZurich/Qout.dat",
@@ -16,11 +16,12 @@
     "Times"  : 96,                                      ! Output times can be a number (interpreted as frequency 1/days), a list with times or a path to a file (containing a number or a list)
     "OutputDepthReference": "surface",                  ! "surface": depth of output variables is referenced to lake level, "bottom": depth of output variables is referenced to lake bottom
     "All"   : false,                                    ! True: All variables are written out, false: only variables in list "variables" are written
+
     "Variables" : ["T", "S","HA","HW","HK","HV"]                  ! Variables written to file (if "all" = false), example: ["T", "S", "WaterH"]
   },
   "ModelConfig" : {
     "MaxLengthInputData"      : 1000,                   ! Maximum length of input data (initial conditions, bathymetry, grid etc.)
-    "CoupleAED2"              : false,                  ! Switch to turn on/off the biochemical model AED2
+    "CoupleAED2"              : true,                  ! Switch to turn on/off the biochemical model AED2
     "TurbulenceModel"         : 1,                      ! 1: k-epsilon, 2: Mellor-Yamada
     "SplitSeicheParameter"    : false,                   ! True: Use a_seiche if N2 exceeds strat_sumr and a_seiche_w otherwise, False: Always use a_seiche
     "StabilityFunction"       : 2,                      ! 1: constant, 2: quasi-equilibrium
@@ -30,17 +31,27 @@
     "UseFilteredWind"         : false,                  ! Switch to activate filtered wind (needs one more column in forcing file)
     "SeicheNormalization"     : 2,                      ! 1: max N2, 2: integral
     "WindDragModel"           : 3,                      ! 1: constant, 2: ocean (increasing), 3: lake (Wüest and Lorke, 2003)
-    "InflowPlacement"         : 0,                      ! 0: inflow depths are chosen manually, 1: inflow is density-driven
-    "PressureGradients"       : 0,                      ! 0: off, 1: Svensson 1978, 2: Bottom drag
+    "InflowMode"              : 2,                      ! 0: no inflow, 1: inflow depths are chosen manually, 2: inflow is density-driven
+    "PressureGradients"       : 0,                      ! 0: off, 1: Svensson 1978 (not working), 2: bottom friction
     "IceModel"                : 1,                      ! Switch to turn on/off the ice model
     "SnowModel"               : 1                       ! Switch to turn on/off the snow model (needs ice model and an additional column in forcing)
+  },
+  "AED2Config" : {
+    "AED2ConfigFile"          : "TestCase_LakeZurich/aed2.nml",             ! AED2 config file
+    "PathAED2initial"         : "TestCase_LakeZurich/AED2_initcond/",       ! Folder with initial conditions of biochemical variables
+    "PathAED2inflow"          : "TestCase_LakeZurich/AED2_inflow/",         ! Folder with inflow files of biochemical variables
+    "ParticleMobility"        : 0,                      ! 0: particle mobility is off, 1: particle mobility is on
+    "BioshadeFeedback"        : 0,                      ! 0: light absorption coefficients are read from Simstrat input file, 1: light absorption is calculated from biochemical variables
+    "BackgroundExtinction"    : 0.2,                    ! Background extinction added to biochemical absorption (only used if bioshadeFeedback is 1)
+    "BenthicMode"             : 1,                      ! 0: Only bottom most layer interacts with sediment, 1: flancs also interact with sediment (but sediment concentrations are not simulated), 2 and 3: not implemented
+
   },
   "Simulation" : {
     "Timestep s"                  : 300,                ! Simulation timestep in seconds
     "Start year"                  : 1900,               ! Starting year
     "Start d"                     : 35001,              ! Simulation start in days since 01.01. of starting year
     "End d"                       : 35732,              ! Simulation end
-    "DisplaySimulation"           : 0,                  ! 0: No display, 1: Display when output is written, 2: Display every iteration
+    "DisplaySimulation"           : 1,                  ! 0: No display, 1: Display when output is written, 2: Display every iteration
     "Continue from last snapshot" : false                ! If true simulation continues from last snapshot (if present in output folder). Default: false
   },
   "ModelParameters" : {

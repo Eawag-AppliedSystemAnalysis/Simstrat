@@ -1,6 +1,29 @@
-!     +---------------------------------------------------------------+
-!     |  Constants....
-!     +---------------------------------------------------------------+
+! ---------------------------------------------------------------------------------
+!     Simstrat a physical 1D model for lakes and reservoirs
+!
+!     Developed by:  Group of Applied System Analysis
+!                    Dept. of Surface Waters - Research and Management
+!                    Eawag - Swiss Federal institute of Aquatic Science and Technology
+!
+!     Copyright (C) 2020, Eawag
+!
+!
+!     This program is free software: you can redistribute it and/or modify
+!     it under the terms of the GNU General Public License as published by
+!     the Free Software Foundation, either version 3 of the License, or
+!     (at your option) any later version.
+!
+!     This program is distributed in the hope that it will be useful,
+!     but WITHOUT ANY WARRANTY; without even the implied warranty of
+!     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!     GNU General Public License for more details.
+!
+!     You should have received a copy of the GNU General Public License
+!     along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+! ---------------------------------------------------------------------------------
+!<    +---------------------------------------------------------------+
+!     |  Model constants
+!<    +---------------------------------------------------------------+
   module strat_consts
      use strat_kinds
      implicit none
@@ -14,12 +37,12 @@
      real(RK), parameter     :: z0 = 0.5_RK ! Surface roughness [m]
 
     ! *** Constants for freshwater ***
-     real(RK), parameter     :: rho_0 = 1000_RK ! Mean freshwater density (seawater: 1023) [kg/m3]
+     real(RK), parameter     :: rho_0 = 1000.0_RK ! Mean freshwater density (seawater: 1023) [kg/m3]
      real(RK), parameter     :: cp = 4182_RK ! Mean freshwater heat capacity (seawater: 3992) [J/kg/K]
      real(RK), parameter     :: cp_air = 1005_RK ! Mean air heat capacity [J/kg/K]
 
     ! *** Further parameters controlling water dynamic ***
-     real(RK), parameter     :: Prndtl = 0.8_RK ! Prandtl number for air??
+     real(RK), parameter     :: Prndtl = 0.8_RK ! Turbulent Prandtl number
      real(RK), parameter     :: k_min = 1.0e-12_RK ! Min value allowed for turbulent kinetic energy
      real(RK), parameter     :: eps_min = 1.0e-30_RK ! Min value allowed for TKE dissipation
      real(RK), parameter     :: avh_min = 1.0e-8_RK ! Min value allowed for turbulent viscosity at boundaries

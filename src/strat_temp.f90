@@ -1,3 +1,26 @@
+! ---------------------------------------------------------------------------------
+!     Simstrat a physical 1D model for lakes and reservoirs
+!
+!     Developed by:  Group of Applied System Analysis
+!                    Dept. of Surface Waters - Research and Management
+!                    Eawag - Swiss Federal institute of Aquatic Science and Technology
+!
+!     Copyright (C) 2020, Eawag
+!
+!
+!     This program is free software: you can redistribute it and/or modify
+!     it under the terms of the GNU General Public License as published by
+!     the Free Software Foundation, either version 3 of the License, or
+!     (at your option) any later version.
+!
+!     This program is distributed in the hope that it will be useful,
+!     but WITHOUT ANY WARRANTY; without even the implied warranty of
+!     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!     GNU General Public License for more details.
+!
+!     You should have received a copy of the GNU General Public License
+!     along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+! ---------------------------------------------------------------------------------
 !<    +---------------------------------------------------------------+
 !     | Implementation of a statevar for a temperature variable
 !<    +---------------------------------------------------------------+
@@ -41,9 +64,12 @@ contains
             state%rad(i) = state%rad(i + 1)*exp(-grid%h(i)*(state%absorb(ubnd_fce - i)+state%absorb(ubnd_fce + 1 - i))/2) !Attenuated by absorption
          end do
 
+         ! Needed for AED2
+         state%rad_vol(1:ubnd_vol) = state%rad(2:ubnd_fce) - state%rad(1:ubnd_fce - 1)
+
          !!!!!!!! Define sources !!!!!!!!
          ! Add Hsol Term to sources (Eq 1, Goudsmit(2002))
-         sources(1:ubnd_vol) = (state%rad(2:ubnd_fce) - state%rad(1:ubnd_fce - 1))/grid%h(1:ubnd_vol)
+         sources(1:ubnd_vol) = state%rad_vol(1:ubnd_vol)/grid%h(1:ubnd_vol)
 
          ! Set boundary heat flux at surface (Eq 25, Goudsmit(2002))
          sources(ubnd_vol) = sources(ubnd_vol) + state%heat/rho_0/cp/grid%h(ubnd_vol)

@@ -102,7 +102,7 @@ class Tester(object):
 
     def extract_forcing_data_subset(self, end_time):
         lines = []
-        with open(self.input_file("forcing_lake_zurich_1981_2013_waedenswil_homogenized.dat3")) as f:
+        with open(self.input_file("forcing_lake_zurich_1981_2013_waedenswil_homogenized.dat")) as f:
             for line in f:
                 if len(lines) == 0 or float(line.split()[0]) <= end_time:
                     lines.append(line)

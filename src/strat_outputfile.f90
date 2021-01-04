@@ -1,3 +1,26 @@
+! ---------------------------------------------------------------------------------
+!     Simstrat a physical 1D model for lakes and reservoirs
+!
+!     Developed by:  Group of Applied System Analysis
+!                    Dept. of Surface Waters - Research and Management
+!                    Eawag - Swiss Federal institute of Aquatic Science and Technology
+!
+!     Copyright (C) 2020, Eawag
+!
+!
+!     This program is free software: you can redistribute it and/or modify
+!     it under the terms of the GNU General Public License as published by
+!     the Free Software Foundation, either version 3 of the License, or
+!     (at your option) any later version.
+!
+!     This program is distributed in the hope that it will be useful,
+!     but WITHOUT ANY WARRANTY; without even the implied warranty of
+!     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!     GNU General Public License for more details.
+!
+!     You should have received a copy of the GNU General Public License
+!     along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+! ---------------------------------------------------------------------------------
 !<    +---------------------------------------------------------------+
 !     |  Interface and implementation of output data loggers
 !<    +---------------------------------------------------------------+
@@ -6,6 +29,7 @@ module strat_outputfile
    use strat_kinds
    use strat_simdata
    use strat_grid
+   use simstrat_aed2
    use utilities
    use csv_module
    implicit none
@@ -17,10 +41,12 @@ module strat_outputfile
       !###########################################
       class(OutputConfig), public, pointer   :: output_config
       class(SimConfig), public, pointer :: sim_config
+      class(ModelConfig), public, pointer :: model_config
+      class(AED2Config), public, pointer :: aed2_config
       class(StaggeredGrid), public, pointer ::grid
       type(csv_file), dimension(:), allocatable :: output_files
       integer, public :: n_depths
-      integer, public :: n_vars
+      integer, public :: n_vars, n_vars_Simstrat, n_vars_AED2
       integer, public :: counter = 0
       integer(8), public, dimension(2) :: simulation_time_for_next_output = 0
       real(RK), dimension(:,:), allocatable :: last_iteration_data
@@ -65,12 +91,17 @@ module strat_outputfile
 
 contains
 
-  ! Abstract interface definitions
-   subroutine generic_log_init(self, sim_config, output_config, grid, snapshot_file_exists)
+   ! Abstract interface definitions
+
+   subroutine generic_log_init(self, state, sim_config, model_config, aed2_config, output_config, grid, snapshot_file_exists)
+
       implicit none
 
       class(SimstratOutputLogger), intent(inout) :: self
+      class(ModelState), target :: state
       class(SimConfig), target :: sim_config
+      class(ModelConfig), target :: model_config
+      class(AED2Config), target :: aed2_config
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
       logical, intent(in) :: snapshot_file_exists
@@ -121,10 +152,15 @@ contains
    !************************* Init logging ****************************
 
    ! Init logging for interpolating logger
-   subroutine log_init_interpolating(self, sim_config, output_config, grid, snapshot_file_exists)
+
+   subroutine log_init_interpolating(self, state, sim_config, model_config, aed2_config, output_config, grid, snapshot_file_exists)
+
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
+      class(ModelState), target :: state
       class(SimConfig), target :: sim_config
+      class(ModelConfig), target :: model_config
+      class(AED2Config), target :: aed2_config
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
       logical, intent(in) :: snapshot_file_exists
@@ -134,9 +170,20 @@ contains
       ! adjusted timestep is the same as the tout given in file
 
       self%sim_config => sim_config
+      self%model_config => model_config
+      self%aed2_config => aed2_config
       self%output_config => output_config
       self%grid => grid
-      self%n_vars = size(output_config%output_vars)
+      self%n_vars_Simstrat = size(output_config%output_vars)
+
+      if (self%model_config%couple_aed2) then
+        ! allocate AED2 output structure
+        allocate (output_config%output_vars_aed2) ! We don't know yet how many variables
+        output_config%output_vars_aed2%names => state%AED2_names
+        output_config%output_vars_aed2%values => state%AED2_state
+        self%n_vars_AED2 = state%n_AED2
+      end if
+      self%n_vars = self%n_vars_Simstrat + self%n_vars_AED2
 
       ! If output times are given in file
       if (output_config%thinning_interval == 0) then
@@ -208,7 +255,7 @@ contains
       ! Check if output directory exists
       inquire(file=output_config%PathOut,exist=exist_output_folder)
 
-      ! Create output folder if it does not exist
+      ! Create Simstrat output folder if it does not exist
       if(.not.exist_output_folder) then
          call warn('Result folder does not exist, create folder according to config file...')
          mkdirCmd = 'mkdir '//trim(output_config%PathOut)
@@ -220,8 +267,8 @@ contains
             call execute_command_line('mkdir Results')
             output_config%PathOut = 'Results'
          end if
-
       end if
+
       call open_files(self, output_config, grid, snapshot_file_exists)
 
    end subroutine
@@ -232,14 +279,15 @@ contains
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
       logical, intent(in) :: snapshot_file_exists
-      integer :: i
+      integer :: i, exitstat
       character(len=:), allocatable :: file_path
-      logical :: status_ok, append
+      logical :: status_ok, append, exist_output_folder
+      character(len=256) :: mkdirCmd
 
       if (allocated(self%output_files)) deallocate (self%output_files)
       allocate (self%output_files(1:self%n_vars))
 
-      do i = 1, self%n_vars
+      do i = 1, self%n_vars_Simstrat
          file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat'
          inquire (file=file_path, exist=append)
          append = append .and. snapshot_file_exists
@@ -269,6 +317,23 @@ contains
             end if
          end if
       end do
+
+      ! AED2 part
+      if (self%model_config%couple_aed2) then
+         do i = self%n_vars_Simstrat + 1, self%n_vars
+            file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_aed2%names(i - self%n_vars_Simstrat))//'_out.dat'
+            inquire (file=file_path, exist=append)
+
+            append = append .and. snapshot_file_exists
+            call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
+            if (.not. append) then
+               call self%output_files(i)%add('')
+               call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
+               call self%output_files(i)%next_row()
+            end if
+         end do
+      end if
+
    end subroutine
 
    !************************* Calculate next time point ****************************
@@ -283,6 +348,7 @@ contains
       associate (thinning_interval => self%output_config%thinning_interval, &
                  timestep => self%sim_config%timestep, &
                  simulation_times_for_output => self%output_config%simulation_times_for_output)
+
          if (thinning_interval == 0) then
             do i = self%counter, size(simulation_times_for_output,2)
                if (simulation_times_for_output(1,i) > simulation_time(1) .or. &
@@ -305,7 +371,7 @@ contains
       !workaround gfortran bug => cannot pass allocatable array to csv file
       real(RK), dimension(self%n_depths) :: values_on_zout
       type(OutputHelper) :: output_helper
-      integer :: i
+      integer :: i, j
 
       call output_helper%init(simdata%model%simulation_time, simdata%model%simulation_time_old, self%sim_config%timestep, self%simulation_time_for_next_output, &
                               self%sim_config%start_datum, self%output_config%thinning_interval, &
@@ -319,7 +385,7 @@ contains
          write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%lake_level, &
                                               simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
       end if
-      do i = 1, self%n_vars
+      do i = 1, self%n_vars_Simstrat
          call output_helper%add_datum(self%output_files(i), "(F12.4)")
          ! If on volume or faces grid
          if (self%output_config%output_vars(i)%volume_grid) then
@@ -335,6 +401,20 @@ contains
          end if
          call output_helper%next_row(self%output_files(i))
       end do
+
+      ! AED2 part
+      if (self%model_config%couple_aed2) then
+         do i = self%n_vars_Simstrat + 1, self%n_vars
+            ! Write datum
+            call output_helper%add_datum(self%output_files(i), "(F12.4)")
+            ! Interpolate state on volume grid
+            call self%grid%interpolate_from_vol(self%output_config%output_vars_aed2%values(:,i - self%n_vars_Simstrat), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
+            ! Write state
+            call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
+            ! Advance to next row
+            call output_helper%next_row(self%output_files(i))
+         end do
+      end if
    end subroutine
 
    subroutine output_helper_init(self, simulation_time, simulation_time_old, timestep, simulation_time_for_next_output, start_datum, &
@@ -482,6 +562,7 @@ contains
       class(InterpolatingLogger), intent(inout) :: self
       integer :: i
       logical :: status_ok
+
       do i = 1, self%n_vars
          call self%output_files(i)%close (status_ok)
       end do

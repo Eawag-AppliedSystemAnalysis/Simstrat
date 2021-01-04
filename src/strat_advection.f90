@@ -1,3 +1,26 @@
+! ---------------------------------------------------------------------------------
+!     Simstrat a physical 1D model for lakes and reservoirs
+!
+!     Developed by:  Group of Applied System Analysis
+!                    Dept. of Surface Waters - Research and Management
+!                    Eawag - Swiss Federal institute of Aquatic Science and Technology
+!
+!     Copyright (C) 2020, Eawag
+!
+!
+!     This program is free software: you can redistribute it and/or modify
+!     it under the terms of the GNU General Public License as published by
+!     the Free Software Foundation, either version 3 of the License, or
+!     (at your option) any later version.
+!
+!     This program is distributed in the hope that it will be useful,
+!     but WITHOUT ANY WARRANTY; without even the implied warranty of
+!     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!     GNU General Public License for more details.
+!
+!     You should have received a copy of the GNU General Public License
+!     along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+! ---------------------------------------------------------------------------------
 !<    +---------------------------------------------------------------+
 !     |  Advection module
 !     |  - Based on already read in/outflows, calculates Advection
@@ -9,6 +32,7 @@ module strat_advection
    use strat_simdata
    use strat_consts
    use strat_grid
+   use simstrat_aed2
    use utilities
    implicit none
    private
@@ -27,16 +51,29 @@ module strat_advection
 
 contains
 
-   subroutine advection_init(self, model_config, model_param, grid)
+   subroutine advection_init(self, state, model_config, model_param, grid)
       implicit none
       class(AdvectionModule) :: self
+      class(ModelState) :: state
       class(StaggeredGrid), target :: grid
       class(ModelConfig), target :: model_config
       class(ModelParam), target :: model_param
 
+      ! Local variables
+      integer :: i
+
       self%cfg => model_config
       self%param => model_param
       self%grid => grid
+
+      if (self%cfg%couple_aed2) then
+         do i = 1, state%n_AED2
+            select case(trim(state%AED2_names(i)))
+            case('CAR_pH')
+               state%n_pH = i
+            end select
+         end do
+      end if
 
    end subroutine
 
@@ -52,13 +89,14 @@ contains
       real(RK) :: dU(self%grid%nz_grid), dV(self%grid%nz_grid), dTemp(self%grid%nz_grid), dS(self%grid%nz_grid)
       real(RK) :: dt_i(1:2) ! first and second time step
       real(RK) :: AreaFactor_adv(1:self%grid%nz_grid)
-      integer :: i, t_i, outflow_above, outflow_below
+      integer :: i, t_i
 
       associate (grid=>self%grid, &
                  nz_occupied=>self%grid%nz_occupied, &
                  dt=>state%dt, &
                  h=>self%grid%h, &
                  Q_vert=>state%Q_vert, &
+                 AED2_state=>state%AED2_state, &
                  ubnd_vol=>self%grid%ubnd_vol, &
                  ubnd_fce=>self%grid%ubnd_fce)
 
@@ -92,6 +130,50 @@ contains
          do t_i = 1, 2 !First and (if needed) second timestep
             AreaFactor_adv(1:nz_occupied) = dt_i(t_i)/((grid%Az(1:nz_occupied) + grid%Az(2:nz_occupied+1))/2*grid%h(1:nz_occupied)) ! Area factor for dt(t_i)
             dh_i(t_i) = dh*dt_i(t_i)/dt ! Depth difference for dt(t_i)
+
+            ! Update Simstrat variables U, V, T and S
+            call do_update_statvars(self, state, AreaFactor_adv(1:nz_occupied), dh_i(t_i))
+
+            ! Update AED2 variables
+            if(self%cfg%couple_aed2) call do_update_statvars_AED2(self, state, AreaFactor_adv(1:nz_occupied), dh_i(t_i))
+
+            ! Adjust boxes (Horrible if/else construction - replace!)
+            if (t_i == 1) then
+               if (dh == 0) then ! If volume does not change, return
+                  return
+               else if ((dh + top_z) >= grid%max_depth) then ! If surface level reached
+                  call grid%modify_top_box(grid%max_depth - top_z)
+                  return
+               else if (((dh_i(t_i) + top_h) > h_div_2) .and. &
+                        ((dh_i(t_i) + top_h) < (h_mult_2))) then ! and top box<2*lower box
+                  call grid%modify_top_box(dh_i(t_i))
+                  return
+               else if (t_i == 1 .and. (dh + top_h) <= h_div_2) then ! If top box<=0.5*lower box, merge 2 boxes
+                  call self%merge_box(state, dh_i(t_i))
+               else if (t_i == 1 .and. (dh + top_h) >= h_mult_2) then ! If top box>=2*lower box, add one box
+                  call self%add_box(state, dh_i(t_i))
+               end if ! dh==0
+            end if
+
+         end do !end do t_i=1,2
+      end associate
+   end subroutine
+
+   subroutine do_update_statvars(self, state, AreaFactor_adv, dh)
+      ! Arguments
+      class(AdvectionModule) :: self
+      class(ModelState) :: state
+      real(RK), dimension(:) :: AreaFactor_adv
+      real(RK) :: dh
+
+      ! Local variables
+      integer :: i, top
+      real(RK) :: dU(self%grid%nz_grid), dV(self%grid%nz_grid), dTemp(self%grid%nz_grid), dS(self%grid%nz_grid)
+      integer :: outflow_above, outflow_below
+
+      associate(ubnd_vol => self%grid%ubnd_vol, &
+         Q_vert => state%Q_vert, &
+         h => self%grid%h)
 
             ! Calculate changes
             do i = 1, ubnd_vol
@@ -152,30 +234,82 @@ contains
             state%S(1:ubnd_vol) = state%S(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dS(1:ubnd_vol)
 
             ! Variation of variables due to change in volume
-            state%U(ubnd_vol) = state%U(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh_i(t_i))
-            state%V(ubnd_vol) = state%V(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh_i(t_i))
-            state%T(ubnd_vol) = state%T(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh_i(t_i))
-            state%S(ubnd_vol) = state%S(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh_i(t_i))
+            state%U(ubnd_vol) = state%U(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
+            state%V(ubnd_vol) = state%V(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
+            state%T(ubnd_vol) = state%T(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
+            state%S(ubnd_vol) = state%S(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
+      end associate
+   end subroutine
 
-            ! Adjust boxes (Horrible if/else construction - replace!)
-            if (t_i == 1) then
-               if (dh == 0) then ! If volume does not change, return
-                  return
-               else if ((dh + top_z) >= grid%max_depth) then ! If surface level reached
-                  call grid%modify_top_box(grid%max_depth - top_z)
-                  return
-               else if (((dh_i(t_i) + top_h) > h_div_2) .and. &
-                        ((dh_i(t_i) + top_h) < (h_mult_2))) then ! and top box<2*lower box
-                  call grid%modify_top_box(dh_i(t_i))
-                  return
-               else if (t_i == 1 .and. (dh + top_h) <= h_div_2) then ! If top box<=0.5*lower box, merge 2 boxes
-                  call self%merge_box(state, dh_i(t_i))
-               else if (t_i == 1 .and. (dh + top_h) >= h_mult_2) then ! If top box>=2*lower box, add one box
-                  call self%add_box(state, dh_i(t_i))
-               end if ! dh==0
+   subroutine do_update_statvars_AED2(self, state, AreaFactor_adv, dh)
+      ! Arguments
+      class(AdvectionModule) :: self
+      class(ModelState) :: state
+      real(RK), dimension(:) :: AreaFactor_adv(1:self%grid%ubnd_vol)
+      real(RK) :: dh
+
+      ! Local variables
+      integer :: i, top, outflow_above, outflow_below
+      real(RK) :: dAED2(self%grid%nz_grid, state%n_AED2)
+
+      associate(ubnd_vol => self%grid%ubnd_vol, &
+         Q_vert => state%Q_vert, &
+         AED2_state => state%AED2_state, &
+         h => self%grid%h)
+
+         ! Calculate changes
+         do i = 1, ubnd_vol
+            ! For the top-most cell, if Q_vert at the upper face is positive, there is still no outflow (the cell is simply growing, but this is done elsewhere)
+            if ((i == ubnd_vol) .and. Q_vert(i + 1) > 0) then
+               top = 0
+            else
+               top = 1
             end if
 
-         end do !end do t_i=1,2
+            ! If Q_vert at the upper face of cell i is positive, then there is outflow to the cell above
+            if (Q_vert(i + 1) > 0) then
+                  outflow_above = 1
+            else 
+                  outflow_above = 0
+            end if
+
+            ! If Q_vert at the lower face of cell i is negative, then there is outflow to the cell below
+            if (Q_vert(i) < 0) then
+                  outflow_below = 1
+            else
+                  outflow_below = 0
+            end if
+
+            ! Calculate advective flow out of cell (thus negative sign in the front) i to the cells above and below
+            dAED2(i,:) = -(top*outflow_above*Q_vert(i + 1) - outflow_below*Q_vert(i))*AED2_state(i,:)
+
+            ! Calculate the advective flow into cell i from below
+            if (i > 1 .and. Q_vert(i) > 0) then
+               dAED2(i,:) = dAED2(i,:) + Q_vert(i)*AED2_state(i - 1,:)
+            end if
+            ! Calculate the advective flow into cell i from above (- sign in front because Q_vert is negative if there is inflow)
+            if (i < ubnd_vol .and. Q_vert(i + 1) < 0) then
+               dAED2(i,:) = dAED2(i,:) - Q_vert(i + 1)*AED2_state(i + 1,:)
+            end if
+         end do
+
+         ! Add change to state variables
+         ! dAED2 = dAED2(vertical advection) + dAED2(inflow) + Outflow(negative)*AED2, units: C*m^3/s
+
+         ! Add change to the state variable
+         do i=1,state%n_AED2
+            dAED2(1:ubnd_vol,i) = dAED2(1:ubnd_vol,i) + state%Q_inp(n_simstrat + i, 1:ubnd_vol) + state%Q_inp(2, 1:ubnd_vol)*AED2_state(1:ubnd_vol,i)
+            AED2_state(1:ubnd_vol,i) = AED2_state(1:ubnd_vol,i) + AreaFactor_adv(1:ubnd_vol)*dAED2(1:ubnd_vol,i)
+         end do
+
+         ! Variation of variables due to change in volume
+         AED2_state(ubnd_vol,:) = AED2_state(ubnd_vol,:)*h(ubnd_vol)/(h(ubnd_vol) + dh)
+
+         ! Transform [H] back to pH
+         if(self%cfg%couple_aed2 .and. state%n_pH > 0) then
+            AED2_state(:,state%n_pH) = -log10(AED2_state(:,state%n_pH))
+         end if
+
       end associate
    end subroutine
 
@@ -188,7 +322,7 @@ contains
       class(ModelState) :: state
       real(RK) :: dh
       real(RK) :: w_a, w_b
-      associate (ubnd_fce=>self%grid%ubnd_fce, ubnd_vol=>self%grid%ubnd_vol)
+      associate (ubnd_fce=>self%grid%ubnd_fce, ubnd_vol=>self%grid%ubnd_vol, AED2_state=>state%AED2_state)
 
          ! New values of the state variables are weighted averages
          !determine weighting an normalization connstant
@@ -207,6 +341,9 @@ contains
          state%k(ubnd_fce) = (w_a*state%k(ubnd_fce + 1) + w_b*state%k(ubnd_fce))/(w_a + w_b)
          state%eps(ubnd_fce) = (w_a*state%eps(ubnd_fce + 1) + w_b*state%eps(ubnd_fce))/(w_a + w_b)
          state%Q_vert(ubnd_fce) = (w_a*state%Q_vert(ubnd_fce + 1) + w_b*state%Q_vert(ubnd_fce))/(w_a + w_b)
+
+         ! AED2
+         if (self%cfg%couple_AED2) AED2_state(ubnd_vol,:) = (w_a*AED2_state(ubnd_vol + 1,:) + w_b*AED2_state(ubnd_vol,:))/(w_a + w_b)
 
          ! update area factors
          call self%grid%update_area_factors()
@@ -236,6 +373,8 @@ contains
 
          state%k(ubnd_fce) = state%k(ubnd_fce - 1)
          state%eps(ubnd_fce) = state%eps(ubnd_fce - 1)
+
+         if (self%cfg%couple_AED2) state%AED2_state(ubnd_vol,:) = state%AED2_state(ubnd_vol - 1,:)
 
          call self%grid%update_area_factors()
 

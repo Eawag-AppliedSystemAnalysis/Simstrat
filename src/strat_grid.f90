@@ -1,3 +1,26 @@
+! ---------------------------------------------------------------------------------
+!     Simstrat a physical 1D model for lakes and reservoirs
+!
+!     Developed by:  Group of Applied System Analysis
+!                    Dept. of Surface Waters - Research and Management
+!                    Eawag - Swiss Federal institute of Aquatic Science and Technology
+!
+!     Copyright (C) 2020, Eawag
+!
+!
+!     This program is free software: you can redistribute it and/or modify
+!     it under the terms of the GNU General Public License as published by
+!     the Free Software Foundation, either version 3 of the License, or
+!     (at your option) any later version.
+!
+!     This program is distributed in the hope that it will be useful,
+!     but WITHOUT ANY WARRANTY; without even the implied warranty of
+!     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!     GNU General Public License for more details.
+!
+!     You should have received a copy of the GNU General Public License
+!     along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+! ---------------------------------------------------------------------------------
 !<    +---------------------------------------------------------------+
 !     | Grid module
 !     |  - Contains class to store, use and modify the grid
@@ -23,10 +46,12 @@ module strat_grid
 
    ! StaggeredGrid implementation
    type, public :: StaggeredGrid
-      real(RK), dimension(:), allocatable :: h        ! Box height
+      real(RK), dimension(:), pointer     :: h        ! Box height
       real(RK), dimension(:), allocatable :: z_face   ! Holds z-values of faces
       real(RK), dimension(:), allocatable :: z_volume ! Holds z-values of volume centers
+      real(RK), dimension(:), pointer     :: layer_depth ! Depth of each layer, used by AED2
       real(RK), dimension(:), allocatable :: Az       ! Areas
+      real(RK), dimension(:), pointer     :: Az_vol   ! Areas on volume grid (needed or AED2)
       real(RK), dimension(:), allocatable :: dAz      ! Difference of areas
       real(RK), dimension(:), allocatable :: meanint  ! ?
       real(RK) :: volume, h_old
@@ -44,7 +69,8 @@ module strat_grid
 
       integer :: ubnd_vol, ubnd_fce, length_vol, length_fce   ! Upper and lenght for volume (vol) and face(fce) grids
       real(RK) :: z_zero
-      real(RK) :: lake_level, lake_level_old
+      real(RK), pointer :: lake_level ! pointer attribute is needed for AED2
+      real(RK) :: lake_level_old
       real(RK) :: max_depth
 
    contains
@@ -85,7 +111,7 @@ contains
       implicit none
       class(StaggeredGrid), intent(inout) :: self
 
-      call save_array(80, self%h)
+      call save_array_pointer(80, self%h)
       call save_array(80, self%z_face)
       call save_array(80, self%z_volume)
       call save_array(80, self%Az)
@@ -106,7 +132,7 @@ contains
       implicit none
       class(StaggeredGrid), intent(inout) :: self
 
-      call read_array(81, self%h)
+      call read_array_pointer(81, self%h)
       call read_array(81, self%z_face)
       call read_array(81, self%z_volume)
       call read_array(81, self%Az)
@@ -156,9 +182,10 @@ contains
          ! h is already allocated by grid point init
          allocate (self%z_volume(0:nz_grid)) ! Depth axis with center of boxes
          self%z_volume(0) = 0 ! trick for array access - index not in use
-
+         allocate (self%layer_depth(0:nz_grid)) ! Depth of each box
          allocate (self%z_face(nz_grid + 1)) ! Depth axis with faceer border of boxes
          allocate (self%Az(nz_grid + 1)) ! Az is defined on the faces
+         allocate (self%Az_vol(nz_grid)) ! Az_vol is defined on volume grid
          allocate (self%dAz(nz_grid)) ! dAz is the difference between Az and thus defined on the volume
 
          ! Area factors used in calculations
@@ -245,6 +272,7 @@ contains
          self%z_face(i - 1) = nint(1e6_RK*self%z_face(i - 1))/1e6_RK
       end do
       self%z_face(self%nz_grid + 1) = nint(1e6_RK*self%z_face(self%nz_grid + 1))/1e6_RK
+      self%layer_depth(1:self%nz_grid) = self%z_zero - self%z_volume(1:self%nz_grid)
 
    end subroutine grid_init_z_axes
 
@@ -270,11 +298,18 @@ contains
       class(GridConfig), intent(inout) :: config
 
       integer :: num_read
-      associate (nz_grid=>self%nz_grid, dAz=>self%dAz, z_face=>self%z_face, Az=>self%Az)
+      associate (nz_grid=>self%nz_grid, &
+                 dAz=>self%dAz, &
+                 z_face=>self%z_face, &
+                 Az=>self%Az, &
+                 Az_vol=>self%Az_vol)
+
          num_read = size(config%A_read)
 
          ! Interpolate area (A) at all depths (z_face)
          call Interp(config%z_A_read, config%A_read, num_read, self%z_face, Az, nz_grid + 1)
+         ! Interpolate area on volume grid (needed for AED2)
+         call Interp(config%z_A_read, config%A_read, num_read, self%z_volume(1:nz_grid), Az_vol, nz_grid)
 
          ! Compute area derivative (= projected sediment area over layer thickness)
          dAz(1:nz_grid) = (Az(2:nz_grid + 1) - Az(1:nz_grid))/(z_face(2:nz_grid + 1) - z_face(1:nz_grid))
@@ -319,8 +354,10 @@ contains
                   ubnd_fce=>self%ubnd_fce, &
                   z_volume=>self%z_volume, &
                   ubnd_vol=>self%ubnd_vol, &
+                  layer_depth=>self%layer_depth, &
                   h=>self%h, &
                   Az=>self%Az, &
+                  Az_vol=>self%Az_vol, &
                   dAz=>self%dAz)
 
       if (h(ubnd_vol) > self%h_old) then
@@ -329,10 +366,12 @@ contains
          Az(ubnd_fce) = Az(ubnd_fce) + dAz(ubnd_vol)*dh
       end if
 
+      Az_vol(ubnd_vol) = Az_vol(ubnd_vol) + dAz(ubnd_vol)*dh
+
       h(ubnd_vol) = h(ubnd_vol) + dh
       z_volume(ubnd_vol) = z_volume(ubnd_vol) + 0.5_RK*dh
       z_face(ubnd_fce) = z_face(ubnd_fce) + dh
-!      print *,ubnd_vol,z_volume(ubnd_vol),dh
+      layer_depth(1:ubnd_vol) = z_face(ubnd_fce) - z_volume(1:ubnd_vol)
 
       end associate
    end subroutine
@@ -347,18 +386,23 @@ contains
                   ubnd_fce=>self%ubnd_fce, &
                   z_volume=>self%z_volume, &
                   ubnd_vol=>self%ubnd_vol, &
+                  layer_depth=>self%layer_depth, &
                   h=>self%h, &
                   nz_occupied=>self%nz_occupied, &
-                  Az=>self%Az)
+                  Az=>self%Az, &
+                  Az_vol=>self%Az_vol)
 
          ! Update grid
          z_face(ubnd_fce - 1) = z_face(ubnd_fce) + dh
          z_volume(ubnd_vol - 1) = 0.5_RK*(z_face(ubnd_fce - 1) + z_face(ubnd_fce - 2))
 
          Az(ubnd_fce - 1) = Az(ubnd_fce)
+         Az_vol(ubnd_vol - 1) = Az_vol(ubnd_vol)
 
          self%h_old = h(ubnd_vol - 1)
          h(ubnd_vol - 1) = (z_face(ubnd_fce - 1) - z_face(ubnd_fce - 2))
+
+         layer_depth(ubnd_vol - 1) = z_face(ubnd_fce - 1) - z_volume(ubnd_vol - 1)
 
          ! Update number of occupied cells
          nz_occupied = nz_occupied - 1
@@ -377,9 +421,11 @@ contains
       associate (z_face=>self%z_face, &
                  ubnd_fce=>self%ubnd_fce, &
                  z_volume=>self%z_volume, &
+                 layer_depth=>self%layer_depth, &
                  ubnd_vol=>self%ubnd_vol, &
                  h=>self%h, &
                  Az=>self%Az, &
+                 Az_vol=>self%Az_vol, &
                  dAz=>self%dAz, &
                  nz_occupied=>self%nz_occupied)
 
@@ -396,7 +442,12 @@ contains
          Az(ubnd_fce) = Az(ubnd_fce - 1) + h(ubnd_vol)*dAz(ubnd_vol)
          Az(ubnd_fce + 1) = Az(ubnd_fce) + h(ubnd_vol + 1)*dAz(ubnd_vol + 1)
 
-         ! Update number of occupied cells
+         Az_vol(ubnd_vol - 1) = (Az(ubnd_fce - 1) + Az(ubnd_fce - 2))/2
+         Az_vol(ubnd_vol) = (Az(ubnd_fce) + Az(ubnd_fce - 1))/2
+
+         layer_depth(ubnd_vol + 1) = z_face(ubnd_fce + 1) - z_volume(ubnd_vol + 1)
+         layer_depth(ubnd_vol) = z_face(ubnd_fce) - z_volume(ubnd_vol)
+
          nz_occupied = nz_occupied + 1
 
          call self%update_nz()
