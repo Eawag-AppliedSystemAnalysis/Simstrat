@@ -365,8 +365,8 @@ The flux through the upper and lower interface are:
 	&dt\cdot AreaFactor_1\cdot\nu^{n+1}_z\phi^{n+1}_{z-1}\nonumber\\
 	&+(1-dt\cdot AreaFactor_1\nu^{n}_z-dt\cdot form_2\nu^{n}_{z+1})\phi^{n+1}_z\nonumber\\
 	&+ dt\cdot AreaFactor_2\cdot\nu^{n+1}_{z+1}\phi^{n+1}_{z+1} = \phi^{n}_{z}+dt\cdot S^n_z\\
-	&AreaFactor_1 = \frac{-4A_{z}}{\left(A_z+A_{z+1}\right)\left(h_{z}+h_{z-1}\right)}\\
-	&AreaFactor_2 = \frac{-4A_{z+1}}{\left(A_z+A_{z+1}\right)\left(h_{z+1}+h_{z}\right)}
+	&AreaFactor_1 = \frac{-4A_{z}}{\left(A_z+A_{z+1}\right)\left(h_{z}+h_{z-1}\right)h_{z}}\\
+	&AreaFactor_2 = \frac{-4A_{z+1}}{\left(A_z+A_{z+1}\right)\left(h_{z+1}+h_{z}\right)h_{z}}
 \end{align}
 
 The temporal change of turbulent quantities mainly follows the same concept except that the control volumes are shifted so that the turbulent quantities are at the center of the control volumes and the mean flow quantities are located at the volume faces. The balance for the turbulent quantities is therefore:
