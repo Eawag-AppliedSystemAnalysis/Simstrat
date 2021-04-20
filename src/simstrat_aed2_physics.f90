@@ -36,17 +36,15 @@ subroutine absorption_updateAED2(self, state)
    ! Local variables
    integer :: i
    real(RK) :: bio_extinction
-   real(RK), dimension(self%grid%nz_occupied) :: extc_coef
 
    do i=self%grid%nz_occupied, 1, -1
       bio_extinction = 0.0_RK
       call aed2_light_extinction(self%column, i, bio_extinction)
-      extc_coef(i) = self%aed2_cfg%background_extinction + bio_extinction
+      state%absorb_vol(i) = self%aed2_cfg%background_extinction + bio_extinction
 
    end do
-
    ! Interpolate to faces to be compatible with Simstrat temperature module
-   call self%grid%interpolate_to_face(self%grid%z_volume, extc_coef, self%grid%nz_occupied, state%absorb)
+   call self%grid%interpolate_to_face(self%grid%z_volume, state%absorb_vol, self%grid%nz_occupied, state%absorb)
 
 end subroutine
 
