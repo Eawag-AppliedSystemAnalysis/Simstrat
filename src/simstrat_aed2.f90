@@ -258,7 +258,7 @@ contains
       end if
 
 
-      self%par(:) = state%absorb_vol(:)
+      self%par(:) = state%rad_vol(:)*rho_0*cp
 
       ! Calculate irradiance spectrum from par (factors from GLM)
       self%nir(:) = (self%par(:)/0.45) * 0.51
