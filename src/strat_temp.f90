@@ -64,7 +64,7 @@ contains
             state%rad(i) = state%rad(i + 1)*exp(-grid%h(i)*(state%absorb(ubnd_fce - i)+state%absorb(ubnd_fce + 1 - i))/2) !Attenuated by absorption
          end do
 
-         ! Needed for AED2
+         ! Radiation staying in a layer
          state%rad_vol(1:ubnd_vol) = state%rad(2:ubnd_fce) - state%rad(1:ubnd_fce - 1)
 
          !!!!!!!! Define sources !!!!!!!!

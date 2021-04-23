@@ -685,7 +685,7 @@ contains
 
          call par_file%get("ModelParameters.cd", model_param%CD, found); call check_field(found, 'ModelParameters.cd', ParName)
          call par_file%get("ModelParameters.hgeo", model_param%fgeo, found); call check_field(found, 'ModelParameters.hgeo', ParName)
-         call par_file%get("ModelParameters.p_sw", model_param%p_sw, found); call check_field(found, 'ModelParameters.p_sw', ParName)
+         call par_file%get("ModelParameters.p_sw_water", model_param%p_sw_water, found); call check_field(found, 'ModelParameters.p_sw_water', ParName)
          call par_file%get("ModelParameters.p_lw", model_param%p_lw, found); call check_field(found, 'ModelParameters.p_lw', ParName)
          call par_file%get("ModelParameters.p_windf", model_param%p_windf, found); call check_field(found, 'ModelParameters.p_windf', ParName)
          call par_file%get("ModelParameters.beta_sol", model_param%beta_sol, found); call check_field(found, 'ModelParameters.beta_sol', ParName)
@@ -695,7 +695,7 @@ contains
             call par_file%get("ModelParameters.wat_albedo", model_param%wat_albedo, found); call check_field(found, 'ModelParameters.wat_albedo', ParName)
          end if
          if (model_cfg%ice_model == 1) then
-           call par_file%get("ModelParameters.p_albedo", model_param%p_albedo, found); call check_field(found, 'ModelParameters.p_albedo', ParName)
+           call par_file%get("ModelParameters.p_sw_ice", model_param%p_sw_ice, found); call check_field(found, 'ModelParameters.p_sw_ice', ParName)
            call par_file%get("ModelParameters.freez_temp", model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_temp', ParName)
            call par_file%get("ModelParameters.snow_temp", model_param%snow_temp, found); call check_field(found, 'ModelParameters.snow_temp', ParName)
          end if

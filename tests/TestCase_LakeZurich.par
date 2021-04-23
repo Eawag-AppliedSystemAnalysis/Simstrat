@@ -43,7 +43,7 @@
     "ParticleMobility"        : 0,                      ! 0: particle mobility is off, 1: particle mobility is on
     "BioshadeFeedback"        : 0,                      ! 0: light absorption coefficients are read from Simstrat input file, 1: light absorption is calculated from biochemical variables
     "BackgroundExtinction"    : 0.2,                    ! Background extinction added to biochemical absorption (only used if bioshadeFeedback is 1)
-    "BenthicMode"             : 1,                      ! 0: Only bottom most layer interacts with sediment, 1: flancs also interact with sediment (but sediment concentrations are not simulated), 2 and 3: not implemented
+    "BenthicMode"             : 1                       ! 0: Only bottom most layer interacts with sediment, 1: flancs also interact with sediment (but sediment concentrations are not simulated), 2 and 3: not implemented
 
   },
   "Simulation" : {
@@ -65,12 +65,12 @@
     "c10"           : 1,                                ! Wind drag coefficient, a physical constant around 0.001 if WindDragModel = 1 and a calibration parameter around 1 if WindDragModel = 2 or 3
     "cd"            : 0.002,                            ! Bottom drag coefficient [-]
     "hgeo"          : 0.1,                              ! Geothermal heat flux [W/m2]
-    "p_sw"          : 1,                                ! Fit parameter for absorption of short wave radiation from sky [-]
+    "p_sw_water"    : 1,                                ! Fit parameter for absorption of short wave radiation from sky [-]
     "p_lw"          : 1.1978,                           ! Fit parameter for absorption of IR radiation from sky [-]
     "p_windf"       : 1,                                ! Fit parameter for convective and latent heat fluxes [-]
     "beta_sol"      : 0.3,                              ! Fraction of short-wave radiation directly absorbed as heat by water [-]
     "wat_albedo"    : 0.08,                             ! User defined water albedo [-] (only used if UserDefinedWaterAlbedo = true)
-    "p_albedo"      : 1,                                ! Fit parameter for albedo of ice, snow-ice and snow [-] (only used if IceModel = 1)
+    "p_sw_ice"      : 1,                                ! Fit parameter for albedo of ice, snow-ice and snow [-] (only used if IceModel = 1)
     "freez_temp"    : 0.00,                             ! Freezing temperature of water [°C] (only used if IceModel = 1)
     "snow_temp"     : 1                                 ! Temperature of snow [°C] (only used if IceModel = 1 and SnowModel = 1)
   }

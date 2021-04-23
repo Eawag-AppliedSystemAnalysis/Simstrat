@@ -257,7 +257,10 @@ contains
          call absorption_updateAED2(self, state)
       end if
 
-      ! Fudge
+
+      self%par(:) = state%rad_vol(:)*rho_0*cp
+
+      ! Calculate irradiance spectrum from par (factors from GLM)
       self%nir(:) = (self%par(:)/0.45) * 0.51
       self%uva(:) = (self%par(:)/0.45) * 0.035
       self%uvb(:) = (self%par(:)/0.45) * 0.005

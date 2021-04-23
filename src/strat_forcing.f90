@@ -186,7 +186,7 @@ contains
          state%v10 = A_cur(2)*param%f_wind ! MS 2014: added f_wind
          state%uv10 = sqrt(state%u10**2 + state%v10**2) ! AG 2014
          state%SST = A_cur(3) ! Lake surface temperature
-         state%rad0 = max(A_cur(4)*(1 - state%albedo_water)*(1 - param%beta_sol),0.0_RK) ! MS: added beta_sol and albedo_water
+         state%rad0 = max(A_cur(4),0.0_RK)*(1 - state%albedo_water)*(1 - param%beta_sol) * param%p_sw_water ! MS: added beta_sol and albedo_water
          state%heat = 0.0_RK
          state%T_atm = 0.0_RK
          state%precip = 0.0_RK
@@ -204,13 +204,13 @@ contains
             A_cur(4) = max(A_cur(4),0.0_RK)  ! To avoid negative values because of numerical problems
 
             if (state%black_ice_h > 0 .and. state%white_ice_h == 0 .and. state%snow_h == 0) then ! Ice
-               F_glob = A_cur(4)*(1 - ice_albedo) * param%p_albedo
+               F_glob = A_cur(4)*(1 - ice_albedo) * param%p_sw_ice
             else if (state%white_ice_h > 0 .and. state%snow_h == 0) then ! Snowice
-               F_glob = A_cur(4)*(1 - snowice_albedo) * param%p_albedo
+               F_glob = A_cur(4)*(1 - snowice_albedo) * param%p_sw_ice
             else if (state%snow_h > 0) then ! Snow
-               F_glob = A_cur(4)*(1 - snow_albedo) * param%p_albedo
+               F_glob = A_cur(4)*(1 - snow_albedo) * param%p_sw_ice
             else ! Water
-               F_glob = A_cur(4)*(1 - state%albedo_water) * param%p_sw
+               F_glob = A_cur(4)*(1 - state%albedo_water) * param%p_sw_water
             end if
 
             Vap_atm = A_cur(5)
@@ -231,13 +231,13 @@ contains
             A_cur(4) = max(A_cur(4),0.0_RK)  ! To avoid negative values because of numerical problems
 
             if (state%black_ice_h > 0 .and. state%white_ice_h == 0 .and. state%snow_h == 0) then ! Ice
-               F_glob = A_cur(4)*(1 - ice_albedo) * param%p_albedo
+               F_glob = A_cur(4)*(1 - ice_albedo) * param%p_sw_ice
             else if (state%white_ice_h > 0 .and. state%snow_h == 0) then ! Snowice
-               F_glob = A_cur(4)*(1 - snowice_albedo) * param%p_albedo
+               F_glob = A_cur(4)*(1 - snowice_albedo) * param%p_sw_ice
             else if (state%snow_h > 0) then ! Snow
-               F_glob = A_cur(4)*(1 - snow_albedo) * param%p_albedo
+               F_glob = A_cur(4)*(1 - snow_albedo) * param%p_sw_ice
             else ! Water
-               F_glob = A_cur(4)*(1 - state%albedo_water) * param%p_sw
+               F_glob = A_cur(4)*(1 - state%albedo_water) * param%p_sw_water
             end if
 
             Vap_atm = A_cur(5)
@@ -264,7 +264,7 @@ contains
             state%u10 = A_cur(1)*param%f_wind ! MS 2014: added f_wind
             state%v10 = A_cur(2)*param%f_wind ! MS 2014: added f_wind
             heat0 = A_cur(3) ! MS 2014
-            F_glob = max(A_cur(4)*(1 - state%albedo_water) * param%p_sw,0.0_RK)
+            F_glob = max(A_cur(4),0.0_RK) * (1 - state%albedo_water) * param%p_sw_water
             state%T_atm = 0.0_RK
             if (cfg%use_filtered_wind) state%Wf = A_cur(5) ! AG 2014
 
@@ -277,13 +277,13 @@ contains
             A_cur(4) = max(A_cur(4),0.0_RK)  ! To avoid negative values because of numerical problems
 
             if (state%black_ice_h > 0 .and. state%white_ice_h == 0 .and. state%snow_h == 0) then ! Ice
-               F_glob = A_cur(4)*(1 - ice_albedo) * param%p_albedo
+               F_glob = A_cur(4)*(1 - ice_albedo) * param%p_sw_ice
             else if (state%white_ice_h > 0 .and. state%snow_h == 0) then ! Snowice
-               F_glob = A_cur(4)*(1 - snowice_albedo) * param%p_albedo
+               F_glob = A_cur(4)*(1 - snowice_albedo) * param%p_sw_ice
             else if (state%snow_h > 0) then ! Snow
-               F_glob = A_cur(4)*(1 - snow_albedo) * param%p_albedo
+               F_glob = A_cur(4)*(1 - snow_albedo) * param%p_sw_ice
             else ! Water
-               F_glob = A_cur(4)*(1 - state%albedo_water) * param%p_sw
+               F_glob = A_cur(4)*(1 - state%albedo_water) * param%p_sw_water
             end if
 
             Vap_atm = A_cur(5)
@@ -433,6 +433,7 @@ contains
             state%hv = H_V
          else !Forcing mode 4
             state%heat = heat0 + F_glob*param%beta_sol !MS: added term with beta_sol
+            state%rad0 = F_glob * (1 - param%beta_sol) !FB, 2021: added term with beta_sol
             state%heat_snow = 0 ! Heat snow
             state%heat_snowice = 0 ! Heat snowice
             state%heat_ice = 0 ! Heat ice
