@@ -144,7 +144,7 @@ module strat_simdata
       real(RK) :: p_windf
       real(RK) :: beta_sol
       real(RK) :: wat_albedo
-      real(RK) :: p_albedo
+      real(RK) :: p_snow_ice
       real(RK) :: freez_temp
       real(RK) :: snow_temp
    end type
