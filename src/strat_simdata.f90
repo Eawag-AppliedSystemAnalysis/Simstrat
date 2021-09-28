@@ -77,7 +77,8 @@ module strat_simdata
       integer :: number_output_vars
       character(len=20), dimension(:), allocatable :: output_var_names ! Names of output variables
       class(LogVariable), dimension(:), allocatable :: output_vars
-      class(LogVariableAED2), allocatable :: output_vars_aed2
+      class(LogVariableAED2), allocatable :: output_vars_aed2_state
+      class(LogVariableAED2), allocatable :: output_vars_aed2_diagnostic
 
       integer :: output_time_type, output_depth_type, thinning_interval
       real(RK) :: depth_interval, thinning_interval_read ! thinning_interval_read is a real to make sure that also values
@@ -121,6 +122,7 @@ module strat_simdata
       character(len=:), allocatable :: path_aed2_inflow
       logical :: particle_mobility
       logical :: bioshade_feedback
+      logical :: output_diagnostic_variables
       real(RK) :: background_extinction
       integer :: benthic_mode
       !integer :: n_zones
@@ -167,9 +169,9 @@ module strat_simdata
       real(RK), dimension(:, :), allocatable :: Q_inp ! Horizontal inflow [m^3/s]
       real(RK), dimension(:), pointer :: rho ! Water density [kg/m^3]
       real(RK), dimension(:,:), pointer :: AED2_state ! State matrix of AED2 variables (depth, variable)
-      real(RK), dimension(:,:), pointer :: AED2_diagstate ! State matrix of AED2 variables
-      character(len=48), dimension(:), pointer :: AED2_names ! Names of AED2 state variables used in the simulation
-      character(len=48), dimension(:), pointer :: AED2_diagnames ! Names of AED2 state variables used in the simulation
+      real(RK), dimension(:,:), pointer :: AED2_diagnostic ! State matrix of AED2 diagnostic svariables
+      character(len=48), dimension(:), pointer :: AED2_state_names ! Names of AED2 state variables used in the simulation
+      character(len=48), dimension(:), pointer :: AED2_diagnostic_names ! Names of AED2 diagnostic variables used in the simulation
       integer :: n_pH
    
       ! Variables located on z_upp grid
@@ -221,7 +223,7 @@ module strat_simdata
       real(RK) :: cde, cm0
       real(RK) ::  fsed
       real(RK), dimension(:), allocatable     :: fgeo_add
-      integer :: n_AED2, n_AED2_diag
+      integer :: n_AED2_state, n_AED2_diagnostic
 
 
    contains
@@ -408,7 +410,7 @@ contains
       write(80) self%fsed
       call save_array(80, self%fgeo_add)
       call save_matrix_pointer(80, self%AED2_state)
-      call save_matrix_pointer(80, self%AED2_diagstate)
+      call save_matrix_pointer(80, self%AED2_diagnostic)
    end subroutine
 
    ! load model state unformatted
@@ -467,7 +469,7 @@ contains
       read(81) self%fsed
       call read_array(81, self%fgeo_add)
       call read_matrix_pointer(81, self%AED2_state)
-      call read_matrix_pointer(81, self%AED2_diagstate)
+      call read_matrix_pointer(81, self%AED2_diagnostic)
    end subroutine
 
 end module strat_simdata

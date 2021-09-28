@@ -660,6 +660,7 @@ contains
             call par_file%get("AED2Config.BenthicMode", aed2_cfg%benthic_mode,found); call check_field(found, 'AED2Config.BenthicMode', ParName)
             !call par_file%get("AED2Config.NZones", aed2_cfg%n_zones,found); call check_field(found, 'AED2Config.NZones', ParName)
             !call par_file%get("AED2Config.ZoneHeights", aed2_cfg%zone_heights,found); call check_field(found, 'AED2Config.ZoneHeights', ParName)
+            call par_file%get("AED2Config.OutputDiagnosticVars", aed2_cfg%output_diagnostic_variables,found); call check_field(found, 'AED2Config.OutputDiagnosticVars', ParName)
          end if
 
          !Model Parameter

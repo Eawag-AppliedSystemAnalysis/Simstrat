@@ -67,8 +67,8 @@ contains
       self%grid => grid
 
       if (self%cfg%couple_aed2) then
-         do i = 1, state%n_AED2
-            select case(trim(state%AED2_names(i)))
+         do i = 1, state%n_AED2_state
+            select case(trim(state%AED2_state_names(i)))
             case('CAR_pH')
                state%n_pH = i
             end select
@@ -250,7 +250,7 @@ contains
 
       ! Local variables
       integer :: i, top, outflow_above, outflow_below
-      real(RK) :: dAED2(self%grid%nz_grid, state%n_AED2)
+      real(RK) :: dAED2(self%grid%nz_grid, state%n_AED2_state)
 
       associate(ubnd_vol => self%grid%ubnd_vol, &
          Q_vert => state%Q_vert, &
@@ -297,7 +297,7 @@ contains
          ! dAED2 = dAED2(vertical advection) + dAED2(inflow) + Outflow(negative)*AED2, units: C*m^3/s
 
          ! Add change to the state variable
-         do i=1,state%n_AED2
+         do i=1,state%n_AED2_state
             dAED2(1:ubnd_vol,i) = dAED2(1:ubnd_vol,i) + state%Q_inp(n_simstrat + i, 1:ubnd_vol) + state%Q_inp(2, 1:ubnd_vol)*AED2_state(1:ubnd_vol,i)
             AED2_state(1:ubnd_vol,i) = AED2_state(1:ubnd_vol,i) + AreaFactor_adv(1:ubnd_vol)*dAED2(1:ubnd_vol,i)
          end do

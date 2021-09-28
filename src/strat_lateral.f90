@@ -108,7 +108,7 @@ contains
 
       self%couple_aed2 = model_config%couple_aed2
       if (self%couple_aed2) then
-         self%n_vars = self%n_vars + state%n_AED2
+         self%n_vars = self%n_vars + state%n_AED2_state
          self%aed2_path = aed2_config%path_aed2_inflow
       end if
 
@@ -142,8 +142,8 @@ contains
 
       ! Get location of pH in AED2 array
       if (self%couple_aed2) then
-         do i = 1, state%n_AED2
-            select case(trim(state%AED2_names(i)))
+         do i = 1, state%n_AED2_state
+            select case(trim(state%AED2_state_names(i)))
             case('CAR_pH')
                state%n_pH = i
             end select
@@ -229,7 +229,7 @@ contains
       real(RK) :: dummy
       real(RK) :: Q_in(1:self%grid%ubnd_vol), h_in(1:self%grid%ubnd_vol)
       real(RK) :: T_in, S_in, co2_in, ch4_in, rho_in, CD_in, g_red, slope, Ri, E, Q_inp_inc
-      real(RK) :: AED2_in(state%n_AED2)
+      real(RK) :: AED2_in(state%n_AED2_state)
       integer :: i, j, k, i1, i2, l, status
       character(len=100) :: fname
 
@@ -251,7 +251,7 @@ contains
 
                   ! Read inflow files
                   if (i > n_simstrat) then
-                     fname = trim(self%aed2_path)//trim(state%AED2_names(i - n_simstrat))//'_inflow.dat'
+                     fname = trim(self%aed2_path)//trim(state%AED2_state_names(i - n_simstrat))//'_inflow.dat'
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
@@ -342,7 +342,7 @@ contains
                else ! if start from snapshot
                   ! Open inflow files
                   if (i > n_simstrat) then
-                     fname = trim(self%aed2_path)//trim(state%AED2_names(i - n_simstrat))//'_inflow.dat'
+                     fname = trim(self%aed2_path)//trim(state%AED2_state_names(i - n_simstrat))//'_inflow.dat'
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
@@ -587,7 +587,7 @@ contains
             if (idx) then  ! If first timestep
                if (self%number_of_lines_read(i) == 0) then  ! If not started from snapshot
                   if (i > n_simstrat) then
-                     fname = trim(self%aed2_path)//trim(state%AED2_names(i - n_simstrat))//'_inflow.dat'
+                     fname = trim(self%aed2_path)//trim(state%AED2_state_names(i - n_simstrat))//'_inflow.dat'
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
@@ -679,7 +679,7 @@ contains
                else ! if start from snapshot
                   ! Open inflow files
                   if (i > n_simstrat) then
-                     fname = trim(self%aed2_path)//trim(state%AED2_names(i - n_simstrat))//'_inflow.dat'
+                     fname = trim(self%aed2_path)//trim(state%AED2_state_names(i - n_simstrat))//'_inflow.dat'
                   else
                      fname = trim(self%simstrat_path(i))
                   end if

@@ -34,8 +34,8 @@ subroutine allocate_memory(self)
 
    ! Local variables
    integer status
-   allocate(self%column(self%n_aed2_vars),stat=status)
-   allocate(self%column_sed(self%n_aed2_vars),stat=status)
+   allocate(self%column(self%n_AED2_state_vars),stat=status)
+   allocate(self%column_sed(self%n_AED2_state_vars),stat=status)
 
    ! names = grab the names from info
    allocate(self%names(self%n_vars),stat=status)
@@ -117,7 +117,7 @@ subroutine allocate_memory(self)
    if (status /= 0) stop 'allocate_memory(): Error allocating (tss)'
    self%tss = zero_
 
-   allocate(self%externalid(self%n_aed2_vars))
+   allocate(self%externalid(self%n_AED2_state_vars))
 
 end subroutine
 
@@ -135,7 +135,7 @@ subroutine assign_var_names(self)
    print "(5X,'Configured variables to simulate:')"
 
    j = 0
-   do i=1,self%n_aed2_vars
+   do i=1,self%n_AED2_state_vars
       if ( aed2_get_var(i, tvar) ) then
          if ( .not. (tvar%sheet .or. tvar%diag .or. tvar%extern) ) then
             j = j + 1
@@ -148,7 +148,7 @@ subroutine assign_var_names(self)
    end do
 
    j = 0
-   do i=1,self%n_aed2_vars
+   do i=1,self%n_AED2_state_vars
       if ( aed2_get_var(i, tvar) ) then
          if ( tvar%sheet .and. .not. (tvar%diag .or. tvar%extern) ) then
             j = j + 1
@@ -161,7 +161,7 @@ subroutine assign_var_names(self)
    end do
 
    j = 0
-   do i=1,self%n_aed2_vars
+   do i=1,self%n_AED2_state_vars
       if ( aed2_get_var(i, tvar) ) then
          if ( tvar%diag ) then
             if ( .not.  tvar%sheet ) then
@@ -174,7 +174,7 @@ subroutine assign_var_names(self)
    end do
 
    j = 0
-   do i=1,self%n_aed2_vars
+   do i=1,self%n_AED2_state_vars
       if ( aed2_get_var(i, tvar) ) then
          if ( tvar%diag ) then
             if (tvar%sheet ) then
@@ -205,7 +205,7 @@ subroutine define_column(self, state)
    associate(column => self%column)
 
       v = 0 ; d = 0; sv = 0; sd = 0 ; ev = 0
-      do av=1,self%n_aed2_vars
+      do av=1,self%n_AED2_state_vars
          if ( .not.  aed2_get_var(av, tvar) ) stop "Error getting variable info"
 
          if ( tvar%extern ) then !# global variable
@@ -281,7 +281,7 @@ subroutine check_data(self)
    v = 0 ; d = 0; sv = 0; sd = 0 ; ev = 0
    err_count = 0
 
-   do av=1,self%n_aed2_vars
+   do av=1,self%n_AED2_state_vars
       if ( .not.  aed2_get_var(av, tvar) ) then
          call error("Error getting variable info")
          stop
@@ -359,7 +359,7 @@ subroutine check_states(self)
       do lev=1, self%grid%nz_occupied
          call aed2_equilibrate(self%column, lev) ! Should probably moved to the update routine for clarity
          v = 0
-         do i=1,self%n_aed2_vars
+         do i=1,self%n_AED2_state_vars
             if ( aed2_get_var(i, tv) ) then
                if ( .not. (tv%diag .or. tv%extern) ) then
                   v = v + 1

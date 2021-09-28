@@ -21,9 +21,9 @@
   },
   "ModelConfig" : {
     "MaxLengthInputData"      : 1000,                   ! Maximum length of input data (initial conditions, bathymetry, grid etc.)
-    "CoupleAED2"              : true,                  ! Switch to turn on/off the biochemical model AED2
+    "CoupleAED2"              : false,                   ! Switch to turn on/off the biochemical model AED2
     "TurbulenceModel"         : 1,                      ! 1: k-epsilon, 2: Mellor-Yamada
-    "SplitSeicheParameter"    : false,                   ! True: Use a_seiche if N2 exceeds strat_sumr and a_seiche_w otherwise, False: Always use a_seiche
+    "SplitSeicheParameter"    : false,                  ! True: Use a_seiche if N2 exceeds strat_sumr and a_seiche_w otherwise, False: Always use a_seiche
     "StabilityFunction"       : 2,                      ! 1: constant, 2: quasi-equilibrium
     "FluxCondition"           : 1,                      ! 0: Dirichlet condition, 1: no-flux
     "Forcing"                 : 3,                      ! 1: Wind + Temp + SolRad, 2: 1 + VapP, 3: 2 + Cloud, 4: Wind + HeatFlux + SolRad, 5: 2 + Incoming Long Wave
@@ -43,7 +43,8 @@
     "ParticleMobility"        : 0,                      ! 0: particle mobility is off, 1: particle mobility is on
     "BioshadeFeedback"        : 0,                      ! 0: light absorption coefficients are read from Simstrat input file, 1: light absorption is calculated from biochemical variables
     "BackgroundExtinction"    : 0.2,                    ! Background extinction added to biochemical absorption (only used if bioshadeFeedback is 1)
-    "BenthicMode"             : 1                       ! 0: Only bottom most layer interacts with sediment, 1: flancs also interact with sediment (but sediment concentrations are not simulated), 2 and 3: not implemented
+    "BenthicMode"             : 1,                      ! 0: Only bottom most layer interacts with sediment, 1: flancs also interact with sediment (but sediment concentrations are not simulated), 2 and 3: not implemented
+    "OutputDiagnosticVars"    : false,                   ! True: Output includes AED2 state and diagnostic variables, False: Output includes only AED2 state variables
 
   },
   "Simulation" : {

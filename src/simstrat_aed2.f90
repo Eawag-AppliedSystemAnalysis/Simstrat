@@ -77,7 +77,7 @@ module simstrat_aed2
 
       real(RK),allocatable,dimension(:) :: min_, max_
 
-      integer :: n_aed2_vars, n_vars, n_vars_ben, n_vars_diag, n_vars_diag_sheet
+      integer :: n_AED2_state_vars, n_vars, n_vars_ben, n_vars_diag, n_vars_diag_sheet
       integer :: zone_var = 0
 
       ! Variables for in-/outflow
@@ -119,7 +119,7 @@ contains
       self%grid => grid
       self%aed2_cfg => aed2_cfg
 
-      associate (n_aed2_vars => self%n_aed2_vars, &
+      associate (n_AED2_state_vars => self%n_AED2_state_vars, &
                  n_vars => self%n_vars, &
                  n_vars_ben => self%n_vars_ben, &
                  n_vars_diag => self%n_vars_diag, &
@@ -156,10 +156,10 @@ contains
          write (6,*) "      AED2 file parsing completed."
 
          ! Assign number of different variables
-         n_aed2_vars = aed2_core_status(n_vars, n_vars_ben, n_vars_diag, n_vars_diag_sheet)
+         n_AED2_state_vars = aed2_core_status(n_vars, n_vars_ben, n_vars_diag, n_vars_diag_sheet)
 
          ! Print variable information to screen
-         print "(/,5X,'AED2 : n_aed2_vars = ',I3,' ; MaxLayers         = ',I4)",n_aed2_vars,self%grid%nz_grid
+         print "(/,5X,'AED2 : n_AED2_state_vars = ',I3,' ; MaxLayers         = ',I4)",n_AED2_state_vars,self%grid%nz_grid
          print "(  5X,'AED2 : n_vars      = ',I3,' ; n_vars_ben        = ',I3)",n_vars,n_vars_ben
          print "(  5X,'AED2 : n_vars_diag = ',I3,' ; n_vars_diag_sheet = ',I3,/)",n_vars_diag,n_vars_diag_sheet
 
@@ -171,9 +171,9 @@ contains
 
          ! Allocate memory for AED2 state and inflow matrix used by Simstrat
          state%AED2_state => self%cc
-         state%AED2_diagstate => self%cc_diag
-         state%n_AED2 = n_vars  + n_vars_ben
-         state%n_AED2_diag = n_vars_diag
+         state%AED2_diagnostic => self%cc_diag
+         state%n_AED2_state = n_vars  + n_vars_ben
+         state%n_AED2_diagnostic = n_vars_diag
 
          ! Define column pointer (which is the object that is handed over to AED2 at every timestep)
          ! It containes external (Simstrat) variables like T and S, but also the variables of this (SimstratAED2) module
@@ -182,15 +182,15 @@ contains
 
          ! Assign name, min and max values of variables, print names to screen
          call assign_var_names(self)
-         allocate(state%AED2_names(n_vars))
-         state%AED2_names => self%names
+         allocate(state%AED2_state_names(n_vars))
+         state%AED2_state_names => self%names
 
-         allocate(state%AED2_diagnames(n_vars_diag))
-         state%AED2_diagnames => self%diagnames
+         allocate(state%AED2_diagnostic_names(n_vars_diag))
+         state%AED2_diagnostic_names => self%diagnames
 
          ! Now set initial values of AED2 variables
          v = 0 ; sv = 0;
-         do av=1,self%n_aed2_vars
+         do av=1,self%n_AED2_state_vars
             if ( .not.  aed2_get_var(av, tvar) ) stop "Error getting variable info"
             if ( .not. ( tvar%extern .or. tvar%diag) ) then  ! neither global nor diagnostic variable
                if ( tvar%sheet ) then
@@ -235,7 +235,7 @@ contains
       ! variables in the water column (note that settling into benthos
       ! is done in aed2_do_benthos)
          v = 0
-         do i = 1,self%n_aed2_vars
+         do i = 1,self%n_AED2_state_vars
             if ( aed2_get_var(i, tvar) ) then
                if ( .not. (tvar%sheet .or. tvar%diag .or. tvar%extern) ) then
                v = v + 1
@@ -298,7 +298,7 @@ contains
 
       ! Diffusive transport of AED2 variables (advective transport of AED2 variables is done in the usual Simstrat routines (lateral/lateral_rho))
       do v=1, self%n_vars
-         call diffusion_AED2(self, state, v)
+         call diffusion_AED2_state(self, state, v)
       end do
 
    end subroutine
@@ -346,7 +346,7 @@ contains
    !        !       !MH WE NEED A COLUMN TO CC VAR MAP FOR BENTHIC GUYS
    !                !CAB Yes, a map (or 2 maps) would be better, but QnD since this all needs reworking
    !                sv = 0 ; sd = 0
-   !                do av=1,self%n_aed2_vars
+   !                do av=1,self%n_AED2_state_vars
    !                   if ( .not.  aed2_get_var(av, tvar) ) stop "Error getting variable info"
    !                   if ( .not. tvar%extern .and. tvar%sheet ) then
    !                      if ( tvar%diag ) then
@@ -459,7 +459,7 @@ contains
 
    ! Copy of diffusion algorithm used for Simstrat state variables
 
-   subroutine diffusion_AED2(self, state, var_index)
+   subroutine diffusion_AED2_state(self, state, var_index)
       implicit none
 
       ! Arguments
