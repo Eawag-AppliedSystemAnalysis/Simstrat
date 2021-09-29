@@ -1,1 +1,1 @@
-../build/simstrat_linux_3 TestCase_LakeZurich.par
+../build/simstrat TestCase_LakeZurich.par
