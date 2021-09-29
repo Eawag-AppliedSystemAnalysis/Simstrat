@@ -333,10 +333,8 @@ contains
          do i = self%n_vars_Simstrat + 1, self%n_vars
             if (i < (self%n_vars_Simstrat + self%n_vars_AED2_state + 1)) then
                file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_aed2_state%names(i - self%n_vars_Simstrat))//'_out.dat'
-               write(6,*) 'hans', i, self%n_vars_Simstrat, self%n_vars_AED2_state, self%n_vars_AED2_diagnostic
             else
                file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_aed2_diagnostic%names(i - self%n_vars_Simstrat - self%n_vars_AED2_state))//'_out.dat'
-               write(6,*) 'hans2', i, self%n_vars_Simstrat, self%n_vars_AED2_state, self%n_vars_AED2_diagnostic
             end if
             inquire (file=file_path, exist=append)
 
