@@ -64,15 +64,16 @@ contains
             state%rad(i) = state%rad(i + 1)*exp(-grid%h(i)*(state%absorb(ubnd_fce - i)+state%absorb(ubnd_fce + 1 - i))/2) !Attenuated by absorption
          end do
 
-         ! Radiation staying in a layer
-         state%rad_vol(1:ubnd_vol) = state%rad(2:ubnd_fce) - state%rad(1:ubnd_fce - 1)
+         ! Radiation staying in a layer (including the heat which goes into the sediment, therefore the weighting using Az)
+         state%rad_vol(1:ubnd_vol) = (state%rad(2:ubnd_fce)*grid%Az(2:ubnd_fce) - state%rad(1:ubnd_fce - 1)*grid%Az(1:ubnd_fce - 1))/(grid%Az(2:ubnd_fce) + grid%Az(1:ubnd_fce - 1))*2
 
          !!!!!!!! Define sources !!!!!!!!
          ! Add Hsol Term to sources (Eq 1, Goudsmit(2002))
          sources(1:ubnd_vol) = state%rad_vol(1:ubnd_vol)/grid%h(1:ubnd_vol)
 
          ! Set boundary heat flux at surface (Eq 25, Goudsmit(2002))
-         sources(ubnd_vol) = sources(ubnd_vol) + state%heat/rho_0/cp/grid%h(ubnd_vol)
+         ! FB, 2021: Correction of relevant area (accoring to tests by Ana Ayala)
+         sources(ubnd_vol) = sources(ubnd_vol) + state%heat/rho_0/cp/grid%h(ubnd_vol)*grid%Az(ubnd_fce)/(grid%Az(ubnd_fce) + grid%Az(ubnd_fce - 1)*2
 
          ! No explicit boundary conditions
          boundaries(1:ubnd_vol) = 0
