@@ -73,7 +73,7 @@ contains
 
          ! Set boundary heat flux at surface (Eq 25, Goudsmit(2002))
          ! FB, 2021: Correction of relevant area (accoring to tests by Ana Ayala)
-         sources(ubnd_vol) = sources(ubnd_vol) + state%heat/rho_0/cp/grid%h(ubnd_vol)*grid%Az(ubnd_fce)/(grid%Az(ubnd_fce) + grid%Az(ubnd_fce - 1)*2)
+         sources(ubnd_vol) = sources(ubnd_vol) + state%heat/rho_0/cp/grid%h(ubnd_vol)*grid%Az(ubnd_fce)/(grid%Az(ubnd_fce) + grid%Az(ubnd_fce - 1))*2
 
          ! No explicit boundary conditions
          boundaries(1:ubnd_vol) = 0
