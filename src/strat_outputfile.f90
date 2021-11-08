@@ -305,7 +305,7 @@ contains
             !Variable on volume grid
             call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
             if (.not. append) then
-               call self%output_files(i)%add('')
+               call self%output_files(i)%add('Datetime')
                call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
                call self%output_files(i)%next_row()
             end if
@@ -313,7 +313,7 @@ contains
             ! Variable on face grid
             call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
             if (.not. append) then
-               call self%output_files(i)%add('')
+               call self%output_files(i)%add('Datetime')
                call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
                call self%output_files(i)%next_row()
             end if
@@ -321,7 +321,7 @@ contains
             !Variable at surface
             call self%output_files(i)%open(file_path, n_cols=1 + 1, append=append, status_ok=status_ok)
             if (.not. append) then
-               call self%output_files(i)%add('')
+               call self%output_files(i)%add('Datetime')
                call self%output_files(i)%add(grid%z_face(grid%ubnd_fce), real_fmt='(F12.3)')
                call self%output_files(i)%next_row()
             end if
