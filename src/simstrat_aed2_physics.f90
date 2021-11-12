@@ -39,7 +39,7 @@ subroutine absorption_updateAED2(self, state)
 
    do i=self%grid%nz_occupied, 1, -1
       bio_extinction = 0.0_RK
-      call aed2_light_extinction(self%column, i, bio_extinction)
+      call aed_light_extinction(self%column, i, bio_extinction)
       state%absorb_vol(i) = self%aed2_cfg%background_extinction + bio_extinction
 
    end do

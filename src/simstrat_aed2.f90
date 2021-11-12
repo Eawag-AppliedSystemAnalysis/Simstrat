@@ -31,8 +31,9 @@ module simstrat_aed2
    use strat_grid
    use strat_solver
    use utilities
-   use aed2_common
-   use aed2_core
+   use aed_common
+   use aed_core
+   use aed_water
 
    implicit none
    private
@@ -64,7 +65,7 @@ module simstrat_aed2
       real(RK),pointer,dimension(:) :: uva, uvb, nir
 
       ! Column pointers
-      type (aed2_column_t),pointer,dimension(:) :: column, column_sed
+      type (aed_column_t),pointer,dimension(:) :: column, column_sed
 
       ! External variables
       integer  :: w_adv_ctr    ! Scheme for vertical advection (0 if not used)
@@ -112,7 +113,7 @@ contains
       character(len=80) :: fname
       character(len=64) :: models(64)
       namelist /aed2_models/ models
-      type(aed2_variable_t),pointer :: tvar
+      type(aed_variable_t),pointer :: tvar
       integer i, status, av, v, sv
 
       ! Add grid and aed2_cfg to SimstratAED2 object
@@ -128,8 +129,8 @@ contains
          ! AED2 config file
          fname = aed2_cfg%aed2_config_file
 
-         if ( aed2_init_core('.') /= 0 ) call error("Initialisation of aed2_core failed")
-         call aed2_print_version
+         if ( aed_init_core('.') /= 0 ) call error("Initialisation of aed_core failed")
+         call aed_print_version
 
          ! Create model tree
          write (6,*) "     Processing aed2_models config from ", trim(fname)
@@ -148,7 +149,7 @@ contains
 
          do i=1,size(models)
             if (models(i)=='') exit
-            call aed2_define_model(models(i), 50)
+            call aed_define_model(models(i), 50)
          end do
 
          ! Finished reading AED2 config
@@ -156,7 +157,7 @@ contains
          write (6,*) "      AED2 file parsing completed."
 
          ! Assign number of different variables
-         n_AED2_state_vars = aed2_core_status(n_vars, n_vars_ben, n_vars_diag, n_vars_diag_sheet)
+         n_AED2_state_vars = aed_core_status(n_vars, n_vars_ben, n_vars_diag, n_vars_diag_sheet)
 
          ! Print variable information to screen
          print "(/,5X,'AED2 : n_AED2_state_vars = ',I3,' ; MaxLayers         = ',I4)",n_AED2_state_vars,self%grid%nz_grid
@@ -191,7 +192,7 @@ contains
          ! Now set initial values of AED2 variables
          v = 0 ; sv = 0;
          do av=1,self%n_AED2_state_vars
-            if ( .not.  aed2_get_var(av, tvar) ) stop "Error getting variable info"
+            if ( .not.  aed_get_var(av, tvar) ) stop "Error getting variable info"
             if ( .not. ( tvar%extern .or. tvar%diag) ) then  ! neither global nor diagnostic variable
                if ( tvar%sheet ) then
                   sv = sv + 1
@@ -219,7 +220,7 @@ contains
       class(ModelState) :: state
 
       ! Local variables
-      type(aed2_variable_t),pointer :: tvar
+      type(aed_variable_t),pointer :: tvar
       real(RK) :: min_C
       integer :: v, i, lev, r
       real(RK), dimension(self%grid%ubnd_vol) :: tmp
@@ -236,7 +237,7 @@ contains
       ! is done in aed2_do_benthos)
          v = 0
          do i = 1,self%n_AED2_state_vars
-            if ( aed2_get_var(i, tvar) ) then
+            if ( aed_get_var(i, tvar) ) then
                if ( .not. (tvar%sheet .or. tvar%diag .or. tvar%extern) ) then
                v = v + 1
                ! only for state_vars that are not sheet
@@ -316,7 +317,7 @@ contains
       !real(RK), dimension(self%grid%nz_occupied, self%n_vars)    :: flux_pel_pre
       !real(RK), dimension(self%aed2_cfg%n_zones, self%n_vars) :: flux_pel_z
       logical :: splitZone
-      type(aed2_variable_t),pointer :: tvar
+      type(aed_variable_t),pointer :: tvar
       !-------------------------------------------------------------------------------
       ! Begin
       self%flux_pel = zero_
@@ -347,7 +348,7 @@ contains
    !                !CAB Yes, a map (or 2 maps) would be better, but QnD since this all needs reworking
    !                sv = 0 ; sd = 0
    !                do av=1,self%n_AED2_state_vars
-   !                   if ( .not.  aed2_get_var(av, tvar) ) stop "Error getting variable info"
+   !                   if ( .not.  aed_get_var(av, tvar) ) stop "Error getting variable info"
    !                   if ( .not. tvar%extern .and. tvar%sheet ) then
    !                      if ( tvar%diag ) then
    !                         sd = sd + 1
@@ -362,15 +363,15 @@ contains
    !             end if
    !             if ( self%aed2_cfg%benthic_mode .eq. 3 ) then
    !                ! Zone is able to operated on by riparian and dry methods
-   !                call aed2_calculate_riparian(column_sed, zon, z_pc_wet(zon))
-   !                if (z_pc_wet(zon) .eq. 0. ) call aed2_calculate_dry(column_sed, zon)
+   !                call aed_calculate_riparian(column_sed, zon, z_pc_wet(zon))
+   !                if (z_pc_wet(zon) .eq. 0. ) call aed_calculate_dry(column_sed, zon)
    !             end if
    !             ! Calculate temporal derivatives due to benthic processes.
    !             ! They are stored in flux_ben (benthic vars) and flux_pel (water vars)
    !             flux_pel_pre = flux_pel
 
    !    !        print*,"Calling ben for zone ",zone_var,zon,z_sed_zones(zon)
-   !             call aed2_calculate_benthic(column_sed, zon)
+   !             call aed_calculate_benthic(column_sed, zon)
 
    !             ! Record benthic fluxes in the zone array
    !             flux_zon(zon, :) = flux_ben(:)
@@ -418,7 +419,7 @@ contains
 
          ! Calculate temporal derivatives due to exchanges at the sediment/water interface
          !if ( self%zone_var .GE. 1 ) column(self%zone_var)%cell_sheet => z_sed_zones(1)
-         call aed2_calculate_benthic(self%column, 1)
+         call aed_calculate_benthic(self%column, 1)
 
          ! Limit flux out of bottom layers to concentration of that layer
          ! i.e. don't flux out more than is there
@@ -428,7 +429,7 @@ contains
          if ( self%aed2_cfg%benthic_mode .EQ. 1 ) then
             do lev=2,self%grid%nz_occupied
                ! Calculate temporal derivatives due to benthic fluxes.
-               call aed2_calculate_benthic(self%column, lev)
+               call aed_calculate_benthic(self%column, lev)
 
                ! Limit flux out of bottom layers to concentration of that layer
                ! i.e. don't flux out more than is there
@@ -443,7 +444,7 @@ contains
       ! (2) SURFACE FLUXES
       ! Calculate temporal derivatives due to air-water exchange.
       if (.not. (state%total_ice_h > 0)) then ! no surface exchange under ice cover
-         call aed2_calculate_surface(self%column, self%grid%nz_occupied)
+         call aed_calculate_surface(self%column, self%grid%nz_occupied)
 
          ! Distribute the fluxes into pelagic surface layer
          self%flux_pel(self%grid%nz_occupied, :) = self%flux_pel(self%grid%nz_occupied, :) + self%flux_atm(:)/self%grid%h(self%grid%nz_occupied)
@@ -452,7 +453,7 @@ contains
       ! (3) WATER COLUMN KINETICS
       ! Add pelagic sink and soustatuse terms for all depth levels.
       do lev=1,self%grid%nz_occupied
-         call aed2_calculate(self%column, lev)
+         call aed_calculate(self%column, lev)
       end do
    end subroutine calculate_fluxes
 

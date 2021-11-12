@@ -129,14 +129,14 @@ subroutine assign_var_names(self)
    class(SimstratAED2) :: self
 
    ! Local variables
-   type(aed2_variable_t),pointer :: tvar
+   type(aed_variable_t),pointer :: tvar
    integer i, j
 
    print "(5X,'Configured variables to simulate:')"
 
    j = 0
    do i=1,self%n_AED2_state_vars
-      if ( aed2_get_var(i, tvar) ) then
+      if ( aed_get_var(i, tvar) ) then
          if ( .not. (tvar%sheet .or. tvar%diag .or. tvar%extern) ) then
             j = j + 1
             self%names(j) = trim(tvar%name)
@@ -149,7 +149,7 @@ subroutine assign_var_names(self)
 
    j = 0
    do i=1,self%n_AED2_state_vars
-      if ( aed2_get_var(i, tvar) ) then
+      if ( aed_get_var(i, tvar) ) then
          if ( tvar%sheet .and. .not. (tvar%diag .or. tvar%extern) ) then
             j = j + 1
             self%bennames(j) = trim(tvar%name)
@@ -162,7 +162,7 @@ subroutine assign_var_names(self)
 
    j = 0
    do i=1,self%n_AED2_state_vars
-      if ( aed2_get_var(i, tvar) ) then
+      if ( aed_get_var(i, tvar) ) then
          if ( tvar%diag ) then
             if ( .not.  tvar%sheet ) then
                j = j + 1
@@ -175,7 +175,7 @@ subroutine assign_var_names(self)
 
    j = 0
    do i=1,self%n_AED2_state_vars
-      if ( aed2_get_var(i, tvar) ) then
+      if ( aed_get_var(i, tvar) ) then
          if ( tvar%diag ) then
             if (tvar%sheet ) then
                j = j + 1
@@ -199,14 +199,14 @@ subroutine define_column(self, state)
    ! Local variables
    integer :: av !, i
    integer :: v, d, sv, sd, ev
-   type(aed2_variable_t), pointer :: tvar
+   type(aed_variable_t), pointer :: tvar
    !-------------------------------------------------------------------------------
    ! Begin
    associate(column => self%column)
 
       v = 0 ; d = 0; sv = 0; sd = 0 ; ev = 0
       do av=1,self%n_AED2_state_vars
-         if ( .not.  aed2_get_var(av, tvar) ) stop "Error getting variable info"
+         if ( .not.  aed_get_var(av, tvar) ) stop "Error getting variable info"
 
          if ( tvar%extern ) then !# global variable
             ev = ev + 1
@@ -275,14 +275,14 @@ subroutine check_data(self)
    ! Local variables
    integer :: av
    integer :: v, d, sv, sd, ev, err_count
-   type(aed2_variable_t),pointer :: tvar
+   type(aed_variable_t),pointer :: tvar
    !-------------------------------------------------------------------------------
    ! Begin
    v = 0 ; d = 0; sv = 0; sd = 0 ; ev = 0
    err_count = 0
 
    do av=1,self%n_AED2_state_vars
-      if ( .not.  aed2_get_var(av, tvar) ) then
+      if ( .not.  aed_get_var(av, tvar) ) then
          call error("Error getting variable info")
          stop
       end if
@@ -351,16 +351,16 @@ subroutine check_states(self)
    class(SimstratAED2) :: self
 
    ! Local variables
-      type(aed2_variable_t), pointer :: tv
+      type(aed_variable_t), pointer :: tv
       integer :: i,v,lev
    !
    !-------------------------------------------------------------------------------
    ! Begin
       do lev=1, self%grid%nz_occupied
-         call aed2_equilibrate(self%column, lev) ! Should probably moved to the update routine for clarity
+         call aed_equilibrate(self%column, lev) ! Should probably moved to the update routine for clarity
          v = 0
          do i=1,self%n_AED2_state_vars
-            if ( aed2_get_var(i, tv) ) then
+            if ( aed_get_var(i, tv) ) then
                if ( .not. (tv%diag .or. tv%extern) ) then
                   v = v + 1
                   if ( .not. ieee_is_nan(self%min_(v)) ) then
