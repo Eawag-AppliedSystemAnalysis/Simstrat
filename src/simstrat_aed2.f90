@@ -419,7 +419,7 @@ contains
 
          ! Calculate temporal derivatives due to exchanges at the sediment/water interface
          !if ( self%zone_var .GE. 1 ) column(self%zone_var)%cell_sheet => z_sed_zones(1)
-         call aed_calculate_benthic(self%column, 1)
+         !call aed_calculate_benthic(self%column, 1)
 
          ! Limit flux out of bottom layers to concentration of that layer
          ! i.e. don't flux out more than is there
@@ -453,8 +453,9 @@ contains
       ! (3) WATER COLUMN KINETICS
       ! Add pelagic sink and soustatuse terms for all depth levels.
       do lev=1,self%grid%nz_occupied
-         call aed_calculate(self%column, lev)
+         !call aed_calculate(self%column, lev)
       end do
+
    end subroutine calculate_fluxes
 
 
