@@ -107,7 +107,7 @@
    Fsed_oxy_variable = ''
    oxy_piston_model = 1
    altitude = 500.0
-   diag_level = 0
+   diag_level = 1
 /
 
 
@@ -192,7 +192,7 @@
    ch4_bub_tau0 = 1
    maxMPBProdn = 40.0
    IkMPB = 180.0
-   diag_level = 0
+   diag_level = 1
 
 /
 

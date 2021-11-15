@@ -190,7 +190,6 @@ module strat_simdata
       real(RK), dimension(:), pointer :: absorb_vol ! Absorption coeff on vol grid [m-1]
       real(RK) :: u10, v10, Wf ! Wind speeds, wind factor
       real(RK), pointer :: uv10 ! pointer attribute needed for AED
-      real(RK), pointer :: rain ! pointer attribute needed for AED, rain is not calculated in Simstrat for the moment, but required by AED
       real(RK) :: drag, u_taus ! Drag
       real(RK), pointer :: u_taub ! pointer attribute needed for AED
       real(RK) :: tx, ty ! Shear stress
@@ -211,7 +210,7 @@ module strat_simdata
       real(RK), allocatable :: white_ice_h ! Snowice layer height [m]
       real(RK) :: snow_dens ! Snow density [kg m-3]
       real(RK) :: ice_temp ! Ice temperature [°C]
-      real(RK) :: precip ! Precipiation in water eqvivalent hight [m]
+      real(RK), pointer :: precip ! Precipiation in water eqvivalent hight [m] (pointer attribute needed by AED)
 
       !For saving heatflux
       real(RK), allocatable :: ha ! Incoming long wave [W m-2]
@@ -333,7 +332,6 @@ contains
       self%white_ice_h = 0.0_RK
       self%ice_temp = 0.0_RK
       self%snow_dens = rho_s_0
-      self%precip = 0.0_RK 
    
       self%ha = 0.0_RK
       self%hw = 0.0_RK
@@ -345,8 +343,8 @@ contains
       ! init pointers
       allocate(self%uv10)
       self%uv10 = 0.0_RK
-      allocate(self%rain)
-      self%rain = 0.0_RK
+      allocate(self%precip)
+      self%precip = 0.0_RK
       allocate(self%u_taub)
       self%u_taub = 0.0_RK
       allocate(self%T_atm)
@@ -386,7 +384,7 @@ contains
       call save_array(80, self%absorb)
       call save_array_pointer(80, self%absorb_vol)
       write(80) self%u10, self%v10, self%uv10, self%Wf
-      write(80) self%u_taub, self%drag, self%u_taus, self%rain
+      write(80) self%u_taub, self%drag, self%u_taus
       write(80) self%tx, self%ty
       write(80) self%C10
       write(80) self%SST, self%heat, self%heat_snow, self%heat_ice, self%heat_snowice
@@ -445,7 +443,7 @@ contains
       call read_array(81, self%absorb)
       call read_array_pointer(81, self%absorb_vol)
       read(81) self%u10, self%v10, self%uv10, self%Wf
-      read(81) self%u_taub, self%drag, self%u_taus, self%rain
+      read(81) self%u_taub, self%drag, self%u_taus
       read(81) self%tx, self%ty
       read(81) self%C10
       read(81) self%SST, self%heat, self%heat_snow, self%heat_ice, self%heat_snowice

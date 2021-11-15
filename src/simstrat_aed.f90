@@ -74,7 +74,7 @@ module simstrat_aed
       character(len=48),pointer :: bennames(:)
       character(len=48),pointer :: diagnames(:)
 
-      integer,allocatable,dimension(:) :: externalid
+      integer,allocatable,dimension(:) :: externalid, zexternalid
 
       real(RK),allocatable,dimension(:) :: min_, max_
 
@@ -440,7 +440,26 @@ contains
 
          ! Calculate temporal derivatives due to exchanges at the sediment/water interface
          !if ( self%zone_var .GE. 1 ) column(self%zone_var)%cell_sheet => z_sed_zones(1)
-         !call aed_calculate_benthic(self%column, 1)
+
+         ! do lev=1,12
+         !    write(6,*) lev, self%column(lev)%cell(1:3)
+         ! end do
+         ! do lev=13,17
+         !    write(6,*) lev, self%column(lev)%cell_sheet
+         ! end do
+         ! write(6,*) 18, self%column(18)%cell(1:3)
+         ! write(6,*) 19, self%column(19)%cell_sheet
+         ! write(6,*) 20, self%column(20)%cell_sheet
+
+         ! do lev=21,24
+         !    write(6,*) lev, self%column(lev)%cell(1:3)
+         !    write(6,*) lev, self%column(lev)%flux_atm
+         !    write(6,*) lev, self%column(lev)%flux_ben
+         ! end do
+
+         ! write(6,*) 25, self%column(25)%cell(1:3)
+
+         call aed_calculate_benthic(self%column(:), 1)
 
          ! Limit flux out of bottom layers to concentration of that layer
          ! i.e. don't flux out more than is there
@@ -474,7 +493,7 @@ contains
       ! (3) WATER COLUMN KINETICS
       ! Add pelagic sink and soustatuse terms for all depth levels.
       do lev=1,self%grid%nz_occupied
-         !call aed_calculate(self%column, lev)
+         call aed_calculate(self%column, lev)
       end do
 
    end subroutine calculate_fluxes

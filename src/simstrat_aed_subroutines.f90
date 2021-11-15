@@ -119,6 +119,8 @@ subroutine allocate_memory(self)
 
    allocate(self%externalid(self%n_AED_state_vars))
 
+   allocate(self%zexternalid(self%n_AED_state_vars))
+
 end subroutine
 
 
@@ -225,7 +227,7 @@ subroutine define_column(self, state)
                case ( 'depth' )       ; column(av)%cell => self%grid%layer_depth
                case ( 'sed_zone' )    ; column(av)%cell_sheet => self%sed_zones(1)
                case ( 'wind_speed' )  ; column(av)%cell_sheet => state%uv10
-               case ( 'rain')         ; column(av)%cell_sheet => state%rain
+               case ( 'rain')         ; column(av)%cell_sheet => state%precip
                case ( 'par_sf' )      ; column(av)%cell_sheet => state%rad0
                case ( 'taub' )        ; column(av)%cell_sheet => state%u_taub
                case ( 'lake_depth' )  ; column(av)%cell_sheet => self%grid%lake_level
