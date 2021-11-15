@@ -21,7 +21,7 @@
   },
   "ModelConfig" : {
     "MaxLengthInputData"      : 1000,                   ! Maximum length of input data (initial conditions, bathymetry, grid etc.)
-    "CoupleAED2"              : false,                   ! Switch to turn on/off the biochemical model AED2
+    "CoupleAED"               : true,                   ! Switch to turn on/off the biochemical model AED
     "TurbulenceModel"         : 1,                      ! 1: k-epsilon, 2: Mellor-Yamada
     "SplitSeicheParameter"    : false,                  ! True: Use a_seiche if N2 exceeds strat_sumr and a_seiche_w otherwise, False: Always use a_seiche
     "StabilityFunction"       : 2,                      ! 1: constant, 2: quasi-equilibrium
@@ -36,15 +36,15 @@
     "IceModel"                : 1,                      ! Switch to turn on/off the ice model
     "SnowModel"               : 1                       ! Switch to turn on/off the snow model (needs ice model and an additional column in forcing)
   },
-  "AED2Config" : {
-    "AED2ConfigFile"          : "TestCase_LakeZurich/aed2.nml",             ! AED2 config file
-    "PathAED2initial"         : "TestCase_LakeZurich/AED2_initcond/",       ! Folder with initial conditions of biochemical variables
-    "PathAED2inflow"          : "TestCase_LakeZurich/AED2_inflow/",         ! Folder with inflow files of biochemical variables
+  "AEDConfig" : {
+    "AEDConfigFile"           : "TestCase_LakeZurich/aed.nml",             ! aed config file
+    "PathAEDinitial"          : "TestCase_LakeZurich/AED_initcond/",       ! Folder with initial conditions of biochemical variables
+    "PathAEDinflow"           : "TestCase_LakeZurich/AED_inflow/",         ! Folder with inflow files of biochemical variables
     "ParticleMobility"        : 0,                      ! 0: particle mobility is off, 1: particle mobility is on
     "BioshadeFeedback"        : 0,                      ! 0: light absorption coefficients are read from Simstrat input file, 1: light absorption is calculated from biochemical variables
     "BackgroundExtinction"    : 0.2,                    ! Background extinction added to biochemical absorption (only used if bioshadeFeedback is 1)
     "BenthicMode"             : 1,                      ! 0: Only bottom most layer interacts with sediment, 1: flancs also interact with sediment (but sediment concentrations are not simulated), 2 and 3: not implemented
-    "OutputDiagnosticVars"    : false,                   ! True: Output includes AED2 state and diagnostic variables, False: Output includes only AED2 state variables
+    "OutputDiagnosticVars"    : false,                   ! True: Output includes aed state and diagnostic variables, False: Output includes only AED state variables
 
   },
   "Simulation" : {

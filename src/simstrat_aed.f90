@@ -441,24 +441,6 @@ contains
          ! Calculate temporal derivatives due to exchanges at the sediment/water interface
          !if ( self%zone_var .GE. 1 ) column(self%zone_var)%cell_sheet => z_sed_zones(1)
 
-         ! do lev=1,12
-         !    write(6,*) lev, self%column(lev)%cell(1:3)
-         ! end do
-         ! do lev=13,17
-         !    write(6,*) lev, self%column(lev)%cell_sheet
-         ! end do
-         ! write(6,*) 18, self%column(18)%cell(1:3)
-         ! write(6,*) 19, self%column(19)%cell_sheet
-         ! write(6,*) 20, self%column(20)%cell_sheet
-
-         ! do lev=21,24
-         !    write(6,*) lev, self%column(lev)%cell(1:3)
-         !    write(6,*) lev, self%column(lev)%flux_atm
-         !    write(6,*) lev, self%column(lev)%flux_ben
-         ! end do
-
-         ! write(6,*) 25, self%column(25)%cell(1:3)
-
          call aed_calculate_benthic(self%column(:), 1)
 
          ! Limit flux out of bottom layers to concentration of that layer
