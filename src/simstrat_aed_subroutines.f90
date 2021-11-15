@@ -230,6 +230,7 @@ subroutine define_column(self, state)
                case ( 'taub' )        ; column(av)%cell_sheet => state%u_taub
                case ( 'lake_depth' )  ; column(av)%cell_sheet => self%grid%lake_level
                case ( 'layer_area' )  ; column(av)%cell => self%grid%Az_vol
+               case ( 'air_temp')     ; column(av)%cell_sheet => state%T_atm
                case default ; call error("External variable "//TRIM(tvar%name)//" not found.")
             end select
          elseif ( tvar%diag ) then  !# Diagnostic variable
@@ -309,6 +310,7 @@ subroutine check_data(self)
             case ( 'taub' )        ; tvar%found = .true.
             case ( 'lake_depth' )  ; tvar%found = .true.
             case ( 'layer_area' )  ; tvar%found = .true.
+            case ( 'air_temp' )    ; tvar%found = .true.
             case default ; call error("ERROR: external variable "//trim(tvar%name)//" not found.")
          end select
       elseif ( tvar%diag ) then  !# Diagnostic variable

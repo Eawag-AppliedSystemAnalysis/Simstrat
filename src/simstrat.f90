@@ -87,7 +87,7 @@ program simstrat_main
 
    ! Print some information
    write (6, *) 'Simstrat version '//version
-   write (6, *) 'Coupled with the biogeochemical library AED'
+   write (6, *) 'Coupled with the biogeochemical library AED developed at the University of Western AUstralia'
    write (6, *) 'This software has been developed at Eawag - Swiss Federal Institute of Aquatic Science and Technology'
    write (6, *) ''
 

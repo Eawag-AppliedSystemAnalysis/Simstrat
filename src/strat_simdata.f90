@@ -197,7 +197,7 @@ module strat_simdata
       real(RK) :: C10 ! Wind drag coefficient
       real(RK) :: SST, heat, heat_snow, heat_ice, heat_snowice! Sea surface temperature and heat flux
 
-      real(RK) :: T_atm ! Air temp at surface
+      real(RK), pointer :: T_atm ! Air temp at surface, pointer attribute needed for AED
       real(RK), dimension(:), allocatable :: rad, rad_vol ! Solar radiation (in water)
       real(RK), dimension(:), allocatable :: Q_vert ! Vertical exchange between boxes
       real(RK), dimension(9,12) :: albedo_data  ! Experimental monthly albedo data for determination of current water albedo
@@ -349,6 +349,8 @@ contains
       self%rain = 0.0_RK
       allocate(self%u_taub)
       self%u_taub = 0.0_RK
+      allocate(self%T_atm)
+      self%T_atm = 0.0_RK
 
       self%simulation_time_old = 0
 

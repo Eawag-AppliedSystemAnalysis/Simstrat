@@ -114,7 +114,7 @@ contains
       character(len=64) :: models(64)
       namelist /aed_models/ models
       type(aed_variable_t),pointer :: tvar
-      integer i, status, av, v, sv
+      integer i, status, av, v, sv, tv
 
       ! Add grid and aed_cfg to SimstratAED object
       self%grid => grid
@@ -131,6 +131,27 @@ contains
 
          if ( aed_init_core('.') /= 0 ) call error("Initialisation of aed_core failed")
          call aed_print_version
+
+         tv = aed_provide_global( 'temperature', 'temperature' , 'celsius' )
+         tv = aed_provide_global( 'salinity', 'salinity' , 'g/Kg' )
+         tv = aed_provide_global( 'density', 'density' , '' )
+         tv = aed_provide_global( 'layer_ht', 'layer heights' , 'meters' )
+         tv = aed_provide_global( 'extc_coef', 'extinction coefficient' , '' )
+         tv = aed_provide_global( 'tss', 'tss' , '' )
+         tv = aed_provide_global( 'par', 'par' , '' )
+         tv = aed_provide_global( 'nir', 'nir' , '' )
+         tv = aed_provide_global( 'uva', 'uva' , '' )
+         tv = aed_provide_global( 'uvb', 'uvb' , '' )
+         tv = aed_provide_global( 'pressure', 'pressure' , '' )
+         tv = aed_provide_global( 'depth', 'depth' , 'm' )
+         tv = aed_provide_sheet_global( 'sed_zone', 'sediment zone' , '' )
+         tv = aed_provide_sheet_global( 'wind_speed', 'wind speed' , 'm/s' )
+         tv = aed_provide_sheet_global( 'par_sf', 'par_sf' , '' )
+         tv = aed_provide_sheet_global( 'taub', 'layer stress' , 'N/m2' )
+         tv = aed_provide_sheet_global( 'lake_depth', 'lake depth' , 'meters' )
+         tv = aed_provide_global( 'layer_area', 'layer area' , 'm2' )
+         tv = aed_provide_sheet_global( 'rain', 'rainfall' , 'm/s' )
+         tv = aed_provide_sheet_global( 'air_temp', 'air temperature' , 'celsius' )
 
          ! Create model tree
          write (6,*) "     Processing aed_models config from ", trim(fname)
@@ -154,7 +175,7 @@ contains
 
          ! Finished reading AED config
          close(50)
-         write (6,*) "      AED file parsing completed."
+         write (6,*) "      AED config file parsing completed."
 
          ! Assign number of different variables
          n_AED_state_vars = aed_core_status(n_vars, n_vars_ben, n_vars_diag, n_vars_diag_sheet)
