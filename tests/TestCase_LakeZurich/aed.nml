@@ -1,31 +1,31 @@
-&aed2_models
+&aed_models
     models =
        !-->  NUTRIENT/CHEMISTRY modules  <--!
-             !'aed2_tracer',
-			 !'aed2_noncohesive',
-             'aed2_oxygen',
-             'aed2_carbon',
-             !'aed2_silica',
-             !'aed2_nitrogen',
-             !'aed2_phosphorus',
-             !'aed2_organic_matter',
-       !plus 'aed2_seddiagenesis',
+             !'aed_tracer',
+			 !'aed_noncohesive',
+             'aed_oxygen',
+             'aed_carbon',
+             !'aed_silica',
+             !'aed_nitrogen',
+             !'aed_phosphorus',
+             !'aed_organic_matter',
+       !plus 'aed_seddiagenesis',
        !-->  BIOLOGY modules  <--!
-             !'aed2_phytoplankton',
-             !'aed2_zooplankton',
-       !plus 'aed2_macroalgae',
-       !plus 'aed2_macrophyte',
-       !plus 'aed2_bivalve',
-       !plus 'aed2_pathogens',
+             !'aed_phytoplankton',
+             !'aed_zooplankton',
+       !plus 'aed_macroalgae',
+       !plus 'aed_macrophyte',
+       !plus 'aed_bivalve',
+       !plus 'aed_pathogens',
        !-->  RIPARIAN modules  <--!
-       !plus 'aed2_geochemistry',
-       !plus 'aed2_land',
-       !plus 'aed2_soilbgc',
-       !plus 'aed2_vegetation',
-       !plus 'aed2_ass',
+       !plus 'aed_geochemistry',
+       !plus 'aed_land',
+       !plus 'aed_soilbgc',
+       !plus 'aed_vegetation',
+       !plus 'aed_ass',
        !-->  SUMMARY modules  <--!
-             !'aed2_totals',
-       !plus 'aed2_habitat'
+             !'aed_totals',
+       !plus 'aed_habitat'
 /
 
 !###############################################################################
@@ -97,13 +97,17 @@
 ! DIAGNOSTICS:
 !
 !-------------------------------------------------------------------------------
-&aed2_oxygen
-   oxy_initial = 225.0	
+&aed_oxygen
+   oxy_initial = 225.0
+   oxy_min = 0
+   oxy_max = 500   
    Fsed_oxy = -12.0	! From data
    Ksed_oxy = 100.0	! Default
-   theta_sed_oxy = 1.08	! Default
-   oxy_min = 0
-   oxy_max = 500
+   theta_sed_oxy = 1.08 ! Default
+   Fsed_oxy_variable = ''
+   oxy_piston_model = 1
+   altitude = 500.0
+   diag_level = 0
 /
 
 
@@ -151,31 +155,45 @@
 ! DIAGNOSTICS:
 !        -
 !-------------------------------------------------------------------------------
-&aed2_carbon
+&aed_carbon
    !-- DIC and pH
    dic_initial = 1600.5
+   pH_initial = 7.5
+   ch4_initial = 27.6
+   ionic = 0.1
+   Rch4ox = 0.01
+   Kch4ox = 0.5
+   vTch4ox = 1.08
+   methane_reactant_variable='OXY_oxy'
    Fsed_dic = 3.0
    Ksed_dic = 20.0
    theta_sed_dic = 1.08
    !Fsed_dic_variable = 'Fsed_dic'
-   pH_initial = 7.5
-   atm_co2 = 410e-6
-   co2_model = 1
-   alk_mode = 1
-   ionic = 0.1
-   co2_piston_model = 1
-   !-- CH4
-   ch4_initial = 27.6
-   Rch4ox = 0.01
-   Kch4ox = 0.5
-   vTch4ox = 1.08
    Fsed_ch4 = 22
    Ksed_ch4 = 100.0
    theta_sed_ch4 = 1.08
-   methane_reactant_variable='OXY_oxy'
    !Fsed_ch4_variable = 'Fsed_ch4'
+   atm_co2 = 410e-6
    atm_ch4 = 1.9e-6    !atm
+   co2_piston_model = 1
    ch4_piston_model = 1
+   co2_model = 1
+   alk_mode = 1
+   ebb_model = 1
+   Fsed_ch4_ebb = 0
+   Fsed_ebb_variable = ''
+   ch4_bub_aLL = 42.9512677
+   ch4_bub_cLL = 0.634
+   ch4_bub_kLL = -0.8247
+   ch4_bub_disf1 = 0.07
+   ch4_bub_disf2 = 0.33
+   ch4_bub_disdp = 20.0
+   ch4_bub_ws = 0
+   ch4_bub_tau0 = 1
+   maxMPBProdn = 40.0
+   IkMPB = 180.0
+   diag_level = 0
+
 /
 
 

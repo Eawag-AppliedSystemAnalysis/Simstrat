@@ -49,9 +49,9 @@ module strat_grid
       real(RK), dimension(:), pointer     :: h        ! Box height
       real(RK), dimension(:), allocatable :: z_face   ! Holds z-values of faces
       real(RK), dimension(:), allocatable :: z_volume ! Holds z-values of volume centers
-      real(RK), dimension(:), pointer     :: layer_depth ! Depth of each layer, used by AED2
+      real(RK), dimension(:), pointer     :: layer_depth ! Depth of each layer, used by AED
       real(RK), dimension(:), allocatable :: Az       ! Areas
-      real(RK), dimension(:), pointer     :: Az_vol   ! Areas on volume grid (needed or AED2)
+      real(RK), dimension(:), pointer     :: Az_vol   ! Areas on volume grid (needed or AED)
       real(RK), dimension(:), allocatable :: dAz      ! Difference of areas
       real(RK), dimension(:), allocatable :: meanint  ! ?
       real(RK) :: volume, h_old
@@ -69,7 +69,7 @@ module strat_grid
 
       integer :: ubnd_vol, ubnd_fce, length_vol, length_fce   ! Upper and lenght for volume (vol) and face(fce) grids
       real(RK) :: z_zero
-      real(RK), pointer :: lake_level ! pointer attribute is needed for AED2
+      real(RK), pointer :: lake_level ! pointer attribute is needed for AED
       real(RK) :: lake_level_old
       real(RK) :: max_depth
 
@@ -308,7 +308,7 @@ contains
 
          ! Interpolate area (A) at all depths (z_face)
          call Interp(config%z_A_read, config%A_read, num_read, self%z_face, Az, nz_grid + 1)
-         ! Interpolate area on volume grid (needed for AED2)
+         ! Interpolate area on volume grid (needed for AED)
          call Interp(config%z_A_read, config%A_read, num_read, self%z_volume(1:nz_grid), Az_vol, nz_grid)
 
          ! Compute area derivative (= projected sediment area over layer thickness)

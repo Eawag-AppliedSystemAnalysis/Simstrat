@@ -57,8 +57,8 @@ module strat_simdata
       logical :: volume_grid, face_grid
    end type
 
-   ! Definition of a AED2 variable to log
-   type, public :: LogVariableAED2
+   ! Definition of a AED variable to log
+   type, public :: LogVariableAED
       character(len=48), pointer, dimension(:) :: names
       real(RK), dimension(:,:), pointer :: values
    end type
@@ -77,8 +77,8 @@ module strat_simdata
       integer :: number_output_vars
       character(len=20), dimension(:), allocatable :: output_var_names ! Names of output variables
       class(LogVariable), dimension(:), allocatable :: output_vars
-      class(LogVariableAED2), allocatable :: output_vars_aed2_state
-      class(LogVariableAED2), allocatable :: output_vars_aed2_diagnostic
+      class(LogVariableAED), allocatable :: output_vars_aed_state
+      class(LogVariableAED), allocatable :: output_vars_aed_diagnostic
 
       integer :: output_time_type, output_depth_type, thinning_interval
       real(RK) :: depth_interval, thinning_interval_read ! thinning_interval_read is a real to make sure that also values
@@ -98,7 +98,7 @@ module strat_simdata
    ! Model configuration (read from file)
    type, public :: ModelConfig
       integer :: max_length_input_data
-      logical :: couple_aed2
+      logical :: couple_aed
       integer :: turbulence_model
       logical :: split_a_seiche
       integer :: stability_func
@@ -115,11 +115,11 @@ module strat_simdata
       integer :: snow_model
    end type
 
-   ! AED2 configuration (read from file)
-   type, public :: AED2Config
-      character(len=:), allocatable :: aed2_config_file
-      character(len=:), allocatable :: path_aed2_initial
-      character(len=:), allocatable :: path_aed2_inflow
+   ! AED configuration (read from file)
+   type, public :: AEDConfig
+      character(len=:), allocatable :: aed_config_file
+      character(len=:), allocatable :: path_aed_initial
+      character(len=:), allocatable :: path_aed_inflow
       logical :: particle_mobility
       logical :: bioshade_feedback
       logical :: output_diagnostic_variables
@@ -168,10 +168,10 @@ module strat_simdata
       real(RK), dimension(:), allocatable :: dS ! Source/sink for salinity
       real(RK), dimension(:, :), allocatable :: Q_inp ! Horizontal inflow [m^3/s]
       real(RK), dimension(:), pointer :: rho ! Water density [kg/m^3]
-      real(RK), dimension(:,:), pointer :: AED2_state ! State matrix of AED2 variables (depth, variable)
-      real(RK), dimension(:,:), pointer :: AED2_diagnostic ! State matrix of AED2 diagnostic svariables
-      character(len=48), dimension(:), pointer :: AED2_state_names ! Names of AED2 state variables used in the simulation
-      character(len=48), dimension(:), pointer :: AED2_diagnostic_names ! Names of AED2 diagnostic variables used in the simulation
+      real(RK), dimension(:,:), pointer :: AED_state ! State matrix of AED variables (depth, variable)
+      real(RK), dimension(:,:), pointer :: AED_diagnostic ! State matrix of AED diagnostic svariables
+      character(len=48), dimension(:), pointer :: AED_state_names ! Names of AED state variables used in the simulation
+      character(len=48), dimension(:), pointer :: AED_diagnostic_names ! Names of AED diagnostic variables used in the simulation
       integer :: n_pH
    
       ! Variables located on z_upp grid
@@ -189,10 +189,10 @@ module strat_simdata
       real(RK), dimension(:), allocatable :: absorb ! Absorption coeff [m-1]
       real(RK), dimension(:), pointer :: absorb_vol ! Absorption coeff on vol grid [m-1]
       real(RK) :: u10, v10, Wf ! Wind speeds, wind factor
-      real(RK), pointer :: uv10 ! pointer attribute needed for AED2
-      real(RK), pointer :: rain ! pointer attribute needed for AED2, rain is not calculated in Simstrat for the moment, but required by AED2
+      real(RK), pointer :: uv10 ! pointer attribute needed for AED
+      real(RK), pointer :: rain ! pointer attribute needed for AED, rain is not calculated in Simstrat for the moment, but required by AED
       real(RK) :: drag, u_taus ! Drag
-      real(RK), pointer :: u_taub ! pointer attribute needed for AED2
+      real(RK), pointer :: u_taub ! pointer attribute needed for AED
       real(RK) :: tx, ty ! Shear stress
       real(RK) :: C10 ! Wind drag coefficient
       real(RK) :: SST, heat, heat_snow, heat_ice, heat_snowice! Sea surface temperature and heat flux
@@ -223,7 +223,7 @@ module strat_simdata
       real(RK) :: cde, cm0
       real(RK) ::  fsed
       real(RK), dimension(:), allocatable     :: fgeo_add
-      integer :: n_AED2_state, n_AED2_diagnostic
+      integer :: n_AED_state, n_AED_diagnostic
 
 
    contains
@@ -238,7 +238,7 @@ module strat_simdata
       type(OutputConfig), public  :: output_cfg
       type(SimConfig), public     :: sim_cfg
       type(ModelConfig), public   :: model_cfg
-      type(AED2Config), public    :: aed2_cfg
+      type(AEDConfig), public    :: aed_cfg
       type(ModelParam), public    :: model_param
       type(ModelState), public    :: model
       type(StaggeredGrid), public :: grid
@@ -409,8 +409,8 @@ contains
       write(80) self%cde, self%cm0
       write(80) self%fsed
       call save_array(80, self%fgeo_add)
-      call save_matrix_pointer(80, self%AED2_state)
-      call save_matrix_pointer(80, self%AED2_diagnostic)
+      call save_matrix_pointer(80, self%AED_state)
+      call save_matrix_pointer(80, self%AED_diagnostic)
    end subroutine
 
    ! load model state unformatted
@@ -468,8 +468,8 @@ contains
       read(81) self%cde, self%cm0
       read(81) self%fsed
       call read_array(81, self%fgeo_add)
-      call read_matrix_pointer(81, self%AED2_state)
-      call read_matrix_pointer(81, self%AED2_diagnostic)
+      call read_matrix_pointer(81, self%AED_state)
+      call read_matrix_pointer(81, self%AED_diagnostic)
    end subroutine
 
 end module strat_simdata

@@ -45,7 +45,7 @@ program simstrat_main
    use strat_transport
    use strat_absorption
    use strat_advection
-   use simstrat_aed2
+   use simstrat_AED
    use strat_lateral
    use forbear
    use, intrinsic :: ieee_arithmetic
@@ -71,7 +71,7 @@ program simstrat_main
    type(IceModule) :: mod_ice
    type(AbsorptionModule) :: mod_absorption
    type(AdvectionModule) :: mod_advection
-   type(SimstratAED2) :: mod_aed2
+   type(SimstratAED) :: mod_aed
    type(LateralModule), target :: mod_lateral_normal
    type(LateralRhoModule), target :: mod_lateral_rho
    class(GenericLateralModule), pointer :: mod_lateral
@@ -87,7 +87,7 @@ program simstrat_main
 
    ! Print some information
    write (6, *) 'Simstrat version '//version
-   write (6, *) 'Coupled with the biogeochemical library AED2'
+   write (6, *) 'Coupled with the biogeochemical library AED'
    write (6, *) 'This software has been developed at Eawag - Swiss Federal Institute of Aquatic Science and Technology'
    write (6, *) ''
 
@@ -122,9 +122,9 @@ program simstrat_main
                             simdata%input_cfg%AbsorpName, &
                             simdata%grid)
 
-   ! Initialize biochemical model "AED2" if used
-   if (simdata%model_cfg%couple_aed2) then
-      call mod_aed2%init(simdata%model, simdata%grid, simdata%model_cfg, simdata%aed2_cfg)
+   ! Initialize biochemical model "AED" if used
+   if (simdata%model_cfg%couple_aed) then
+      call mod_aed%init(simdata%model, simdata%grid, simdata%model_cfg, simdata%aed_cfg)
    end if
 
    ! If there is advection (due to inflow)
@@ -141,7 +141,7 @@ program simstrat_main
          ! User defined inflow depths
          mod_lateral => mod_lateral_rho
       end if
-      call mod_lateral%init(simdata%model, simdata%model_cfg, simdata%input_cfg, simdata%aed2_cfg, simdata%model_param, simdata%grid)
+      call mod_lateral%init(simdata%model, simdata%model_cfg, simdata%input_cfg, simdata%aed_cfg, simdata%model_param, simdata%grid)
    else
       call warn('Lake in-/outflow is turned off')
    end if
@@ -154,7 +154,7 @@ program simstrat_main
    end if
 
    ! Setup logger
-   call logger%initialize(simdata%model, simdata%sim_cfg, simdata%model_cfg, simdata%aed2_cfg, simdata%output_cfg, simdata%grid, continue_from_snapshot)
+   call logger%initialize(simdata%model, simdata%sim_cfg, simdata%model_cfg, simdata%aed_cfg, simdata%output_cfg, simdata%grid, continue_from_snapshot)
 
    ! Calculate simulation_end_time, which is a tuple of integers (days, seconds)
 
@@ -261,9 +261,9 @@ contains
          ! Update forcing
          call mod_forcing%update(simdata%model)
 
-         ! Update absorption (except if AED2 is off or if AED2 is on but bioshade feedback is off)
-         if (simdata%model_cfg%couple_aed2) then
-            if (.not. simdata%aed2_cfg%bioshade_feedback) then
+         ! Update absorption (except if AED is off or if AED is on but bioshade feedback is off)
+         if (simdata%model_cfg%couple_aed) then
+            if (.not. simdata%aed_cfg%bioshade_feedback) then
                call mod_absorption%update(simdata%model)
             end if
          else
@@ -312,8 +312,8 @@ contains
          end if
 
          ! Update biogeochemistry
-         if (simdata%model_cfg%couple_aed2) then
-            call mod_aed2%update(simdata%model)
+         if (simdata%model_cfg%couple_aed) then
+            call mod_aed%update(simdata%model)
          end if
 
          ! Call logger to write files

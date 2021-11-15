@@ -32,7 +32,7 @@ module strat_advection
    use strat_simdata
    use strat_consts
    use strat_grid
-   use simstrat_aed2
+   use simstrat_aed
    use utilities
    implicit none
    private
@@ -66,9 +66,9 @@ contains
       self%param => model_param
       self%grid => grid
 
-      if (self%cfg%couple_aed2) then
-         do i = 1, state%n_AED2_state
-            select case(trim(state%AED2_state_names(i)))
+      if (self%cfg%couple_aed) then
+         do i = 1, state%n_AED_state
+            select case(trim(state%AED_state_names(i)))
             case('CAR_pH')
                state%n_pH = i
             end select
@@ -96,7 +96,7 @@ contains
                  dt=>state%dt, &
                  h=>self%grid%h, &
                  Q_vert=>state%Q_vert, &
-                 AED2_state=>state%AED2_state, &
+                 AED_state=>state%AED_state, &
                  ubnd_vol=>self%grid%ubnd_vol, &
                  ubnd_fce=>self%grid%ubnd_fce)
 
@@ -134,8 +134,8 @@ contains
             ! Update Simstrat variables U, V, T and S
             call do_update_statvars(self, state, AreaFactor_adv(1:nz_occupied), dh_i(t_i))
 
-            ! Update AED2 variables
-            if(self%cfg%couple_aed2) call do_update_statvars_AED2(self, state, AreaFactor_adv(1:nz_occupied), dh_i(t_i))
+            ! Update AED variables
+            if(self%cfg%couple_aed) call do_update_statvars_AED(self, state, AreaFactor_adv(1:nz_occupied), dh_i(t_i))
 
             ! Adjust boxes (Horrible if/else construction - replace!)
             if (t_i == 1) then
@@ -241,7 +241,7 @@ contains
       end associate
    end subroutine
 
-   subroutine do_update_statvars_AED2(self, state, AreaFactor_adv, dh)
+   subroutine do_update_statvars_AED(self, state, AreaFactor_adv, dh)
       ! Arguments
       class(AdvectionModule) :: self
       class(ModelState) :: state
@@ -250,11 +250,11 @@ contains
 
       ! Local variables
       integer :: i, top, outflow_above, outflow_below
-      real(RK) :: dAED2(self%grid%nz_grid, state%n_AED2_state)
+      real(RK) :: dAED(self%grid%nz_grid, state%n_AED_state)
 
       associate(ubnd_vol => self%grid%ubnd_vol, &
          Q_vert => state%Q_vert, &
-         AED2_state => state%AED2_state, &
+         AED_state => state%AED_state, &
          h => self%grid%h)
 
          ! Calculate changes
@@ -281,33 +281,33 @@ contains
             end if
 
             ! Calculate advective flow out of cell (thus negative sign in the front) i to the cells above and below
-            dAED2(i,:) = -(top*outflow_above*Q_vert(i + 1) - outflow_below*Q_vert(i))*AED2_state(i,:)
+            dAED(i,:) = -(top*outflow_above*Q_vert(i + 1) - outflow_below*Q_vert(i))*AED_state(i,:)
 
             ! Calculate the advective flow into cell i from below
             if (i > 1 .and. Q_vert(i) > 0) then
-               dAED2(i,:) = dAED2(i,:) + Q_vert(i)*AED2_state(i - 1,:)
+               dAED(i,:) = dAED(i,:) + Q_vert(i)*AED_state(i - 1,:)
             end if
             ! Calculate the advective flow into cell i from above (- sign in front because Q_vert is negative if there is inflow)
             if (i < ubnd_vol .and. Q_vert(i + 1) < 0) then
-               dAED2(i,:) = dAED2(i,:) - Q_vert(i + 1)*AED2_state(i + 1,:)
+               dAED(i,:) = dAED(i,:) - Q_vert(i + 1)*AED_state(i + 1,:)
             end if
          end do
 
          ! Add change to state variables
-         ! dAED2 = dAED2(vertical advection) + dAED2(inflow) + Outflow(negative)*AED2, units: C*m^3/s
+         ! dAED = dAED(vertical advection) + dAED(inflow) + Outflow(negative)*AED, units: C*m^3/s
 
          ! Add change to the state variable
-         do i=1,state%n_AED2_state
-            dAED2(1:ubnd_vol,i) = dAED2(1:ubnd_vol,i) + state%Q_inp(n_simstrat + i, 1:ubnd_vol) + state%Q_inp(2, 1:ubnd_vol)*AED2_state(1:ubnd_vol,i)
-            AED2_state(1:ubnd_vol,i) = AED2_state(1:ubnd_vol,i) + AreaFactor_adv(1:ubnd_vol)*dAED2(1:ubnd_vol,i)
+         do i=1,state%n_AED_state
+            dAED(1:ubnd_vol,i) = dAED(1:ubnd_vol,i) + state%Q_inp(n_simstrat + i, 1:ubnd_vol) + state%Q_inp(2, 1:ubnd_vol)*AED_state(1:ubnd_vol,i)
+            AED_state(1:ubnd_vol,i) = AED_state(1:ubnd_vol,i) + AreaFactor_adv(1:ubnd_vol)*dAED(1:ubnd_vol,i)
          end do
 
          ! Variation of variables due to change in volume
-         AED2_state(ubnd_vol,:) = AED2_state(ubnd_vol,:)*h(ubnd_vol)/(h(ubnd_vol) + dh)
+         AED_state(ubnd_vol,:) = AED_state(ubnd_vol,:)*h(ubnd_vol)/(h(ubnd_vol) + dh)
 
          ! Transform [H] back to pH
-         if(self%cfg%couple_aed2 .and. state%n_pH > 0) then
-            AED2_state(:,state%n_pH) = -log10(AED2_state(:,state%n_pH))
+         if(self%cfg%couple_aed .and. state%n_pH > 0) then
+            AED_state(:,state%n_pH) = -log10(AED_state(:,state%n_pH))
          end if
 
       end associate
@@ -322,7 +322,7 @@ contains
       class(ModelState) :: state
       real(RK) :: dh
       real(RK) :: w_a, w_b
-      associate (ubnd_fce=>self%grid%ubnd_fce, ubnd_vol=>self%grid%ubnd_vol, AED2_state=>state%AED2_state)
+      associate (ubnd_fce=>self%grid%ubnd_fce, ubnd_vol=>self%grid%ubnd_vol, AED_state=>state%AED_state)
 
          ! New values of the state variables are weighted averages
          !determine weighting an normalization connstant
@@ -342,8 +342,8 @@ contains
          state%eps(ubnd_fce) = (w_a*state%eps(ubnd_fce + 1) + w_b*state%eps(ubnd_fce))/(w_a + w_b)
          state%Q_vert(ubnd_fce) = (w_a*state%Q_vert(ubnd_fce + 1) + w_b*state%Q_vert(ubnd_fce))/(w_a + w_b)
 
-         ! AED2
-         if (self%cfg%couple_AED2) AED2_state(ubnd_vol,:) = (w_a*AED2_state(ubnd_vol + 1,:) + w_b*AED2_state(ubnd_vol,:))/(w_a + w_b)
+         ! AED
+         if (self%cfg%couple_AED) AED_state(ubnd_vol,:) = (w_a*AED_state(ubnd_vol + 1,:) + w_b*AED_state(ubnd_vol,:))/(w_a + w_b)
 
          ! update area factors
          call self%grid%update_area_factors()
@@ -374,7 +374,7 @@ contains
          state%k(ubnd_fce) = state%k(ubnd_fce - 1)
          state%eps(ubnd_fce) = state%eps(ubnd_fce - 1)
 
-         if (self%cfg%couple_AED2) state%AED2_state(ubnd_vol,:) = state%AED2_state(ubnd_vol - 1,:)
+         if (self%cfg%couple_AED) state%AED_state(ubnd_vol,:) = state%AED_state(ubnd_vol - 1,:)
 
          call self%grid%update_area_factors()
 

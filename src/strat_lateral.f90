@@ -55,8 +55,8 @@ module strat_lateral
       integer, dimension(:), allocatable :: number_of_lines_read
       logical, dimension(:), allocatable :: has_surface_input, has_deep_input
       integer :: n_vars, max_n_inflows
-      logical :: couple_aed2
-      character(len=100) :: simstrat_path(n_simstrat), aed2_path
+      logical :: couple_aed
+      character(len=100) :: simstrat_path(n_simstrat), aed_path
 
    contains
       procedure, pass :: init => lateral_generic_init
@@ -83,14 +83,14 @@ contains
       class(ModelState) :: state
    end subroutine
 
-   subroutine lateral_generic_init(self, state, model_config, input_config, aed2_config, model_param, grid)
+   subroutine lateral_generic_init(self, state, model_config, input_config, aed_config, model_param, grid)
       implicit none
       class(GenericLateralModule) :: self
       class(ModelState) :: state
       class(StaggeredGrid), target :: grid
       class(ModelConfig), target :: model_config
       class(InputConfig), target :: input_config
-      class(AED2Config), target :: aed2_config
+      class(AEDConfig), target :: aed_config
       class(ModelParam), target :: model_param
 
       ! Locals
@@ -106,10 +106,10 @@ contains
       self%simstrat_path(3) = input_config%TinpName
       self%simstrat_path(4) = input_config%SinpName
 
-      self%couple_aed2 = model_config%couple_aed2
-      if (self%couple_aed2) then
-         self%n_vars = self%n_vars + state%n_AED2_state
-         self%aed2_path = aed2_config%path_aed2_inflow
+      self%couple_aed = model_config%couple_aed
+      if (self%couple_aed) then
+         self%n_vars = self%n_vars + state%n_AED_state
+         self%aed_path = aed_config%path_aed_inflow
       end if
 
       self%max_n_inflows = model_config%max_length_input_data
@@ -140,10 +140,10 @@ contains
       allocate(self%has_surface_input(1:self%n_vars))
       allocate(self%has_deep_input(1:self%n_vars))
 
-      ! Get location of pH in AED2 array
-      if (self%couple_aed2) then
-         do i = 1, state%n_AED2_state
-            select case(trim(state%AED2_state_names(i)))
+      ! Get location of pH in AED array
+      if (self%couple_aed) then
+         do i = 1, state%n_AED_state
+            select case(trim(state%AED_state_names(i)))
             case('CAR_pH')
                state%n_pH = i
             end select
@@ -229,7 +229,7 @@ contains
       real(RK) :: dummy
       real(RK) :: Q_in(1:self%grid%ubnd_vol), h_in(1:self%grid%ubnd_vol)
       real(RK) :: T_in, S_in, co2_in, ch4_in, rho_in, CD_in, g_red, slope, Ri, E, Q_inp_inc
-      real(RK) :: AED2_in(state%n_AED2_state)
+      real(RK) :: AED_in(state%n_AED_state)
       integer :: i, j, k, i1, i2, l, status
       character(len=100) :: fname
 
@@ -251,7 +251,7 @@ contains
 
                   ! Read inflow files
                   if (i > n_simstrat) then
-                     fname = trim(self%aed2_path)//trim(state%AED2_state_names(i - n_simstrat))//'_inflow.dat'
+                     fname = trim(self%aed_path)//trim(state%AED_state_names(i - n_simstrat))//'_inflow.dat'
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
@@ -342,7 +342,7 @@ contains
                else ! if start from snapshot
                   ! Open inflow files
                   if (i > n_simstrat) then
-                     fname = trim(self%aed2_path)//trim(state%AED2_state_names(i - n_simstrat))//'_inflow.dat'
+                     fname = trim(self%aed_path)//trim(state%AED_state_names(i - n_simstrat))//'_inflow.dat'
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
@@ -458,9 +458,9 @@ contains
          end do
 
          ! Only if biochemistry enabled: Transform pH to [H] for physical mixing processes
-         if (self%couple_aed2 .and.state%n_pH > 0) then
+         if (self%couple_aed .and.state%n_pH > 0) then
             ! current pH profile
-            state%AED2_state(:,state%n_pH) = 10.**(-state%AED2_state(:,state%n_pH))
+            state%AED_state(:,state%n_pH) = 10.**(-state%AED_state(:,state%n_pH))
             do i=1,ubnd_vol
                if (Q_inp(n_simstrat + state%n_pH,i) > 0) then
                   ! Surface inflows: pH is given as pH*m2/s, so before transforming to [H], we need to get rid of the m2/s temporarily
@@ -485,11 +485,11 @@ contains
                S_in = Inp(4,j) !Inflow salinity [‰]
 
                ! Only if biochemistry enabled
-               if (self%couple_aed2) then
-                  ! Get AED2 values for the plunging inflow (before entrainment of ambient water)
-                  AED2_in = Inp(n_simstrat + 1 : self%n_vars,j)
+               if (self%couple_aed) then
+                  ! Get AED values for the plunging inflow (before entrainment of ambient water)
+                  AED_in = Inp(n_simstrat + 1 : self%n_vars,j)
                   ! Transform pH to [H] for physical mixing processes
-                  if (state%n_pH > 0) AED2_in(state%n_pH) = 10.**(-AED2_in(state%n_pH))
+                  if (state%n_pH > 0) AED_in(state%n_pH) = 10.**(-AED_in(state%n_pH))
                end if
                ! Compute density as a function of T and S
                call calc_density(rho_in, T_in, S_in)
@@ -511,8 +511,8 @@ contains
                      Q_inp(2,k) = Q_inp(2,k) - (Q_in(k-1) - Q_in(k))
                      T_in = (T_in*Q_in(k) + state%T(k)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
                      S_in = (S_in*Q_in(k) + state%S(k)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
-                     if (self%couple_aed2) then
-                        AED2_in = (AED2_in*Q_in(k) + state%AED2_state(k,:)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
+                     if (self%couple_aed) then
+                        AED_in = (AED_in*Q_in(k) + state%AED_state(k,:)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
                      end if
                      rho_in = (rho_in*Q_in(k) + state%rho(k)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
                      k = k - 1
@@ -529,8 +529,8 @@ contains
                      Q_inp(2,k) = Q_inp(2,k) - (Q_in(k + 1) - Q_in(k))
                      T_in = (T_in*Q_in(k) + state%T(k)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
                      S_in = (S_in*Q_in(k) + state%S(k)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
-                     if (self%couple_aed2) then
-                        AED2_in = (AED2_in*Q_in(k) + state%AED2_state(k,:)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
+                     if (self%couple_aed) then
+                        AED_in = (AED_in*Q_in(k) + state%AED_state(k,:)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
                      end if
                      rho_in = (rho_in*Q_in(k) + state%rho(k)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
                      k = k + 1
@@ -548,7 +548,7 @@ contains
                   Q_inp(1,i) = Q_inp(1,i) + Q_inp_inc
                   Q_inp(3,i) = Q_inp(3,i) + T_in*Q_inp_inc
                   Q_inp(4,i) = Q_inp(4,i) + S_in*Q_inp_inc
-                  if (self%couple_aed2) Q_inp(n_simstrat + 1 : self%n_vars,i) = Q_inp(n_simstrat + 1 : self%n_vars,i) + AED2_in*Q_inp_inc
+                  if (self%couple_aed) Q_inp(n_simstrat + 1 : self%n_vars,i) = Q_inp(n_simstrat + 1 : self%n_vars,i) + AED_in*Q_inp_inc
                end do
             end if
          end do
@@ -587,7 +587,7 @@ contains
             if (idx) then  ! If first timestep
                if (self%number_of_lines_read(i) == 0) then  ! If not started from snapshot
                   if (i > n_simstrat) then
-                     fname = trim(self%aed2_path)//trim(state%AED2_state_names(i - n_simstrat))//'_inflow.dat'
+                     fname = trim(self%aed_path)//trim(state%AED_state_names(i - n_simstrat))//'_inflow.dat'
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
@@ -679,7 +679,7 @@ contains
                else ! if start from snapshot
                   ! Open inflow files
                   if (i > n_simstrat) then
-                     fname = trim(self%aed2_path)//trim(state%AED2_state_names(i - n_simstrat))//'_inflow.dat'
+                     fname = trim(self%aed_path)//trim(state%AED_state_names(i - n_simstrat))//'_inflow.dat'
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
@@ -768,9 +768,9 @@ contains
          end do
 
          ! Only if biochemistry enabled: Transform pH to [H] for physical mixing processes
-         if (self%couple_aed2 .and. state%n_pH > 0) then
+         if (self%couple_aed .and. state%n_pH > 0) then
             ! current pH profile
-            state%AED2_state(:,state%n_pH) = 10.**(-state%AED2_state(:,state%n_pH))
+            state%AED_state(:,state%n_pH) = 10.**(-state%AED_state(:,state%n_pH))
             do i=1,ubnd_vol
                if (Q_inp(n_simstrat + state%n_pH,i) > 0) then
                   ! Surface inflows: pH is given as pH*m2/s, so before transforming to [H], we need to get rid of the m2/s temporarily

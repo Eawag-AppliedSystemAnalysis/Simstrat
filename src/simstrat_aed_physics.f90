@@ -23,14 +23,14 @@
 !     along with this program.  If not, see <http://www.gnu.org/licenses/>. 
 ! ---------------------------------------------------------------------------------
 !<    +---------------------------------------------------------------+
-!     |  Simstrat - AED2 interface: physics utilities
+!     |  Simstrat - AED interface: physics utilities
 !<    +---------------------------------------------------------------+
 
-! Light absorption feedback by AED2 variables
-subroutine absorption_updateAED2(self, state)
+! Light absorption feedback by AED variables
+subroutine absorption_updateAED(self, state)
 
    ! Arguments
-   class(SimstratAED2) :: self
+   class(SimstratAED) :: self
    class(ModelState) :: state
 
    ! Local variables
@@ -40,7 +40,7 @@ subroutine absorption_updateAED2(self, state)
    do i=self%grid%nz_occupied, 1, -1
       bio_extinction = 0.0_RK
       call aed_light_extinction(self%column, i, bio_extinction)
-      state%absorb_vol(i) = self%aed2_cfg%background_extinction + bio_extinction
+      state%absorb_vol(i) = self%aed_cfg%background_extinction + bio_extinction
 
    end do
    ! Interpolate to faces to be compatible with Simstrat temperature module
@@ -56,7 +56,7 @@ end subroutine
 
 subroutine mobility(self, state, min_C, settling_v, conc)
    ! Arguments
-   class(SimstratAED2) :: self
+   class(SimstratAED) :: self
    class(ModelState) :: state
    real(RK), intent(in) :: min_C
    real(RK), dimension(:), intent(in) :: settling_v
@@ -154,7 +154,7 @@ end subroutine
 
 subroutine Rising(self, Y, conc, settling_v, vols, mins, dt, start_i, end_i)
    ! Arguments
-   class(SimstratAED2) :: self
+   class(SimstratAED) :: self
    real(RK), dimension(:), intent(inout) :: conc, Y
    real(RK), dimension(:), intent(in) :: settling_v, vols, mins
    real(RK) :: dt
@@ -193,7 +193,7 @@ end subroutine
 
 subroutine Sinking(self, Y, conc, settling_v, vols, mins, dt, start_i, end_i, moved)
    ! Arguments
-   class(SimstratAED2) :: self
+   class(SimstratAED) :: self
    real(RK), dimension(:), intent(inout) :: conc, Y
    real(RK), dimension(:), intent(in) :: settling_v, vols, mins
    real(RK) :: dt

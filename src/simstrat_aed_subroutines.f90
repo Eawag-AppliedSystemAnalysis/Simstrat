@@ -23,19 +23,19 @@
 !     along with this program.  If not, see <http://www.gnu.org/licenses/>. 
 ! ---------------------------------------------------------------------------------
 !<    +---------------------------------------------------------------+
-!     |  Simstrat - AED2 interface: utilities
+!     |  Simstrat - AED interface: utilities
 !<    +---------------------------------------------------------------+
 
 subroutine allocate_memory(self)
    implicit none
 
    ! Arguments
-   class(SimstratAED2) :: self
+   class(SimstratAED) :: self
 
    ! Local variables
    integer status
-   allocate(self%column(self%n_AED2_state_vars),stat=status)
-   allocate(self%column_sed(self%n_AED2_state_vars),stat=status)
+   allocate(self%column(self%n_AED_state_vars),stat=status)
+   allocate(self%column_sed(self%n_AED_state_vars),stat=status)
 
    ! names = grab the names from info
    allocate(self%names(self%n_vars),stat=status)
@@ -60,7 +60,7 @@ subroutine allocate_memory(self)
    allocate(self%flux_pel(self%grid%nz_occupied, self%n_vars + self%n_vars_ben),stat=status)
    if (status /= 0) stop 'allocate_memory(): Error allocating (flux_pel)'
 
-   !allocate(self%flux_zone(self%aed2_cfg%n_zones, self%n_vars + self%n_vars_ben),stat=status)
+   !allocate(self%flux_zone(self%aed_cfg%n_zones, self%n_vars + self%n_vars_ben),stat=status)
    !if (status /= 0) stop 'allocate_memory(): Error allocating (flux_zone)'
 
    ! Min, max values
@@ -117,7 +117,7 @@ subroutine allocate_memory(self)
    if (status /= 0) stop 'allocate_memory(): Error allocating (tss)'
    self%tss = zero_
 
-   allocate(self%externalid(self%n_AED2_state_vars))
+   allocate(self%externalid(self%n_AED_state_vars))
 
 end subroutine
 
@@ -126,7 +126,7 @@ subroutine assign_var_names(self)
    implicit none
 
    ! Arguments
-   class(SimstratAED2) :: self
+   class(SimstratAED) :: self
 
    ! Local variables
    type(aed_variable_t),pointer :: tvar
@@ -135,51 +135,51 @@ subroutine assign_var_names(self)
    print "(5X,'Configured variables to simulate:')"
 
    j = 0
-   do i=1,self%n_AED2_state_vars
+   do i=1,self%n_AED_state_vars
       if ( aed_get_var(i, tvar) ) then
          if ( .not. (tvar%sheet .or. tvar%diag .or. tvar%extern) ) then
             j = j + 1
             self%names(j) = trim(tvar%name)
             self%min_(j) = tvar%minimum
             self%max_(j) = tvar%maximum
-            print *,"     S(",j,") AED2 pelagic(3D) variable: ", trim(self%names(j))
+            print *,"     S(",j,") AED pelagic(3D) variable: ", trim(self%names(j))
          end if
       end if
    end do
 
    j = 0
-   do i=1,self%n_AED2_state_vars
+   do i=1,self%n_AED_state_vars
       if ( aed_get_var(i, tvar) ) then
          if ( tvar%sheet .and. .not. (tvar%diag .or. tvar%extern) ) then
             j = j + 1
             self%bennames(j) = trim(tvar%name)
             self%min_(self%n_vars+j) = tvar%minimum
             self%max_(self%n_vars+j) = tvar%maximum
-            print *,"     B(",j,") AED2 benthic(2D) variable: ", trim(self%bennames(j))
+            print *,"     B(",j,") AED benthic(2D) variable: ", trim(self%bennames(j))
          end if
       end if
    end do
 
    j = 0
-   do i=1,self%n_AED2_state_vars
+   do i=1,self%n_AED_state_vars
       if ( aed_get_var(i, tvar) ) then
          if ( tvar%diag ) then
             if ( .not.  tvar%sheet ) then
                j = j + 1
                self%diagnames(j) = trim(tvar%name)
-               print *,"     D(",j,") AED2 diagnostic 3Dvariable: ", trim(tvar%name)
+               print *,"     D(",j,") AED diagnostic 3Dvariable: ", trim(tvar%name)
             end if
          end if
       end if
    end do
 
    j = 0
-   do i=1,self%n_AED2_state_vars
+   do i=1,self%n_AED_state_vars
       if ( aed_get_var(i, tvar) ) then
          if ( tvar%diag ) then
             if (tvar%sheet ) then
                j = j + 1
-               print *,"     D(",j,") AED2 diagnostic 2Dvariable: ", trim(tvar%name)
+               print *,"     D(",j,") AED diagnostic 2Dvariable: ", trim(tvar%name)
             end if
          end if
       end if
@@ -193,7 +193,7 @@ subroutine define_column(self, state)
    ! Set up the current column pointers
    !-------------------------------------------------------------------------------
    ! Arguments
-   class(SimstratAED2) :: self
+   class(SimstratAED) :: self
    class(ModelState) :: state
 
    ! Local variables
@@ -205,7 +205,7 @@ subroutine define_column(self, state)
    associate(column => self%column)
 
       v = 0 ; d = 0; sv = 0; sd = 0 ; ev = 0
-      do av=1,self%n_AED2_state_vars
+      do av=1,self%n_AED_state_vars
          if ( .not.  aed_get_var(av, tvar) ) stop "Error getting variable info"
 
          if ( tvar%extern ) then !# global variable
@@ -270,7 +270,7 @@ subroutine check_data(self)
    ! Check that all variable dependencies have been met
    !-------------------------------------------------------------------------------
    ! Arguments
-   class(SimstratAED2) :: self
+   class(SimstratAED) :: self
 
    ! Local variables
    integer :: av
@@ -281,7 +281,7 @@ subroutine check_data(self)
    v = 0 ; d = 0; sv = 0; sd = 0 ; ev = 0
    err_count = 0
 
-   do av=1,self%n_AED2_state_vars
+   do av=1,self%n_AED_state_vars
       if ( .not.  aed_get_var(av, tvar) ) then
          call error("Error getting variable info")
          stop
@@ -336,7 +336,7 @@ subroutine check_data(self)
    if ( self%n_vars_diag_sheet < sd ) print *,"More sheet diag vars than expected"
 
    if ( err_count > 0 ) then
-      call error("In AED2 configuration")
+      call error("In AED configuration")
       stop
    end if
 end subroutine check_data
@@ -348,7 +348,7 @@ subroutine check_states(self)
    implicit none
 
    ! Arguments
-   class(SimstratAED2) :: self
+   class(SimstratAED) :: self
 
    ! Local variables
       type(aed_variable_t), pointer :: tv
@@ -359,7 +359,7 @@ subroutine check_states(self)
       do lev=1, self%grid%nz_occupied
          call aed_equilibrate(self%column, lev) ! Should probably moved to the update routine for clarity
          v = 0
-         do i=1,self%n_AED2_state_vars
+         do i=1,self%n_AED_state_vars
             if ( aed_get_var(i, tv) ) then
                if ( .not. (tv%diag .or. tv%extern) ) then
                   v = v + 1
@@ -377,13 +377,13 @@ end subroutine check_states
 
 
 
-subroutine AED2_InitCondition(self, var, varname, default_val)
+subroutine AED_InitCondition(self, var, varname, default_val)
    !#################################### written/copied by A. Gaudard, 2015
         implicit none
 
-        class(SimstratAED2) :: self
+        class(SimstratAED) :: self
         real(RK), intent(inout) :: var(1:self%grid%nz_grid) ! Vector of initial conditions
-        real(RK), intent(in) :: default_val ! Depth-independent value (default from aed2.nml)
+        real(RK), intent(in) :: default_val ! Depth-independent value (default from aed.nml)
         character(len=*), intent(in) :: varname ! Identifying the variable
 
         real(RK) :: z_read(self%grid%max_length_input_data), var_read(self%grid%max_length_input_data)
@@ -391,7 +391,7 @@ subroutine AED2_InitCondition(self, var, varname, default_val)
         character(len=100) :: fname
         integer :: i,nval
 
-        fname = trim(self%aed2_cfg%path_aed2_initial)//trim(varname)//'_ini.dat'
+        fname = trim(self%aed_cfg%path_aed_initial)//trim(varname)//'_ini.dat'
         open(14,action='read',status='unknown',err=1,file=fname)       ! Opens initial conditions file
         write(6,*) 'reading initial conditions of ', trim(varname)
         read(14,*)                                ! Skip header
@@ -421,7 +421,7 @@ subroutine AED2_InitCondition(self, var, varname, default_val)
         end if
         return
 
-    1   write(6,*) '   File ''',trim(fname),''' not found. Initial conditions set to default value from file ''AED2.nml''.'
+    1   write(6,*) '   File ''',trim(fname),''' not found. Initial conditions set to default value from file ''AED.nml''.'
         var(1:self%grid%nz_grid) = default_val !File not found: value from fabm.nml (constant)
         return
-    end subroutine AED2_InitCondition
+    end subroutine AED_InitCondition

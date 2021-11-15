@@ -29,7 +29,7 @@ module strat_outputfile
    use strat_kinds
    use strat_simdata
    use strat_grid
-   use simstrat_aed2
+   use simstrat_aed
    use utilities
    use csv_module
    implicit none
@@ -42,11 +42,11 @@ module strat_outputfile
       class(OutputConfig), public, pointer   :: output_config
       class(SimConfig), public, pointer :: sim_config
       class(ModelConfig), public, pointer :: model_config
-      class(AED2Config), public, pointer :: aed2_config
+      class(AEDConfig), public, pointer :: aed_config
       class(StaggeredGrid), public, pointer ::grid
       type(csv_file), dimension(:), allocatable :: output_files
       integer, public :: n_depths
-      integer, public :: n_vars, n_vars_Simstrat, n_vars_AED2_state, n_vars_AED2_diagnostic
+      integer, public :: n_vars, n_vars_Simstrat, n_vars_AED_state, n_vars_AED_diagnostic
       integer, public :: counter = 0
       integer(8), public, dimension(2) :: simulation_time_for_next_output = 0
       real(RK), dimension(:,:), allocatable :: last_iteration_data
@@ -93,7 +93,7 @@ contains
 
    ! Abstract interface definitions
 
-   subroutine generic_log_init(self, state, sim_config, model_config, aed2_config, output_config, grid, snapshot_file_exists)
+   subroutine generic_log_init(self, state, sim_config, model_config, aed_config, output_config, grid, snapshot_file_exists)
 
       implicit none
 
@@ -101,7 +101,7 @@ contains
       class(ModelState), target :: state
       class(SimConfig), target :: sim_config
       class(ModelConfig), target :: model_config
-      class(AED2Config), target :: aed2_config
+      class(AEDConfig), target :: aed_config
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
       logical, intent(in) :: snapshot_file_exists
@@ -153,14 +153,14 @@ contains
 
    ! Init logging for interpolating logger
 
-   subroutine log_init_interpolating(self, state, sim_config, model_config, aed2_config, output_config, grid, snapshot_file_exists)
+   subroutine log_init_interpolating(self, state, sim_config, model_config, aed_config, output_config, grid, snapshot_file_exists)
 
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
       class(ModelState), target :: state
       class(SimConfig), target :: sim_config
       class(ModelConfig), target :: model_config
-      class(AED2Config), target :: aed2_config
+      class(AEDConfig), target :: aed_config
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
       logical, intent(in) :: snapshot_file_exists
@@ -169,31 +169,31 @@ contains
 
       self%sim_config => sim_config
       self%model_config => model_config
-      self%aed2_config => aed2_config
+      self%aed_config => aed_config
       self%output_config => output_config
       self%grid => grid
       self%n_vars_Simstrat = size(output_config%output_vars)
 
-      if (self%model_config%couple_aed2) then
-        ! allocate AED2 output structure for state variables
-        allocate (output_config%output_vars_aed2_state) ! We don't know yet how many variables
-        output_config%output_vars_aed2_state%names => state%AED2_state_names
-        output_config%output_vars_aed2_state%values => state%AED2_state
-        self%n_vars_AED2_state = state%n_AED2_state
+      if (self%model_config%couple_aed) then
+        ! allocate AED output structure for state variables
+        allocate (output_config%output_vars_aed_state) ! We don't know yet how many variables
+        output_config%output_vars_aed_state%names => state%AED_state_names
+        output_config%output_vars_aed_state%values => state%AED_state
+        self%n_vars_AED_state = state%n_AED_state
 
-        ! Allocate AED2 output structure for diagnostic variables if necessary
-        if (aed2_config%output_diagnostic_variables) then
-          allocate (output_config%output_vars_aed2_diagnostic) ! We don't know yet how many variables
-          output_config%output_vars_aed2_diagnostic%names => state%AED2_diagnostic_names
-          output_config%output_vars_aed2_diagnostic%values => state%AED2_diagnostic
-          self%n_vars_AED2_diagnostic = state%n_AED2_diagnostic
+        ! Allocate AED output structure for diagnostic variables if necessary
+        if (aed_config%output_diagnostic_variables) then
+          allocate (output_config%output_vars_aed_diagnostic) ! We don't know yet how many variables
+          output_config%output_vars_aed_diagnostic%names => state%AED_diagnostic_names
+          output_config%output_vars_aed_diagnostic%values => state%AED_diagnostic
+          self%n_vars_AED_diagnostic = state%n_AED_diagnostic
         else
-         self%n_vars_AED2_diagnostic = 0
+         self%n_vars_AED_diagnostic = 0
         end if
       else
-         self%n_vars_AED2_state = 0
+         self%n_vars_AED_state = 0
       end if
-      self%n_vars = self%n_vars_Simstrat + self%n_vars_AED2_state + self%n_vars_AED2_diagnostic
+      self%n_vars = self%n_vars_Simstrat + self%n_vars_AED_state + self%n_vars_AED_diagnostic
 
       ! If output times are given in file
       if (output_config%thinning_interval == 0) then
@@ -328,13 +328,13 @@ contains
          end if
       end do
 
-      ! AED2 part
-      if (self%model_config%couple_aed2) then
+      ! AED part
+      if (self%model_config%couple_aed) then
          do i = self%n_vars_Simstrat + 1, self%n_vars
-            if (i < (self%n_vars_Simstrat + self%n_vars_AED2_state + 1)) then
-               file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_aed2_state%names(i - self%n_vars_Simstrat))//'_out.dat'
+            if (i < (self%n_vars_Simstrat + self%n_vars_AED_state + 1)) then
+               file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_aed_state%names(i - self%n_vars_Simstrat))//'_out.dat'
             else
-               file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_aed2_diagnostic%names(i - self%n_vars_Simstrat - self%n_vars_AED2_state))//'_out.dat'
+               file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_aed_diagnostic%names(i - self%n_vars_Simstrat - self%n_vars_AED_state))//'_out.dat'
             end if
             inquire (file=file_path, exist=append)
 
@@ -416,16 +416,16 @@ contains
          call output_helper%next_row(self%output_files(i))
       end do
 
-      ! AED2 part
-      if (self%model_config%couple_aed2) then
+      ! AED part
+      if (self%model_config%couple_aed) then
          do i = self%n_vars_Simstrat + 1, self%n_vars
             ! Write datum
             call output_helper%add_datum(self%output_files(i), "(F12.4)")
             ! Interpolate state on volume grid
-            if (i < (self%n_vars_Simstrat + self%n_vars_AED2_state + 1)) then
-               call self%grid%interpolate_from_vol(self%output_config%output_vars_aed2_state%values(:,i - self%n_vars_Simstrat), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
+            if (i < (self%n_vars_Simstrat + self%n_vars_AED_state + 1)) then
+               call self%grid%interpolate_from_vol(self%output_config%output_vars_aed_state%values(:,i - self%n_vars_Simstrat), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
             else
-               call self%grid%interpolate_from_vol(self%output_config%output_vars_aed2_diagnostic%values(:,i - self%n_vars_Simstrat - self%n_vars_AED2_state), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
+               call self%grid%interpolate_from_vol(self%output_config%output_vars_aed_diagnostic%values(:,i - self%n_vars_Simstrat - self%n_vars_AED_state), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
             end if
             ! Write state
             call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
