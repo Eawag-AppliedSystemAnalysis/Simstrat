@@ -1,0 +1,7 @@
+lib
+obj
+mod
+.*.swp
+.DS*
+._.DS*
+*.i90
