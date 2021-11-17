@@ -345,6 +345,8 @@ contains
          call diffusion_AED_state(self, state, v)
       end do
 
+      call check_states(self)
+
    end subroutine
 
    subroutine calculate_fluxes(self, state)
