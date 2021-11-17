@@ -18,7 +18,6 @@
 &aed_models
     models =  
 			  'aed_sedflux',
-              'aed_macrophyte',
               !'aed_tracer',
               !'aed_noncohesive',
               'aed_oxygen',

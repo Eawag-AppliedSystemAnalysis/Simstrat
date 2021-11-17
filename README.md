@@ -1,6 +1,6 @@
-# Simstrat: a one-dimensional physical lake model coupled to a biogeochemical library
+# Simstrat: a one-dimensional physical lake model coupled to the biogeochemical library libaed
 
-Simstrat is a one-dimensional physical lake model for the simulation of stratification and mixing in deep stratified lakes. The model was originally developed by Goudsmit et al. (2002) and has been successfully applied to lakes with different physical properties. A k-ε model is used to model turbulent mixing including energy transfer of internal seiches. River or groundwater inflow can be added at specific depths or as density-dependent intrusions. The newest version of Simstrat can also simulate ice/snow covers and do biogeochemical simulations by using its coupling with AED2 (https://github.com/AquaticEcoDynamics/libaed2). From version 3.0 onwards, Simstrat always includes a coupling to AED2 but the coupling can be turned off using a switch in the configuration file for purely physical simulations.
+Simstrat is a one-dimensional physical lake model for the simulation of stratification and mixing in deep stratified lakes. The model was originally developed by Goudsmit et al. (2002) and has been successfully applied to lakes with different physical properties. A k-ε model is used to model turbulent mixing including energy transfer of internal seiches. River or groundwater inflow can be added at specific depths or as density-dependent intrusions. The newest version of Simstrat can also simulate ice/snow covers and do biogeochemical simulations by using its coupling with libaed-water (https://github.com/AquaticEcoDynamics/libaed-water). From version 3.0 onwards, Simstrat always includes a coupling to AED but the coupling can be turned off using a switch in the configuration file for purely physical simulations.
 
 ## Run Simstrat
 Pre-built binaries are available [here](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/releases).
@@ -39,7 +39,7 @@ Once the building environment is setup, you can build Simstrat from the `/build`
 FoBiS.py build
 ~~~
 
-If the AED2 library is not built yet, use make (or mingw32-make in windows) to compile it in the lib/libaed2 folder.
+If the AED library is not built yet, use make (or mingw32-make in windows) to compile it in the lib/libaed2 folder.
 
 > **N.B.1** MacOS seems to allow only dynamic library linking. To build for this target, use the `release-gnu-dynamic` compiling mode
 ~~~bash

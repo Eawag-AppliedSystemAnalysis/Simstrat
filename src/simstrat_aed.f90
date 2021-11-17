@@ -244,7 +244,6 @@ contains
       type(aed_variable_t),pointer :: tvar
       real(RK) :: min_C
       integer :: v, i, lev, r
-      real(RK), dimension(self%grid%ubnd_vol) :: tmp
 
       ! Calculate local pressure
       self%pres(1:self%grid%ubnd_vol) = -self%grid%z_volume(1:self%grid%ubnd_vol)
@@ -252,8 +251,9 @@ contains
       self%cc_diag = 0.
       self%cc_diag_hz = 0.
 
+      ! The mobility algorithm is copied from the GLM code, but not checked (FB 2021)
       if (self%aed_cfg%particle_mobility) then
-      ! (3) Calculate source/sink terms due to settling rising of state
+      ! Calculate source/sink terms due to settling rising of state
       ! variables in the water column (note that settling into benthos
       ! is done in aed_do_benthos)
          v = 0
@@ -261,11 +261,33 @@ contains
             if ( aed_get_var(i, tvar) ) then
                if ( .not. (tvar%sheet .or. tvar%diag .or. tvar%extern) ) then
                v = v + 1
+               self%ws(:,i) = zero_
                ! only for state_vars that are not sheet
                   if ( .not. ieee_is_nan(tvar%mobility) ) then
-                     self%ws(:, v) = tvar%mobility
+                     ! default to ws that was set during initialisation
+                     self%ws(1:self%grid%ubnd_vol, i) = tvar%mobility
+                  end if
+               end if
+            end if
+         end do
+         do i = 1, self%grid%ubnd_vol
+            ! update ws for modules that use the mobility method
+            call aed_mobility(self%column, i, self%ws(i,:))
+         end do
+
+         !# (3) Calculate source/sink terms due to the settling or rising of
+         !# state variables in the water column (note that settling into benthos
+         !# is done in aed_do_benthos)
+         v = 0
+         do i=1,self%n_AED_state_vars
+
+            if ( aed_get_var(i, tvar) ) then
+               if ( .NOT. (tvar%sheet .OR. tvar%diag .OR. tvar%extern)   ) then
+                  v = v + 1
+                  !# only for state_vars that are not sheet, and also non-zero ws
+                  if ( .not. ieee_is_nan(tvar%mobility) .AND. sum(abs(self%ws(1:self%grid%ubnd_vol,i)))>zero_ ) then
                      min_C = tvar%minimum
-                     call Mobility(self, state, min_C, self%ws(:, v), self%cc(:, v))
+                     call Mobility(self, state, min_C, self%ws(:, i), self%cc(:, v))
                   end if
                end if
             end if

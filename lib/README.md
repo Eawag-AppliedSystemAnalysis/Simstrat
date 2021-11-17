@@ -6,12 +6,12 @@ For now we have:
 
 | Library Name | Version / Date             | License | Linking      |
 |--------------|----------------------------|---------|--------------|
-| csv_fortran  | 1.1.0 / 05.09.2019			    | BSD	    | static       |
+| csv_fortran  | 1.1.0 / 05.09.2019			| BSD	  | static       |
 | json_fortan  | 7.1.0 / 19.07.2019         | BSD 	  | static       |
-| libaed	   | 2.0.4 / 12.11.2020			    | GPL-3.0 | static       |
+| libaed-water | 2.0.4a/ 17.11.2020			| GPL-3.0 | static       |
 | forbear      |   -   / 05.11.2020         | BSD     | static       |
 
-Please note that the first two libraries are hard copies, while the `libaed2` and `forbear` libraries are submodules, added in the first place as
+Please note that the first two libraries are hard copies, while the `libaed-water` and `forbear` libraries are submodules, added in the first place as
 ~~~bash
 git submodule add remote_git_url_to_external_library path_to_this_directory
 ~~~
