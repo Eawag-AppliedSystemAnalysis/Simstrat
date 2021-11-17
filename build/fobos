@@ -7,36 +7,36 @@ cflags=-c -O2 -std=f2008 -ffree-line-length-none
 lflags=-static-libgcc -static-libgfortran -static
 build_dir=.
 src=../src/
-libs = ../lib/libaed/obj/aed_bio_particles.o
-	   ../lib/libaed/obj/aed_bio_utils.o
-	   ../lib/libaed/obj/aed_carbon.o
-	   ../lib/libaed/obj/aed_common.o
-	   ../lib/libaed/obj/aed_core.o
-	   ../lib/libaed/obj/aed_csv_reader.o
-	   ../lib/libaed/obj/aed_dummy.o
-	   ../lib/libaed/obj/aed_external.o
-	   ../lib/libaed/obj/aed_gclib.o
-	   ../lib/libaed/obj/aed_gcsolver.o
-	   ../lib/libaed/obj/aed_gctypes.o
-	   ../lib/libaed/obj/aed_geochemistry.o
-	   ../lib/libaed/obj/aed_habitat_water.o
-	   ../lib/libaed/obj/aed_nitrogen.o
-	   ../lib/libaed/obj/aed_noncohesive.o
-	   ../lib/libaed/obj/aed_organic_matter.o
-	   ../lib/libaed/obj/aed_oxygen.o
-	   ../lib/libaed/obj/aed_pathogens.o
-	   ../lib/libaed/obj/aed_pesticides.o
-	   ../lib/libaed/obj/aed_phosphorus.o
-	   ../lib/libaed/obj/aed_phytoplankton.o
-	   ../lib/libaed/obj/aed_sedflux.o
-	   ../lib/libaed/obj/aed_silica.o
-	   ../lib/libaed/obj/aed_totals.o
-	   ../lib/libaed/obj/aed_tracer.o
-	   ../lib/libaed/obj/aed_util.o
-	   ../lib/libaed/obj/aed_water.o
-	   ../lib/libaed/obj/aed_zoop_utils.o
-	   ../lib/libaed/obj/aed_zooplankton.o
-include = ../lib/libaed/mod/
+libs = ../lib/libaed-water/obj/aed_bio_particles.o
+	   ../lib/libaed-water/obj/aed_bio_utils.o
+	   ../lib/libaed-water/obj/aed_carbon.o
+	   ../lib/libaed-water/obj/aed_common.o
+	   ../lib/libaed-water/obj/aed_core.o
+	   ../lib/libaed-water/obj/aed_csv_reader.o
+	   ../lib/libaed-water/obj/aed_dummy.o
+	   ../lib/libaed-water/obj/aed_external.o
+	   ../lib/libaed-water/obj/aed_gclib.o
+	   ../lib/libaed-water/obj/aed_gcsolver.o
+	   ../lib/libaed-water/obj/aed_gctypes.o
+	   ../lib/libaed-water/obj/aed_geochemistry.o
+	   ../lib/libaed-water/obj/aed_habitat_water.o
+	   ../lib/libaed-water/obj/aed_nitrogen.o
+	   ../lib/libaed-water/obj/aed_noncohesive.o
+	   ../lib/libaed-water/obj/aed_organic_matter.o
+	   ../lib/libaed-water/obj/aed_oxygen.o
+	   ../lib/libaed-water/obj/aed_pathogens.o
+	   ../lib/libaed-water/obj/aed_pesticides.o
+	   ../lib/libaed-water/obj/aed_phosphorus.o
+	   ../lib/libaed-water/obj/aed_phytoplankton.o
+	   ../lib/libaed-water/obj/aed_sedflux.o
+	   ../lib/libaed-water/obj/aed_silica.o
+	   ../lib/libaed-water/obj/aed_totals.o
+	   ../lib/libaed-water/obj/aed_tracer.o
+	   ../lib/libaed-water/obj/aed_util.o
+	   ../lib/libaed-water/obj/aed_water.o
+	   ../lib/libaed-water/obj/aed_zoop_utils.o
+	   ../lib/libaed-water/obj/aed_zooplankton.o
+include = ../lib/libaed-water/mod/
 colors=False
 quiet=False
 target=simstrat.f90
@@ -52,36 +52,36 @@ cflags=-c -O2 -std=f2008 -ffree-line-length-none
 lflags=-dynamic-libgcc -dynamic-libgfortran -dynamic
 build_dir=.
 src=../src/
-libs = ../lib/libaed/obj/aed_bio_particles.o
-	   ../lib/libaed/obj/aed_bio_utils.o
-	   ../lib/libaed/obj/aed_carbon.o
-	   ../lib/libaed/obj/aed_common.o
-	   ../lib/libaed/obj/aed_core.o
-	   ../lib/libaed/obj/aed_csv_reader.o
-	   ../lib/libaed/obj/aed_dummy.o
-	   ../lib/libaed/obj/aed_external.o
-	   ../lib/libaed/obj/aed_gclib.o
-	   ../lib/libaed/obj/aed_gcsolver.o
-	   ../lib/libaed/obj/aed_gctypes.o
-	   ../lib/libaed/obj/aed_geochemistry.o
-	   ../lib/libaed/obj/aed_habitat_water.o
-	   ../lib/libaed/obj/aed_nitrogen.o
-	   ../lib/libaed/obj/aed_noncohesive.o
-	   ../lib/libaed/obj/aed_organic_matter.o
-	   ../lib/libaed/obj/aed_oxygen.o
-	   ../lib/libaed/obj/aed_pathogens.o
-	   ../lib/libaed/obj/aed_pesticides.o
-	   ../lib/libaed/obj/aed_phosphorus.o
-	   ../lib/libaed/obj/aed_phytoplankton.o
-	   ../lib/libaed/obj/aed_sedflux.o
-	   ../lib/libaed/obj/aed_silica.o
-	   ../lib/libaed/obj/aed_totals.o
-	   ../lib/libaed/obj/aed_tracer.o
-	   ../lib/libaed/obj/aed_util.o
-	   ../lib/libaed/obj/aed_water.o
-	   ../lib/libaed/obj/aed_zoop_utils.o
-	   ../lib/libaed/obj/aed_zooplankton.o
-include = ../lib/libaed/mod/
+libs = ../lib/libaed-water/obj/aed_bio_particles.o
+	   ../lib/libaed-water/obj/aed_bio_utils.o
+	   ../lib/libaed-water/obj/aed_carbon.o
+	   ../lib/libaed-water/obj/aed_common.o
+	   ../lib/libaed-water/obj/aed_core.o
+	   ../lib/libaed-water/obj/aed_csv_reader.o
+	   ../lib/libaed-water/obj/aed_dummy.o
+	   ../lib/libaed-water/obj/aed_external.o
+	   ../lib/libaed-water/obj/aed_gclib.o
+	   ../lib/libaed-water/obj/aed_gcsolver.o
+	   ../lib/libaed-water/obj/aed_gctypes.o
+	   ../lib/libaed-water/obj/aed_geochemistry.o
+	   ../lib/libaed-water/obj/aed_habitat_water.o
+	   ../lib/libaed-water/obj/aed_nitrogen.o
+	   ../lib/libaed-water/obj/aed_noncohesive.o
+	   ../lib/libaed-water/obj/aed_organic_matter.o
+	   ../lib/libaed-water/obj/aed_oxygen.o
+	   ../lib/libaed-water/obj/aed_pathogens.o
+	   ../lib/libaed-water/obj/aed_pesticides.o
+	   ../lib/libaed-water/obj/aed_phosphorus.o
+	   ../lib/libaed-water/obj/aed_phytoplankton.o
+	   ../lib/libaed-water/obj/aed_sedflux.o
+	   ../lib/libaed-water/obj/aed_silica.o
+	   ../lib/libaed-water/obj/aed_totals.o
+	   ../lib/libaed-water/obj/aed_tracer.o
+	   ../lib/libaed-water/obj/aed_util.o
+	   ../lib/libaed-water/obj/aed_water.o
+	   ../lib/libaed-water/obj/aed_zoop_utils.o
+	   ../lib/libaed-water/obj/aed_zooplankton.o
+include = ../lib/libaed-water/mod/
 colors=False
 quiet=False
 target=simstrat.f90
@@ -142,4 +142,4 @@ help = Clean all the libraries (.mod and .obj)
 rule_1 = cd ../lib/csv_fortran && FoBiS.py clean
 rule_2 = cd ../lib/json_fortran/static && FoBiS.py clean
 rule_3 = cd ../lib/forbear/static && FoBiS.py clean
-rule_4 = echo Please clean libaed subdirectories lib, mod and obj manually!
+rule_4 = echo Please clean libaed-water subdirectories lib, mod and obj manually!
