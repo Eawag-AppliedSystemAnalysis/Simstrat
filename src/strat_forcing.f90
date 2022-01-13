@@ -316,8 +316,8 @@ contains
                ! see Flerchinger et al. (2009)
                if (cfg%forcing_mode /= 5) then
                   H_A = (1 - r_a)*((1 - 0.84_RK*Cloud)*(59.38_RK + 113.7_RK*((state%T_atm + 273.15_RK)/273.16_RK)**6 &
-                     + 96.96_RK*sqrt(465*Vap_atm/(state%T_atm + 273.15_RK)*0.04_RK))/5.67e-8_RK/ &
-                     (state%T_atm + 273.15_RK)**4 + 0.84_RK*Cloud)*5.67e-8_RK*(state%T_atm + 273.15_RK)**4
+                     + 96.96_RK*sqrt(465*Vap_atm/(state%T_atm + 273.15_RK)*0.04_RK))/sig/ &
+                     (state%T_atm + 273.15_RK)**4 + 0.84_RK*Cloud)*sig*(state%T_atm + 273.15_RK)**4
                end if
 
                H_A = H_A*param%p_lw ! Provided fitting factor p_radin (~1)
