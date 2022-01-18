@@ -210,7 +210,7 @@ contains
       call ok("Start day: "//real_to_str(simdata%sim_cfg%start_datum, '(F7.1)'))
       new_start_datum = simdata%sim_cfg%start_datum
       if (continue_from_snapshot) then
-         call load_snapshot(snapshot_file_path)
+         call load_snapshot(snapshot_file_path, simdata%model_cfg%couple_aed2)
          call ok("Simulation snapshot successfully read. Snapshot day: "//real_to_str(simdata%model%datum, '(F7.1)'))
          call logger%calculate_simulation_time_for_next_output(simdata%model%simulation_time)
          new_start_datum = simdata%model%datum
@@ -326,15 +326,16 @@ contains
          call bar%update(current=(simdata%model%datum-new_start_datum))
 
       end do
-      if (simdata%sim_cfg%continue_from_snapshot) call save_snapshot(snapshot_file_path)
+      if (simdata%sim_cfg%continue_from_snapshot) call save_snapshot(snapshot_file_path, simdata%model_cfg%couple_aed2)
    end subroutine
 
-   subroutine save_snapshot(file_path)
+   subroutine save_snapshot(file_path, couple_aed2)
       implicit none
       character(len=*), intent(in) :: file_path
+      logical, intent(in) :: couple_aed2
 
       open(80, file=file_path, Form='unformatted', Action='Write')
-      call simdata%model%save()
+      call simdata%model%save(couple_aed2)
       call simdata%grid%save()
       call mod_absorption%save()
       call mod_lateral%save()
@@ -342,12 +343,13 @@ contains
       close(80)
    end subroutine
 
-   subroutine load_snapshot(file_path)
+   subroutine load_snapshot(file_path, couple_aed2)
       implicit none
       character(len=*), intent(in) :: file_path
+      logical, intent(in) :: couple_aed2
 
       open(81, file=file_path, Form='unformatted', Action='Read')
-      call simdata%model%load()
+      call simdata%model%load(couple_aed2)
       call simdata%grid%load()
       call mod_absorption%load()
       call mod_lateral%load()

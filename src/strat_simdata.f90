@@ -355,9 +355,10 @@ contains
    end subroutine
 
    ! save model state unformatted
-   subroutine save_model_state(self)
+   subroutine save_model_state(self, couple_aed2)
       implicit none
       class(ModelState), intent(in) :: self
+      logical, intent(in) :: couple_aed2
 
       write(80) self%current_year, self%current_month, self%current_day, self%datum
       write(80) self%simulation_time(1), self%simulation_time(2), self%simulation_time_old(1), self%simulation_time_old(2)
@@ -409,14 +410,17 @@ contains
       write(80) self%cde, self%cm0
       write(80) self%fsed
       call save_array(80, self%fgeo_add)
-      call save_matrix_pointer(80, self%AED2_state)
-      call save_matrix_pointer(80, self%AED2_diagnostic)
+      if (couple_aed2) then
+         call save_matrix_pointer(80, self%AED2_state)
+         call save_matrix_pointer(80, self%AED2_diagnostic)
+      end if
    end subroutine
 
    ! load model state unformatted
-   subroutine load_model_state(self)
+   subroutine load_model_state(self, couple_aed2)
       implicit none
       class(ModelState), intent(inout) :: self
+      logical, intent(in) :: couple_aed2
 
       read(81) self%current_year, self%current_month, self%current_day, self%datum
       read(81) self%simulation_time(1), self%simulation_time(2), self%simulation_time_old(1), self%simulation_time_old(2)
@@ -468,8 +472,10 @@ contains
       read(81) self%cde, self%cm0
       read(81) self%fsed
       call read_array(81, self%fgeo_add)
-      call read_matrix_pointer(81, self%AED2_state)
-      call read_matrix_pointer(81, self%AED2_diagnostic)
+      if (couple_aed2) then
+         call read_matrix_pointer(81, self%AED2_state)
+         call read_matrix_pointer(81, self%AED2_diagnostic)
+      end if
    end subroutine
 
 end module strat_simdata
