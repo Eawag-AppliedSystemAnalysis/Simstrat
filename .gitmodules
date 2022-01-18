@@ -3,4 +3,4 @@
 	url = https://github.com/AquaticEcoDynamics/libaed2.git
 [submodule "lib/forbear"]
 	path = lib/forbear
-	url = https://github.com/d-vanzo/forbear.git
+	url = git@github.com:d-vanzo/forbear.git
