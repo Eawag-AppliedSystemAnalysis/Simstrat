@@ -312,12 +312,13 @@ contains
                Vap_wat = Vap_wat*(1 + 1e-6_RK*param%p_air*(4.5_RK + 0.00006_RK*T_surf**2))
 
 
-               ! Long-wave radiation according to Dilley and O'Brien
-               ! see Flerchinger et al. (2009)
+               ! Long-wave radiation according to Dilley and O'Brien (1998) with cloud correction of Unsworth and Monteith (1975)
+               ! See Flerchinger et al. (2009) for an evaluation of different long-wave radiation algorithms
+               ! 465 instead of 4650 because Vap_atm is in [hPa]
                if (cfg%forcing_mode /= 5) then
-                  H_A = (1 - r_a)*((1 - 0.84_RK*Cloud)*(59.38_RK + 113.7_RK*((state%T_atm + 273.15_RK)/273.16_RK)**6 &
-                     + 96.96_RK*sqrt(465*Vap_atm/(state%T_atm + 273.15_RK)*0.04_RK))/sig/ &
-                     (state%T_atm + 273.15_RK)**4 + 0.84_RK*Cloud)*sig*(state%T_atm + 273.15_RK)**4
+                  H_A = 59.38_RK + 113.7_RK*((state%T_atm + 273.15_RK)/273.16_RK)**6 + 96.96_RK*sqrt(465*Vap_atm/(state%T_atm + 273.15_RK)*0.04_RK)
+                  H_A = (1 - 0.84_RK*Cloud)*H_A/sig/(state%T_atm + 273.15_RK)**4 + 0.84_RK*Cloud
+                  H_A = (1 - r_a)*H_A*sig*(state%T_atm + 273.15_RK)**4
                end if
 
                H_A = H_A*param%p_lw ! Provided fitting factor p_radin (~1)
