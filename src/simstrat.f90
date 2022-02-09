@@ -221,14 +221,16 @@ contains
       call logger%start()
 
       ! initialize a bar with the progress percentage counter
-      call bar%initialize(filled_char_string='#', &
-         prefix_string=' Simulation progress |',  &
-         suffix_string='| ', add_progress_percent=.true., &
-         add_date_time=.true., &
-         max_value=(simdata%sim_cfg%end_datum-new_start_datum))
+      if (simdata%sim_cfg%show_bar) then
+         call bar%initialize(filled_char_string='#', &
+            prefix_string=' Simulation progress |',  &
+            suffix_string='| ', add_progress_percent=.true., &
+            add_date_time=.true., &
+            max_value=(simdata%sim_cfg%end_datum-new_start_datum))
 
-      ! start the progress bar
-      call bar%start
+            ! start the progress bar
+         call bar%start
+      end if
 
       ! Run the simulation loop
       ! Run simulation until end datum or until no more results are required by the output time file
@@ -323,7 +325,9 @@ contains
          simdata%model%first_timestep = .false.
 
          !update the progress bar
-         call bar%update(current=(simdata%model%datum-new_start_datum))
+         if (simdata%sim_cfg%show_bar) then
+            call bar%update(current=(simdata%model%datum-new_start_datum))
+         end if
 
       end do
       if (simdata%sim_cfg%continue_from_snapshot) call save_snapshot(snapshot_file_path, simdata%model_cfg%couple_aed2)

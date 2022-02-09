@@ -53,7 +53,8 @@
     "Start d"                     : 35001,              ! Simulation start in days since 01.01. of starting year
     "End d"                       : 35732,              ! Simulation end
     "DisplaySimulation"           : 1,                  ! 0: No display, 1: Display when output is written, 2: Display every iteration
-    "Continue from last snapshot" : false                ! If true simulation continues from last snapshot (if present in output folder). Default: false
+    "Continue from last snapshot" : false,              ! If true simulation continues from last snapshot (if present in output folder). Default: false
+    "Show progress bar"           : false                ! If true the progress bar is shown, if false it is not shown
   },
   "ModelParameters" : {
     "lat"           : 47.3,                             ! Latitude in [°]
