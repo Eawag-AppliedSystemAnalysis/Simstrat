@@ -338,7 +338,9 @@ contains
       call simdata%model%save(couple_aed2)
       call simdata%grid%save()
       call mod_absorption%save()
-      call mod_lateral%save()
+      if (simdata%model_cfg%inflow_mode > 0) then
+         call mod_lateral%save()
+      end if
       call logger%save()
       close(80)
    end subroutine
@@ -352,7 +354,9 @@ contains
       call simdata%model%load(couple_aed2)
       call simdata%grid%load()
       call mod_absorption%load()
-      call mod_lateral%load()
+      if (simdata%model_cfg%inflow_mode > 0) then
+         call mod_lateral%load()
+      end if
       call logger%load()
       close(81)
    end subroutine

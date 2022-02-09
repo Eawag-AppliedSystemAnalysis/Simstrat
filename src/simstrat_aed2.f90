@@ -44,7 +44,7 @@ module simstrat_aed2
       ! Arrays for state and diagnostic variables
       real(RK),pointer,dimension(:,:) :: cc ! water quality array: nlayers, nvars
       real(RK),pointer,dimension(:,:) :: cc_diag
-      real(RK),pointer,dimension(:) :: cc_diag_hz
+      real(RK),pointer,dimension(:) :: cc_diag_sheet
       real(RK),pointer,dimension(:) :: tss
       real(RK),pointer,dimension(:) :: sed_zones
 
@@ -72,6 +72,7 @@ module simstrat_aed2
       character(len=48),pointer :: names(:)
       character(len=48),pointer :: bennames(:)
       character(len=48),pointer :: diagnames(:)
+      character(len=48),pointer :: diagnames_sheet(:)
 
       integer,allocatable,dimension(:) :: externalid
 
@@ -172,8 +173,10 @@ contains
          ! Allocate memory for AED2 state and inflow matrix used by Simstrat
          state%AED2_state => self%cc
          state%AED2_diagnostic => self%cc_diag
+         state%AED2_diagnostic_sheet => self%cc_diag_sheet
          state%n_AED2_state = n_vars  + n_vars_ben
          state%n_AED2_diagnostic = n_vars_diag
+         state%n_AED2_diagnostic_sheet = n_vars_diag_sheet
 
          ! Define column pointer (which is the object that is handed over to AED2 at every timestep)
          ! It containes external (Simstrat) variables like T and S, but also the variables of this (SimstratAED2) module
@@ -187,6 +190,9 @@ contains
 
          allocate(state%AED2_diagnostic_names(n_vars_diag))
          state%AED2_diagnostic_names => self%diagnames
+
+         allocate(state%AED2_diagnostic_names_sheet(n_vars_diag_sheet))
+         state%AED2_diagnostic_names_sheet => self%diagnames_sheet
 
          ! Now set initial values of AED2 variables
          v = 0 ; sv = 0;
@@ -228,7 +234,7 @@ contains
       self%pres(1:self%grid%ubnd_vol) = -self%grid%z_volume(1:self%grid%ubnd_vol)
 
       self%cc_diag = 0.
-      self%cc_diag_hz = 0.
+      self%cc_diag_sheet = 0.
 
       if (self%aed2_cfg%particle_mobility) then
       ! (3) Calculate source/sink terms due to settling rising of state
@@ -293,7 +299,7 @@ contains
 
 !       ! If simulating sediment zones, distribute cc-sed benthic properties back
 !       !  into main cc array, mainly for plotting
-!       IF ( benthic_mode .GT. 1 ) CALL copy_from_zone(cc, cc_diag, cc_diag_hz, wlev)
+!       IF ( benthic_mode .GT. 1 ) CALL copy_from_zone(cc, cc_diag, cc_diag_sheet, wlev)
 
 
       ! Diffusive transport of AED2 variables (advective transport of AED2 variables is done in the usual Simstrat routines (lateral/lateral_rho))

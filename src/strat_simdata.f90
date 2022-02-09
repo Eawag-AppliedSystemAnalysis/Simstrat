@@ -61,6 +61,7 @@ module strat_simdata
    type, public :: LogVariableAED2
       character(len=48), pointer, dimension(:) :: names
       real(RK), dimension(:,:), pointer :: values
+      real(RK), dimension(:), pointer :: values_sheet
    end type
 
    ! Logging configuration
@@ -79,6 +80,7 @@ module strat_simdata
       class(LogVariable), dimension(:), allocatable :: output_vars
       class(LogVariableAED2), allocatable :: output_vars_aed2_state
       class(LogVariableAED2), allocatable :: output_vars_aed2_diagnostic
+      class(LogVariableAED2), allocatable :: output_vars_aed2_diagnostic_sheet
 
       integer :: output_time_type, output_depth_type, thinning_interval
       real(RK) :: depth_interval, thinning_interval_read ! thinning_interval_read is a real to make sure that also values
@@ -170,8 +172,10 @@ module strat_simdata
       real(RK), dimension(:), pointer :: rho ! Water density [kg/m^3]
       real(RK), dimension(:,:), pointer :: AED2_state ! State matrix of AED2 variables (depth, variable)
       real(RK), dimension(:,:), pointer :: AED2_diagnostic ! State matrix of AED2 diagnostic svariables
+      real(RK), dimension(:), pointer :: AED2_diagnostic_sheet ! State matrix of AED2 diagnostic svariables
       character(len=48), dimension(:), pointer :: AED2_state_names ! Names of AED2 state variables used in the simulation
       character(len=48), dimension(:), pointer :: AED2_diagnostic_names ! Names of AED2 diagnostic variables used in the simulation
+      character(len=48), dimension(:), pointer :: AED2_diagnostic_names_sheet ! Names of AED2 diagnostic surface variables used in the simulation
       integer :: n_pH
    
       ! Variables located on z_upp grid
@@ -223,7 +227,7 @@ module strat_simdata
       real(RK) :: cde, cm0
       real(RK) ::  fsed
       real(RK), dimension(:), allocatable     :: fgeo_add
-      integer :: n_AED2_state, n_AED2_diagnostic
+      integer :: n_AED2_state, n_AED2_diagnostic, n_AED2_diagnostic_sheet
 
 
    contains
@@ -413,6 +417,7 @@ contains
       if (couple_aed2) then
          call save_matrix_pointer(80, self%AED2_state)
          call save_matrix_pointer(80, self%AED2_diagnostic)
+         call save_array_pointer(80, self%AED2_diagnostic_sheet)
       end if
    end subroutine
 
@@ -475,6 +480,7 @@ contains
       if (couple_aed2) then
          call read_matrix_pointer(81, self%AED2_state)
          call read_matrix_pointer(81, self%AED2_diagnostic)
+         call read_array_pointer(81, self%AED2_diagnostic_sheet)
       end if
    end subroutine
 

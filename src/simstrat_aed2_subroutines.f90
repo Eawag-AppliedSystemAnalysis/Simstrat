@@ -44,6 +44,8 @@ subroutine allocate_memory(self)
    if (status /= 0) stop 'allocate_memory(): Error allocating (bennames)'
    allocate(self%diagnames(self%n_vars_diag),stat=status)
    if (status /= 0) stop 'allocate_memory(): Error allocating (diagnames)'
+   allocate(self%diagnames_sheet(self%n_vars_diag_sheet),stat=status)
+   if (status /= 0) stop 'allocate_memory(): Error allocating (diagnames_sheet)'
 
    ! Now that we know how many vars we need, we can allocate space for them
    allocate(self%cc(self%grid%nz_grid, (self%n_vars + self%n_vars_ben)),stat=status)
@@ -79,9 +81,9 @@ subroutine allocate_memory(self)
 
    !# Allocate diagnostic variable array and set all values to zero.
    !# (needed because time-integrated/averaged variables will increment rather than set the array)
-   allocate(self%cc_diag_hz(self%n_vars_diag_sheet),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (cc_diag_hz)'
-   self%cc_diag_hz = zero_
+   allocate(self%cc_diag_sheet(self%n_vars_diag_sheet),stat=status)
+   if (status /= 0) stop 'allocate_memory(): Error allocating (cc_diag_sheet)'
+   self%cc_diag_sheet = zero_
 
    !# Allocate array with vertical movement rates (m/s, positive for upwards),
    !# and set these to the values provided by the model.
@@ -179,6 +181,7 @@ subroutine assign_var_names(self)
          if ( tvar%diag ) then
             if (tvar%sheet ) then
                j = j + 1
+               self%diagnames_sheet(j) = trim(tvar%name)
                print *,"     D(",j,") AED2 diagnostic 2Dvariable: ", trim(tvar%name)
             end if
          end if
@@ -235,7 +238,7 @@ subroutine define_column(self, state)
          elseif ( tvar%diag ) then  !# Diagnostic variable
             if ( tvar%sheet ) then
                sd = sd + 1
-               column(av)%cell_sheet => self%cc_diag_hz(sd)
+               column(av)%cell_sheet => self%cc_diag_sheet(sd)
             else
                d = d + 1
                column(av)%cell => self%cc_diag(:,d)

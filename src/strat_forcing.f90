@@ -125,7 +125,6 @@ contains
 
   7   eof = 1
       if(datum>tb_start) call warn('Last forcing date before simulation end time.')
-      write(6,*) datum, tb_start
 
 
   8   A_cur(1:nval) = A_s(1:nval)       ! Take first value of current interval
