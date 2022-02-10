@@ -648,6 +648,7 @@ contains
          if (model_cfg%pressure_gradients == 1) call error('The option "PressureGradients = 1" is not working. Please choose either "0" or "2".')
          call par_file%get("ModelConfig.IceModel", model_cfg%ice_model, found); call check_field(found, 'ModelConfig.IceModel', ParName)
          call par_file%get("ModelConfig.SnowModel", model_cfg%snow_model, found); call check_field(found, 'ModelConfig.SnowModel', ParName)
+         call par_file%get("ModelConfig.InitializeSeicheEnergy", model_cfg%initialize_seiche_energy, found); call check_field(found, 'ModelConfig.InitializeSeicheEnergy', ParName)
 
          ! AED2 configuration (or another biogeochemical model if implemented)
          if (model_cfg%couple_aed2) then
@@ -699,6 +700,9 @@ contains
            call par_file%get("ModelParameters.p_sw_ice", model_param%p_sw_ice, found); call check_field(found, 'ModelParameters.p_sw_ice', ParName)
            call par_file%get("ModelParameters.freez_temp", model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_temp', ParName)
            call par_file%get("ModelParameters.snow_temp", model_param%snow_temp, found); call check_field(found, 'ModelParameters.snow_temp', ParName)
+         end if
+         if (model_cfg%initialize_seiche_energy) then
+            call par_file%get("ModelParameters.seiche_ini", model_param%seiche_ini, found); call check_field(found, 'ModelParameters.seiche_ini', ParName)
          end if
 
          ! Simulation Parameter

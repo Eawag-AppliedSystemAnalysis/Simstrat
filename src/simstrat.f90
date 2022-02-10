@@ -175,7 +175,7 @@ program simstrat_main
 
    ! Initialize simulation modules
    call mod_stability%init(simdata%grid, simdata%model_cfg, simdata%model_param)
-   call mod_turbulence%init(simdata%grid, simdata%model_cfg, simdata%model_param)
+   call mod_turbulence%init(simdata%model, simdata%grid, simdata%model_cfg, simdata%model_param)
    call mod_ice%init(simdata%model_cfg, simdata%model_param, simdata%grid)
 
    ! Set temperature state var to have nu_h as nu and T as model variable

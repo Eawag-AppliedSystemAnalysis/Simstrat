@@ -116,6 +116,7 @@ module strat_simdata
       logical :: salinity_transport
       integer :: ice_model
       integer :: snow_model
+      logical :: initialize_seiche_energy
    end type
 
    ! AED2 configuration (read from file)
@@ -152,6 +153,7 @@ module strat_simdata
       real(RK) :: p_sw_ice
       real(RK) :: freez_temp
       real(RK) :: snow_temp
+      real(RK) :: seiche_ini
    end type
 
    ! Model state (self is actually the simulation data!!!)

@@ -53,9 +53,10 @@ module strat_turbulence
    end type
 contains
 
-   subroutine turbulence_module_init(self, grid, model_cfg, model_param)
+   subroutine turbulence_module_init(self, state, grid, model_cfg, model_param)
       implicit none
       class(TurbulenceModule) :: self
+      class(ModelState), target :: state
       class(StaggeredGrid), target :: grid
       class(ModelConfig), target :: model_cfg
       class(ModelParam), target :: model_param
@@ -63,6 +64,10 @@ contains
       self%grid => grid
       self%model_cfg => model_cfg
       self%model_param => model_param
+
+      if (model_cfg%initialize_seiche_energy) then
+         state%E_Seiche = model_param%seiche_ini
+      end if
    end subroutine
 
    subroutine turbulence_module_update(self, state, param)
