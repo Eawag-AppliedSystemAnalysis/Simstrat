@@ -501,7 +501,7 @@ contains
       class(ModelState) :: state
       class(SimConfig) :: sim_cfg
 
-      call init_calendar(sim_cfg%start_year, state%datum, state%current_year, state%current_month, state%current_day)
+      call init_calendar(sim_cfg%reference_year, state%datum, state%current_year, state%current_month, state%current_day)
 
       ! Monthly albedo data according to Grishchenko, in Cogley 1979
       if (self%param%Lat > 0)  then ! Northern hemisphere (1.000 if no sun)

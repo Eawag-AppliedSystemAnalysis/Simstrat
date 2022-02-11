@@ -714,7 +714,7 @@ contains
 
          ! Simulation Parameter
          call par_file%get("Simulation.Timestep s", sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep s', ParName)
-         call par_file%get("Simulation.Start year", sim_cfg%start_year, found); call check_field(found, 'Simulation.Start year', ParName)
+         call par_file%get("Simulation.Reference year", sim_cfg%reference_year, found); call check_field(found, 'Simulation.Reference year', ParName)
          call par_file%get("Simulation.Start d", sim_cfg%start_datum, found); call check_field(found, 'Simulation.Start d', ParName)
          call par_file%get("Simulation.End d", sim_cfg%end_datum, found); call check_field(found, 'Simulation.End d', ParName)
          call par_file%get("Simulation.DisplaySimulation", sim_cfg%disp_simulation, found); call check_field(found, 'Simulation.DisplaySimulation', ParName)

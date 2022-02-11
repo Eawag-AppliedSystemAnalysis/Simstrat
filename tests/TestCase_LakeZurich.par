@@ -17,7 +17,7 @@
     "OutputDepthReference": "surface",                  ! "surface": depth of output variables is referenced to lake level, "bottom": depth of output variables is referenced to lake bottom
     "All"   : false,                                    ! True: All variables are written out, false: only variables in list "variables" are written
 
-    "Variables" : ["T", "S","HA","HW","HK","HV"]                  ! Variables written to file (if "all" = false), example: ["T", "S", "WaterH"]
+    "Variables" : ["T", "S","HA","HW","HK","HV","Eseiche"]                  ! Variables written to file (if "all" = false), example: ["T", "S", "WaterH"]
   },
   "ModelConfig" : {
     "MaxLengthInputData"      : 1000,                   ! Maximum length of input data (initial conditions, bathymetry, grid etc.)
@@ -50,12 +50,12 @@
   },
   "Simulation" : {
     "Timestep s"                  : 300,                ! Simulation timestep in seconds
-    "Start year"                  : 1900,               ! Starting year
-    "Start d"                     : 35001,              ! Simulation start in days since 01.01. of starting year
+    "Reference year"              : 1900,               ! Reference year for day count
+    "Start d"                     : 35001,              ! Simulation start in days since 01.01. of reference year
     "End d"                       : 35732,              ! Simulation end
     "DisplaySimulation"           : 1,                  ! 0: No display, 1: Display when output is written, 2: Display every iteration
     "Continue from last snapshot" : false,              ! If true simulation continues from last snapshot (if present in output folder). Default: false
-    "Show progress bar"           : false                ! If true the progress bar is shown, if false it is not shown
+    "Show progress bar"           : true                ! If true the progress bar is shown, if false it is not shown
   },
   "ModelParameters" : {
     "lat"           : 47.3,                             ! Latitude in [°]

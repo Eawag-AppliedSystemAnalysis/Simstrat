@@ -90,7 +90,7 @@ module strat_simdata
    ! Simulation configuration
    type, public :: SimConfig
       integer :: timestep
-      integer :: start_year
+      integer :: reference_year
       real(RK) :: start_datum
       real(RK) :: end_datum
       integer :: disp_simulation
