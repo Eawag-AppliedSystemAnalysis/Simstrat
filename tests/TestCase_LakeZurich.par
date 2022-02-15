@@ -1,6 +1,6 @@
 {
   "Input" : {
-    "Initial conditions"  : "TestCase_LakeZurich/initcond_zuri_810107.dat",
+    "Initial conditions"  : "TestCases_Results/save_end_conditions.dat",!"TestCase_LakeZurich/initcond_zuri_810107.dat",!
     "Grid"                : "TestCase_LakeZurich/Grid.dat",
     "Morphology"          : "TestCase_LakeZurich/morph_zuri.dat",
     "Forcing"             : "TestCase_LakeZurich/forcing_lake_zurich_1981_2013_waedenswil_homogenized.dat",
@@ -17,10 +17,10 @@
     "OutputDepthReference": "surface",                  ! "surface": depth of output variables is referenced to lake level, "bottom": depth of output variables is referenced to lake bottom
     "All"   : false,                                    ! True: All variables are written out, false: only variables in list "variables" are written
 
-    "Variables" : ["T", "S","HA","HW","HK","HV","Eseiche"]                  ! Variables written to file (if "all" = false), example: ["T", "S", "WaterH"]
+    "Variables" : ["T", "S","HA","HW","HK","HV","num"]                  ! Variables written to file (if "all" = false), example: ["T", "S", "WaterH"]
   },
   "ModelConfig" : {
-    "MaxLengthInputData"      : 1000,                   ! Maximum length of input data (initial conditions, bathymetry, grid etc.)
+    "MaxLengthInputData"      : 2000,                   ! Maximum length of input data (initial conditions, bathymetry, grid etc.)
     "CoupleAED2"              : false,                   ! Switch to turn on/off the biochemical model AED2
     "TurbulenceModel"         : 1,                      ! 1: k-epsilon, 2: Mellor-Yamada
     "SplitSeicheParameter"    : false,                  ! True: Use a_seiche if N2 exceeds strat_sumr and a_seiche_w otherwise, False: Always use a_seiche
@@ -35,7 +35,7 @@
     "PressureGradients"       : 0,                      ! 0: off, 1: Svensson 1978 (not working), 2: bottom friction
     "IceModel"                : 1,                      ! Switch to turn on/off the ice model
     "SnowModel"               : 1,                      ! Switch to turn on/off the snow model (needs ice model and an additional column in forcing)
-    "InitializeSeicheEnergy"  : false                   ! True: Value given in the section "ModelParameters" is taken as start value of Seiche Energy, False: Seiche Energy is set to 0 at simulation start
+    "InitializeSeicheEnergy"  : true             ! True: Value given in the section "ModelParameters" is taken as start value of Seiche Energy, False: Seiche Energy is set to 0 at simulation start
   },
   "AED2Config" : {
     "AED2ConfigFile"          : "TestCase_LakeZurich/aed2.nml",             ! AED2 config file
@@ -51,10 +51,11 @@
   "Simulation" : {
     "Timestep s"                  : 300,                ! Simulation timestep in seconds
     "Reference year"              : 1900,               ! Reference year for day count
-    "Start d"                     : 35001,              ! Simulation start in days since 01.01. of reference year
+    "Start d"                     : 35300,              ! Simulation start in days since 01.01. of reference year
     "End d"                       : 35732,              ! Simulation end
     "DisplaySimulation"           : 1,                  ! 0: No display, 1: Display when output is written, 2: Display every iteration
     "Continue from last snapshot" : false,              ! If true simulation continues from last snapshot (if present in output folder). Default: false
+    "SaveEnd"                     : false,
     "Show progress bar"           : true                ! If true the progress bar is shown, if false it is not shown
   },
   "ModelParameters" : {
@@ -76,6 +77,6 @@
     "p_sw_ice"      : 1,                                ! Fit parameter for albedo of ice, snow-ice and snow [-] (only used if IceModel = 1)
     "freez_temp"    : 0.00,                             ! Freezing temperature of water [°C] (only used if IceModel = 1)
     "snow_temp"     : 1,                                ! Temperature of snow [°C] (only used if IceModel = 1 and SnowModel = 1)
-    "seiche_ini"    : 1e10                                ! Initial seiche energy [J], only used if InitializeSeicheEnergy is True
+    "seiche_ini"    : 3.126215437267E+09                 ! Initial seiche energy [J], only used if InitializeSeicheEnergy is True
   }
 }
