@@ -53,7 +53,8 @@
     "End d"                       : 35732,
     "DisplaySimulation"           : 1,
     "Continue from last snapshot" : false,
-    "Show progress bar"           : true
+    "Show progress bar"           : true,
+    "SaveEnd"                    : true
   },
   "ModelParameters" : {
     "lat"           : 47.3,
