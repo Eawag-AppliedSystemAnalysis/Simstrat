@@ -85,7 +85,7 @@ subroutine allocate_memory(self)
 
    !# Allocate array with vertical movement rates (m/s, positive for upwards),
    !# and set these to the values provided by the model.
-   allocate(self%ws(self%grid%nz_grid, self%n_vars),stat=status)
+   allocate(self%ws(self%grid%nz_grid, self%n_AED_state_vars),stat=status)
    if (status /= 0) stop 'allocate_memory(): Error allocating (ws)'
    self%ws = zero_
 
