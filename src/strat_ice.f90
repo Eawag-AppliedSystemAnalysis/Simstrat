@@ -72,9 +72,10 @@ module strat_ice
 contains
 
    ! Initiate ice model
-   subroutine ice_module_init(self, model_cfg, model_param, grid)
+   subroutine ice_module_init(self, state, model_cfg, model_param, grid)
       implicit none
       class(IceModule) :: self
+      class(ModelState) :: state
       class(ModelConfig), target :: model_cfg
       class(ModelParam), target :: model_param
       class(StaggeredGrid), target :: grid
@@ -82,6 +83,12 @@ contains
       self%model_cfg => model_cfg
       self%model_param => model_param
       self%grid => grid
+
+      if (self%model_cfg%ice_model == 1) then
+         state%white_ice_h = model_param%w_ice_ini
+         state%black_ice_h = model_param%b_ice_ini
+         state%snow_h = model_param%snow_ini
+      end if
 
    end subroutine
 

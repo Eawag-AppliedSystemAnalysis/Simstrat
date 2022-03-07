@@ -1,6 +1,6 @@
 {
   "Input" : {
-    "Initial conditions"  : "TestCases_Results/save_end_conditions.dat",!"TestCase_LakeZurich/initcond_zuri_810107.dat",!
+    "Initial conditions"  : "TestCase_LakeZurich/initcond_zuri_810107.dat",!"TestCases_Results/save_end_conditions.dat",!
     "Grid"                : "TestCase_LakeZurich/Grid.dat",
     "Morphology"          : "TestCase_LakeZurich/morph_zuri.dat",
     "Forcing"             : "TestCase_LakeZurich/forcing_lake_zurich_1981_2013_waedenswil_homogenized.dat",
@@ -16,11 +16,11 @@
     "Times"  : 96,
     "OutputDepthReference": "surface",
     "All"   : false,
-    "Variables" : ["T", "S","HA","HW","HK","HV","Eseiche"]
+    "Variables" : ["T", "S","HA","HW","HK","HV","WhiteIceH","BlackIceH","SnowH"]
   },
   "ModelConfig" : {
-    "MaxLengthInputData"      : 1000,
-    "CoupleAED2"              : true,
+    "MaxLengthInputData"      : 2000,
+    "CoupleAED2"              : false,
     "TurbulenceModel"         : 1,
     "SplitSeicheParameter"    : false,
     "StabilityFunction"       : 2,
@@ -33,8 +33,7 @@
     "InflowMode"              : 2,
     "PressureGradients"       : 0,
     "IceModel"                : 1,
-    "SnowModel"               : 1,
-    "InitializeSeicheEnergy"  : false
+    "SnowModel"               : 1
   },
   "AED2Config" : {
     "AED2ConfigFile"          : "TestCase_LakeZurich/aed2.nml",
@@ -54,7 +53,8 @@
     "DisplaySimulation"           : 1,
     "Continue from last snapshot" : false,
     "Show progress bar"           : true,
-    "SaveEnd"                    : true
+    "Save text restart"           : false,
+    "Use text restart"            : false
   },
   "ModelParameters" : {
     "lat"           : 47.3,
@@ -75,6 +75,9 @@
     "p_sw_ice"      : 1,
     "freez_temp"    : 0.00,
     "snow_temp"     : 1,
-    "seiche_ini"    : 1e10
+    "seiche_ini"    : 0,
+    "b_ice_ini"     : 0,
+    "w_ice_ini"     : 0,
+    "snow_ini"      : 0
   }
 }

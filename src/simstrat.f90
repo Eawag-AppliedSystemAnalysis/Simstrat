@@ -182,7 +182,7 @@ program simstrat_main
    ! Initialize simulation modules
    call mod_stability%init(simdata%grid, simdata%model_cfg, simdata%model_param)
    call mod_turbulence%init(simdata%model, simdata%grid, simdata%model_cfg, simdata%model_param)
-   call mod_ice%init(simdata%model_cfg, simdata%model_param, simdata%grid)
+   call mod_ice%init(simdata%model, simdata%model_cfg, simdata%model_param, simdata%grid)
 
    ! Set temperature state var to have nu_h as nu and T as model variable
    call mod_temperature%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%nuh, simdata%model%T, simdata%grid%ubnd_vol)
@@ -340,10 +340,11 @@ contains
 
       end do
       if (simdata%sim_cfg%continue_from_snapshot) call save_snapshot(snapshot_file_path, simdata%model_cfg%couple_aed2)
-      if (simdata%sim_cfg%save_end) call save_end(end_file_path, end_file_path2)
+      if (simdata%sim_cfg%save_text_restart) call save_restart(end_file_path, end_file_path2)
    end subroutine
 
-   subroutine save_end(file_path_1, file_path_2)
+   ! Function to save the necessary variables for a restart from a text file (similar to initial conditions)
+   subroutine save_restart(file_path_1, file_path_2)
       character(len=*), intent(in) :: file_path_1
       character(len=*), intent(in) :: file_path_2
 
@@ -352,10 +353,11 @@ contains
       real(RK) :: total_grid(size(simdata%grid%z_face) + size(simdata%grid%z_volume))
       real(RK),dimension(size(simdata%grid%z_face(1:simdata%grid%ubnd_fce)) + size(simdata%grid%z_volume(1:simdata%grid%ubnd_vol))) :: depth, U, V, T, S, k, eps, num, nuh
       integer :: i
-      real(RK),dimension(9) :: row
+      real(RK),dimension(9) :: row1
+      real(RK),dimension(5) :: row2
 
       call save_files(1)%open(file_path_1, n_cols=9,status_ok=status_ok)
-      call save_files(1)%add(["depth (m) ","u (m/s)   ","v (m/s)   ","T (°C)   ","S (g/kg)  ","k (J/kg)  ","eps (W/kg)","num (wwww)","nuh (wwww)"])
+      call save_files(1)%add(["depth (m) ","u (m/s)   ","v (m/s)   ","T (°C)   ","S (g/kg)  ","k (J/kg)  ","eps (W/kg)","num (m2/s)","nuh (m2/s)"])
       call save_files(1)%next_row()
       depth(1) = simdata%grid%z_face(1)
 
@@ -385,18 +387,19 @@ contains
       call reverse_in_place(nuh)
 
       do i=1,size(simdata%grid%z_face(1:simdata%grid%ubnd_fce)) + size(simdata%grid%z_volume(1:simdata%grid%ubnd_vol))
-         row = [depth(i),U(i),V(i),T(i),S(i),k(i),eps(i),num(i),nuh(i)]
-         call save_files(1)%add(row, real_fmt="(ES24.15)")
+         row1 = [depth(i),U(i),V(i),T(i),S(i),k(i),eps(i),num(i),nuh(i)]
+         call save_files(1)%add(row1, real_fmt="(ES24.15)")
          call save_files(1)%next_row()
       end do
-
-      call save_files(2)%open(file_path_2,n_cols=1,status_ok=status_ok)
-      call save_files(2)%add('E_seiche (J)')
-      call save_Files(2)%next_row()
-
-      call save_files(2)%add(simdata%model%E_seiche,real_fmt="(ES24.12)")
-
       call save_files(1)%close(status_ok)
+
+      call save_files(2)%open(file_path_2,n_cols=5,status_ok=status_ok)
+      call save_files(2)%add(['E_seiche (J) ', 'WaterH (m)   ', 'BlackIceH (m)', 'WhiteIceH (m)', 'SnowH (m)    '])
+
+      call save_Files(2)%next_row()
+      row2 = [simdata%model%E_seiche,simdata%grid%lake_level,simdata%model%black_ice_h,simdata%model%white_ice_h,simdata%model%snow_h]
+      call save_files(2)%add(row2,real_fmt="(ES24.12)")
+
       call save_files(2)%close(status_ok)
    end subroutine
 

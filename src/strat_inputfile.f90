@@ -374,9 +374,6 @@ contains
          model%cde = model%cm0**3
          sig_e = (kappa/model%cm0)**2/(ce2 - ce1)
 
-         !model%num(1:grid%nz_grid + 1) = 0.0_RK
-         !model%nuh(1:grid%nz_grid + 1) = 0.0_RK
-
          model%tx = 0.0_RK
          model%ty = 0.0_RK
 
@@ -655,7 +652,6 @@ contains
          if (model_cfg%pressure_gradients == 1) call error('The option "PressureGradients = 1" is not working. Please choose either "0" or "2".')
          call par_file%get("ModelConfig.IceModel", model_cfg%ice_model, found); call check_field(found, 'ModelConfig.IceModel', ParName)
          call par_file%get("ModelConfig.SnowModel", model_cfg%snow_model, found); call check_field(found, 'ModelConfig.SnowModel', ParName)
-         call par_file%get("ModelConfig.InitializeSeicheEnergy", model_cfg%initialize_seiche_energy, found); call check_field(found, 'ModelConfig.InitializeSeicheEnergy', ParName)
 
          ! AED2 configuration (or another biogeochemical model if implemented)
          if (model_cfg%couple_aed2) then
@@ -708,8 +704,12 @@ contains
            call par_file%get("ModelParameters.freez_temp", model_param%freez_temp, found); call check_field(found, 'ModelParameters.freez_temp', ParName)
            call par_file%get("ModelParameters.snow_temp", model_param%snow_temp, found); call check_field(found, 'ModelParameters.snow_temp', ParName)
          end if
-         if (model_cfg%initialize_seiche_energy) then
-            call par_file%get("ModelParameters.seiche_ini", model_param%seiche_ini, found); call check_field(found, 'ModelParameters.seiche_ini', ParName)
+         call par_file%get("ModelParameters.seiche_ini", model_param%seiche_ini, found); call check_field(found, 'ModelParameters.seiche_ini', ParName)
+
+         if (model_cfg%ice_model == 1) then
+            call par_file%get("ModelParameters.b_ice_ini", model_param%b_ice_ini, found); call check_field(found, 'ModelParameters.b_ice_ini', ParName)
+           call par_file%get("ModelParameters.w_ice_ini", model_param%w_ice_ini, found); call check_field(found, 'ModelParameters.w_ice_ini', ParName)
+           call par_file%get("ModelParameters.snow_ini", model_param%snow_ini, found); call check_field(found, 'ModelParameters.snow_ini', ParName)
          end if
 
          ! Simulation Parameter
@@ -719,7 +719,8 @@ contains
          call par_file%get("Simulation.End d", sim_cfg%end_datum, found); call check_field(found, 'Simulation.End d', ParName)
          call par_file%get("Simulation.DisplaySimulation", sim_cfg%disp_simulation, found); call check_field(found, 'Simulation.DisplaySimulation', ParName)
          call par_file%get("Simulation.Continue from last snapshot", sim_cfg%continue_from_snapshot, found)
-         call par_file%get("Simulation.SaveEnd", sim_cfg%save_end, found); call check_field(found, 'Simulation.SaveEnd', ParName)
+         call par_file%get("Simulation.Save text restart", sim_cfg%save_text_restart, found); call check_field(found, 'Simulation.Save text restart', ParName)
+         call par_file%get("Simulation.Use text restart", sim_cfg%use_text_restart, found); call check_field(found, 'Simulation.Use text restart', ParName)
          call par_file%get("Simulation.Show progress bar", sim_cfg%show_bar, found); call check_field(found, 'Simulation.Show progress bar', ParName)
 
          call par_file%destroy()
@@ -747,10 +748,17 @@ contains
                  max_length_input_data=>self%simdata%model_cfg%max_length_input_data)
 
          ! Read file
+         if (self%simdata%sim_cfg%use_text_restart) then
+            call warn('Simulation is restarted from text file. This means that the Simstrat initial condition file needs to have 8 data columns instead of 6 (including num and nuh).')
+         end if
          open (13, status='old', file=self%simdata%input_cfg%InitName) ! Opens initial conditions file
          read (13, *) ! Skip header
          do i = 1, max_length_input_data ! Read initial u,v,T, etc
-            read (13, *, end=99) z_read(i), U_read(i), V_read(i), T_read(i), S_read(i), k_read(i), eps_read(i), numy_read(i), nuh_read(i)
+            if (self%simdata%sim_cfg%use_text_restart) then
+               read (13, *, end=99) z_read(i), U_read(i), V_read(i), T_read(i), S_read(i), k_read(i), eps_read(i), numy_read(i), nuh_read(i)
+            else
+               read (13, *, end=99) z_read(i), U_read(i), V_read(i), T_read(i), S_read(i), k_read(i), eps_read(i)
+            end if
             if (z_read(i)>0) then
                call error('One or several input depths of initial conditions are positive.')
             end if
@@ -786,8 +794,11 @@ contains
          call reverse_in_place(S_read(1:num_read))
          call reverse_in_place(k_read(1:num_read))
          call reverse_in_place(eps_read(1:num_read))
-         call reverse_in_place(numy_read(1:num_read))
-         call reverse_in_place(nuh_read(1:num_read))
+
+         if (self%simdata%sim_cfg%use_text_restart) then
+            call reverse_in_place(numy_read(1:num_read))
+            call reverse_in_place(nuh_read(1:num_read))
+         end if
 
          if (num_read == 1) then
             call warn('Only one row! Water column will be initially homogeneous.')
@@ -797,8 +808,11 @@ contains
             model%S = S_read(1)
             model%k = k_read(1)
             model%eps = eps_read(1)
-            model%num = numy_read(1)
-            model%nuh = nuh_read(1)
+
+            if (self%simdata%sim_cfg%use_text_restart) then
+               model%num = numy_read(1)
+               model%nuh = nuh_read(1)
+            end if
          else
             ! Interpolate variables UVTS on central grid and store
             call grid%interpolate_to_vol(z_read, U_read, num_read, model%U)
@@ -809,8 +823,11 @@ contains
             ! Interpolate k/eps on upper grid and store
             call grid%interpolate_to_face(z_read, k_read, num_read, model%k)
             call grid%interpolate_to_face(z_read, eps_read, num_read, model%eps)
-            call grid%interpolate_to_face(z_read, numy_read, num_read, model%num)
-            call grid%interpolate_to_face(z_read, nuh_read, num_read, model%nuh)
+
+            if (self%simdata%sim_cfg%use_text_restart) then
+               call grid%interpolate_to_face(z_read, numy_read, num_read, model%num)
+               call grid%interpolate_to_face(z_read, nuh_read, num_read, model%nuh)
+            end if
          end if
 
          call ok('Initial data file successfully read')
