@@ -21,7 +21,7 @@
   },
   "ModelConfig" : {
     "MaxLengthInputData"      : 1000,
-    "CoupleAED2"              : true,
+    "CoupleAED2"              : false,
     "TurbulenceModel"         : 1,
     "SplitSeicheParameter"    : false,
     "StabilityFunction"       : 2,
@@ -34,8 +34,7 @@
     "InflowMode"              : 2,
     "PressureGradients"       : 0,
     "IceModel"                : 1,
-    "SnowModel"               : 1,
-    "InitializeSeicheEnergy"  : false
+    "SnowModel"               : 1
   },
   "AED2Config" : {
     "AED2ConfigFile"          : "TestCase_LakeZurich/aed2.nml",
@@ -76,6 +75,6 @@
     "p_sw_ice"      : 1,
     "freez_temp"    : 0.00,
     "snow_temp"     : 1,
-    "seiche_ini"    : 1e10
+    "seiche_ini"    : 0
   }
 }

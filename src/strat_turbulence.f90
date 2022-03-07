@@ -65,9 +65,7 @@ contains
       self%model_cfg => model_cfg
       self%model_param => model_param
 
-      if (model_cfg%initialize_seiche_energy) then
          state%E_Seiche = model_param%seiche_ini
-      end if
    end subroutine
 
    subroutine turbulence_module_update(self, state, param)

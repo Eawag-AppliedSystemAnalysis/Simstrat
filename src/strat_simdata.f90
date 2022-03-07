@@ -116,7 +116,6 @@ module strat_simdata
       logical :: salinity_transport
       integer :: ice_model
       integer :: snow_model
-      logical :: initialize_seiche_energy
    end type
 
    ! AED2 configuration (read from file)
