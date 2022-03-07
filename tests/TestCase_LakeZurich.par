@@ -1,6 +1,6 @@
 {
   "Input" : {
-    "Initial conditions"  : "TestCase_LakeZurich/initcond_zuri_810107.dat",!"TestCases_Results/save_end_conditions.dat",!
+    "Initial conditions"  : "TestCase_LakeZurich/initcond_zuri_810107.dat",
     "Grid"                : "TestCase_LakeZurich/Grid.dat",
     "Morphology"          : "TestCase_LakeZurich/morph_zuri.dat",
     "Forcing"             : "TestCase_LakeZurich/forcing_lake_zurich_1981_2013_waedenswil_homogenized.dat",

@@ -354,7 +354,7 @@ contains
       real(RK),dimension(size(simdata%grid%z_face(1:simdata%grid%ubnd_fce)) + size(simdata%grid%z_volume(1:simdata%grid%ubnd_vol))) :: depth, U, V, T, S, k, eps, num, nuh
       integer :: i
       real(RK),dimension(9) :: row1
-      real(RK),dimension(5) :: row2
+      real(RK),dimension(4) :: row2
 
       call save_files(1)%open(file_path_1, n_cols=9,status_ok=status_ok)
       call save_files(1)%add(["depth (m) ","u (m/s)   ","v (m/s)   ","T (°C)   ","S (g/kg)  ","k (J/kg)  ","eps (W/kg)","num (m2/s)","nuh (m2/s)"])
@@ -393,11 +393,11 @@ contains
       end do
       call save_files(1)%close(status_ok)
 
-      call save_files(2)%open(file_path_2,n_cols=5,status_ok=status_ok)
-      call save_files(2)%add(['E_seiche (J) ', 'WaterH (m)   ', 'BlackIceH (m)', 'WhiteIceH (m)', 'SnowH (m)    '])
+      call save_files(2)%open(file_path_2,n_cols=4,status_ok=status_ok)
+      call save_files(2)%add(['E_seiche (J) ', 'BlackIceH (m)', 'WhiteIceH (m)', 'SnowH (m)    '])
 
       call save_Files(2)%next_row()
-      row2 = [simdata%model%E_seiche,simdata%grid%lake_level,simdata%model%black_ice_h,simdata%model%white_ice_h,simdata%model%snow_h]
+      row2 = [simdata%model%E_seiche,simdata%model%black_ice_h,simdata%model%white_ice_h,simdata%model%snow_h]
       call save_files(2)%add(row2,real_fmt="(ES24.12)")
 
       call save_files(2)%close(status_ok)
