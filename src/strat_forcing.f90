@@ -163,11 +163,11 @@ contains
       end if
 
       ! Number of values to read, depending on filtered wind and precipitation
-      if (cfg%use_filtered_wind .and. cfg%ice_model == 0) then
+      if (cfg%use_filtered_wind .and. cfg%snow_model == 0) then
          nval_offset = 1
-      else if (cfg%ice_model == 1 .and. cfg%use_filtered_wind) then
+      else if (cfg%snow_model == 1 .and. cfg%use_filtered_wind) then
          nval_offset = 2
-      else if (cfg%ice_model == 1) then
+      else if (cfg%snow_model == 1) then
          nval_offset = 1
       else
          nval_offset = 0
@@ -179,7 +179,6 @@ contains
             call error('Ice module not compatible with forcing mode 1, use 2, 3 or 5.')
          end if
 
-         call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%first_timestep)
          call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%first_timestep)
          state%u10 = A_cur(1)*param%f_wind ! MS 2014: added f_wind
          state%v10 = A_cur(2)*param%f_wind ! MS 2014: added f_wind
