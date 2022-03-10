@@ -163,15 +163,13 @@ contains
       end if
 
       ! Number of values to read, depending on filtered wind and precipitation
-      if (cfg%use_filtered_wind .and. cfg%snow_model == 0) then
-         nval_offset = 1
-      else if (cfg%snow_model == 1 .and. cfg%use_filtered_wind) then
-         nval_offset = 2
-      else if (cfg%snow_model == 1) then
-         nval_offset = 1
-      else
-         nval_offset = 0
+      nval_offset = 0
+      if (cfg%use_filtered_wind) then ! Add additional column for filtered wind
+        nval_offset = nval_offset + 1
       end if
+      if (cfg%snow_model == 1) then ! Add additional column for precipitation used in the snow model
+        nval_offset = nval_offset + 1
+      endif
 
       ! Forcing mode 1 (date, U10, V10, T_lake, H_sol)
       if (cfg%forcing_mode == 1) then
