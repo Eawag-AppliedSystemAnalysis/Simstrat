@@ -165,6 +165,10 @@ module strat_simdata
       real(RK), allocatable :: hv ! Latent heat [W m-2]
       real(RK), allocatable :: rad0 !  Solar radiation at surface  [W m-2]
 
+      ! For model calibration
+      real(RK), dimension(:), allocatable :: heat_per_layer
+      real(RK), allocatable :: schmidt_stability, mixing_depth
+
       real(RK) :: cde, cm0
       real(RK) ::  fsed
       real(RK), dimension(:), allocatable     :: fgeo_add
@@ -244,6 +248,10 @@ contains
       allocate (self%hv)
       allocate (self%rad0)
 
+      allocate(self%heat_per_layer(state_size))
+      allocate(self%schmidt_stability)
+      allocate(self%mixing_depth)
+
       ! Init to zero
       self%U = 0.0_RK
       self%V = 0.0_RK
@@ -283,6 +291,10 @@ contains
       self%hk = 0.0_RK
       self%hv = 0.0_RK
       self%rad0 = 0.0_RK
+
+      self%heat_per_layer = 0.0_RK
+      self%schmidt_stability = 0.0_RK
+      self%mixing_depth = 0.0_RK
 
       self%simulation_time_old = 0
 

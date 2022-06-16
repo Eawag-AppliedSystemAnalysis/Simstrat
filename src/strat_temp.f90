@@ -71,9 +71,51 @@ contains
       class(TempModelVar), intent(inout) :: self
       class(ModelState), intent(inout) :: state
 
+      real(RK) :: Az_vol(self%grid%nz_grid), rho(self%grid%length_vol), depth(size(self%grid%z_volume))
+      real(RK) :: rho0t(self%grid%length_vol), rho0st(self%grid%length_vol)
+      integer :: i
+      real(RK) :: volume, sum_z, zv, sumy
+
       if (self%cfg%forcing_mode==1) then
          state%T(self%grid%ubnd_vol) = state%SST
       end if
+
+
+      ! Calculation of heat (per layer), schmidt stability and mixing depht for model calibration
+      call self%grid%interpolate_to_vol(self%grid%z_face,self%grid%Az, self%grid%nz_grid+1, Az_vol)
+
+      volume = 0
+      sum_z = 0
+
+      do i = 1, self%grid%ubnd_vol
+         rho0t(i) = 0.9998395_RK + state%T(i)*(6.7914e-5_RK + state%T(i)*(-9.0894e-6_RK + state%T(i)* &
+                                             (1.0171e-7_RK + state%T(i)*(-1.2846e-9_RK + state%T(i)*(1.1592e-11_RK + state%T(i)*(-5.0125e-14_RK))))))
+         rho0st(i) = (8.181e-4_RK + state%T(i)*(-3.85e-6_RK + state%T(i)*(4.96e-8_RK)))*state%S(i)
+         rho(i) = rho_0*(rho0t(i) + rho0st(i))
+
+         depth(i) = self%grid%z_volume(self%grid%ubnd_vol) - self%grid%z_volume(i)
+
+         volume = volume + Az_vol(i)*self%grid%h(i)
+         sum_z = sum_z + depth(i)*Az_vol(i)*self%grid%h(i)
+
+         state%heat_per_layer(i) = Az_vol(i)*state%T(i)*cp*rho(i)/1e12
+      end do
+      zv = sum_z/volume
+
+      state%schmidt_stability = 9.81/self%grid%Az(self%grid%ubnd_fce)*sum((depth - zv)*rho*Az_vol*self%grid%h)
+
+      sumy = 0
+      do i = 1, self%grid%ubnd_vol
+         sumy = sumy + (depth(i) - zv)*rho(i)*Az_vol(i)*self%grid%h(i)
+      end do
+      state%schmidt_stability = 9.81/self%grid%Az(self%grid%ubnd_fce)*sumy
+
+      do i = self%grid%ubnd_vol,1,-1
+         if ((state%T(self%grid%ubnd_vol) - state%T(i)) > 1) then
+            state%mixing_depth = depth(i)
+            return
+         end if
+      end do
 
    end subroutine
 
