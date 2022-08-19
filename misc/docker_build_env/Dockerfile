@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends apt-utils \
 gfortran gfortran-mingw-w64 make nano less tree python3 python3-pip doxygen git graphviz locales
 
 # install some needed python modules
+RUN pip3 install pip --upgrade
 RUN pip3 install setuptools
 RUN pip3 install wheel
 RUN pip3 install future
