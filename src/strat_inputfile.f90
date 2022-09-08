@@ -325,7 +325,7 @@ contains
 
                case('HeatPL')
                   ! Heat per layer [J]
-                  self%simdata%output_cfg%output_vars(i)%name = "HeatPerLayer"
+                  self%simdata%output_cfg%output_vars(i)%name = "HeatPL"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%heat_per_layer
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .false.
