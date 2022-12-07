@@ -357,7 +357,6 @@ contains
                   call self%output_files(i)%next_row()
                end if
             else
-               write(6,*) 'hans', file_path, self%n_vars_AED2_diagnostic_sheet, self%n_vars
                call self%output_files(i)%open(file_path, n_cols=1 + 1, append=append, status_ok=status_ok)
                if (.not. append) then
                   call self%output_files(i)%add('Datetime')
