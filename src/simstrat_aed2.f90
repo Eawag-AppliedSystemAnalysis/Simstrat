@@ -81,12 +81,6 @@ module simstrat_aed2
       integer :: n_AED2_state_vars, n_vars, n_vars_ben, n_vars_diag, n_vars_diag_sheet
       integer :: zone_var = 0
 
-      ! Variables for in-/outflow
-      real(RK), dimension(:, :), allocatable   :: z_Inp_AED2, Q_start_AED2, Qs_start_AED2, Q_end_AED2, Qs_end_AED2, Q_read_start_AED2, Q_read_end_AED2
-      real(RK), dimension(:, :), allocatable   :: Inp_read_start_AED2, Inp_read_end_AED2, Qs_read_start_AED2, Qs_read_end_AED2, Q_inp_AED2
-      real(RK), dimension(:), allocatable :: tb_start, tb_end ! Input depths, start time, end time
-      integer, dimension(:), allocatable :: eof, nval, nval_deep, nval_surface
-
    contains
       procedure, pass(self), public :: init
       procedure, pass(self), public :: update
