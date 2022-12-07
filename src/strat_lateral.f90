@@ -280,6 +280,10 @@ contains
 
                   ! Read number of deep and surface columns
                   read(self%fnum(i), *, end=9) self%nval_deep(i), self%nval_surface(i)
+
+                  ! Check whether both nval_deep and nval_surface are given in the inflow file. If only one number is given, then nval_surface is equal to -1 (the dummy on the line below)
+                  if (self%nval_surface(i) == -1) call error('Define the number of columns for deep and surface inflows of '//fname//'.')
+
                   call count_read(self, i)
 
                   ! Check whether there is deep inflow (fixed) or surface inflow (varies with lake level)
@@ -615,6 +619,10 @@ contains
 
                   ! Number of deep (fixed) and surface inputs to read
                   read (self%fnum(i), *, end=9) self%nval_deep(i), self%nval_surface(i)
+                  
+                  ! Check whether both nval_deep and nval_surface are given in the inflow file. If only one number is given, then nval_surface is equal to -1 (the dummy on the line below)
+                  if (self%nval_surface(i) == -1) call error('Define the number of columns for deep and surface inflows of '//fname//'.')
+
                   call count_read(self, i)
 
                   ! Check whether there is deep inflow (fixed) or surface inflow (varies with lake level)
