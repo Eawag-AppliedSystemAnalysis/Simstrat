@@ -680,6 +680,7 @@ contains
          end if
          call par_file%get("ModelParameters.q_nn", model_param%q_NN, found); call check_field(found, 'ModelParameters.q_nn', ParName)
          call par_file%get("ModelParameters.f_wind", model_param%f_wind, found); call check_field(found, 'ModelParameters.f_wind', ParName)
+         call par_file%get("ModelParameters.f_wind_aed", model_param%f_wind_aed, found); call check_field(found, 'ModelParameters.f_wind_aed', ParName)
 
          ! C10 is a physical parameter on the order of e-3 if wind drag model is 1. Conversely, it is a calibration parameter
          ! with a value around 1 for wind drag models 2 and 3. This fact can lead to confusion and thus we check for realistic

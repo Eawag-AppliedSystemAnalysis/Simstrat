@@ -141,6 +141,7 @@ module strat_simdata
       real(RK) :: strat_sumr
       real(RK) :: q_NN
       real(RK) :: f_wind
+      real(RK) :: f_wind_aed
       real(RK) :: C10_constant
       real(RK) :: CD
       real(RK) :: fgeo
@@ -195,7 +196,7 @@ module strat_simdata
       real(RK), dimension(:), allocatable :: absorb ! Absorption coeff [m-1]
       real(RK), dimension(:), pointer :: absorb_vol ! Absorption coeff on vol grid [m-1]
       real(RK) :: u10, v10, Wf ! Wind speeds, wind factor
-      real(RK), pointer :: uv10 ! pointer attribute needed for AED2
+      real(RK), pointer :: uv10, raw_wind ! pointer attribute needed for AED2
       real(RK), pointer :: rain ! pointer attribute needed for AED2, rain is not calculated in Simstrat for the moment, but required by AED2
       real(RK) :: drag, u_taus ! Drag
       real(RK), pointer :: u_taub ! pointer attribute needed for AED2
@@ -351,6 +352,8 @@ contains
       ! init pointers
       allocate(self%uv10)
       self%uv10 = 0.0_RK
+      allocate(self%raw_wind)
+      self%raw_wind = 0.0_RK
       allocate(self%rain)
       self%rain = 0.0_RK
       allocate(self%u_taub)
@@ -390,7 +393,7 @@ contains
       write(80) self%E_Seiche, self%gamma
       call save_array(80, self%absorb)
       call save_array_pointer(80, self%absorb_vol)
-      write(80) self%u10, self%v10, self%uv10, self%Wf
+      write(80) self%u10, self%v10, self%uv10, self%raw_wind, self%Wf
       write(80) self%u_taub, self%drag, self%u_taus, self%rain
       write(80) self%tx, self%ty
       write(80) self%C10
@@ -453,7 +456,7 @@ contains
       read(81) self%E_Seiche, self%gamma
       call read_array(81, self%absorb)
       call read_array_pointer(81, self%absorb_vol)
-      read(81) self%u10, self%v10, self%uv10, self%Wf
+      read(81) self%u10, self%v10, self%uv10, self%raw_wind, self%Wf
       read(81) self%u_taub, self%drag, self%u_taus, self%rain
       read(81) self%tx, self%ty
       read(81) self%C10

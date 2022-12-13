@@ -64,6 +64,7 @@
     "strat_sumr"    : 0,
     "q_nn"          : 0.75,
     "f_wind"        : 1.6423,
+    "f_wind_aed"    : 1,
     "c10"           : 1,
     "cd"            : 0.002,
     "hgeo"          : 0.1,

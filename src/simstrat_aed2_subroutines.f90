@@ -227,7 +227,7 @@ subroutine define_column(self, state)
                case ( 'pressure' )    ; column(av)%cell => self%pres
                case ( 'depth' )       ; column(av)%cell => self%grid%layer_depth
                case ( 'sed_zone' )    ; column(av)%cell_sheet => self%sed_zones(1)
-               case ( 'wind_speed' )  ; column(av)%cell_sheet => state%uv10
+               case ( 'wind_speed' )  ; column(av)%cell_sheet => state%raw_wind
                case ( 'rain')         ; column(av)%cell_sheet => state%rain
                case ( 'par_sf' )      ; column(av)%cell_sheet => state%rad0
                case ( 'taub' )        ; column(av)%cell_sheet => state%u_taub
