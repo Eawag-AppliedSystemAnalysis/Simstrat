@@ -9,7 +9,7 @@ INPUT_DATA_FOLDER = "TestCase_LakeZurich"
 ORIGINAL_CONFIG_FILE = "TestCase_LakeZurich.par"
 USED_CONFIG_FILE = "config.par"
 SIMSTRAT_EXE = "../build/simstrat"
-EXPECTED_RESULTS_FOLDER = "TestCases_Results_expected_windows" if sys.platform.startswith('win') else "TestCases_Results_expected"
+EXPECTED_RESULTS_FOLDER = "TestCases_Results_expected_windows" if sys.platform.startswith('win') else "TestCases_Results_expected_linux"
 ACTUAL_RESULTS_FOLDER = "TestCases_Results"
 ERROR_FOLDER = "TestDiffs"
 
