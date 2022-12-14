@@ -28,3 +28,8 @@ python3 ./tests.py
 ~~~
 
 under linux.
+
+# Expected test case results
+
+The expected results of the test cases are always generated using the latest release. Current Simstrat release is 3.02 and current AED2 release is 1.3.5. In windows, Simstrat and AED2 were compiled using gfortran 8.1 and in Linux using gfortran 7.5.
+Fobos settings used for Simstrat calibration can be found in the latest release
