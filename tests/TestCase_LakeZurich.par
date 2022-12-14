@@ -1,10 +1,10 @@
 {
   "Input" : {
-    "Initial conditions"  : "TestCase_LakeZurich/initcond_zuri_810107.dat",
+    "Initial conditions"  : "TestCase_LakeZurich/InitialConditions.dat",
     "Grid"                : "TestCase_LakeZurich/Grid.dat",
-    "Morphology"          : "TestCase_LakeZurich/morph_zuri.dat",
-    "Forcing"             : "TestCase_LakeZurich/forcing_lake_zurich_1981_2013_waedenswil_homogenized.dat",
-    "Absorption"          : "TestCase_LakeZurich/absorption_zh_1981_2013.dat",
+    "Morphology"          : "TestCase_LakeZurich/Bathymetry.dat",
+    "Forcing"             : "TestCase_LakeZurich/MeteoForcing.dat",
+    "Absorption"          : "TestCase_LakeZurich/Absorption.dat",
     "Inflow"              : "TestCase_LakeZurich/Qinp.dat",
     "Outflow"             : "TestCase_LakeZurich/Qout.dat",
     "Inflow temperature"  : "TestCase_LakeZurich/Tinp.dat",
@@ -15,7 +15,7 @@
     "Depths" : 1,
     "Times"  : 96,
     "OutputDepthReference": "surface",
-    "All"   : false,
+    "All"   : true,
 
     "Variables" : ["T", "S","HA","HW","HK","HV","Eseiche"]
   },
@@ -49,32 +49,32 @@
   },
   "Simulation" : {
     "Timestep s"                  : 300,
-    "Reference year"              : 1900,
-    "Start d"                     : 35001,
-    "End d"                       : 35732,
+    "Reference year"              : 1981,
+    "Start d"                     : 12001,
+    "End d"                       : 12732,
     "DisplaySimulation"           : 1,
     "Continue from last snapshot" : false,
     "Show progress bar"           : true
   },
   "ModelParameters" : {
     "lat"           : 47.3,
-    "p_air"         : 960,
-    "a_seiche"      : 0.0011046,
+    "p_air"         : 965,
+    "a_seiche"      : 0.0045971307,
     "a_seiche_w"    : 0,
     "strat_sumr"    : 0,
-    "q_nn"          : 0.75,
-    "f_wind"        : 1.6423,
+    "q_nn"          : 1.1,
+    "f_wind"        : 1.25126793,
     "c10"           : 1,
     "cd"            : 0.002,
-    "hgeo"          : 0.1,
+    "hgeo"          : 0.08,
     "p_sw_water"    : 1,
-    "p_lw"          : 1.1978,
+    "p_lw"          : 1.01091023,
     "p_windf"       : 1,
-    "beta_sol"      : 0.3,
-    "wat_albedo"    : 0.08,
+    "beta_sol"      : 0.35,
+    "wat_albedo"    : 0.09,
     "p_sw_ice"      : 1,
     "freez_temp"    : 0.00,
-    "snow_temp"     : 1,
+    "snow_temp"     : 0.5,
     "seiche_ini"    : 0
   }
 }
