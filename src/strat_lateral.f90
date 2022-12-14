@@ -284,6 +284,19 @@ contains
                   ! Check whether both nval_deep and nval_surface are given in the inflow file. If only one number is given, then nval_surface is equal to -1 (the dummy on the line below)
                   if (self%nval_surface(i) == -1) call error('Define the number of columns for deep and surface inflows of '//fname//'.')
 
+                  ! Check whether the input files have the same number of columns and issue a warning otherwise
+                  if (i > 2) then
+                     if (i == 3) then ! compare Tin with Qin, not with Qout
+                        if (self%nval_deep(i) /= self%nval_deep(i - 2) .or. self%nval_surface(i) /= self%nval_surface(i - 2)) then
+                           call warn('Not all inflow files have the same number of inflow columns')
+                        end if
+                     else
+                        if (self%nval_deep(i) /= self%nval_deep(i - 1) .or. self%nval_surface(i) /= self%nval_surface(i - 1)) then
+                           call warn('Not all inflow files have the same number of inflow columns')
+                        end if
+                     end if
+                  end if
+
                   call count_read(self, i)
 
                   ! Check whether there is deep inflow (fixed) or surface inflow (varies with lake level)
@@ -622,6 +635,19 @@ contains
                   
                   ! Check whether both nval_deep and nval_surface are given in the inflow file. If only one number is given, then nval_surface is equal to -1 (the dummy on the line below)
                   if (self%nval_surface(i) == -1) call error('Define the number of columns for deep and surface inflows of '//fname//'.')
+
+                  ! Check whether the input files have the same number of columns and issue a warning otherwise
+                  if (i > 2) then
+                     if (i == 3) then ! compare Tin with Qin, not with Qout
+                        if (self%nval_deep(i) /= self%nval_deep(i - 2) .or. self%nval_surface(i) /= self%nval_surface(i - 2)) then
+                           call warn('Not all inflow files have the same number of inflow columns')
+                        end if
+                     else
+                        if (self%nval_deep(i) /= self%nval_deep(i - 1) .or. self%nval_surface(i) /= self%nval_surface(i - 1)) then
+                           call warn('Not all inflow files have the same number of inflow columns')
+                        end if
+                     end if
+                  end if
 
                   call count_read(self, i)
 
