@@ -102,7 +102,7 @@ class Tester(object):
 
     def extract_forcing_data_subset(self, end_time):
         lines = []
-        with open(self.input_file("forcing_lake_zurich_1981_2013_waedenswil_homogenized.dat")) as f:
+        with open(self.input_file("MeteoForcing.dat")) as f:
             for line in f:
                 if len(lines) == 0 or float(line.split()[0]) <= end_time:
                     lines.append(line)
@@ -166,10 +166,10 @@ class Tester(object):
     def read_and_interpolate(self, variable):
         path = self.output_file(variable)
         lines = read_lines(path)
-        if len(lines) != 4:
-            self.fail("Output file %s has %s lines instead of 4" % (path, len(lines)))
-        r1 = as_row(lines[2])
-        r0 = as_row(lines[3])
+        if len(lines) != 3:
+            self.fail("Output file %s has %s lines instead of 3" % (path, len(lines)))
+        r1 = as_row(lines[1])
+        r0 = as_row(lines[2])
         return [0.2 * r1[i] + 0.8 * r0[i] for i in range(len(r0))]
 
     def assert_equal_outputs(self):
@@ -247,29 +247,29 @@ tester = Tester()
 
 tester.log_title("Test incremental simulation with output at equidistant time steps")
 tester.clean_up()
-tester.run_simulation(35150.0)
-tester.run_simulation(35250.125)
-tester.run_simulation(35350.375)
-tester.log_step("Run until end (35732)")
+tester.run_simulation(12150.0)
+tester.run_simulation(12250.125)
+tester.run_simulation(12350.375)
+tester.log_step("Run until end (12732)")
 tester.create_simulation_config({"Output.All" : True})
 tester.execute_simstrat(USED_CONFIG_FILE)
 tester.assert_equal_outputs()
 
 tester.log_title("Test incremental simulation and output interpolation for a list of output time points")
 tester.clean_up()
-tester.run_simulation_with_defined_times([35010.09722222222222, 35010.1006944444444])
+tester.run_simulation_with_defined_times([12010.09722222222222, 12010.1006944444444])
 v_expected = tester.read_and_interpolate("V")
 nn_expected = tester.read_and_interpolate("NN")
 hk_expected = tester.read_and_interpolate("HK")
 tester.clean_up()
-tester.run_simulation_with_defined_times([35002.5, 35002.625, 35003, 35010.09722222])
-tester.run_simulation_with_defined_times([35002.5, 35002.625, 35003, 35010.09722222, 35010.1, 35010.1006944, 35020, 35100])
+tester.run_simulation_with_defined_times([12002.5, 12002.625, 12003, 12010.09722222])
+tester.run_simulation_with_defined_times([12002.5, 12002.625, 12003, 12010.09722222, 12010.1, 12010.1006944, 12020, 12100])
 tester.log_step("Check interpolation")
-tester.assert_equal_lists(tester.read_row(tester.output_file("V"), 35010.1), v_expected, "V")
-tester.assert_equal_lists(tester.read_row(tester.output_file("NN"), 35010.1), nn_expected, "NN")
-tester.assert_equal_lists(tester.read_row(tester.output_file("HK"), 35010.1), hk_expected, "HK")
-tester.assert_equal_outputs_for(35003)
-tester.assert_equal_outputs_for(35020)
-tester.assert_equal_outputs_for(35100)
+tester.assert_equal_lists(tester.read_row(tester.output_file("V"), 12010.1), v_expected, "V")
+tester.assert_equal_lists(tester.read_row(tester.output_file("NN"), 12010.1), nn_expected, "NN")
+tester.assert_equal_lists(tester.read_row(tester.output_file("HK"), 12010.1), hk_expected, "HK")
+tester.assert_equal_outputs_for(12003)
+tester.assert_equal_outputs_for(12020)
+tester.assert_equal_outputs_for(12100)
 
 sys.exit(tester.close())
