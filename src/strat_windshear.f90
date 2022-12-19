@@ -56,7 +56,7 @@ contains
       class(UVModelVar), intent(inout) :: self
       class(ModelState), intent(inout) :: state
       class(ModelParam), intent(inout) :: param
-      real(RK) :: integr, length
+      real(RK) :: mean_velocity, basin_length
       real(RK), dimension(:) ::  sources, boundaries
       real(RK), dimension(size(self%var)) ::  uv_norm
       associate (grid=>self%grid, &
@@ -64,24 +64,19 @@ contains
                  ubnd_vol=>self%grid%ubnd_vol)
 
          !!!!!!!! Precalculations !!!!!!!!
-         if (self%cfg%pressure_gradients == 1) then
-            integr = sum(self%var(1:ubnd_vol))
-            length = sqrt(grid%Az(ubnd_fce))
-         else
-            integr = 0
-            length = 0
-         end if
-
          uv_norm = sqrt(state%U**2 + state%V**2)
+         mean_velocity = 0
+         basin_length = 0
 
          !!!!!!!! Define sources !!!!!!!!
          sources = 0
-         if (self%cfg%pressure_gradients == 1) then !Svensson 1978
-            sources(2:ubnd_vol - 1) = -pi**2*rho_0*g*integr/ubnd_vol*grid%max_depth/length**2
-         elseif (self%cfg%pressure_gradients == 2) then !???
-            sources(2:ubnd_vol - 1) = -state%drag*self%var(2:ubnd_vol - 1)* &
-                                      uv_norm(2:ubnd_vol - 1)* &
-                                      grid%dAz(2:ubnd_vol - 1)/grid%Az(2:ubnd_vol - 1)
+
+         if (self%cfg%pressure_gradients == 1) then ! Horizontal pressure gradients according to Svensson and Sahlberg (1989)
+            mean_velocity = sum(self%var(1:ubnd_vol))/ubnd_vol
+            basin_length = sqrt(grid%Az(ubnd_fce))
+            sources(2:ubnd_vol - 1) = -pi**2 * g * grid%max_depth / basin_length**2 * mean_velocity
+         elseif (self%cfg%pressure_gradients == 2) then ! Add bottom drag (mostly important for lakes close to the equator to avoid resonance)
+            sources(2:ubnd_vol - 1) = -state%drag*self%var(2:ubnd_vol - 1)*uv_norm(2:ubnd_vol - 1)*grid%dAz(2:ubnd_vol - 1)/grid%Az(2:ubnd_vol - 1)
          end if
 
          ! Set surface condition based on shear stress variable
