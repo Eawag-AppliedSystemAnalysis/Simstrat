@@ -32,7 +32,7 @@
     "SeicheNormalization"     : 2,
     "WindDragModel"           : 3,
     "InflowMode"              : 2,
-    "PressureGradients"       : 0,
+    "BottomFriction"          : 0,
     "IceModel"                : 1,
     "SnowModel"               : 1
   },
