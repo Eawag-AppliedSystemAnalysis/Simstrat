@@ -160,8 +160,10 @@ program simstrat_main
 
    ! If output times are at regular intervals
    if (simdata%output_cfg%thinning_interval > 0) then
+      ! Compute number of simulation days
       simulation_end_time(1) = int(floor(simdata%sim_cfg%end_datum - simdata%sim_cfg%start_datum))
-      simulation_end_time(2) = int(floor(simdata%sim_cfg%end_datum - simdata%sim_cfg%start_datum - real(simulation_end_time(1), RK)) * SECONDS_PER_DAY + 0.5)
+      ! Compute number of simulation seconds (in addition to the days calculated above)
+      simulation_end_time(2) = (simdata%sim_cfg%end_datum - simdata%sim_cfg%start_datum - real(simulation_end_time(1), RK)) * SECONDS_PER_DAY + 0.5
    
    ! If output times are user defined
    else
