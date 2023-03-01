@@ -283,7 +283,7 @@ contains
             end if
 
             Vap_atm = A_cur(5)
-            H_A = A_cur(6)
+            H_A = (1 - r_a)*A_cur(6) ! FB 2023: add reflection of longwave radiation
             if (cfg%use_filtered_wind) state%Wf = A_cur(7) ! AG 2014
             if (cfg%snow_model == 1 .and. cfg%use_filtered_wind) then
                state%precip = max(A_cur(8),0.0_RK)
