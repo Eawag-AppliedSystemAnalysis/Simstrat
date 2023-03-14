@@ -345,7 +345,10 @@ contains
 
       end do
       if (simdata%sim_cfg%continue_from_snapshot) call save_snapshot(snapshot_file_path, simdata%model_cfg%couple_aed2)
-      if (simdata%sim_cfg%save_text_restart) call save_restart(file_text_restart, file_text_restart2)
+      if (simdata%sim_cfg%save_text_restart) then
+         if (simdata%model_cfg%couple_aed2) call warn('Text restart is not working for AED2 variables.')
+         call save_restart(file_text_restart, file_text_restart2)
+      end if
    end subroutine
 
    ! Function to save the necessary variables for a restart from a text file (similar to initial conditions)
