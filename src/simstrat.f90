@@ -48,6 +48,7 @@ program simstrat_main
    use simstrat_aed2
    use strat_lateral
    use forbear
+   use csv_module
    use, intrinsic :: ieee_arithmetic
 
    implicit none
@@ -77,10 +78,13 @@ program simstrat_main
    class(GenericLateralModule), pointer :: mod_lateral
    ! Instantiate progress bar object
    type(bar_object):: bar
+   type(csv_file), dimension(:), allocatable :: csv_files
 
    character(len=100) :: arg
    character(len=:), allocatable :: ParName
    character(len=:), allocatable :: snapshot_file_path
+   character(len=:), allocatable :: end_file_path
+   character(len=:), allocatable :: end_file_path2
    logical :: continue_from_snapshot = .false.
    integer(8),dimension(2) :: simulation_end_time
    real(RK) :: new_start_datum
@@ -148,6 +152,8 @@ program simstrat_main
 
    ! Binary simulation snapshot file
    snapshot_file_path = simdata%output_cfg%PathOut//'/simulation-snapshot.dat'
+   end_file_path = simdata%output_cfg%PathOut//'/save_end_conditions.dat'
+   end_file_path2 = simdata%output_cfg%PathOut//'/save_end_conditions2.dat'
    if (simdata%sim_cfg%continue_from_snapshot) then
       inquire (file=snapshot_file_path, exist=continue_from_snapshot)
       print *,"Snapshot is available and used",continue_from_snapshot
@@ -178,7 +184,7 @@ program simstrat_main
    ! Initialize simulation modules
    call mod_stability%init(simdata%grid, simdata%model_cfg, simdata%model_param)
    call mod_turbulence%init(simdata%model, simdata%grid, simdata%model_cfg, simdata%model_param)
-   call mod_ice%init(simdata%model_cfg, simdata%model_param, simdata%grid)
+   call mod_ice%init(simdata%model, simdata%model_cfg, simdata%model_param, simdata%grid)
 
    ! Set temperature state var to have nu_h as nu and T as model variable
    call mod_temperature%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%nuh, simdata%model%T, simdata%grid%ubnd_vol)
@@ -273,9 +279,12 @@ contains
          else
             call mod_absorption%update(simdata%model)
          end if
-
+!write(6,*) 'before stab',simdata%model%k(simdata%grid%ubnd_fce),simdata%model%eps(simdata%grid%ubnd_fce),simdata%model%num(simdata%grid%ubnd_fce),simdata%model%nuh(simdata%grid%ubnd_fce),&
+!simdata%model%NN(simdata%grid%ubnd_fce), simdata%model%rho(simdata%grid%ubnd_vol)
          ! Update physics
          call mod_stability%update(simdata%model)
+!write(6,*) 'after stab',simdata%model%k(simdata%grid%ubnd_fce),simdata%model%eps(simdata%grid%ubnd_fce),simdata%model%num(simdata%grid%ubnd_fce),simdata%model%nuh(simdata%grid%ubnd_fce),&
+!simdata%model%NN(simdata%grid%ubnd_fce), simdata%model%rho(simdata%grid%ubnd_vol)
 
          ! If there is inflow/outflow do advection part
          if (simdata%model_cfg%inflow_mode > 0) then
@@ -333,6 +342,67 @@ contains
 
       end do
       if (simdata%sim_cfg%continue_from_snapshot) call save_snapshot(snapshot_file_path, simdata%model_cfg%couple_aed2)
+      if (simdata%sim_cfg%save_text_restart) call save_restart(end_file_path, end_file_path2)
+   end subroutine
+
+   ! Function to save the necessary variables for a restart from a text file (similar to initial conditions)
+   subroutine save_restart(file_path_1, file_path_2)
+      character(len=*), intent(in) :: file_path_1
+      character(len=*), intent(in) :: file_path_2
+
+      logical :: status_ok
+      type(csv_file), dimension(2):: save_files
+      real(RK) :: total_grid(size(simdata%grid%z_face) + size(simdata%grid%z_volume))
+      real(RK),dimension(size(simdata%grid%z_face(1:simdata%grid%ubnd_fce)) + size(simdata%grid%z_volume(1:simdata%grid%ubnd_vol))) :: depth, U, V, T, S, k, eps, num, nuh
+      integer :: i
+      real(RK),dimension(9) :: row1
+      real(RK),dimension(4) :: row2
+
+      call save_files(1)%open(file_path_1, n_cols=9,status_ok=status_ok)
+      call save_files(1)%add(["depth (m) ","u (m/s)   ","v (m/s)   ","T (°C)   ","S (g/kg)  ","k (J/kg)  ","eps (W/kg)","num (m2/s)","nuh (m2/s)"])
+      call save_files(1)%next_row()
+      depth(1) = simdata%grid%z_face(1)
+
+      do i=2,2*size(simdata%grid%z_volume(1:simdata%grid%ubnd_vol)),2
+         depth(i+1) = simdata%grid%z_face(i/2+1)
+         depth(i) = simdata%grid%z_volume(i/2)
+      end do
+
+      call Interp(simdata%grid%z_volume(1:simdata%grid%ubnd_vol), simdata%model%U(1:simdata%grid%ubnd_vol), size(simdata%model%U), depth, U, size(U))
+      call Interp(simdata%grid%z_volume(1:simdata%grid%ubnd_vol), simdata%model%V(1:simdata%grid%ubnd_vol), size(simdata%model%V), depth, V, size(V))
+      call Interp(simdata%grid%z_volume(1:simdata%grid%ubnd_vol), simdata%model%T(1:simdata%grid%ubnd_vol), size(simdata%model%T), depth, T, size(T))
+      call Interp(simdata%grid%z_volume(1:simdata%grid%ubnd_vol), simdata%model%S(1:simdata%grid%ubnd_vol), size(simdata%model%S), depth, S, size(S))
+      call Interp(simdata%grid%z_face(1:simdata%grid%ubnd_fce), simdata%model%k(1:simdata%grid%ubnd_vol), size(simdata%model%k), depth, k, size(k))
+      call Interp(simdata%grid%z_face(1:simdata%grid%ubnd_fce), simdata%model%eps(1:simdata%grid%ubnd_vol), size(simdata%model%eps), depth, eps, size(eps))
+      call Interp(simdata%grid%z_face(1:simdata%grid%ubnd_fce), simdata%model%num(1:simdata%grid%ubnd_vol), size(simdata%model%num), depth, num, size(num))
+      call Interp(simdata%grid%z_face(1:simdata%grid%ubnd_fce), simdata%model%nuh(1:simdata%grid%ubnd_vol), size(simdata%model%nuh), depth, nuh, size(nuh))
+
+      call reverse_in_place(depth)
+      depth = depth - depth(1)
+      call reverse_in_place(U)
+      call reverse_in_place(V)
+      call reverse_in_place(T)
+      call reverse_in_place(S)
+      call reverse_in_place(k)
+      call reverse_in_place(eps)
+      call reverse_in_place(num)
+      call reverse_in_place(nuh)
+
+      do i=1,size(simdata%grid%z_face(1:simdata%grid%ubnd_fce)) + size(simdata%grid%z_volume(1:simdata%grid%ubnd_vol))
+         row1 = [depth(i),U(i),V(i),T(i),S(i),k(i),eps(i),num(i),nuh(i)]
+         call save_files(1)%add(row1, real_fmt="(ES24.15)")
+         call save_files(1)%next_row()
+      end do
+      call save_files(1)%close(status_ok)
+
+      call save_files(2)%open(file_path_2,n_cols=4,status_ok=status_ok)
+      call save_files(2)%add(['E_seiche (J) ', 'BlackIceH (m)', 'WhiteIceH (m)', 'SnowH (m)    '])
+
+      call save_Files(2)%next_row()
+      row2 = [simdata%model%E_seiche,simdata%model%black_ice_h,simdata%model%white_ice_h,simdata%model%snow_h]
+      call save_files(2)%add(row2,real_fmt="(ES24.12)")
+
+      call save_files(2)%close(status_ok)
    end subroutine
 
    subroutine save_snapshot(file_path, couple_aed2)

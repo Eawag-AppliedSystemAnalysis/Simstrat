@@ -65,7 +65,7 @@ contains
       self%model_cfg => model_cfg
       self%model_param => model_param
 
-         state%E_Seiche = model_param%seiche_ini
+      state%E_Seiche = model_param%seiche_ini
    end subroutine
 
    subroutine turbulence_module_update(self, state, param)
