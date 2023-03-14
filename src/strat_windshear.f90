@@ -68,7 +68,7 @@ contains
          !!!!!!!! Define sources !!!!!!!!
          sources = 0
 
-         if (self%cfg%bottom_friction == 1) then ! Add bottom drag (mostly important for lakes close to the equator to avoid resonance)
+         if (self%cfg%bottom_friction) then ! Add bottom drag (mostly important for lakes close to the equator to avoid resonance)
             sources(2:ubnd_vol - 1) = -state%drag*self%var(2:ubnd_vol - 1)*uv_norm(2:ubnd_vol - 1)*grid%dAz(2:ubnd_vol - 1)/grid%Az(2:ubnd_vol - 1)
          end if
 
