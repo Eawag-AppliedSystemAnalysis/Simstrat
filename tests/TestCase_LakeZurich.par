@@ -53,7 +53,7 @@
     "DisplaySimulation"           : 1,
     "Continue from last snapshot" : false,
     "Show progress bar"           : true,
-    "Save text restart"           : true,
+    "Save text restart"           : false,
     "Use text restart"            : false
   },
   "ModelParameters" : {
