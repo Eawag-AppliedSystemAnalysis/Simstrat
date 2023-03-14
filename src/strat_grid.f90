@@ -281,9 +281,9 @@ contains
       implicit none
       class(StaggeredGrid), intent(inout) :: self
       class(GridConfig), intent(inout) :: config
-      integer :: num_read
+      integer :: n_read
 
-      num_read = size(config%A_read)
+      n_read = size(config%A_read)
 
       self%z_zero = config%z_A_read(1) ! z_zero is the negative value of the lowest depth in the morphology file
 
@@ -297,19 +297,19 @@ contains
       class(StaggeredGrid), intent(inout) :: self
       class(GridConfig), intent(inout) :: config
 
-      integer :: num_read
+      integer :: n_read
       associate (nz_grid=>self%nz_grid, &
                  dAz=>self%dAz, &
                  z_face=>self%z_face, &
                  Az=>self%Az, &
                  Az_vol=>self%Az_vol)
 
-         num_read = size(config%A_read)
+         n_read = size(config%A_read)
 
          ! Interpolate area (A) at all depths (z_face)
-         call Interp(config%z_A_read, config%A_read, num_read, self%z_face, Az, nz_grid + 1)
+         call Interp(config%z_A_read, config%A_read, n_read, self%z_face, Az, nz_grid + 1)
          ! Interpolate area on volume grid (needed for AED2)
-         call Interp(config%z_A_read, config%A_read, num_read, self%z_volume(1:nz_grid), Az_vol, nz_grid)
+         call Interp(config%z_A_read, config%A_read, n_read, self%z_volume(1:nz_grid), Az_vol, nz_grid)
 
          ! Compute area derivative (= projected sediment area over layer thickness)
          dAz(1:nz_grid) = (Az(2:nz_grid + 1) - Az(1:nz_grid))/(z_face(2:nz_grid + 1) - z_face(1:nz_grid))

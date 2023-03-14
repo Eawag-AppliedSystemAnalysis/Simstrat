@@ -16,7 +16,7 @@
     "Times"  : 96,
     "OutputDepthReference": "surface",
     "All"   : false,
-    "Variables" : ["T", "S","HA","HW","HK","HV","ESeiche","WhiteIceH","BlackIceH","SnowH"]
+    "Variables" : ["T", "S","HA","HW","HK","HV"]
   },
   "ModelConfig" : {
     "MaxLengthInputData"      : 2000,
@@ -53,7 +53,7 @@
     "DisplaySimulation"           : 1,
     "Continue from last snapshot" : false,
     "Show progress bar"           : true,
-    "Save text restart"           : false,
+    "Save text restart"           : true,
     "Use text restart"            : false
   },
   "ModelParameters" : {

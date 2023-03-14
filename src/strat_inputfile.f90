@@ -350,7 +350,7 @@ contains
                   self%simdata%output_cfg%output_vars(i)%face_grid = .false.
 
                case default
-                  call warn('Output variable specified in config file not found: ' // trim(output_cfg%output_var_names(i)))
+                  call error('Output variable specified in config file not found: ' // trim(output_cfg%output_var_names(i)))
             end select
          end do
 
@@ -406,7 +406,7 @@ contains
       type(GridConfig) :: grid_config
       real(RK), dimension(:) :: z_tmp(self%simdata%model_cfg%max_length_input_data)
       real(RK), dimension(:) :: A_tmp(self%simdata%model_cfg%max_length_input_data)
-      integer :: num_read, i
+      integer :: n_read, i
       associate (simdata=>self%simdata, &
                  max_length_input_data=>grid_config%max_length_input_data)
 
@@ -482,17 +482,17 @@ contains
          end if
          close (11)
 
-         num_read = i - 1 ! Number of area values
+         n_read = i - 1 ! Number of area values
 
-         allocate (grid_config%z_A_read(num_read), grid_config%A_read(num_read))
+         allocate (grid_config%z_A_read(n_read), grid_config%A_read(n_read))
 
          ! Reverse order of values
-         do i = 1, num_read
-            grid_config%z_A_read(i) = -z_tmp(num_read - i + 1)
-            grid_config%A_read(i) = A_tmp(num_read - i + 1)
+         do i = 1, n_read
+            grid_config%z_A_read(i) = -z_tmp(n_read - i + 1)
+            grid_config%A_read(i) = A_tmp(n_read - i + 1)
          end do
 
-         grid_config%max_depth = grid_config%z_A_read(1) - grid_config%z_A_read(num_read) ! depth = max - min depth
+         grid_config%max_depth = grid_config%z_A_read(1) - grid_config%z_A_read(n_read) ! depth = max - min depth
 
          ! Initialize Grid of simdata
          call simdata%grid%init(grid_config)
@@ -735,9 +735,9 @@ contains
 
       ! Local variables
       real(RK) :: z_read(self%simdata%model_cfg%max_length_input_data), U_read(self%simdata%model_cfg%max_length_input_data), V_read(self%simdata%model_cfg%max_length_input_data)
-      real(RK) :: T_read(self%simdata%model_cfg%max_length_input_data), S_read(self%simdata%model_cfg%max_length_input_data), k_read(self%simdata%model_cfg%max_length_input_data), eps_read(self%simdata%model_cfg%max_length_input_data), numy_read(self%simdata%model_cfg%max_length_input_data), nuh_read(self%simdata%model_cfg%max_length_input_data)
+      real(RK) :: T_read(self%simdata%model_cfg%max_length_input_data), S_read(self%simdata%model_cfg%max_length_input_data), k_read(self%simdata%model_cfg%max_length_input_data), eps_read(self%simdata%model_cfg%max_length_input_data), num_read(self%simdata%model_cfg%max_length_input_data), nuh_read(self%simdata%model_cfg%max_length_input_data)
       real(RK) :: z_ini_depth
-      integer :: i, num_read
+      integer :: i, n_read
 
       associate (grid=>self%simdata%grid, &
                  model=>self%simdata%model, &
@@ -752,7 +752,7 @@ contains
          read (13, *) ! Skip header
          do i = 1, max_length_input_data ! Read initial u,v,T, etc
             if (self%simdata%sim_cfg%use_text_restart) then
-               read (13, *, end=99) z_read(i), U_read(i), V_read(i), T_read(i), S_read(i), k_read(i), eps_read(i), numy_read(i), nuh_read(i)
+               read (13, *, end=99) z_read(i), U_read(i), V_read(i), T_read(i), S_read(i), k_read(i), eps_read(i), num_read(i), nuh_read(i)
             else
                read (13, *, end=99) z_read(i), U_read(i), V_read(i), T_read(i), S_read(i), k_read(i), eps_read(i)
             end if
@@ -760,15 +760,15 @@ contains
                call error('One or several input depths of initial conditions are positive.')
             end if
          end do
-99       num_read = i-1                               ! Number of valuInitNamees
-         if (num_read < 1) then
+99       n_read = i-1                               ! Number of valuInitNamees
+         if (n_read < 1) then
             call error('Unable to read initial conditions files (no data found).')
-         else if(num_read==max_length_input_data) then
+         else if(n_read==max_length_input_data) then
             write(*,*) '[ERROR] ','Only first ',max_length_input_data,' values of initial data file read.'
          end if
 
          close (13)
-         do i = 1, num_read
+         do i = 1, n_read
             z_read(i) = abs(z_read(i)) ! Make depths positive
          end do
          z_ini_depth = z_read(1) ! Initial depth (top-most)
@@ -783,21 +783,21 @@ contains
          grid%lake_level_old = grid%lake_level
 
          ! Reverse arrays
-         call reverse_in_place(z_read(1:num_read))
-         z_read(1:num_read) = grid%z_zero - z_read(1:num_read)
-         call reverse_in_place(U_read(1:num_read))
-         call reverse_in_place(V_read(1:num_read))
-         call reverse_in_place(T_read(1:num_read))
-         call reverse_in_place(S_read(1:num_read))
-         call reverse_in_place(k_read(1:num_read))
-         call reverse_in_place(eps_read(1:num_read))
+         call reverse_in_place(z_read(1:n_read))
+         z_read(1:n_read) = grid%z_zero - z_read(1:n_read)
+         call reverse_in_place(U_read(1:n_read))
+         call reverse_in_place(V_read(1:n_read))
+         call reverse_in_place(T_read(1:n_read))
+         call reverse_in_place(S_read(1:n_read))
+         call reverse_in_place(k_read(1:n_read))
+         call reverse_in_place(eps_read(1:n_read))
 
          if (self%simdata%sim_cfg%use_text_restart) then
-            call reverse_in_place(numy_read(1:num_read))
-            call reverse_in_place(nuh_read(1:num_read))
+            call reverse_in_place(num_read(1:n_read))
+            call reverse_in_place(nuh_read(1:n_read))
          end if
 
-         if (num_read == 1) then
+         if (n_read == 1) then
             call warn('Only one row! Water column will be initially homogeneous.')
             model%U = U_read(1)
             model%V = V_read(1)
@@ -807,23 +807,23 @@ contains
             model%eps = eps_read(1)
 
             if (self%simdata%sim_cfg%use_text_restart) then
-               model%num = numy_read(1)
+               model%num = num_read(1)
                model%nuh = nuh_read(1)
             end if
          else
             ! Interpolate variables UVTS on central grid and store
-            call grid%interpolate_to_vol(z_read, U_read, num_read, model%U)
-            call grid%interpolate_to_vol(z_read, V_read, num_read, model%V)
-            call grid%interpolate_to_vol(z_read, T_read, num_read, model%T)
-            call grid%interpolate_to_vol(z_read, S_read, num_read, model%S)
+            call grid%interpolate_to_vol(z_read, U_read, n_read, model%U)
+            call grid%interpolate_to_vol(z_read, V_read, n_read, model%V)
+            call grid%interpolate_to_vol(z_read, T_read, n_read, model%T)
+            call grid%interpolate_to_vol(z_read, S_read, n_read, model%S)
 
             ! Interpolate k/eps on upper grid and store
-            call grid%interpolate_to_face(z_read, k_read, num_read, model%k)
-            call grid%interpolate_to_face(z_read, eps_read, num_read, model%eps)
+            call grid%interpolate_to_face(z_read, k_read, n_read, model%k)
+            call grid%interpolate_to_face(z_read, eps_read, n_read, model%eps)
 
             if (self%simdata%sim_cfg%use_text_restart) then
-               call grid%interpolate_to_face(z_read, numy_read, num_read, model%num)
-               call grid%interpolate_to_face(z_read, nuh_read, num_read, model%nuh)
+               call grid%interpolate_to_face(z_read, num_read, n_read, model%num)
+               call grid%interpolate_to_face(z_read, nuh_read, n_read, model%nuh)
             end if
          end if
 

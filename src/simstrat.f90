@@ -83,8 +83,8 @@ program simstrat_main
    character(len=100) :: arg
    character(len=:), allocatable :: ParName
    character(len=:), allocatable :: snapshot_file_path
-   character(len=:), allocatable :: end_file_path
-   character(len=:), allocatable :: end_file_path2
+   character(len=:), allocatable :: file_text_restart
+   character(len=:), allocatable :: file_text_restart2
    logical :: continue_from_snapshot = .false.
    integer(8),dimension(2) :: simulation_end_time
    real(RK) :: new_start_datum
@@ -152,8 +152,11 @@ program simstrat_main
 
    ! Binary simulation snapshot file
    snapshot_file_path = simdata%output_cfg%PathOut//'/simulation-snapshot.dat'
-   end_file_path = simdata%output_cfg%PathOut//'/save_end_conditions.dat'
-   end_file_path2 = simdata%output_cfg%PathOut//'/save_end_conditions2.dat'
+
+   ! Text output files for simulation restart
+   file_text_restart = simdata%output_cfg%PathOut//'/initial_conditions_for_restart.dat'
+   file_text_restart2 = simdata%output_cfg%PathOut//'/seiche_ice_for_restart.dat'
+
    if (simdata%sim_cfg%continue_from_snapshot) then
       inquire (file=snapshot_file_path, exist=continue_from_snapshot)
       print *,"Snapshot is available and used",continue_from_snapshot
@@ -342,10 +345,11 @@ contains
 
       end do
       if (simdata%sim_cfg%continue_from_snapshot) call save_snapshot(snapshot_file_path, simdata%model_cfg%couple_aed2)
-      if (simdata%sim_cfg%save_text_restart) call save_restart(end_file_path, end_file_path2)
+      if (simdata%sim_cfg%save_text_restart) call save_restart(file_text_restart, file_text_restart2)
    end subroutine
 
    ! Function to save the necessary variables for a restart from a text file (similar to initial conditions)
+   ! The depth grid includes both grid components (volume and surface) of the staggered grid
    subroutine save_restart(file_path_1, file_path_2)
       character(len=*), intent(in) :: file_path_1
       character(len=*), intent(in) :: file_path_2
