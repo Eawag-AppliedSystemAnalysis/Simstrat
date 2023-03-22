@@ -692,6 +692,7 @@ contains
          call par_file%get("ModelParameters.p_sw_water", model_param%p_sw_water, found); call check_field(found, 'ModelParameters.p_sw_water', ParName)
          call par_file%get("ModelParameters.p_lw", model_param%p_lw, found); call check_field(found, 'ModelParameters.p_lw', ParName)
          call par_file%get("ModelParameters.p_windf", model_param%p_windf, found); call check_field(found, 'ModelParameters.p_windf', ParName)
+         call par_file%get("ModelParameters.p_absorb", model_param%p_absorb, found); call check_field(found, 'ModelParameters.p_absorb', ParName)
          call par_file%get("ModelParameters.beta_sol", model_param%beta_sol, found); call check_field(found, 'ModelParameters.beta_sol', ParName)
 
          ! Get water albedo value if switch is on

@@ -70,6 +70,7 @@
     "p_sw_water"    : 1,
     "p_lw"          : 0.9406,
     "p_windf"       : 1,
+    "p_absorb"      : 1,
     "beta_sol"      : 0.35,
     "wat_albedo"    : 0.09,
     "p_sw_ice"      : 1,

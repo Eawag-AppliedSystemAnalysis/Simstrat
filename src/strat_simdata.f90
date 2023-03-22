@@ -148,6 +148,7 @@ module strat_simdata
       real(RK) :: p_sw_water
       real(RK) :: p_lw
       real(RK) :: p_windf
+      real(RK) :: p_absorb
       real(RK) :: beta_sol
       real(RK) :: wat_albedo
       real(RK) :: p_sw_ice
