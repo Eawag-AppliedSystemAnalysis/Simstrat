@@ -475,7 +475,7 @@ contains
       integer, intent(inout) :: counter
 
       ! Local variables
-      integer :: i
+      integer :: i, number_of_days
       logical :: write_condition1, write_condition2
 
       ! Write condition 1: the next output time is larger than the old simulation time
@@ -511,8 +511,9 @@ contains
             ! Regular output time spacing
             simulation_time_for_next_output(2) = simulation_time_for_next_output(2) + thinning_interval * timestep
             if (simulation_time_for_next_output(2) >= SECONDS_PER_DAY) then
-               simulation_time_for_next_output(2) = simulation_time_for_next_output(2) - SECONDS_PER_DAY
-               simulation_time_for_next_output(1) = simulation_time_for_next_output(1) + 1
+               number_of_days = floor(real(simulation_time_for_next_output(2)) / SECONDS_PER_DAY, RK)
+               simulation_time_for_next_output(2) = simulation_time_for_next_output(2) - number_of_days * SECONDS_PER_DAY
+               simulation_time_for_next_output(1) = simulation_time_for_next_output(1) + number_of_days
             end if
          end if
       end if
