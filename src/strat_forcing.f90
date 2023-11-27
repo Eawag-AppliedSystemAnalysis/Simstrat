@@ -477,7 +477,7 @@ contains
       associate (grid=>self%grid, dt=>state%dt, param=>self%param)
 
          ! Calculate u_taub before changing U resp V
-         state%u_taub = sqrt(state%drag*(state%U(1)**2 + state%V(1)**2))
+         state%u_taub = sqrt(param%CD*(state%U(1)**2 + state%V(1)**2))
 
          ! Calculate coriolis parameter based on latitude
          cori = 2.0_RK*7.292e-5_RK*sin(param%Lat*pi/180.0_RK)
