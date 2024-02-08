@@ -3,7 +3,38 @@
 Simstrat is a one-dimensional physical lake model for the simulation of stratification and mixing in deep stratified lakes. The model was originally developed by Goudsmit et al. (2002) and has been successfully applied to lakes with different physical properties. A k-ε model is used to model turbulent mixing including energy transfer of internal seiches. River or groundwater inflow can be added at specific depths or as density-dependent intrusions. The newest version of Simstrat can also simulate ice/snow covers and do biogeochemical simulations by using its coupling with AED2 (https://github.com/AquaticEcoDynamics/libaed2). From version 3.0 onwards, Simstrat always includes a coupling to AED2 but the coupling can be turned off using a switch in the configuration file for purely physical simulations.
 
 ## Run Simstrat
-Pre-built binaries are available [here](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/releases).
+
+There are a number of options for running Simstrat: 
+
+- Pre-built binaries are available [here](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/releases).
+- Build Simstrat
+- [LakeEnsemblR](https://github.com/aemon-j/LakeEnsemblR)
+- Docker container
+
+### Pre-build binary
+
+1. Download the appropriate binary for your operating system and version requirements.
+2. Make the binary executable `chmod +x simstrat_linux_303`
+3. Pass the location of the par file to the binary
+~~~bash
+/pathtobinary/simstrat_linux_303 /pathtoparfile/test.par
+~~~
+
+### Docker container
+
+To use the docker container all input files, including the par file must be in the same folder. The file paths in the 
+par file must be relative to the parent folder that is mounted to the docker container.
+
+Download the docker container
+
+`docker pull eawag/simstrat:3.0.3`
+
+Run the docker container for `test.par` where all input files including `test.par` are located in `/pathtoinputfiles`.
+```bash
+cd /pathtoinputfiles
+docker run -v $(pwd):/simstrat/run eawag/simstrat:3.0.3 test.par
+```
+
 
 ## Build Simstrat
 After cloning the git repository for the first time,  you need to initialize the 3rd-party libraries with the given script
