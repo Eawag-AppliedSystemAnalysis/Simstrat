@@ -158,6 +158,7 @@ module strat_simdata
       real(RK) :: w_ice_ini
       real(RK) :: b_ice_ini
       real(RK) :: snow_ini
+      !real(RK) :: k_min
    end type
 
    ! Model state (self is actually the simulation data!!!)
@@ -366,10 +367,11 @@ contains
    end subroutine
 
    ! save model state unformatted
-   subroutine save_model_state(self, couple_aed2)
+   subroutine save_model_state(self, couple_aed2, inflow_mode)
       implicit none
       class(ModelState), intent(in) :: self
       logical, intent(in) :: couple_aed2
+      integer, intent(in) :: inflow_mode
 
       write(80) self%current_year, self%current_month, self%current_day, self%datum
       write(80) self%simulation_time(1), self%simulation_time(2), self%simulation_time_old(1), self%simulation_time_old(2)
@@ -378,7 +380,6 @@ contains
       call save_array_pointer(80, self%T)
       call save_array_pointer(80, self%S)
       call save_array(80, self%dS)
-      call save_matrix(80, self%Q_inp)
       call save_array_pointer(80, self%rho)
       call save_array(80, self%k)
       call save_array(80, self%ko)
@@ -402,7 +403,6 @@ contains
       write(80) self%SST, self%heat, self%heat_snow, self%heat_ice, self%heat_snowice
       write(80) self%T_atm
       call save_array(80, self%rad)
-      call save_array(80, self%Q_vert)
       write(80) self%albedo_data
       write(80) self%albedo_water
       write(80) self%lat_number
@@ -426,13 +426,18 @@ contains
          call save_matrix_pointer(80, self%AED2_diagnostic)
          call save_array_pointer(80, self%AED2_diagnostic_sheet)
       end if
+      if (inflow_mode > 0) then
+         call save_matrix(80, self%Q_inp)
+         call save_array(80, self%Q_vert)
+      end if
    end subroutine
 
    ! load model state unformatted
-   subroutine load_model_state(self, couple_aed2)
+   subroutine load_model_state(self, couple_aed2, inflow_mode)
       implicit none
       class(ModelState), intent(inout) :: self
       logical, intent(in) :: couple_aed2
+      integer, intent(in) :: inflow_mode
 
       read(81) self%current_year, self%current_month, self%current_day, self%datum
       read(81) self%simulation_time(1), self%simulation_time(2), self%simulation_time_old(1), self%simulation_time_old(2)
@@ -441,7 +446,6 @@ contains
       call read_array_pointer(81, self%T)
       call read_array_pointer(81, self%S)
       call read_array(81, self%dS)
-      call read_matrix(81, self%Q_inp)
       call read_array_pointer(81, self%rho)
       call read_array(81, self%k)
       call read_array(81, self%ko)
@@ -465,7 +469,6 @@ contains
       read(81) self%SST, self%heat, self%heat_snow, self%heat_ice, self%heat_snowice
       read(81) self%T_atm
       call read_array(81, self%rad)
-      call read_array(81, self%Q_vert)
       read(81) self%albedo_data
       read(81) self%albedo_water
       read(81) self%lat_number
@@ -488,6 +491,10 @@ contains
          call read_matrix_pointer(81, self%AED2_state)
          call read_matrix_pointer(81, self%AED2_diagnostic)
          call read_array_pointer(81, self%AED2_diagnostic_sheet)
+      end if
+      if (inflow_mode > 0) then
+         call read_matrix(81, self%Q_inp)
+         call read_array(81, self%Q_vert)
       end if
    end subroutine
 

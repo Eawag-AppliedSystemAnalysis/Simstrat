@@ -418,7 +418,7 @@ contains
       logical, intent(in) :: couple_aed2
 
       open(80, file=file_path, Form='unformatted', Action='Write')
-      call simdata%model%save(couple_aed2)
+      call simdata%model%save(couple_aed2, simdata%model_cfg%inflow_mode)
       call simdata%grid%save()
       call mod_absorption%save()
       if (simdata%model_cfg%inflow_mode > 0) then
@@ -434,7 +434,7 @@ contains
       logical, intent(in) :: couple_aed2
 
       open(81, file=file_path, Form='unformatted', Action='Read')
-      call simdata%model%load(couple_aed2)
+      call simdata%model%load(couple_aed2, simdata%model_cfg%inflow_mode)
       call simdata%grid%load()
       call mod_absorption%load()
       if (simdata%model_cfg%inflow_mode > 0) then
