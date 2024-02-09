@@ -51,6 +51,7 @@ contains
       class(ModelParam), intent(inout) :: param
       real(RK), dimension(:) ::  sources, boundaries
       integer :: i
+      !real(RK) :: T_soil
       associate (grid=>self%grid, &
                  ubnd_fce=>self%grid%ubnd_fce, &
                  ubnd_vol=>self%grid%ubnd_vol)
@@ -70,6 +71,11 @@ contains
          !!!!!!!! Define sources !!!!!!!!
          ! Add Hsol Term to sources (Eq 1, Goudsmit(2002))
          sources(1:ubnd_vol) = state%rad_vol(1:ubnd_vol)/grid%h(1:ubnd_vol)
+
+         ! Experimenting with influence of soil temperature on water temperature using a sinusoidal soil temperature         
+         !T_soil = 5 + 5*cos(2*pi/365*(state%current_month*30 + state%current_day - 270))
+
+         !sources(1:ubnd_vol) = sources(1:ubnd_vol) + 2.4*(T_soil - state%T(1:ubnd_vol))/0.5*(grid%Az(2:ubnd_fce) - grid%Az(1:ubnd_fce-1))/rho_0/cp/grid%h(1:ubnd_vol)/(grid%Az(2:ubnd_fce) + grid%Az(1:ubnd_fce - 1))*2
 
          ! Set boundary heat flux at surface (Eq 25, Goudsmit(2002))
          ! FB, 2021: Correction of relevant area (accoring to tests by Ana Ayala)
@@ -94,9 +100,10 @@ contains
       end associate
    end subroutine
 
-   subroutine temp_var_post_solve(self, state)
+   subroutine temp_var_post_solve(self, state, param)
       class(TempModelVar), intent(inout) :: self
       class(ModelState), intent(inout) :: state
+      class(ModelParam), intent(inout) :: param
 
       if (self%cfg%forcing_mode==1) then
          state%T(self%grid%ubnd_vol) = state%SST
