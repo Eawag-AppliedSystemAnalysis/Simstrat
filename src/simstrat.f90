@@ -282,12 +282,9 @@ contains
          else
             call mod_absorption%update(simdata%model)
          end if
-!write(6,*) 'before stab',simdata%model%k(simdata%grid%ubnd_fce),simdata%model%eps(simdata%grid%ubnd_fce),simdata%model%num(simdata%grid%ubnd_fce),simdata%model%nuh(simdata%grid%ubnd_fce),&
-!simdata%model%NN(simdata%grid%ubnd_fce), simdata%model%rho(simdata%grid%ubnd_vol)
+
          ! Update physics
          call mod_stability%update(simdata%model)
-!write(6,*) 'after stab',simdata%model%k(simdata%grid%ubnd_fce),simdata%model%eps(simdata%grid%ubnd_fce),simdata%model%num(simdata%grid%ubnd_fce),simdata%model%nuh(simdata%grid%ubnd_fce),&
-!simdata%model%NN(simdata%grid%ubnd_fce), simdata%model%rho(simdata%grid%ubnd_vol)
 
          ! If there is inflow/outflow do advection part
          if (simdata%model_cfg%inflow_mode > 0) then
