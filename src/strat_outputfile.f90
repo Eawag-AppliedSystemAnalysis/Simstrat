@@ -79,7 +79,7 @@ module strat_outputfile
    type, private :: OutputHelper
       real(RK) :: w0, w1, output_datum
       real(RK), dimension(:), allocatable :: interpolated_data
-      logical write_to_file
+      logical write_to_file, write_to_file2
    contains
       procedure, pass :: init => output_helper_init
       procedure, pass :: add_datum => output_helper_add_datum
@@ -376,12 +376,11 @@ contains
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
       integer(8), dimension(2), intent(in) :: simulation_time
-      integer :: i
+      integer :: i, number_of_days
 
       associate (thinning_interval => self%output_config%thinning_interval, &
                  timestep => self%sim_config%timestep, &
                  simulation_times_for_output => self%output_config%simulation_times_for_output)
-
          if (thinning_interval == 0) then
             do i = self%counter, size(simulation_times_for_output,2)
                if (simulation_times_for_output(1,i) > simulation_time(1) .or. &
@@ -390,6 +389,14 @@ contains
                   exit
                end if
             end do
+         else
+            ! Regular output time spacing
+            self%simulation_time_for_next_output(2) = self%simulation_time_for_next_output(2) + thinning_interval * timestep
+            if (self%simulation_time_for_next_output(2) >= SECONDS_PER_DAY) then
+               number_of_days = floor(real(self%simulation_time_for_next_output(2)) / SECONDS_PER_DAY, RK)
+               self%simulation_time_for_next_output(2) = self%simulation_time_for_next_output(2) - number_of_days * SECONDS_PER_DAY
+               self%simulation_time_for_next_output(1) = self%simulation_time_for_next_output(1) + number_of_days
+            end if
          end if
       end associate
    end subroutine
@@ -410,54 +417,51 @@ contains
                               self%sim_config%start_datum, self%output_config%thinning_interval, &
                               self%output_config%simulation_times_for_output, self%counter)
       
-      ! Don't print out the initial condition i.e. if counter = 1 (creates problem for automated calibration)
-      if ((self%counter > 1 .and. self%output_config%thinning_interval == 0) .or. self%output_config%thinning_interval /= 0) then
-         ! Standard display: display when logged: datum, lake surface, T(1), T(surf)
-         if (self%sim_config%disp_simulation == 1 .and. output_helper%write_to_file) then
-            write(6,'(F12.4,F16.4,F20.4,F20.4)') simdata%model%datum, simdata%grid%lake_level, &
+      ! Standard display: display when logged: datum, lake surface, T(1), T(surf)
+      if (self%sim_config%disp_simulation == 1 .and. output_helper%write_to_file) then
+         write(6,'(F12.4,F16.4,F20.4,F20.4)') simdata%model%datum, simdata%grid%lake_level, &
                                               simdata%model%T(simdata%grid%nz_occupied), simdata%model%T(1)
-         ! Extra display: display every iteration: datum, lake surface, T(1), T(surf)
-         else if (self%sim_config%disp_simulation == 2) then
-            write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%lake_level, &
+      ! Extra display: display every iteration: datum, lake surface, T(1), T(surf)
+      else if (self%sim_config%disp_simulation == 2) then
+         write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%lake_level, &
                                               simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
+      end if
+      do i = 1, self%n_vars_Simstrat
+         call output_helper%add_datum(self%output_files(i), "(F12.4)")
+         ! If on volume or faces grid
+         if (self%output_config%output_vars(i)%volume_grid) then
+            ! Interpolate state on volume grid
+            call self%grid%interpolate_from_vol(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
+            call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
+         else if (self%output_config%output_vars(i)%face_grid) then
+            ! Interpolate state on face grid
+            call self%grid%interpolate_from_face(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
+            call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
+         else
+            call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%output_vars(i)%values_surf, "(ES14.4E3)")
          end if
-         do i = 1, self%n_vars_Simstrat
+         call output_helper%next_row(self%output_files(i))
+      end do
+
+      ! AED2 part
+      if (self%model_config%couple_aed2) then
+         do i = self%n_vars_Simstrat + 1, self%n_vars
+            ! Write datum
             call output_helper%add_datum(self%output_files(i), "(F12.4)")
-            ! If on volume or faces grid
-            if (self%output_config%output_vars(i)%volume_grid) then
-               ! Interpolate state on volume grid
-               call self%grid%interpolate_from_vol(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
+            ! Interpolate state on volume grid
+            if (i < (self%n_vars_Simstrat + self%n_vars_AED2_state + 1)) then
+               call self%grid%interpolate_from_vol(self%output_config%output_vars_aed2_state%values(:,i - self%n_vars_Simstrat), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
                call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
-            else if (self%output_config%output_vars(i)%face_grid) then
-               ! Interpolate state on face grid
-               call self%grid%interpolate_from_face(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
+            else if (i < (self%n_vars_Simstrat + self%n_vars_AED2_state + self%n_vars_AED2_diagnostic + 1)) then
+               call self%grid%interpolate_from_vol(self%output_config%output_vars_aed2_diagnostic%values(:,i - self%n_vars_Simstrat - self%n_vars_AED2_state), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
                call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
             else
-               call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%output_vars(i)%values_surf, "(ES14.4E3)")
+               call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%output_vars_aed2_diagnostic_sheet%values_sheet(i - self%n_vars_Simstrat - self%n_vars_AED2_state - self%n_vars_AED2_diagnostic), "(ES14.4E3)")
             end if
+
+            ! Advance to next row
             call output_helper%next_row(self%output_files(i))
          end do
-
-         ! AED2 part
-         if (self%model_config%couple_aed2) then
-            do i = self%n_vars_Simstrat + 1, self%n_vars
-               ! Write datum
-               call output_helper%add_datum(self%output_files(i), "(F12.4)")
-               ! Interpolate state on volume grid
-               if (i < (self%n_vars_Simstrat + self%n_vars_AED2_state + 1)) then
-                  call self%grid%interpolate_from_vol(self%output_config%output_vars_aed2_state%values(:,i - self%n_vars_Simstrat), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-                  call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
-               else if (i < (self%n_vars_Simstrat + self%n_vars_AED2_state + self%n_vars_AED2_diagnostic + 1)) then
-                  call self%grid%interpolate_from_vol(self%output_config%output_vars_aed2_diagnostic%values(:,i - self%n_vars_Simstrat - self%n_vars_AED2_state), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-                  call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
-               else
-                  call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%output_vars_aed2_diagnostic_sheet%values_sheet(i - self%n_vars_Simstrat - self%n_vars_AED2_state - self%n_vars_AED2_diagnostic), "(ES14.4E3)")
-               end if
-
-               ! Advance to next row
-               call output_helper%next_row(self%output_files(i))
-            end do
-         end if
       end if
    end subroutine
 
@@ -485,8 +489,12 @@ contains
       ! Write condition 2: the next output time is smaller or equal to the current simulation time
       write_condition2 = (simulation_time_for_next_output(1) < simulation_time(1) .or. &
                simulation_time_for_next_output(1) == simulation_time(1) .and. simulation_time_for_next_output(2) <= simulation_time(2))
-      
+
       self%write_to_file = (write_condition1 .and. write_condition2)
+
+      ! Don't print out the initial condition i.e. if counter = 0 (creates problem for automated calibration)
+      ! This logical is only used in the add_helper functions
+      self%write_to_file2 = ((counter > 0 .and. thinning_interval == 0) .or. thinning_interval /= 0)
 
       ! If both writing conditions are fulfilled
       if (self%write_to_file) then
@@ -525,7 +533,7 @@ contains
       type(csv_file), intent(inout) :: output_file
       character(len=*), intent(in) :: format
 
-      if (self%write_to_file) then
+      if (self%write_to_file .and. self%write_to_file2) then
          call output_file%add(self%output_datum, real_fmt=format)
       end if
    end subroutine
@@ -539,7 +547,7 @@ contains
       real(RK), dimension(:), intent(in) :: data
       character(len=*), intent(in) :: format
 
-      if (self%write_to_file) then
+      if (self%write_to_file .and. self%write_to_file2) then
          if (self%w1 == 0) then
             call output_file%add(data, real_fmt=format)
          else
@@ -562,7 +570,7 @@ contains
       real(RK), intent(in) :: data
       character(len=*), intent(in) :: format
 
-      if (self%write_to_file) then
+      if (self%write_to_file .and. self%write_to_file2) then
          if (self%w1 == 0) then
             call output_file%add(data, real_fmt=format)
          else
@@ -626,7 +634,7 @@ contains
    subroutine log_save(self)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
-      write(80) self%counter, self%simulation_time_for_next_output(1), self%simulation_time_for_next_output(2)
+      !write(80) self%counter!, self%simulation_time_for_next_output(1), self%simulation_time_for_next_output(2)
       call save_matrix(80, self%last_iteration_data)
    end subroutine
 
@@ -637,7 +645,7 @@ contains
    subroutine log_load(self)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
-      read(81) self%counter, self%simulation_time_for_next_output(1), self%simulation_time_for_next_output(2)
+      !read(81) self%counter!, self%simulation_time_for_next_output(1), self%simulation_time_for_next_output(2)
       call read_matrix(81, self%last_iteration_data)
    end subroutine
 

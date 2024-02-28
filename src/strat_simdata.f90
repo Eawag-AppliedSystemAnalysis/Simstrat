@@ -373,8 +373,8 @@ contains
       logical, intent(in) :: couple_aed2
       integer, intent(in) :: inflow_mode
 
-      write(80) self%current_year, self%current_month, self%current_day, self%datum
-      write(80) self%simulation_time(1), self%simulation_time(2), self%simulation_time_old(1), self%simulation_time_old(2)
+      !write(80) self%current_year, self%current_month, self%current_day, self%datum
+      !write(80) self%simulation_time(1), self%simulation_time(2), self%simulation_time_old(1), self%simulation_time_old(2)
       call save_array(80, self%U)
       call save_array(80, self%V)
       call save_array_pointer(80, self%T)
@@ -439,8 +439,8 @@ contains
       logical, intent(in) :: couple_aed2
       integer, intent(in) :: inflow_mode
 
-      read(81) self%current_year, self%current_month, self%current_day, self%datum
-      read(81) self%simulation_time(1), self%simulation_time(2), self%simulation_time_old(1), self%simulation_time_old(2)
+      !read(81) self%current_year, self%current_month, self%current_day, self%datum
+      !read(81) self%simulation_time(1), self%simulation_time(2), self%simulation_time_old(1), self%simulation_time_old(2)
       call read_array(81, self%U)
       call read_array(81, self%V)
       call read_array_pointer(81, self%T)
