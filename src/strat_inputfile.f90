@@ -121,7 +121,9 @@ contains
             call f%destroy()
 
             ! Decide whether an interval or a list of values is given
-            if(size(output_cfg%zout_read)==1) then
+
+            ! Number in output depth is interpreted as interval if it is only 1 number and if the number is positive (one number but negative means only 1 depth should be output)
+            if(size(output_cfg%zout_read)==1 .and. output_cfg%zout_read(1)>0) then
                output_cfg%depth_interval = output_cfg%zout_read(1)
             else
                output_cfg%depth_interval = 0
