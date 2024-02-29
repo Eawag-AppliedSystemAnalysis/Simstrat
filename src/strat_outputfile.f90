@@ -311,26 +311,38 @@ contains
          if (self%output_config%output_vars(i)%volume_grid) then
             !Variable on volume grid
             call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
-            if (.not. append) then
-               call self%output_files(i)%add('Datetime')
-               call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
-               call self%output_files(i)%next_row()
+            if (status_ok) then
+               if (.not. append) then
+                  call self%output_files(i)%add('Datetime')
+                  call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
+                  call self%output_files(i)%next_row()
+               end if
+            else
+               call error('Cannot write to output directory. Make sure you have writing access.')
             end if
          else if (self%output_config%output_vars(i)%face_grid) then
             ! Variable on face grid
             call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
-            if (.not. append) then
-               call self%output_files(i)%add('Datetime')
-               call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
-               call self%output_files(i)%next_row()
+            if (status_ok) then
+               if (.not. append) then
+                  call self%output_files(i)%add('Datetime')
+                  call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
+                  call self%output_files(i)%next_row()
+               end if
+            else
+               call error('Cannot write to output directory. Make sure you have writing access.')
             end if
          else
             !Variable at surface
             call self%output_files(i)%open(file_path, n_cols=1 + 1, append=append, status_ok=status_ok)
-            if (.not. append) then
-               call self%output_files(i)%add('Datetime')
-               call self%output_files(i)%add(grid%z_face(grid%ubnd_fce), real_fmt='(F12.3)')
-               call self%output_files(i)%next_row()
+            if (status_ok) then
+               if (.not. append) then
+                  call self%output_files(i)%add('Datetime')
+                  call self%output_files(i)%add(grid%z_face(grid%ubnd_fce), real_fmt='(F12.3)')
+                  call self%output_files(i)%next_row()
+               end if
+            else
+               call error('Cannot write to output directory. Make sure you have writing access.')
             end if
          end if
       end do
