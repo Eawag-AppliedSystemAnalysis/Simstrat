@@ -72,7 +72,7 @@ contains
          do while (zi(i) > z(posi + 1))
             posi = posi + 1
          end do
-         yi(i) = y(posi) + (zi(i) - z(posi))*(y(posi + 1) - y(posi))/(z(posi + 1) - z(posi))
+         yi(i) = y(posi) + ((zi(i) - z(posi)) / (z(posi + 1) - z(posi))) * (y(posi + 1) - y(posi))
       end do
 
       return
@@ -112,7 +112,7 @@ contains
          do while (zi(i) > z(posi + 1))
             posi = posi + 1
          end do
-         yi(i) = y(posi) + (zi(i) - z(posi))*(y(posi + 1) - y(posi))/(z(posi + 1) - z(posi))
+         yi(i) = y(posi) + ((zi(i) - z(posi)) / (z(posi + 1) - z(posi))) * (y(posi + 1) - y(posi))
       end do
 
       return
