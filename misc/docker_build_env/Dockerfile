@@ -1,10 +1,26 @@
 FROM ubuntu:bionic
-MAINTAINER SURF Team "davide.vanzo@eawag.ch"
+LABEL org.opencontainers.imag.authors="SURF Team" email="davide.vanzo@eawag.ch"
 
 # get the tools we need
-ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends apt-utils \
-gfortran gfortran-mingw-w64 make nano less tree python3 python3-pip doxygen git graphviz locales
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends \
+apt-utils \
+gfortran gfortran-mingw-w64 \
+make \
+nano \
+less \
+tree \
+python3 python3-pip \
+doxygen \
+git \
+graphviz \
+locales \
+wget \
+ca-certificates && \
+# Install cmake 4.0.2 manually
+wget https://github.com/Kitware/CMake/releases/download/v4.0.2/cmake-4.0.2-linux-x86_64.sh && \
+bash cmake-4.0.2-linux-x86_64.sh --skip-license --prefix=/usr/local && \
+rm cmake-4.0.2-linux-x86_64.sh && \
+rm -rf /var/lib/apt/lists/*
 
 # install some needed python modules
 RUN pip3 install pip --upgrade
