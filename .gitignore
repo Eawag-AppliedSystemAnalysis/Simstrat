@@ -11,6 +11,7 @@ build/**/*
 
 lib/json_fortran/build/
 lib/csv_fortran/build/
+lib/fabm/build/
 
 #Latex gitignores:
 ## Core latex/pdflatex auxiliary files:

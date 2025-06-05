@@ -46,12 +46,12 @@ If you are not using git, you can manually download the library source files fro
 
 Before building an executable of Simstrat, you need to setup your building environment. We suggest two alternative options:
 
-### 1. Setup building environment using Docker
+### 1a. Setup building environment using Docker
 You can setup the building environment using Docker for Linux, MacOS and Win hosting systems; a complete step-by-step guide to use a docker container is available
 [here](misc/docker_build_env).
 
 
-### 2. Manual setup of the building environment
+### 1b. Manual setup of the building environment
 Please install the following required packages:
 
 **System requirements**
@@ -64,13 +64,41 @@ Please install the following required packages:
 
 In principle, the manual installation is platform independent. Be aware that other programs on your computer might already use some version of Python and thus interfere with any new installation of Python.
 
-### Build
+### 2. Build FABM
+
+Go to `lib/fabm` and run:
+
+~~~bash
+cmake -S ./ -B build -DFABM_HOST=simstrat
+~~~
+
+to create the new directory `build` and generate the build configuration inside it,
+with the Simstrat preprocesser definitions for information about the spatial domain.
+
+Then run:
+
+~~~bash
+cmake --build build --target install
+~~~
+
+to build and install FABM.
+
+### 3. Build
+
 Once the building environment is setup, you can build Simstrat from the `/build` folder with:
 ~~~bash
 FoBiS.py build
 ~~~
 
-If the AED2 library is not built yet, use make (or mingw32-make in windows) to compile it in the lib/libaed2 folder.
+if FABM should be included do the same but add:
+~~~bash
+FoBiS.py build -mode couple-to-fabm
+~~~
+
+Or if you want to include it later go to `build` in `lib/fabm` and run:
+~~~bash
+FoBiS.py build
+~~~
 
 > **N.B.1** MacOS seems to allow only dynamic library linking. To build for this target, use the `release-gnu-dynamic` compiling mode
 ~~~bash

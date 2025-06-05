@@ -1,19 +1,21 @@
-# How to build Simstrat-AED2 with FoBiS.py
-In case the AED2 library is not compiled go to ´lib/libaed2´ and run:
+# How to build Simstrat-FABM with FoBiS.py
+
+Go to `lib/fabm` and run:
 
 ~~~bash
-export F90=gfortran
-mingw32-make
+cmake -S ./ -B build -DFABM_HOST=simstrat
 ~~~
 
-under windows (note that the export command only works in a bash shell) or
+to create the new directory `build` and generate the build configuration inside it,
+with the Simstrat preprocesser definitions for information about the spatial domain.
+
+Then run:
 
 ~~~bash
-export F90=gfortran
-make
+cmake --build build --target install
 ~~~
 
-under linux.
+to build and install FABM.
 
 Then, from this folder (`build`), run:
 

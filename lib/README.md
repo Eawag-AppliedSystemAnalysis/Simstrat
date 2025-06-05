@@ -8,10 +8,10 @@ For now we have:
 |--------------|----------------------------|---------|--------------|
 | csv_fortran  | 1.1.0 / 05.09.2019			    | BSD	    | static       |
 | json_fortan  | 7.1.0 / 19.07.2019         | BSD 	  | static       |
-| libaed2	     | 1.3.5 / 05.11.2020			    | GPL-3.0 | static       |
 | forbear      |   -   / 05.11.2020         | BSD     | static       |
+| fabm         | 2.1.5 / 05.06.2025         | GPL-2.0 | static       |
 
-Please note that the first two libraries are hard copies, while the `libaed2` and `forbear` libraries are submodules, added in the first place as
+Please note that the first two libraries are hard copies, while the `forbear` and `fabm` libraries are submodules, added in the first place as
 ~~~bash
 git submodule add remote_git_url_to_external_library path_to_this_directory
 ~~~
