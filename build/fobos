@@ -1,6 +1,7 @@
 [modes]
 modes = couple-to-fabm release-gnu release-gnu-dynamic release-intel debug-gnu debug-gnu-dynamic
 
+# Needs work
 [couple-to-fabm]
 compiler = Gnu
 cflags = -c -O2 -std=f2008 -ffree-line-length-none
@@ -12,7 +13,10 @@ libs = fabm forbear
 include = ../lib/fabm/build/ ../lib/forbear/static/ 
 target = ../src/simstrat.f90
 output = simstrat
-build_dir = ./build
+dependon=../lib/csv_fortran/fobos:release-gnu((direct))
+         ../lib/json_fortran/fobos:release-gnu((direct))
+         ../lib/forbear/fobos:static-gnu((direct))
+build_dir = .
 log = True
 quiet = False
 

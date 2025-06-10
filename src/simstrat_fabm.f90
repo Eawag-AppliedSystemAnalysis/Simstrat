@@ -6,7 +6,9 @@
 !                    Eawag - Swiss Federal institute of Aquatic Science and Technology
 !
 !     Copyright (C) 2020, Eawag
-!     Copyright (C)
+!     FABM: Copyright (C) 2014, Bolding & Bruggeman ApS
+!     GOTM: Copyright by the GOTM-team under the GNU Public License - www.gnu.org
+!           Original author(s): Jorn Bruggeman (rem.: for every subroutine)
 !
 !
 !     This program is free software: you can redistribute it and/or modify
@@ -42,8 +44,12 @@ module simstrat_fabm
    if _FABM_API_VERSION_ > 0
       use fabm_v0_compatibility
    end if
+   use yaml_settings
 
    ! use aed2_common; aed2_core
+
+   ! use input,only: register_input, type_scalar_input, type_profile_input
+   ! use settings
    ! use field_manager
 
    implicit none
@@ -115,10 +121,10 @@ module simstrat_fabm
    type(type_horizontal_variable_id),save :: lon_id,lat_id,windspeed_id,par_sf_id,cloud_id,taub_id,swr_sf_id
 
    ! Some parameters
-   logical, save :: save_diag = .true.
-   logical, save :: compute_light = .false.
+   logical,save :: save_diag = .true.
+   logical,save :: compute_light = .false.
 
-   integer, parameter :: gotmrk = kind(_ONE_)
+   integer,parameter :: gotmrk = kind(_ONE_)
 
    ! Calendar date interface
    interface 
@@ -130,8 +136,36 @@ module simstrat_fabm
 
    procedure(calendar_date_interface),pointer :: fabm_calendar_date
 
+   ! Input (all from GOTM)
+   public configure_simstrat_fabm_input, init_simstrat_fabm_input
+   public type_input_variable, first_input_variable
+   integer,parameter :: maxpathlen = 256
+   integer,parameter :: max_variable_count_per_file = 256
+   ! Information on an observed variable
+   type type_input_variable
+      !type (type_scalar_input) :: scalar_input
+      !type (type_profile_input) :: profile_input
+      type (type_bulk_variable_id) :: interior_id          ! FABM identifier of pelagic variable (not associated if variable is not pelagic)
+      type (type_horizontal_variable_id) :: horizontal_id        ! FABM identifier of horizontal variable (not associated if variable is not horizontal)
+      type (type_scalar_variable_id) :: scalar_id            ! FABM identifier of scalar variable (not associated if variable is not scalar)
+      integer :: ncid = -1 ! NetCDF id in output file (only used if this variable is included in output)
+      real(RK) :: relax_tau ! Relaxation times
+      real(RK) :: relax_tau_bot ! Relaxation times for bottom layer (depth-dependent variables only)
+      real(RK) :: relax_tau_surf ! Relaxation times for surface layer (depth-dependent variables only)
+      real(RK) :: h_bot, h_surf ! Thickness of bottom and surface layers (for relaxation rates that vary per layer)
+      real(RK),allocatable,dimension(:) :: relax_tau_1d ! Relaxation times for profiles (depth-dependent variables)
+      type(type_input_variable),pointer :: next => null() ! Next variable in current input file
+   end type
+   type(type_input_variable),pointer,save :: first_input_variable => null()
+   type(type_input_variable),pointer,save :: last_input_variable  => null()
+   type,extends(type_dictionary_populator) :: type_fabm_input_populator
+   contains
+      procedure :: create => fabm_input_create
+   end type
+   type (type_fabm_input_populator) :: fabm_input_populator
+
    ! Type for use of FABM
-   type, public :: SimstratFABM
+   type,public :: SimstratFABM
       class(fabm_config),pointer :: fabm_cfg
       class(StaggeredGrid),pointer :: grid
       class(type_fabm_model),pointer :: model
@@ -210,8 +244,8 @@ module simstrat_fabm
       integer :: zone_var = 0
 
    contains
-      procedure, pass(self), public :: init
-      procedure, pass(self), public :: update
+      procedure,pass(self),public :: init
+      procedure,pass(self),public :: update
    end type SimstratFABM
 
 contains
@@ -233,8 +267,8 @@ contains
       class(StaggeredGrid),target :: grid
       class(ModelConfig),target :: model_cfg
       class(fabm_config),target :: fabm_cfg
-      !class(type_settings),intent(inout) :: cfg
-      !type(type_settings),pointer :: branch
+      class(type_settings),intent(inout) :: cfg
+      type(type_settings),pointer :: branch
 
       ! Local variables
       !integer :: i, output_level
@@ -246,11 +280,11 @@ contains
       !integer i, status, av, v, sv
 
       ! Configuration
-      !associate (n_AED2_state_vars => self%n_AED2_state_vars, &
-         !    n_vars => self%n_vars, &
-         !    n_vars_ben => self%n_vars_ben, &
-         !    n_vars_diag => self%n_vars_diag, &
-         !    n_vars_diag_sheet => self%n_vars_diag_sheet)
+      associate (n_AED2_state_vars => self%n_AED2_state_vars, &
+             n_vars => self%n_vars, &
+             n_vars_ben => self%n_vars_ben, &
+             n_vars_diag => self%n_vars_diag, &
+             n_vars_diag_sheet => self%n_vars_diag_sheet)
 
          ! ! AED2 config file
          ! fname = aed2_cfg%aed2_config_file
@@ -336,24 +370,132 @@ contains
          ! end do
 
          ! write(*,"(/,5X,'----------  AED2 config : end  ----------',/)")
-      !end associate
+      end associate
 
       ! Add grid and fabm_cfg to SimstratFABM object
       self%grid => grid
       self%fabm_cfg => fabm_cfg
 
-      ! Initialize the model
-      model => fabm_create_model()
+      ! send message
+      !LEVEL1 'init_gotm_fabm_yaml'
+      ! Initialize all configuration variables with the get subroutine from fabm/yaml/yaml_settings.F90
+      call cfg%get(fabm_calc, 'use', 'enable FABM', &
+                  default=.false.)
+      call cfg%get(yaml_file, 'yaml_file', 'FABM configuration file', &
+                  default='fabm.yaml', display=display_advanced)
+      call cfg%get(freshwater_impact, 'freshwater_impact', 'enable dilution/concentration by precipitation/evaporation', &
+                  default=.true.) ! disable to check mass conservation
+      branch => cfg%get_child('feedbacks', 'feedbacks to physics')
+      call branch%get(bioshade_feedback, 'shade', 'interior light absorption', &
+                  default=.false.)
+      call branch%get(bioalbedo_feedback, 'albedo', 'surface albedo', &
+                  default=.false.)
+      call branch%get(biodrag_feedback, 'surface_drag', 'surface drag', &
+                  default=.false.)
+      call cfg%get(repair_state, 'repair_state', 'clip state to minimum/maximum boundaries', &
+                  default=.false.)
+      branch => cfg%get_child('numerics', display=display_advanced)
+      call branch%get(ode_method, 'ode_method', 'time integration scheme applied to source terms', &
+                  options=(/ option(1, 'Forward Euler', 'FE'), option(2, 'Runge-Kutta 2', 'RK2'), option(3, 'Runge-Kutta 4', 'RK4'), &
+                  option(4, 'first-order Patanker', 'Patankar1'), option(5, 'second-order Patanker', 'Patankar2'), option(7, 'first-order modified Patanker', 'MP1'), &
+                  option(8, 'second-order modified Patanker', 'MP2'), option(10, 'first-order extended modified Patanker', 'EMP1'), &
+                  option(11, 'second-order extended modified Patankar', 'EMP2') /), default=1)
+      call branch%get(split_factor, 'split_factor', 'number of substeps used for source integration', &
+                  minimum=1,maximum=100,default=1)
+      call branch%get(w_adv_discr, 'w_adv_discr', 'vertical advection scheme for settling/rising', options=&
+               (/ option(UPSTREAM, 'first-order upstream', 'upstream'), option(P2, 'third-order upstream-biased polynomial', 'P2'), &
+                  option(Superbee, 'third-order TVD with Superbee limiter', 'Superbee'), option(MUSCL, 'third-order TVD with MUSCL limiter', 'MUSCL'), &
+                  option(P2_PDM, 'third-order TVD with ULTIMATE QUICKEST limiter', 'P2_PDM') /), default=P2_PDM)
+      call branch%get(cnpar, 'cnpar', '"implicitness" of diffusion scheme', '1', &
+                  minimum=_ZERO_,default=_ONE_)
+      if 0 then
+         call cfg%get(salinity_relaxation_to_freshwater_flux, 'salinity_relaxation_to_freshwater_flux', '', &
+                     default=.false.)
+      else
+         salinity_relaxation_to_freshwater_flux = .false.
+      end if
+      branch => cfg%get_child('debug', display=display_advanced)
+      call branch%get(no_surface, 'no_surface', 'disable surface processes', &
+                  default=.false.) ! disables surface exchange; useful to check mass conservation
+      call branch%get(save_inputs, 'save_inputs', 'include additional forcing fields in output', &
+                  default=.false.)
+      call cfg%get(configuration_method, 'configuration_method', 'configuration file', &
+                  options=(/option(-1, 'auto-detect (prefer fabm.yaml)', 'auto'), option(0, 'fabm.nml', 'nml'), option(1, 'fabm.yaml', 'yaml')/), &
+                  default=-1, display=display_advanced)
+      ! Send message that reading is done
+      !if (fabm_calc) then
+      !   LEVEL2 'Reading configuration from:'
+      !   LEVEL3 trim(yaml_file)
+      !end if
+      !LEVEL2 'done.'
 
-      ! Provide extents of the spatial domain (number of layers nz for a 1D column)
+      ! Provide FABM with an object for communication with host, abort if FABM is not enabled
+      allocate(type_gotm_driver::driver)
+      if (.not. fabm_calc) return
+      fabm_ready = .false.
+
+      ! Initialize the model, handled by fabm. or:
+      model => fabm_create_model()
+      ! create from YAML file with subroutine from fabm/fabm_v0_compatibility
+      if (_FABM_API_VERSION_ > 0) then
+         allocate(model)
+         call fabm_create_model_from_yaml_file(model,trim(yaml_file))
+      else
+         ! Create model tree
+         if (configuration_method==-1) then
+            configuration_method = 1
+            inquire(file=trim(yaml_file),exist=file_exists)
+            if (.not.file_exists) then
+               inquire(file='fabm.nml',exist=file_exists)
+               if (file_exists) configuration_method = 0
+            end if
+         end if
+         select case (configuration_method)
+         case (0)
+            model => fabm_create_model_from_file(namlst)
+         case (1)
+            allocate(model)
+            call fabm_create_model_from_yaml_file(model,path=trim(yaml_file))
+         end select   
+      end if
+
+      ! Initialize the Simstrat-FABM driver by reaing settings from fabm/yaml
+      ! Input parameters
+      integer,intent(in) :: nlev
+      !character(len=*),intent(in) :: fname
+      real(rk),optional,intent(in) :: dt
+      class(type_field_manager),intent(inout),optional :: field_manager
+      ! Local variables
+      integer :: i
+      logical :: in_output
+      ! Send message
+      !LEVEL1 'post_init_gotm_fabm'
+      if (fabm_calc) then
+         clock_adv    = 0
+         clock_diff   = 0
+         clock_source = 0
+         repair_interior_count = 0
+         repair_surface_count = 0
+         repair_bottom_count = 0
+      end if
+
+      ! Provide extents of the spatial domain (number of layers nz for a 1D column) or:
       call model%set_domain(nz)
+      ! initialize model tree (creates metadata and assigns variable identifiers)
+      ! fabm v0 compatibiity subroutines
+      call fabm_set_domain(model,nlev,dt)
+      if (_FABM_API_VERSION_ == 0) then
+            call model%set_bottom_index(1)
+            call model%set_surface_index(nlev)
+      end if
 
       ! Point FABM to environmental data
       ! Do this for all variables on FABM's standard variable list that the model can provide.
-      
+      ! In Simstrat: ModelVariable contains pointer var to variable data
+
       ! allocate in simstrat: real, dimension(nz), target :: temp, salt
-      call model%link_interior_data(fabm_standard_variables%temperature, temp)
-      call model%link_interior_data(fabm_standard_variables%practical_salinity, salt)
+      call model%link_interior_data(fabm_standard_variables%temperature, state%model%T)
+      call model%link_interior_data(fabm_standard_variables%practical_salinity, state%model%S)
 
       ! allocate in simstrat: real, target :: wind, yearday
       call model%link_horizontal_data(fabm_standard_variables%wind_speed, wind)
@@ -1070,7 +1212,138 @@ contains
       end do
    end subroutine check_states
 
+   ! Initialize input
+   subroutine configure_simstrat_fabm_input()
+
+      class (type_settings), pointer :: cfg
+
+      cfg => settings_store%get_child('fabm/input', populator=fabm_input_populator)
+   end subroutine configure_simstrat_fabm_input
+
+   ! Add inputs
+   subroutine append_input(input_variable)
+      type (type_input_variable), target :: input_variable
+
+      if (.not. associated(first_input_variable)) then
+         first_input_variable => input_variable
+      else
+         last_input_variable%next => input_variable
+      end if
+      last_input_variable => input_variable
+   end subroutine
+
+   ! Allocate input variable, search in interior/horizontal/global variables
+   subroutine fabm_input_create(self, pair)
+      class (type_fabm_input_populator), intent(inout) :: self
+      type (type_key_value_pair),        intent(inout) :: pair
+
+      type (type_input_variable), pointer :: input_variable
+      class (type_simstrat_settings), pointer :: branch
+      character(len=attribute_length)     :: fabm_name
+      integer :: i
+
+      allocate(input_variable)
+
+      ! First search in interior variables
+      input_variable%interior_id = model%get_bulk_variable_id(pair%name)
+
+      if (fabm_is_variable_used(input_variable%interior_id)) then
+         fabm_name = fabm_get_variable_name(model, input_variable%interior_id)
+         call type_input_create(pair, input_variable%profile_input, trim(input_variable%interior_id%variable%long_name), trim(input_variable%interior_id%variable%units), default=0._rk, pchild=branch)
+         do i = 1, size(model%state_variables)
+            if (fabm_name == model%state_variables(i)%name) then
+               call branch%get(input_variable%relax_tau, 'relax_tau', 'relaxation time scale', 's', minimum=0._rk, default=1.e15_rk)
+               call branch%get(input_variable%relax_tau_bot, 'relax_tau_bot', 'relaxation time scale for bottom layer', 's', minimum=0._rk, default=1.e15_rk)
+               call branch%get(input_variable%relax_tau_surf, 'relax_tau_surf', 'relaxation time scale for surface layer', 's', minimum=0._rk, default=1.e15_rk)
+               call branch%get(input_variable%h_bot, 'thickness_bot', 'thickness of bottom relaxation layer', 'm', minimum=0._rk, default=0._rk)
+               call branch%get(input_variable%h_surf, 'thickness_surf', 'thickness of surface relaxation layer', 'm', minimum=0._rk, default=0._rk)
+               exit
+            end if
+         end do
+      else
+         ! Variable was not found among interior variables. Try variables defined on horizontal slice of model domain (e.g., benthos)
+         input_variable%horizontal_id = model%get_horizontal_variable_id(pair%name)
+         if (fabm_is_variable_used(input_variable%horizontal_id)) then
+            fabm_name = fabm_get_variable_name(model, input_variable%horizontal_id)
+            call type_input_create(pair, input_variable%scalar_input, trim(input_variable%horizontal_id%variable%long_name), trim(input_variable%horizontal_id%variable%units), default=0._rk, pchild=branch)
+            do i = 1, size(model%bottom_state_variables)
+               if (fabm_name == model%bottom_state_variables(i)%name) then
+                  call branch%get(input_variable%relax_tau, 'relax_tau', 'relaxation time scale', 's', minimum=0._rk, default=1.e15_rk)
+                  exit
+               end if
+            end do
+         else
+            ! Variable was not found among interior or horizontal variables. Try global scalars.
+            input_variable%scalar_id = model%get_scalar_variable_id(pair%name)
+            if (.not. fabm_is_variable_used(input_variable%scalar_id)) then
+               FATAL 'Variable '//pair%name//', referenced among FABM inputs was not found in model.'
+               stop 'simstrat_fabm_input:init_simstrat_fabm_input'
+            end if
+            call type_input_create(pair, input_variable%scalar_input, trim(input_variable%scalar_id%variable%long_name), trim(input_variable%scalar_id%variable%units), default=0._rk, pchild=branch)
+         end if
+      end if
+      call append_input(input_variable)
+   end subroutine fabm_input_create
+
+   ! Register input variables with the Simstrat-FABM driver
+   subroutine init_simstrat_fabm_input(nlev,h)
+
+      ! DESCRIPTION:
+      ! Initialize files with observations on FABM variables.
+
+      ! USES:
+      use settings
+
+      ! INPUT PARAMETERS:
+      integer,          intent(in) :: nlev
+      real(RK),         intent(in) :: h(1:nlev)
+
+      ! LOCAL VARIABLES:
+      type (type_input_variable), pointer :: curvariable
+      integer                             :: k
+      real(RK)                            :: db,ds,depth
+
+      ! Calculate depth (used to determine whether in surface/bottom/bulk for relaxation times)
+      depth = sum(h)
+
+      curvariable => first_input_variable
+      do while (associated(curvariable))
+         if (fabm_is_variable_used(curvariable%interior_id)) then
+            call register_input(curvariable%profile_input)
+
+            allocate(curvariable%relax_tau_1d(0:nlev))
+            curvariable%relax_tau_1d = curvariable%relax_tau
+
+            ! Apply separate relaxation times for bottom and surface layer, if specified.
+            db = _ZERO_
+            ds = depth
+            do k=1,nlev
+               db = db+0.5*h(k)
+               ds = ds-0.5*h(k)
+               if (db<=curvariable%h_bot) curvariable%relax_tau_1d(k) = curvariable%relax_tau_bot
+               if (ds<=curvariable%h_surf) curvariable%relax_tau_1d(k) = curvariable%relax_tau_surf
+               db = db+0.5*h(k)
+               ds = ds-0.5*h(k)
+            end do
+
+         ! Register observed variable with the simstrat-FABM driver.
+            call register_observation(curvariable%interior_id, curvariable%profile_input%data, curvariable%relax_tau_1d)
+         else
+            call register_input(curvariable%scalar_input)
+            if (fabm_is_variable_used(curvariable%horizontal_id)) then
+               ! Horizontal variable
+               call register_observation(curvariable%horizontal_id, curvariable%scalar_input%value, curvariable%relax_tau)
+            else
+               ! Scalar variable
+               call register_observation(curvariable%scalar_id, curvariable%scalar_input%value)
+            end if
+         end if
+         curvariable => curvariable%next
+      end do
+   end subroutine init_simstrat_fabm_input
+
    ! Process FABM initial conditions to Simstrat
+   ! Should be done by the 4 above (all from GOTM)
    subroutine AED2_InitCondition(self, var, varname, default_val)
       !#################################### written/copied by A. Gaudard, 2015
          implicit none
