@@ -136,6 +136,13 @@ contains
 
       ! Update total ice thickness
       state%total_ice_h = state%white_ice_h + state%black_ice_h
+      
+      ! Update ice_area_fraction, simple because ice is uniform
+      if (state%total_ice_h > ice_tolerance) then
+         state%ice_area_fraction = 1.0_RK
+      else
+         state%ice_area_fraction = 0.0_RK
+      end if
 
    end subroutine
 

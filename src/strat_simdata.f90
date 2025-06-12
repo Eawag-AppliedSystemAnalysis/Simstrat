@@ -174,10 +174,10 @@ module strat_simdata
       ! Variables located on z_cent grid
       ! Note that for these variables the value at 0 z.b. U(0) is not used
       real(RK), dimension(:), allocatable :: U, V ! Water velocities [m/s]
-      real(RK), dimension(:), pointer :: T, S ! Temperature [°C], Salinity [‰]
+      real(RK), dimension(:), pointer :: T, S ! Temperature [°C], Salinity [‰], FABM needs pointer attribute
       real(RK), dimension(:), allocatable :: dS ! Source/sink for salinity
       real(RK), dimension(:, :), allocatable :: Q_inp ! Horizontal inflow [m^3/s]
-      real(RK), dimension(:), pointer :: rho ! Water density [kg/m^3]
+      real(RK), dimension(:), pointer :: rho ! Water density [kg/m^3], FABM needs pointer attribute
       real(RK), dimension(:,:), pointer :: AED2_state ! State matrix of AED2 variables (depth, variable)
       real(RK), dimension(:,:), pointer :: AED2_diagnostic ! State matrix of AED2 diagnostic svariables
       real(RK), dimension(:), pointer :: AED2_diagnostic_sheet ! State matrix of AED2 diagnostic svariables
@@ -199,18 +199,21 @@ module strat_simdata
       real(RK) :: gamma ! Proportionality constant for loss of seiche energy
 
       real(RK), dimension(:), allocatable :: absorb ! Absorption coeff [m-1]
-      real(RK), dimension(:), pointer :: absorb_vol ! Absorption coeff on vol grid [m-1]
+      real(RK), dimension(:), pointer :: absorb_vol ! Absorption coeff on vol grid [m-1], FABM needs pointer attribute
       real(RK) :: u10, v10, Wf ! Wind speeds, wind factor
-      real(RK), pointer :: uv10 ! pointer attribute needed for AED2
+      real(RK), pointer :: uv10 ! pointer attribute needed for FABM
       real(RK), pointer :: rain ! pointer attribute needed for AED2, rain is not calculated in Simstrat for the moment, but required by AED2
       real(RK) :: drag, u_taus ! Drag
-      real(RK), pointer :: u_taub ! pointer attribute needed for AED2
+      real(RK), pointer :: u_taub ! Bottom stress, FABM needs pointer attribute
       real(RK) :: tx, ty ! Shear stress
-      real(RK) :: C10 ! Wind drag coefficient
+      real(RK), pointer :: C10 ! Wind drag coefficient, FABM needs pointer attribute
       real(RK) :: SST, heat, heat_snow, heat_ice, heat_snowice! Sea surface temperature and heat flux
 
-      real(RK) :: T_atm ! Air temp at surface
+      real(RK), pointer :: T_atm, qa ! Air temp and specific humidity at surface
+      real(RK), pointer :: Cloud ! Cloud area fraction, FABM needs ponter attribute
       real(RK), dimension(:), allocatable :: rad, rad_vol ! Solar radiation (in water)
+      real(RK), dimension(:), pointer :: swr, swr_vol ! Shortwave radiation [J/s/m2] (used for FABM: needs pointer attribute)
+      real(RK), dimension(:), pointer :: par, par_vol ! Photosynthetically active radiation (fraction of swr, used for FABM: needs pointer attribute)
       real(RK), dimension(:), allocatable :: Q_vert ! Vertical exchange between boxes
       real(RK), dimension(9,12) :: albedo_data  ! Experimental monthly albedo data for determination of current water albedo
       real(RK) :: albedo_water   ! Current water albedo
@@ -224,19 +227,25 @@ module strat_simdata
       real(RK) :: snow_dens ! Snow density [kg m-3]
       real(RK) :: ice_temp ! Ice temperature [°C]
       real(RK) :: precip ! Precipiation in water eqvivalent hight [m]
+      real(RK), pointer :: ice_area_fraction ! Ice area fraction, FABM needs pointer attribute
 
       !For saving heatflux
       real(RK), allocatable :: ha ! Incoming long wave [W m-2]
       real(RK), allocatable :: hw ! Outgoing long wave [W m-2]
       real(RK), allocatable :: hk ! Sensible flux [W m-2]
       real(RK), allocatable :: hv ! Latent heat [W m-2]
-      real(RK), pointer :: rad0 !  Solar radiation at surface  [W m-2]
-   
+      real(RK), pointer :: rad0 !  Solar radiation at surface  [W m-2], FABM needs pointer attribute
+      real(RK), pointer :: par0 ! Photosynthetically active radiation [W m-2], FABM needs pointer attribute
+
       real(RK) :: cde, cm0
       real(RK) ::  fsed
       real(RK), dimension(:), allocatable     :: fgeo_add
       integer :: n_AED2_state, n_AED2_diagnostic, n_AED2_diagnostic_sheet
 
+      ! Pointers to parameters for FABM (needs pointer attribute)
+      real(RK), pointer :: Lat ! latitude [degree_north]
+      real(RK), pointer :: p_air ! Surface air pressure [Pa]
+      real(RK), pointer :: wat_albedo ! Surface albedo [-]
 
    contains
       procedure, pass :: init => model_state_init
@@ -269,6 +278,7 @@ contains
    ! Allocates all arrays of the model state in the correct size
    subroutine model_state_init(self, state_size)
       class(ModelState), intent(inout) :: self
+      class(ModelParam), intent(in) :: param
       integer, intent(in) :: state_size
 
       ! Values on volume grid
@@ -299,18 +309,24 @@ contains
       allocate (self%absorb_vol(state_size))
       allocate (self%rad(state_size + 1))
       allocate (self%rad_vol(state_size))
+      allocate (self%swr(state_size + 1))
+      allocate (self%swr_vol(state_size))
+      allocate (self%par(state_size + 1))
+      allocate (self%par_vol(state_size))
       allocate (self%Q_vert(state_size + 1))
 
       allocate (self%snow_h)
       allocate (self%total_ice_h)
       allocate (self%black_ice_h)
       allocate (self%white_ice_h)
+      allocate (self%ice_area_fraction)
 
       allocate (self%ha)
       allocate (self%hw)
       allocate (self%hk)
       allocate (self%hv)
       allocate (self%rad0)
+      allocate (self%par0)
 
       ! Init to zero
       self%U = 0.0_RK
@@ -337,6 +353,10 @@ contains
       self%absorb_vol = 0.0_RK
       self%rad = 0.0_RK
       self%rad_vol = 0.0_RK
+      self%swr = 0.0_RK
+      self%swr_vol = 0.0_RK
+      self%par = 0.0_RK
+      self%par_vol = 0.0_RK
       self%Q_vert = 0.0_RK
 
       self%snow_h = 0.0_RK
@@ -346,12 +366,14 @@ contains
       self%ice_temp = 0.0_RK
       self%snow_dens = rho_s_0
       self%precip = 0.0_RK 
+      self%ice_area_fraction = 0.0_RK 
    
       self%ha = 0.0_RK
       self%hw = 0.0_RK
       self%hk = 0.0_RK 
-      self%hv = 0.0_RK 
+      self%hv = 0.0_RK
       self%rad0 = 0.0_RK
+      self%par0 = 0.0_RK
       self%n_pH = 0
 
       ! init pointers
@@ -360,7 +382,21 @@ contains
       allocate(self%rain)
       self%rain = 0.0_RK
       allocate(self%u_taub)
-      self%u_taub = 0.0_RK
+      self%u_taub = 0.0_RK      
+      allocate(self%C10)
+      self%C10 = 0.0_RK
+      allocate(self%T_atm)
+      self%T_atm = 0.0_RK
+      allocate(self%qa)
+      self%qa = 0.0_RK
+      allocate(self%Cloud)
+      self%Cloud = 0.5_RK
+      allocate(self%Lat)
+      self%Lat = param%Lat
+      allocate(self%p_air)
+      self%p_air = param%p_air
+      allocate(self%wat_albedo)
+      self%wat_albedo = param%wat_albedo
 
       self%simulation_time_old = 0
 
@@ -402,7 +438,13 @@ contains
       write(80) self%C10
       write(80) self%SST, self%heat, self%heat_snow, self%heat_ice, self%heat_snowice
       write(80) self%T_atm
+      !write(80) self%Cloud, self%qa, self%Lat, self%p_air, self%wat_albedo
       call save_array(80, self%rad)
+      !call save_array(80, self%rad_vol)
+      !call save_array(80, self%swr)
+      !call save_array(80, self%swr_vol)
+      !call save_array(80, self%par)
+      !call save_array(80, self%par_vol)
       write(80) self%albedo_data
       write(80) self%albedo_water
       write(80) self%lat_number
@@ -413,11 +455,13 @@ contains
       write(80) self%snow_dens
       write(80) self%ice_temp
       write(80) self%precip
+      !write(80) self%ice_area_fraction
       write(80) self%ha
       write(80) self%hw
       write(80) self%hk
       write(80) self%hv
       write(80) self%rad0
+      !write(80) self%par0
       write(80) self%cde, self%cm0
       write(80) self%fsed
       call save_array(80, self%fgeo_add)
@@ -468,7 +512,13 @@ contains
       read(81) self%C10
       read(81) self%SST, self%heat, self%heat_snow, self%heat_ice, self%heat_snowice
       read(81) self%T_atm
+      !read(81) self%Cloud, self%qa, self%Lat, self%p_air, self%wat_albedo
       call read_array(81, self%rad)
+      !call read_array(81, self%rad_vol)
+      !call read_array(81, self%swr)
+      !call read_array(81, self%swr_vol)
+      !call read_array(81, self%par)
+      !call read_array(81, self%par_vol)
       read(81) self%albedo_data
       read(81) self%albedo_water
       read(81) self%lat_number
@@ -479,11 +529,13 @@ contains
       read(81) self%snow_dens
       read(81) self%ice_temp
       read(81) self%precip
+      !read(81) self%ice_area_fraction
       read(81) self%ha
       read(81) self%hw
       read(81) self%hk
       read(81) self%hv
       read(81) self%rad0
+      !read(81) self%par0
       read(81) self%cde, self%cm0
       read(81) self%fsed
       call read_array(81, self%fgeo_add)

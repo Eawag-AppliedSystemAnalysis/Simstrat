@@ -46,14 +46,17 @@ module strat_grid
 
    ! StaggeredGrid implementation
    type, public :: StaggeredGrid
-      real(RK), dimension(:), pointer     :: h        ! Box height
-      real(RK), dimension(:), allocatable :: z_face   ! Holds z-values of faces
-      real(RK), dimension(:), allocatable :: z_volume ! Holds z-values of volume centers
-      real(RK), dimension(:), pointer     :: layer_depth ! Depth of each layer, used by AED2
-      real(RK), dimension(:), allocatable :: Az       ! Areas
-      real(RK), dimension(:), pointer     :: Az_vol   ! Areas on volume grid (needed or AED2)
-      real(RK), dimension(:), allocatable :: dAz      ! Difference of areas
-      real(RK), dimension(:), allocatable :: meanint  ! ?
+      real(RK), dimension(:), pointer     :: h              ! Box height
+      real(RK), dimension(:), pointer     :: h_in           ! Box height without unphysical layers, used by FABM (needs pointer attribute)
+      real(RK), dimension(:), allocatable :: z_face         ! Holds z-values of faces
+      real(RK), dimension(:), allocatable :: z_volume       ! Holds z-values of volume centers
+      real(RK), dimension(:), pointer     :: layer_depth    ! Depth of each layer, used by FABM (needs pointer attribute)
+      real(RK), dimension(:), allocatable :: Az             ! Areas
+      real(RK), dimension(:), pointer     :: Az_vol         ! Areas on volume grid (needed or AED2)
+      real(RK), dimension(:), allocatable :: dAz            ! Difference of areas
+      real(RK), dimension(:), allocatable :: meanint        ! ?
+      real(RK), pointer :: max_depth                        ! Relative to lake surface depth of lowest layer, FABM needs pointer attribute
+      real(RK), pointer :: z_zero                           ! Absolute depth of lowest layer, FABM needs pointer attribute
       real(RK) :: volume, h_old
 
       !Area factors
@@ -68,10 +71,8 @@ module strat_grid
       integer :: max_length_input_data  ! Hard limit of grid cells for reading files of unknnown length etc
 
       integer :: ubnd_vol, ubnd_fce, length_vol, length_fce   ! Upper and lenght for volume (vol) and face(fce) grids
-      real(RK) :: z_zero
       real(RK), pointer :: lake_level ! pointer attribute is needed for AED2
       real(RK) :: lake_level_old
-      real(RK) :: max_depth
 
    contains
       !Many methods...
@@ -112,12 +113,13 @@ contains
       class(StaggeredGrid), intent(inout) :: self
 
       call save_array_pointer(80, self%h)
+      !call save_array_pointer(80, self%h_in)
       call save_array(80, self%z_face)
       call save_array(80, self%z_volume)
       call save_array(80, self%Az)
       call save_array(80, self%dAz)
       call save_array(80, self%meanint)
-      write(80) self%volume, self%h_old
+      write(80) self%volume, self%h_old, self%max_depth
       call save_array(80, self%AreaFactor_1)
       call save_array(80, self%AreaFactor_2)
       call save_array(80, self%AreaFactor_k1)
@@ -125,7 +127,7 @@ contains
       call save_array(80, self%AreaFactor_eps)
       write(80) self%nz_grid, self%nz_occupied, self%max_length_input_data
       write(80) self%ubnd_vol, self%ubnd_fce, self%length_vol, self%length_fce
-      write(80) self%z_zero, self%lake_level, self%lake_level_old, self%max_depth
+      write(80) self%z_zero, self%lake_level, self%lake_level_old
    end subroutine
 
    subroutine grid_load(self)
@@ -133,12 +135,13 @@ contains
       class(StaggeredGrid), intent(inout) :: self
 
       call read_array_pointer(81, self%h)
+      !call read_array_pointer(81, self%h_in)
       call read_array(81, self%z_face)
       call read_array(81, self%z_volume)
       call read_array(81, self%Az)
       call read_array(81, self%dAz)
       call read_array(81, self%meanint)
-      read(81) self%volume, self%h_old
+      read(81) self%volume, self%h_old, self%max_depth
       call read_array(81, self%AreaFactor_1)
       call read_array(81, self%AreaFactor_2)
       call read_array(81, self%AreaFactor_k1)
@@ -146,7 +149,7 @@ contains
       call read_array(81, self%AreaFactor_eps)
       read(81) self%nz_grid, self%nz_occupied, self%max_length_input_data
       read(81) self%ubnd_vol, self%ubnd_fce, self%length_vol, self%length_fce
-      read(81) self%z_zero, self%lake_level, self%lake_level_old, self%max_depth
+      read(81) self%z_zero, self%lake_level, self%lake_level_old
    end subroutine
 
   ! Set up grid at program start
@@ -154,6 +157,10 @@ contains
       implicit none
       class(StaggeredGrid), intent(inout) :: self
       class(GridConfig), intent(inout) :: config
+
+      ! Allocate max_depth and z_zero
+      allocate(self%max_depth)
+      allocate(self%z_zero)
 
       ! Assign config
       self%nz_grid = config%nz_grid
@@ -182,7 +189,7 @@ contains
          ! h is already allocated by grid point init
          allocate (self%z_volume(0:nz_grid)) ! Depth axis with center of boxes
          self%z_volume(0) = 0 ! trick for array access - index not in use
-         allocate (self%layer_depth(0:nz_grid)) ! Depth of each box
+         allocate (self%layer_depth(0:nz_grid)) ! Depth of each box  -Max: why from 0? would need from 1 for FABM
          allocate (self%z_face(nz_grid + 1)) ! Depth axis with faceer border of boxes
          allocate (self%Az(nz_grid + 1)) ! Az is defined on the faces
          allocate (self%Az_vol(nz_grid)) ! Az_vol is defined on volume grid
@@ -250,6 +257,9 @@ contains
             self%h(2 + self%nz_grid - i) = config%grid_read(i - 1) - config%grid_read(i)
          end do
       end if
+
+      ! h_in only contains physical values
+      self%h_in => self%h(1:self%nz_grid)
    end subroutine grid_init_grid_points
 
    ! Initializes z_volume and z_face
@@ -356,6 +366,7 @@ contains
                   ubnd_vol=>self%ubnd_vol, &
                   layer_depth=>self%layer_depth, &
                   h=>self%h, &
+                  h_in=>self%h_in, &
                   Az=>self%Az, &
                   Az_vol=>self%Az_vol, &
                   dAz=>self%dAz)

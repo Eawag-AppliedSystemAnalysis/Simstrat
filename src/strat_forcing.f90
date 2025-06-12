@@ -162,6 +162,9 @@ contains
          T_surf = state%T(self%grid%ubnd_vol) ! Free water
       end if
 
+      ! Converter from absolut vapour pressure to specific humidity (Lepparanta 2015)
+      sh_c = 0.622/param%p_air
+
       ! Number of values to read, depending on filtered wind and precipitation
       nval_offset = 0
       if (cfg%use_filtered_wind) then ! Add additional column for filtered wind
@@ -183,8 +186,11 @@ contains
          state%uv10 = sqrt(state%u10**2 + state%v10**2) ! AG 2014
          state%SST = A_cur(3) ! Lake surface temperature
          state%rad0 = max(A_cur(4),0.0_RK)*(1 - state%albedo_water)*(1 - param%beta_sol) * param%p_sw_water ! MS: added beta_sol and albedo_water
+         state%par0 = state%rad0*swr_par
          state%heat = 0.0_RK
          state%T_atm = 0.0_RK
+         state%qa = 0.0_RK
+         state%Cloud = 0.5_RK
          state%precip = 0.0_RK
          if (cfg%use_filtered_wind) then
             state%Wf = A_cur(5) ! AG 2014
@@ -210,7 +216,9 @@ contains
             end if
 
             Vap_atm = A_cur(5)
+            state%qa = sh_c * Vap_atm
             Cloud = 0.5
+            state%Cloud = Cloud
             if (cfg%use_filtered_wind) state%Wf = A_cur(6) ! AG 2014
             if (cfg%snow_model == 1 .and. cfg%use_filtered_wind) then
                state%precip = max(A_cur(7),0.0_RK)
@@ -237,12 +245,14 @@ contains
             end if
 
             Vap_atm = A_cur(5)
+            state%qa = sh_c * Vap_atm
             Cloud = A_cur(6)
             if (Cloud < -1e-6 .or. Cloud > 1.000001) then
                write (*,'(A,F12.6)') 'Cloud : ' , Cloud
                write (*,'(A,F12.6)') 'Date  : ' , state%datum
                call error('Cloudiness should always be between 0 and 1.')
             end if
+            state%Cloud = Cloud
             if (cfg%use_filtered_wind) state%Wf = A_cur(7) !AG 2014
             if (cfg%snow_model == 1 .and. cfg%use_filtered_wind) then
                state%precip = max(A_cur(8),0.0_RK)
@@ -262,6 +272,8 @@ contains
             heat0 = A_cur(3) ! MS 2014
             F_glob = max(A_cur(4),0.0_RK) * (1 - state%albedo_water) * param%p_sw_water
             state%T_atm = 0.0_RK
+            state%qa = 0.0_RK
+            state%Cloud = 0.5_RK
             if (cfg%use_filtered_wind) state%Wf = A_cur(5) ! AG 2014
 
          ! Forcing 5 (date, U10, V10, T_atm, H_sol, Vap, ILWR)
@@ -270,6 +282,7 @@ contains
             state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
             state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
             state%T_atm = A_cur(3)
+            state%Cloud = 0.5_RK
             A_cur(4) = max(A_cur(4),0.0_RK)  ! To avoid negative values because of numerical problems
 
             if (state%black_ice_h > 0 .and. state%white_ice_h == 0 .and. state%snow_h == 0) then ! Ice
@@ -283,6 +296,7 @@ contains
             end if
 
             Vap_atm = A_cur(5)
+            state%qa = sh_c * Vap_atm
             H_A = (1 - r_a)*A_cur(6) ! FB 2023: add reflection of longwave radiation
             if (cfg%use_filtered_wind) state%Wf = A_cur(7) ! AG 2014
             if (cfg%snow_model == 1 .and. cfg%use_filtered_wind) then
@@ -331,6 +345,7 @@ contains
                state%heat = H_A + H_W + H_K + H_V + F_glob * param%beta_sol !MS: added term with beta_sol
                ! Removal of solar short-wave radiation absorbed in first water cell
                state%rad0 = F_glob * (1 - param%beta_sol) !MS: added beta_sol
+               state%par0 = state%rad0*swr_par
 
                state%heat_snow = 0 ! Heat snow
                state%heat_snowice = 0 ! Heat snowice
@@ -359,8 +374,8 @@ contains
                   end if
                   H_W = -emissivity * sig * (T_surf + 273.15_RK)**4
                   H_K = rho_air * cp_air * Hk_CH * (state%T_atm - T_surf) * state%uv10
-                  sh_c = 0.622/param%p_air! Converter from absolut vapour pressure to specific humidity (Lepparanta 2015)
                   qa  = sh_c * Vap_atm! Specific humidity air
+                  state%qa = qa
                   q0  = sh_c * 6.11! Specific humidity for saturation levels (6.11 mbar) at surface (ice) at 0°C (Lepparanta 2015)
                   H_V = rho_air * (l_h + l_e) * Hv_CE * (qa - q0) * state%uv10 ! Through sublimation (solid to gas)
                else ! If no melting only considering penetraiting solar radiation since ice formation is parameterised towards temperature
@@ -380,6 +395,7 @@ contains
                ! Removal of solar short-wave radiation absorbed in snow, snowice, ice and first water cell (works also when x_h = 0)
                state%heat = F_glob * exp(-lambda_snow*state%snow_h - lambda_snowice*state%white_ice_h - lambda_ice*state%black_ice_h) * param%beta_sol
                state%rad0 = F_glob * exp(-lambda_snow*state%snow_h - lambda_snowice*state%white_ice_h - lambda_ice*state%black_ice_h) * (1 - param%beta_sol)
+               state%par0 = state%rad0*swr_par
 
                ! Heat flux into snow, ice or snowice layer.
                ! Light absorption each layer
@@ -431,6 +447,7 @@ contains
          else !Forcing mode 4
             state%heat = heat0 + F_glob*param%beta_sol !MS: added term with beta_sol
             state%rad0 = F_glob * (1 - param%beta_sol) !FB, 2021: added term with beta_sol
+            state%par0 = state%rad0*swr_par
             state%heat_snow = 0 ! Heat snow
             state%heat_snowice = 0 ! Heat snowice
             state%heat_ice = 0 ! Heat ice

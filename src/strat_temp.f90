@@ -59,14 +59,22 @@ contains
          !!!!!!!! Precalculations !!!!!!!!
          ! Radiation reaching top layer
          state%rad(self%grid%ubnd_fce) = state%rad0/rho_0/cp ![°C*m/s]  , rad is on faces
+         state%swr(self%grid%ubnd_fce) = state%rad0 ![J/s/m2]
+         state%par(self%grid%ubnd_fce) = state%rad0*swr_par ![J/s/m2]
 
          ! Radiation reaching a layer is equal to radiation in the layer above minus absorption
+         ! Absorption is different for swr and par so the last calculation is not exactly correct
          do i = ubnd_fce - 1, 1, -1
             state%rad(i) = state%rad(i + 1)*exp(-grid%h(i)*(state%absorb(ubnd_fce - i)+state%absorb(ubnd_fce + 1 - i))/2) !Attenuated by absorption
+            state%swr(i) = state%rad(i)*state%rho_0*cp
+            state%par(i) = state%rad(i)*swr_par
          end do
 
          ! Radiation staying in a layer (including the heat which goes into the sediment, therefore the weighting using Az)
+         ! Absorption is different for swr and par so the last calculation is not exactly correct
          state%rad_vol(1:ubnd_vol) = (state%rad(2:ubnd_fce)*grid%Az(2:ubnd_fce) - state%rad(1:ubnd_fce - 1)*grid%Az(1:ubnd_fce - 1))/(grid%Az(2:ubnd_fce) + grid%Az(1:ubnd_fce - 1))*2
+         state%swr_vol(1:ubnd_vol) = state%rad_vol(1:ubnd_vol)*rho_0*cp
+         state%par_vol(1:ubnd_vol) = state%swr_vol(1:ubnd_vol)*rho_0*cp
 
          !!!!!!!! Define sources !!!!!!!!
          ! Add Hsol Term to sources (Eq 1, Goudsmit(2002))
