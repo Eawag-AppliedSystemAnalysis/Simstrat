@@ -189,7 +189,7 @@ contains
          ! h is already allocated by grid point init
          allocate (self%z_volume(0:nz_grid)) ! Depth axis with center of boxes
          self%z_volume(0) = 0 ! trick for array access - index not in use
-         allocate (self%layer_depth(0:nz_grid)) ! Depth of each box  -Max: why from 0? would need from 1 for FABM
+         allocate (self%layer_depth(nz_grid)) ! Depth of each box  -Max: why from 0? would need from 1 for FABM
          allocate (self%z_face(nz_grid + 1)) ! Depth axis with faceer border of boxes
          allocate (self%Az(nz_grid + 1)) ! Az is defined on the faces
          allocate (self%Az_vol(nz_grid)) ! Az_vol is defined on volume grid

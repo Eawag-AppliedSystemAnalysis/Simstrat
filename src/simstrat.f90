@@ -45,7 +45,7 @@ program simstrat_main
    use strat_transport
    use strat_absorption
    use strat_advection
-   use simstrat_aed2
+   use simstrat_fabm
    use strat_lateral
    use forbear
    use csv_module
@@ -72,7 +72,7 @@ program simstrat_main
    type(IceModule) :: mod_ice
    type(AbsorptionModule) :: mod_absorption
    type(AdvectionModule) :: mod_advection
-   type(SimstratAED2) :: mod_aed2
+   type(SimstratFABM) :: mod_fabm
    type(LateralModule), target :: mod_lateral_normal
    type(LateralRhoModule), target :: mod_lateral_rho
    class(GenericLateralModule), pointer :: mod_lateral
@@ -126,9 +126,9 @@ program simstrat_main
                             simdata%input_cfg%AbsorpName, &
                             simdata%grid)
 
-   ! Initialize biochemical model "AED2" if used
-   if (simdata%model_cfg%couple_aed2) then
-      call mod_aed2%init(simdata%model, simdata%grid, simdata%model_cfg, simdata%aed2_cfg)
+   ! Initialize biogeochemical model "FABM" if used
+   if (simdata%model_cfg%couple_fabm) then
+      call mod_fabm%init(simdata%model, simdata%grid)
    end if
 
    ! If there is advection (due to inflow)
@@ -325,8 +325,8 @@ contains
          end if
 
          ! Update biogeochemistry
-         if (simdata%model_cfg%couple_aed2) then
-            call mod_aed2%update(simdata%model)
+         if (simdata%model_cfg%couple_fabm) then
+            call mod_fabm%update()
          end if
 
          ! Call logger to write files

@@ -20,7 +20,7 @@
   },
   "ModelConfig" : {
     "MaxLengthInputData"      : 1000,
-    "CoupleAED2"              : false,
+    "CoupleFABM"              : false,
     "TurbulenceModel"         : 1,
     "SplitSeicheParameter"    : false,
     "StabilityFunction"       : 2,
