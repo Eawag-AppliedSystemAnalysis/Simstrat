@@ -1212,8 +1212,8 @@ contains
       class(SimstratFABM), intent(inout) :: self
       class(ModelState), intent(inout) :: state
       class(StaggeredGrid) :: grid
-      class(Discretization), pointer :: disc      ! Discretization scheme
-      class(LinSysSolver), pointer :: solver      ! Solver
+      class(Discretization) :: disc ! Discretization scheme
+      class(LinSysSolver) :: solver ! Solver
       !class(type_fabm_model), pointer :: fabm_model
 
       ! Simstrat-AED2 Calculations
@@ -1734,7 +1734,7 @@ contains
       ! -> This would be the ideal moment for the output: 
       ! all variables (enviromental, state, mask, diagnostics, source, fluxes, vertical velocities) are in sync.
 
-      
+
 
       ! -> Here you would time-integrate (method up to host) the advection-diffusion-reaction equations
       ! of all tracers, combining the transport terms with the biogeochemical source
@@ -1742,62 +1742,76 @@ contains
 
       ! Time integration for interior state variables
       do ivar = 1, size(self%fabm_model%interior_state_variables)
-         real(RK), dimension(grid%nz_grid) :: var, sources, boundaries, lower_diag, main_diag, upper_diag, rhs
+         call diffusion_FABM_interior_state(self, state, grid, disc, solver, ivar)
+      end do
 
-         var = self%fabm_model%interior_state_variables(:, ivar)
-         sources = self%sms(:, ivar)
-         boundaries = 0
+      ! Time integration for bottom state variables
+      do ivar = 1, size(self%fabm_model%bottom_state_variables)
+         call diffusion_FABM_bottom_state(self, state, grid, disc, solver, ivar)
+      end do
 
-         ! Create linear system of equations
-         ! With diffusivity for temperature nuh
-         call disc%create_LES(var, state%nuh, sources, boundaries, lower_diag, main_diag, upper_diag, rhs, state%dt)
-         ! Solve LES
-         call solver%solve(lower_diag, main_diag, upper_diag, rhs, self%var, self%ubnd)
+      ! Time integration for surface state variables
+      do ivar = 1, size(self%fabm_model%surface_state_variables)
+         call diffusion_FABM_surface_state(self, state, grid, disc, solver, ivar)
       end do
 
       ! Assign local alias back to self
       !self%fabm_model => fabm_model
    end subroutine
 
-   ! Copy of diffusion algorithm used for Simstrat state variables
-   subroutine diffusion_FABM_state(self, state, grid, var_index)
+   ! Diffusion algorithm for interior state variables
+   subroutine diffusion_FABM_interior_state(self, state, grid, disc, solver, ivar)
       ! Arguments
-      class(SimstratFABM) :: self
-      class(ModelState) :: state
+      class(SimstratFABM), intent(inout) :: self
+      class(ModelState), intent(inout) :: state
       class(StaggeredGrid) :: grid
-      integer :: var_index
-
+      class(Discretization) :: disc ! Discretization scheme
+      class(LinSysSolver) :: solver ! Solver
+      
       ! Local variables
-      real(RK), dimension(grid%ubnd_vol) :: boundaries, sources, lower_diag, main_diag, upper_diag, rhs
+      real(RK), dimension(grid%nz_grid) :: sources, boundaries, lower_diag, main_diag, upper_diag, rhs
+      ! Conversion of velocitz fluxes to sources
+      sources = self%sms(:, ivar)  ! Sources and fluxes
+      boundaries = 0 ! Concentration dependent fluxes
 
-      boundaries = 0.
-      sources = 0.
-
-      if (var_index == state%n_pH) state%AED2_state(:,state%n_pH) = 10.**(-state%AED2_state(:,state%n_pH))
-      call euleri_create_LES_MFQ_AED2(self, state%AED2_state(:,var_index), state%nuh, sources, boundaries, lower_diag, main_diag, upper_diag, rhs, state%dt)
-      call solve_tridiag_thomas(lower_diag, main_diag, upper_diag, rhs, state%AED2_state(:,var_index), self%grid%ubnd_vol)
-      if (var_index == state%n_pH) state%AED2_state(:,state%n_pH) = -log10(state%AED2_state(:,state%n_pH))
+      ! Create linear system of equations
+      ! With diffusivity for temperature nuh
+      call disc%create_LES(self%fabm_model%interior_state_variables(:, ivar), state%nuh, sources, boundaries, lower_diag, main_diag, upper_diag, rhs, state%dt)
+      ! Solve LES
+      call solver%solve(lower_diag, main_diag, upper_diag, rhs, self%fabm_model%interior_state_variables(:, ivar), grid%ubnd)
    end subroutine
-   ! Copy of disretization of Simstrat mean quantities
-   subroutine euleri_create_LES_MFQ_AED2(self, var, nu, sources, boundaries, lower_diag, main_diag, upper_diag, rhs, dt)
-      class(SimstratAED2), intent(inout) :: self
-      real(RK), dimension(:), intent(inout) :: var, sources, boundaries, lower_diag, upper_diag, main_diag, rhs, nu
-      real(RK), intent(inout) :: dt
-      integer :: n
 
-      n=self%grid%ubnd_vol
+   ! Diffusion algorithm for bottom state variables
+   subroutine diffusion_FABM_bottom_state(self, state, grid, disc, solver, ivar)
+      ! Arguments
+      class(SimstratFABM), intent(inout) :: self
+      class(ModelState), intent(inout) :: state
+      class(StaggeredGrid) :: grid
+      class(Discretization) :: disc ! Discretization scheme
+      class(LinSysSolver) :: solver ! Solver
+      
+      ! Local variables
+      real(RK), dimension(grid%nz_grid) :: sources, boundaries, lower_diag, main_diag, upper_diag, rhs
+      ! Conversion of fluxes to sources
+      sources =  ! Sources and fluxes
+      boundaries = 0 ! Concentration dependent fluxes
 
-      ! Build diagonals
-      upper_diag(1) = 0.0_RK
-      upper_diag(2:n) = dt*nu(2:n)*self%grid%AreaFactor_1(2:n)
-      lower_diag(1:n - 1) = dt*nu(2:n)*self%grid%AreaFactor_2(1:n-1)
-      lower_diag(n) = 0.0_RK
-      main_diag(1:n) = 1.0_RK - upper_diag(1:n) - lower_diag(1:n) + boundaries(1:n)*dt
-
-      ! Calculate RHS
-      ! A*phi^{n+1} = phi^{n}+dt*S^{n}
-      rhs(1:n) = var(1:n) + dt*sources(1:n)
+      ! Create linear system of equations
+      ! With diffusivity for temperature nuh
+      call disc%create_LES(self%fabm_model%interior_state_variables(:, ivar), state%nuh, sources, boundaries, lower_diag, main_diag, upper_diag, rhs, state%dt)
+      ! Solve LES
+      call solver%solve(lower_diag, main_diag, upper_diag, rhs, self%fabm_model%interior_state_variables(:, ivar), grid%ubnd)
    end subroutine
+
+   ! Convert flux [var_unit m s-1] at layer [m] to source [var_unit s-1]
+   subroutine flux_to_source(self, grid, flux)
+      ! Arguments
+      class(SimstratFABM), intent(inout) :: self
+      class(StaggeredGrid) :: grid
+
+      
+
+   end subroutine flux_to_source
 
    ! Simstrat-AED2 subroutines
       ! ! Calculate fluxes (with AED2 methods) - done bz FABM
