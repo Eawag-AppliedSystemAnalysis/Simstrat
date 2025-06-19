@@ -233,9 +233,6 @@ module simstrat_fabm
 
       ! Arrays to hold the values of all biogeochemical state variables
       ! Where this memory resides and how it is laid out is typically host-specific
-      ! This way is from the FABM Wiki (changed target to pointer attribute)
-      real(RK), dimension(:,:), pointer, allocatable :: interior_state
-      real(RK), dimension(:), pointer, allocatable :: bottom_state, surface_state
 
       ! Array for interior tracer source terms
       real(RK), dimension(:,:), allocatable :: sms_int
@@ -1046,26 +1043,36 @@ contains
       ! (access variable metadata in fabm_model%interior_state_variables, fabm_model%interior_diagnostic_variables)
       self%fabm_model => fabm_create_model()
       ! Provide extents of the spatial domain (number of layers nz for a 1D column)
-      ! Because the entire extent is given some lazers might be claculated that are not physical, be aware of that in the output
+      ! Because the entire extent is given some layers might be claculated that are not physical, be aware of that in the output
       call self%fabm_model%set_domain(grid%nz_grid)
 
       ! At this point (after the call to fabm_create_model), memory should be
-      ! allocated to hold the values of all size(fabm_model%interior_state_variables) state variables
-      ! Combine all state variable values in an array *_state with shape (nz,)size(fabm_model%*_state_variables)
-      allocate(self%interior_state(grid%nz_grid, size(fabm_model%interior_state_variables)))
-      allocate(self%bottom_state(size(fabm_model%bottom_state_variables)))
-      allocate(self%surface_state(size(fabm_model%surface_state_variables)))
-      ! Below, we assume all state variable values are combined in an array interior_state with
-      ! shape nz,size(fabm_model%interior_state_variables)
-      ! Point FABM to your state variable data
-      do ivar = 1, size(fabm_model%interior_state_variables)
-         call self%fabm_model%link_interior_state_data(ivar, self%interior_state(:,ivar))
+      ! allocated to hold the values of all size(fabm_model%*_state_variables) state variables
+      ! All state variable values are combined in an array *_state with shape grid%nz_grid, state%n_fabm_*_state
+
+      ! Interior state variables
+      state%n_fabm_interior_state = size(fabm_model%interior_state_variables)
+      allocate(state%fabm_interior_state(grid%nz_grid, state%n_fabm_interior_state))
+      ! Bottom state variables
+      state%n_fabm_bottom_state = size(fabm_model%bottom_state_variables)
+      allocate(state%fabm_surface_state(state%n_fabm_bottom_state))
+      ! Surface state variables
+      state%n_fabm_surface_state = size(fabm_model%surface_state_variables)
+      allocate(state%fabm_bottom_state(state%n_fabm_surface_state))
+
+      ! Point FABM to state variable data
+
+      ! Interior state variables
+      do ivar = 1, state%n_fabm_interior_state
+         call self%fabm_model%link_interior_state_data(ivar, state%fabm_interior_state(:,ivar))
       end do
-      do ivar = 1, size(fabm_model%bottom_state_variables)
-         call self%fabm_model%link_bottom_state_data(ivar, self%bottom_state(ivar))
+      ! Bottom state variables
+      do ivar = 1, state%n_fabm_bottom_state
+         call self%fabm_model%link_bottom_state_data(ivar, state%fabm_surface_state(ivar))
       end do
-      do ivar = 1, size(fabm_model%surface_state_variables)
-         call self%fabm_model%link_surface_state_data(ivar, self%surface_state(ivar))
+      ! Surface state variables
+      do ivar = 1, state%n_fabm_surface_state
+         call self%fabm_model%link_surface_state_data(ivar, state%fabm_bottom_state(ivar))
       end do
 
       ! Get id for standard variable <variable> if memory location of <variable> changes
@@ -1173,26 +1180,26 @@ contains
       ! 2. Retrieve sources and fluxes across whole domain: order of call and of processing grid points is up to host
       
       ! 2a. Allocate and initialize with 0 (and then retrieve) interior tracer source terms (tracer units s-1)
-      allocate(self%sms_int(grid%nz_grid, size(self%fabm_model%interior_state_variables)))
+      allocate(self%sms_int(grid%nz_grid, state%n_fabm_interior_state))
       self%sms_int = 0
       !call self%fabm_model%get_interior_sources(1, grid%nz_grid, self%sms)
 
       ! 2b. Allocate and initialize with 0 (and then retrieve) fluxes and tracer source terms at bottom
-      allocate(self%flux_bt(size(self%fabm_model%interior_state_variables)))
-      allocate(self%sms_bt(size(self%fabm_model%bottom_state_variables)))
+      allocate(self%flux_bt(state%n_fabm_interior_state))
+      allocate(self%sms_bt(state%n_fabm_bottom_state))
       self%flux_bt = 0
       self%sms_bt = 0
       !call self%fabm_model%get_bottom_sources(self%flux_bt, self%sms_bt)
 
       ! 2c. Allocate and initialize with 0 (and then retrieve) fluxes and tracer source terms at surface
-      allocate(flux_sf(size(self%fabm_model%interior_state_variables)))
-      allocate(sms_sf(size(self%fabm_model%surface_state_variables)))
+      allocate(flux_sf(state%n_fabm_interior_state))
+      allocate(sms_sf(state%n_fabm_surface_state))
       self%flux_sf = 0
       self%sms_sf = 0
       !call self%fabm_model%get_surface_sources(self%flux_sf, self%sms_sf)
 
       ! 3. Allocate and initialize with 0 (and then retrieve) vertical velocities (sinking, floating, active movement) in m s-1
-      allocate(self%velocity(grid%nz_grid, size(self%fabm_model%interior_state_variables)))
+      allocate(self%velocity(grid%nz_grid, state%n_fabm_interior_state))
       self%velocity = 0
       !call self%fabm_model%get_vertical_movement(1,grid%nz_grid, self%velocity)
 
@@ -1731,35 +1738,29 @@ contains
       ! Operates on entire active spatial domain
       call self%fabm_model%finalize_outputs()
 
-      ! -> This would be the ideal moment for the output: 
-      ! all variables (enviromental, state, mask, diagnostics, source, fluxes, vertical velocities) are in sync.
+      ! This would be the ideal moment for the output: 
+      ! All variables (enviromental, state, mask, diagnostics, source, fluxes, vertical velocities) are in sync.
+      ! After the state variables are one step further (does ot matter if Simstrat only outputs those)
 
-
-
-      ! -> Here you would time-integrate (method up to host) the advection-diffusion-reaction equations
-      ! of all tracers, combining the transport terms with the biogeochemical source
-      ! terms (flux and sms) and vertical velocities (velocity). This should result in an updated interior_state.
+      ! Time-integrate the advection-diffusion-reaction equations (method up to host)
+      ! of all tracers, combining the transport terms (flux) with the biogeochemical source
+      ! terms (sms) and vertical velocities (velocity). This results in an updated interior_state.
 
       ! Time integration for interior state variables
-      do ivar = 1, size(self%fabm_model%interior_state_variables)
+      do ivar = 1, state%n_fabm_interior_state
          call diffusion_FABM_interior_state(self, state, grid, disc, solver, ivar)
       end do
-
       ! Time integration for bottom state variables
-      do ivar = 1, size(self%fabm_model%bottom_state_variables)
-         call diffusion_FABM_bottom_state(self, state, grid, disc, solver, ivar)
-      end do
-
+      self%fabm_model%bottom_state_variables = self%fabm_model%bottom_state_variables + state%dt * self%sms_bt
       ! Time integration for surface state variables
-      do ivar = 1, size(self%fabm_model%surface_state_variables)
-         call diffusion_FABM_surface_state(self, state, grid, disc, solver, ivar)
-      end do
+      self%fabm_model%surface_state_variables = self%fabm_model%surface_state_variables + state%dt * self%sms_sf
 
       ! Assign local alias back to self
       !self%fabm_model => fabm_model
    end subroutine
 
    ! Diffusion algorithm for interior state variables
+   ! Assuming small enough dt such that only fluxes between neighbouring layers are relevant
    subroutine diffusion_FABM_interior_state(self, state, grid, disc, solver, ivar)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
@@ -1768,50 +1769,56 @@ contains
       class(Discretization) :: disc ! Discretization scheme
       class(LinSysSolver) :: solver ! Solver
       
+      ! real(RK), dimension(0:grid%nz_grid+1) :: flux_tot ! Include air and benthic layer
+      ! real(RK), dimension(grid%nz_grid) :: boundaries, source, lower_diag, main_diag, upper_diag, rhs
+      ! flux_tot(1:grid%nz_grid) = self%velocity(:, ivar) * state%fabm_interior_state(:, ivar) ! Local flux
+      ! if (self%flux_bt(ivar) > 0) then
+      !    flux_tot(0) = self%flux_bt(ivar) ! flux into water
+      ! else
+      !    flux_tot(0) = 0 ! -> verify: flux out of water is same as negative local flux at 1
+      ! end if
+      ! if (self%flux_sf(ivar) > 0) then
+      !    flux_tot(grid%nz_grid+1) = -self%flux_sf(ivar) ! flux into water
+      ! else
+      !    flux_tot(grid%nz_grid+1) = 0 ! -> verify: flux out of water is same as positive local flux at grid%nz_grid
+      ! end if
+
       ! Local variables
-      real(RK), dimension(grid%nz_grid) :: sources, boundaries, lower_diag, main_diag, upper_diag, rhs
-      ! Conversion of velocitz fluxes to sources
-      sources = self%sms(:, ivar)  ! Sources and fluxes
-      boundaries = 0 ! Concentration dependent fluxes
+      real(RK), dimension(grid%nz_grid) :: velocity_up, velocity_down, sources, lower_diag, main_diag, upper_diag, rhs
+
+      ! Upward flow and downward flow for each layer (positive)
+      velocity_up(1:grid%nz_grid) = max(0.0, velocity(1:grid%nz_grid))
+      velocity_down(1:grid%nz_grid) = max(0.0, -velocity(1:grid%nz_grid))
 
       ! Create linear system of equations
       ! With diffusivity for temperature nuh
-      call disc%create_LES(self%fabm_model%interior_state_variables(:, ivar), state%nuh, sources, boundaries, lower_diag, main_diag, upper_diag, rhs, state%dt)
+
+      ! Build diagonals of A
+
+      ! Downward flux
+      upper_diag(1) = 0.0_RK
+      upper_diag(2:grid%nz_grid) = velocity_down(2:grid%nz_grid)*state%dt*state%nuh(2:grid%nz_grid)
+
+      ! Upward flux
+      lower_diag(1:grid%nz_grid - 1) = velocity_up(1:grid%nz_grid-1)*state%dt*state%nuh(2:grid%nz_grid)
+      lower_diag(grid%nz_grid) = 0.0_RK
+
+      ! 1 - downward - upward
+      main_diag(1:grid%nz_grid) = 1.0_RK - velocity_down(1:grid%nz_grid)*state%dt*state%nuh(1:grid%nz_grid) - velocity_up(1:grid%nz_grid-1)*state%dt*state%nuh(2:grid%nz_grid+1)
+
+      ! Calculate RHS (phi^{n}+dt*S^{n})
+
+      ! Source at each layer
+      sources = self%sms(:, ivar)
+      ! Conversion of flux [var_unit m s-1] to source [var_unit s-1]
+      sources(1) = self%flux_bt(ivar) / grid%h(1)
+      sources(grid%nz_grid) = self%flux_sf(ivar) / grid%h(grid%nz_grid)
+      ! A*phi^{n+1} = phi^{n}+dt*S^{n}
+      rhs(1:grid%nz_grid) = self%fabm_model%interior_state_variables(:, ivar) + state%dt*source(1:grid%nz_grid)
+
       ! Solve LES
-      call solver%solve(lower_diag, main_diag, upper_diag, rhs, self%fabm_model%interior_state_variables(:, ivar), grid%ubnd)
+      call solver%solve(lower_diag, main_diag, upper_diag, rhs, self%fabm_model%interior_state_variables(:, ivar), grid%nz_grid)
    end subroutine
-
-   ! Diffusion algorithm for bottom state variables
-   subroutine diffusion_FABM_bottom_state(self, state, grid, disc, solver, ivar)
-      ! Arguments
-      class(SimstratFABM), intent(inout) :: self
-      class(ModelState), intent(inout) :: state
-      class(StaggeredGrid) :: grid
-      class(Discretization) :: disc ! Discretization scheme
-      class(LinSysSolver) :: solver ! Solver
-      
-      ! Local variables
-      real(RK), dimension(grid%nz_grid) :: sources, boundaries, lower_diag, main_diag, upper_diag, rhs
-      ! Conversion of fluxes to sources
-      sources =  ! Sources and fluxes
-      boundaries = 0 ! Concentration dependent fluxes
-
-      ! Create linear system of equations
-      ! With diffusivity for temperature nuh
-      call disc%create_LES(self%fabm_model%interior_state_variables(:, ivar), state%nuh, sources, boundaries, lower_diag, main_diag, upper_diag, rhs, state%dt)
-      ! Solve LES
-      call solver%solve(lower_diag, main_diag, upper_diag, rhs, self%fabm_model%interior_state_variables(:, ivar), grid%ubnd)
-   end subroutine
-
-   ! Convert flux [var_unit m s-1] at layer [m] to source [var_unit s-1]
-   subroutine flux_to_source(self, grid, flux)
-      ! Arguments
-      class(SimstratFABM), intent(inout) :: self
-      class(StaggeredGrid) :: grid
-
-      
-
-   end subroutine flux_to_source
 
    ! Simstrat-AED2 subroutines
       ! ! Calculate fluxes (with AED2 methods) - done bz FABM

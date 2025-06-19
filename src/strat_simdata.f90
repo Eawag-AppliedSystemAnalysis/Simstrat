@@ -185,6 +185,12 @@ module strat_simdata
       character(len=48), dimension(:), pointer :: AED2_diagnostic_names ! Names of AED2 diagnostic variables used in the simulation
       character(len=48), dimension(:), pointer :: AED2_diagnostic_names_sheet ! Names of AED2 diagnostic surface variables used in the simulation
       integer :: n_pH
+      
+      ! All FABM biogeochemical state variable values in an array *_state
+      ! In Simstrat_FABM allocated with shape (grid%nz_grid, size(n_fabm_*_state))
+      real(RK), dimension(:,:), pointer, allocatable :: fabm_interior_state
+      real(RK), dimension(:), pointer, allocatable :: fabm_bottom_state, fabm_surface_state
+      integer :: n_fabm_interior_state, n_fabm_bottom_state, n_fabm_surface_state
    
       ! Variables located on z_upp grid
       real(RK), dimension(:), allocatable :: k, ko ! Turbulent kinetic energy (TKE) [J/kg]
@@ -459,6 +465,11 @@ contains
       write(80) self%cde, self%cm0
       write(80) self%fsed
       call save_array(80, self%fgeo_add)
+      if (couple_fabm) then
+         call save_matrix_pointer(80, self%fabm_interior_state)
+         call save_matrix_pointer(80, self%fabm_bottom_state)
+         call save_matrix_pointer(80, self%fabm_surface_state)
+      end if
       if (couple_aed2) then
          call save_matrix_pointer(80, self%AED2_state)
          call save_matrix_pointer(80, self%AED2_diagnostic)
@@ -531,6 +542,11 @@ contains
       read(81) self%cde, self%cm0
       read(81) self%fsed
       call read_array(81, self%fgeo_add)
+      if (couple_fabm) then
+         call read_matrix_pointer(81, self%fabm_interior_state)
+         call read_matrix_pointer(81, self%fabm_bottom_state)
+         call read_matrix_pointer(81, self%fabm_surface_state)
+      end if
       if (couple_aed2) then
          call read_matrix_pointer(81, self%AED2_state)
          call read_matrix_pointer(81, self%AED2_diagnostic)

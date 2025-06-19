@@ -79,14 +79,15 @@ contains
 
       n=self%grid%ubnd_vol
 
-      ! Build diagonals
+      ! Build diagonals of A
+      ! boundaries are concentration dependent fluxes (Dampening terms)
       upper_diag(1) = 0.0_RK
       upper_diag(2:n) = dt*nu(2:n)*self%grid%AreaFactor_1(2:n)
       lower_diag(1:n - 1) = dt*nu(2:n)*self%grid%AreaFactor_2(1:n-1)
       lower_diag(n) = 0.0_RK
       main_diag(1:n) = 1.0_RK - upper_diag(1:n) - lower_diag(1:n) + boundaries(1:n)*dt
 
-      ! Calculate RHS
+      ! Calculate RHS (phi^{n}+dt*S^{n})
       ! A*phi^{n+1} = phi^{n}+dt*S^{n}
       rhs(1:n) = var(1:n) + dt*sources(1:n)
    end subroutine
