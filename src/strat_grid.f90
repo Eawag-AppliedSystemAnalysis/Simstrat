@@ -47,7 +47,6 @@ module strat_grid
    ! StaggeredGrid implementation
    type, public :: StaggeredGrid
       real(RK), dimension(:), pointer     :: h              ! Box height
-      real(RK), dimension(:), pointer     :: h_in           ! Box height without unphysical layers, used by FABM (needs pointer attribute)
       real(RK), dimension(:), allocatable :: z_face         ! Holds z-values of faces
       real(RK), dimension(:), allocatable :: z_volume       ! Holds z-values of volume centers
       real(RK), dimension(:), pointer     :: layer_depth    ! Depth of each layer, used by FABM (needs pointer attribute)
@@ -113,7 +112,6 @@ contains
       class(StaggeredGrid), intent(inout) :: self
 
       call save_array_pointer(80, self%h)
-      !call save_array_pointer(80, self%h_in)
       call save_array(80, self%z_face)
       call save_array(80, self%z_volume)
       call save_array(80, self%Az)
@@ -135,7 +133,6 @@ contains
       class(StaggeredGrid), intent(inout) :: self
 
       call read_array_pointer(81, self%h)
-      !call read_array_pointer(81, self%h_in)
       call read_array(81, self%z_face)
       call read_array(81, self%z_volume)
       call read_array(81, self%Az)
@@ -257,9 +254,6 @@ contains
             self%h(2 + self%nz_grid - i) = config%grid_read(i - 1) - config%grid_read(i)
          end do
       end if
-
-      ! h_in only contains physical values
-      self%h_in => self%h(1:self%nz_grid)
    end subroutine grid_init_grid_points
 
    ! Initializes z_volume and z_face
@@ -366,7 +360,6 @@ contains
                   ubnd_vol=>self%ubnd_vol, &
                   layer_depth=>self%layer_depth, &
                   h=>self%h, &
-                  h_in=>self%h_in, &
                   Az=>self%Az, &
                   Az_vol=>self%Az_vol, &
                   dAz=>self%dAz)
