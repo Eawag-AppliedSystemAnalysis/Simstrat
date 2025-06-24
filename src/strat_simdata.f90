@@ -57,8 +57,8 @@ module strat_simdata
       logical :: volume_grid, face_grid
    end type
 
-   ! Definition of a AED2 variable to log
-   type, public :: LogVariableAED2
+   ! -> Definition of a FABM variable to log
+   type, public :: LogVariableFABM
       character(len=48), pointer, dimension(:) :: names
       real(RK), dimension(:,:), pointer :: values
       real(RK), dimension(:), pointer :: values_sheet
@@ -78,9 +78,10 @@ module strat_simdata
       integer :: number_output_vars
       character(len=20), dimension(:), allocatable :: output_var_names ! Names of output variables
       class(LogVariable), dimension(:), allocatable :: output_vars
-      class(LogVariableAED2), allocatable :: output_vars_aed2_state
-      class(LogVariableAED2), allocatable :: output_vars_aed2_diagnostic
-      class(LogVariableAED2), allocatable :: output_vars_aed2_diagnostic_sheet
+      class(LogVariableFABM), allocatable :: output_vars_fabm_interior_state
+      class(LogVariableFABM), allocatable :: output_vars_fabm_bottom_state
+      class(LogVariableFABM), allocatable :: output_vars_fabm_surface_state
+      ! -> class(LogVariableFABM), allocatable :: output_vars_fabm_diagnostic
 
       integer :: output_time_type, output_depth_type, thinning_interval
       real(RK) :: depth_interval, thinning_interval_read ! thinning_interval_read is a real to make sure that also values
@@ -119,19 +120,19 @@ module strat_simdata
       integer :: snow_model
    end type
 
-   ! AED2 configuration (read from file)
-   ! type, public :: AED2Config
-   !    character(len=:), allocatable :: aed2_config_file
-   !    character(len=:), allocatable :: path_aed2_initial
-   !    character(len=:), allocatable :: path_aed2_inflow
-   !    logical :: particle_mobility
-   !    logical :: bioshade_feedback
-   !    logical :: output_diagnostic_variables
-   !    real(RK) :: background_extinction
-   !    integer :: benthic_mode
-   !    !integer :: n_zones
-   !    real(RK), dimension(:), allocatable :: zone_heights
-   ! end type
+   ! FABM configuration (read from file)
+   type, public :: FABMConfig
+      character(len=:), allocatable :: fabm_config_file
+      character(len=:), allocatable :: path_fabm_initial
+      character(len=:), allocatable :: path_fabm_inflow
+      logical :: particle_mobility
+      logical :: bioshade_feedback
+      logical :: output_diagnostic_variables
+      real(RK) :: background_extinction
+      integer :: benthic_mode
+      !integer :: n_zones
+      real(RK), dimension(:), allocatable :: zone_heights
+   end type
 
    ! Model params (read from file)
    type, public :: ModelParam
@@ -178,19 +179,16 @@ module strat_simdata
       real(RK), dimension(:), allocatable :: dS ! Source/sink for salinity
       real(RK), dimension(:, :), allocatable :: Q_inp ! Horizontal inflow [m^3/s]
       real(RK), dimension(:), pointer :: rho ! Water density [kg/m^3], FABM needs pointer attribute
-      real(RK), dimension(:,:), pointer :: AED2_state ! State matrix of AED2 variables (depth, variable)
-      real(RK), dimension(:,:), pointer :: AED2_diagnostic ! State matrix of AED2 diagnostic svariables
-      real(RK), dimension(:), pointer :: AED2_diagnostic_sheet ! State matrix of AED2 diagnostic svariables
-      character(len=48), dimension(:), pointer :: AED2_state_names ! Names of AED2 state variables used in the simulation
-      character(len=48), dimension(:), pointer :: AED2_diagnostic_names ! Names of AED2 diagnostic variables used in the simulation
-      character(len=48), dimension(:), pointer :: AED2_diagnostic_names_sheet ! Names of AED2 diagnostic surface variables used in the simulation
       integer :: n_pH
       
       ! All FABM biogeochemical state variable values in an array *_state
       ! In Simstrat_FABM allocated with shape (grid%nz_grid, size(n_fabm_*_state))
       real(RK), dimension(:,:), pointer, allocatable :: fabm_interior_state
       real(RK), dimension(:), pointer, allocatable :: fabm_bottom_state, fabm_surface_state
-      integer :: n_fabm_interior_state, n_fabm_bottom_state, n_fabm_surface_state
+      integer :: n_fabm_interior_state, n_fabm_bottom_state, n_fabm_surface_state ! -> n_fabm_diagnostic
+      ! -> real(RK), dimension(:,:), pointer :: fabm_diagnostic ! State matrix of FABM diagnostic svariables
+      ! -> character(len=48), dimension(:), pointer :: fabm_state_names ! Names of FABM state variables used in the simulation
+      ! -> character(len=48), dimension(:), pointer :: fabm_diagnostic_names ! Names of FABM diagnostic variables used in the simulation
    
       ! Variables located on z_upp grid
       real(RK), dimension(:), allocatable :: k, ko ! Turbulent kinetic energy (TKE) [J/kg]
@@ -208,7 +206,6 @@ module strat_simdata
       real(RK), dimension(:), pointer :: absorb_vol ! Absorption coeff on vol grid [m-1], FABM needs pointer attribute
       real(RK) :: u10, v10, Wf ! Wind speeds, wind factor
       real(RK), pointer :: uv10 ! pointer attribute needed for FABM
-      real(RK), pointer :: rain ! pointer attribute needed for AED2, rain is not calculated in Simstrat for the moment, but required by AED2
       real(RK) :: drag, u_taus ! Drag
       real(RK), pointer :: u_taub ! Bottom stress, FABM needs pointer attribute
       real(RK) :: tx, ty ! Shear stress
@@ -246,7 +243,6 @@ module strat_simdata
       real(RK) :: cde, cm0
       real(RK) ::  fsed
       real(RK), dimension(:), allocatable     :: fgeo_add
-      integer :: n_AED2_state, n_AED2_diagnostic, n_AED2_diagnostic_sheet
 
       ! Pointers to parameters for FABM (needs pointer attribute)
       real(RK), pointer :: Lat ! latitude [degree_north]
@@ -265,7 +261,7 @@ module strat_simdata
       type(OutputConfig), public  :: output_cfg
       type(SimConfig), public     :: sim_cfg
       type(ModelConfig), public   :: model_cfg
-      !type(AED2Config), public    :: aed2_cfg
+      type(FABMConfig), public    :: fabm_cfg
       type(ModelParam), public    :: model_param
       type(ModelState), public    :: model
       type(StaggeredGrid), public :: grid
@@ -381,8 +377,6 @@ contains
       ! init pointers
       allocate(self%uv10)
       self%uv10 = 0.0_RK
-      allocate(self%rain)
-      self%rain = 0.0_RK
       allocate(self%u_taub)
       self%u_taub = 0.0_RK      
       allocate(self%C10)
@@ -405,10 +399,10 @@ contains
    end subroutine
 
    ! save model state unformatted
-   subroutine save_model_state(self, couple_aed2, inflow_mode)
+   subroutine save_model_state(self, couple_fabm, inflow_mode)
       implicit none
       class(ModelState), intent(in) :: self
-      logical, intent(in) :: couple_aed2
+      logical, intent(in) :: couple_fabm
       integer, intent(in) :: inflow_mode
 
       !write(80) self%current_year, self%current_month, self%current_day, self%datum
@@ -435,7 +429,7 @@ contains
       call save_array(80, self%absorb)
       call save_array_pointer(80, self%absorb_vol)
       write(80) self%u10, self%v10, self%uv10, self%Wf
-      write(80) self%u_taub, self%drag, self%u_taus, self%rain
+      write(80) self%u_taub, self%drag, self%u_taus
       write(80) self%tx, self%ty
       write(80) self%C10
       write(80) self%SST, self%heat, self%heat_snow, self%heat_ice, self%heat_snowice
@@ -469,11 +463,7 @@ contains
          call save_matrix_pointer(80, self%fabm_interior_state)
          call save_matrix_pointer(80, self%fabm_bottom_state)
          call save_matrix_pointer(80, self%fabm_surface_state)
-      end if
-      if (couple_aed2) then
-         call save_matrix_pointer(80, self%AED2_state)
-         call save_matrix_pointer(80, self%AED2_diagnostic)
-         call save_array_pointer(80, self%AED2_diagnostic_sheet)
+         ! -> call save_matrix_pointer(80, self%FABM_diagnostic)
       end if
       if (inflow_mode > 0) then
          call save_matrix(80, self%Q_inp)
@@ -482,10 +472,10 @@ contains
    end subroutine
 
    ! load model state unformatted
-   subroutine load_model_state(self, couple_aed2, inflow_mode)
+   subroutine load_model_state(self, couple_fabm, inflow_mode)
       implicit none
       class(ModelState), intent(inout) :: self
-      logical, intent(in) :: couple_aed2
+      logical, intent(in) :: couple_fabm
       integer, intent(in) :: inflow_mode
 
       read(81) self%current_year, self%current_month, self%current_day, self%datum
@@ -512,7 +502,7 @@ contains
       call read_array(81, self%absorb)
       call read_array_pointer(81, self%absorb_vol)
       read(81) self%u10, self%v10, self%uv10, self%Wf
-      read(81) self%u_taub, self%drag, self%u_taus, self%rain
+      read(81) self%u_taub, self%drag, self%u_taus
       read(81) self%tx, self%ty
       read(81) self%C10
       read(81) self%SST, self%heat, self%heat_snow, self%heat_ice, self%heat_snowice
@@ -546,11 +536,7 @@ contains
          call read_matrix_pointer(81, self%fabm_interior_state)
          call read_matrix_pointer(81, self%fabm_bottom_state)
          call read_matrix_pointer(81, self%fabm_surface_state)
-      end if
-      if (couple_aed2) then
-         call read_matrix_pointer(81, self%AED2_state)
-         call read_matrix_pointer(81, self%AED2_diagnostic)
-         call read_array_pointer(81, self%AED2_diagnostic_sheet)
+         ! -> call read_matrix_pointer(81, self%fabm_diagnostic)
       end if
       if (inflow_mode > 0) then
          call read_matrix(81, self%Q_inp)

@@ -28,9 +28,6 @@
 !     |  Simstrat - FABM interface
 !<    +---------------------------------------------------------------+
 
-!#include "cppdefs.h"
-!#include "fabm_version.h"
-
 module simstrat_fabm
    use fabm ! main FABM module
    use strat_simdata
@@ -51,7 +48,7 @@ module simstrat_fabm
       real(RK), dimension(:,:), allocatable :: sms_int
       ! Arrays for fluxes and tracer source terms at bottom
       ! -> Consider that there is a bottom at every layer
-      real(RK), dimension(:), allocatable :: flux_bt
+      real(RK), dimension(:), allocatable :: flux_bt 
       real(RK), dimension(:), allocatable :: sms_bt
       ! Arrays for fluxes and tracer source terms at surface
       real(RK), dimension(:), allocatable :: flux_sf
@@ -399,7 +396,7 @@ contains
       call solver%solve(lower_diag, main_diag, upper_diag, rhs, self%fabm_model%interior_state_variables(:, ivar), grid%nz_grid)
    end subroutine diffusion_fabm_interior_state
 
-   ! Deallocate memory.
+   ! Deallocate memory
    subroutine deallocate_fabm(self)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self

@@ -51,7 +51,7 @@ module strat_grid
       real(RK), dimension(:), allocatable :: z_volume       ! Holds z-values of volume centers
       real(RK), dimension(:), pointer     :: layer_depth    ! Depth of each layer, used by FABM (needs pointer attribute)
       real(RK), dimension(:), allocatable :: Az             ! Areas
-      real(RK), dimension(:), pointer     :: Az_vol         ! Areas on volume grid (needed or AED2)
+      real(RK), dimension(:), pointer     :: Az_vol         ! Areas on volume grid, needed for FABM
       real(RK), dimension(:), allocatable :: dAz            ! Difference of areas
       real(RK), dimension(:), allocatable :: meanint        ! ?
       real(RK), pointer :: max_depth                        ! Relative to lake surface depth of lowest layer, FABM needs pointer attribute
@@ -70,7 +70,7 @@ module strat_grid
       integer :: max_length_input_data  ! Hard limit of grid cells for reading files of unknnown length etc
 
       integer :: ubnd_vol, ubnd_fce, length_vol, length_fce   ! Upper and lenght for volume (vol) and face(fce) grids
-      real(RK), pointer :: lake_level ! pointer attribute is needed for AED2
+      real(RK), pointer :: lake_level ! -> pointer attribute was needed for AED2
       real(RK) :: lake_level_old
 
    contains
@@ -312,7 +312,7 @@ contains
 
          ! Interpolate area (A) at all depths (z_face)
          call Interp(config%z_A_read, config%A_read, n_read, self%z_face, Az, nz_grid + 1)
-         ! Interpolate area on volume grid (needed for AED2)
+         ! Interpolate area on volume grid (needed for FABM)
          call Interp(config%z_A_read, config%A_read, n_read, self%z_volume(1:nz_grid), Az_vol, nz_grid)
 
          ! Compute area derivative (= projected sediment area over layer thickness)

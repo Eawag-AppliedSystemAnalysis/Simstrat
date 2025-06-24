@@ -91,7 +91,7 @@ program simstrat_main
 
    ! Print some information
    write (6, *) 'Simstrat version '//version
-   write (6, *) 'Coupled with the biogeochemical library AED2'
+   write (6, *) 'Coupled with the biogeochemical library FABM'
    write (6, *) 'This software has been developed at Eawag - Swiss Federal Institute of Aquatic Science and Technology'
    write (6, *) ''
 
@@ -145,7 +145,7 @@ program simstrat_main
          ! User defined inflow depths
          mod_lateral => mod_lateral_rho
       end if
-      call mod_lateral%init(simdata%model, simdata%model_cfg, simdata%input_cfg, simdata%aed2_cfg, simdata%model_param, simdata%grid)
+      call mod_lateral%init(simdata%model, simdata%model_cfg, simdata%input_cfg, simdata%fabm_cfg, simdata%model_param, simdata%grid)
    else
       call warn('Lake in-/outflow is turned off')
    end if
@@ -163,7 +163,7 @@ program simstrat_main
    end if
 
    ! Setup logger
-   call logger%initialize(simdata%model, simdata%sim_cfg, simdata%model_cfg, simdata%aed2_cfg, simdata%output_cfg, simdata%grid, continue_from_snapshot)
+   call logger%initialize(simdata%model, simdata%sim_cfg, simdata%model_cfg, simdata%fabm_cfg, simdata%output_cfg, simdata%grid, continue_from_snapshot)
 
    ! Calculate simulation_end_time, which is a tuple of integers (days, seconds)
 
@@ -221,7 +221,7 @@ contains
       call ok("Start day: "//real_to_str(simdata%sim_cfg%start_datum, '(F7.1)'))
       new_start_datum = simdata%sim_cfg%start_datum
       if (continue_from_snapshot) then
-         call load_snapshot(snapshot_file_path, simdata%model_cfg%couple_aed2)
+         call load_snapshot(snapshot_file_path, simdata%model_cfg%couple_fabm)
          call ok("Simulation snapshot successfully read. Snapshot day: "//real_to_str(simdata%model%datum, '(F7.1)'))
          call logger%calculate_simulation_time_for_next_output(simdata%model%simulation_time)
          new_start_datum = simdata%model%datum
@@ -274,9 +274,9 @@ contains
          ! Update forcing
          call mod_forcing%update(simdata%model)
 
-         ! Update absorption (except if AED2 is off or if AED2 is on but bioshade feedback is off)
-         if (simdata%model_cfg%couple_aed2) then
-            if (.not. simdata%aed2_cfg%bioshade_feedback) then
+         ! Update absorption (except if FABM is off or if FABM is on but bioshade feedback is off)
+         if (simdata%model_cfg%couple_fabm) then
+            if (.not. simdata%fabm_cfg%bioshade_feedback) then
                call mod_absorption%update(simdata%model)
             end if
          else
@@ -341,9 +341,9 @@ contains
          end if
 
       end do
-      if (simdata%sim_cfg%continue_from_snapshot) call save_snapshot(snapshot_file_path, simdata%model_cfg%couple_aed2)
+      if (simdata%sim_cfg%continue_from_snapshot) call save_snapshot(snapshot_file_path, simdata%model_cfg%couple_fabm)
       if (simdata%sim_cfg%save_text_restart) then
-         if (simdata%model_cfg%couple_aed2) call warn('Text restart is not working for AED2 variables.')
+         ! -> if (simdata%model_cfg%couple_fabm) call warn('Text restart is not working for FABM variables.')
          call save_restart(file_text_restart, file_text_restart2)
       end if
    end subroutine
@@ -409,13 +409,13 @@ contains
       call save_files(2)%close(status_ok)
    end subroutine
 
-   subroutine save_snapshot(file_path, couple_aed2)
+   subroutine save_snapshot(file_path, couple_fabm)
       implicit none
       character(len=*), intent(in) :: file_path
-      logical, intent(in) :: couple_aed2
+      logical, intent(in) :: couple_fabm
 
       open(80, file=file_path, Form='unformatted', Action='Write')
-      call simdata%model%save(couple_aed2, simdata%model_cfg%inflow_mode)
+      call simdata%model%save(couple_fabm, simdata%model_cfg%inflow_mode)
       call simdata%grid%save()
       call mod_absorption%save()
       if (simdata%model_cfg%inflow_mode > 0) then
@@ -425,13 +425,13 @@ contains
       close(80)
    end subroutine
 
-   subroutine load_snapshot(file_path, couple_aed2)
+   subroutine load_snapshot(file_path, couple_fabm)
       implicit none
       character(len=*), intent(in) :: file_path
-      logical, intent(in) :: couple_aed2
+      logical, intent(in) :: couple_fabm
 
       open(81, file=file_path, Form='unformatted', Action='Read')
-      call simdata%model%load(couple_aed2, simdata%model_cfg%inflow_mode)
+      call simdata%model%load(couple_fabm, simdata%model_cfg%inflow_mode)
       call simdata%grid%load()
       call mod_absorption%load()
       if (simdata%model_cfg%inflow_mode > 0) then
