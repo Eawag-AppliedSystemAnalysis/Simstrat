@@ -290,6 +290,7 @@ contains
          if (simdata%model_cfg%inflow_mode > 0) then
             ! Treat inflow/outflow
             call mod_lateral%update(simdata%model)
+            call mod_lateral%update_bound(simdata%model)
             ! Set old lake level (before it is changed by advection module)
             simdata%grid%lake_level_old = simdata%grid%z_face(simdata%grid%ubnd_fce)
 

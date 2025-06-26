@@ -51,18 +51,21 @@ module strat_lateral
       real(RK), dimension(:, :), allocatable   :: z_Inp, Q_start, Qs_start, Q_end, Qs_end, Q_read_start, Q_read_end
       real(RK), dimension(:, :), allocatable   :: Inp_read_start, Inp_read_end, Qs_read_start, Qs_read_end
       real(RK), dimension(:), allocatable  :: tb_start, tb_end ! Start time, end time
+      real(RK), dimension(:), allocatable  :: Q_start_bound, Q_end_bound, Q_start_bound_con, Q_end_bound_con, tb_start_bound, tb_end_bound ! For surface- / bottom-bound inflow
       integer, dimension(:), allocatable  :: eof, nval, nval_deep, nval_surface, fnum
+      integer, dimension(:), allocatable  :: eof_bound, nval_bound, fnum_bound, number_of_lines_read_bound ! For surface- / bottom-bound inflow
       integer, dimension(:), allocatable :: number_of_lines_read
       logical, dimension(:), allocatable :: has_surface_input, has_deep_input
       integer :: n_vars, max_n_inflows
-      logical :: couple_aed2
-      character(len=100) :: simstrat_path(n_simstrat), aed2_path
+      logical :: couple_fabm
+      character(len=100) :: simstrat_path(n_simstrat), fabm_path
 
    contains
       procedure, pass :: init => lateral_generic_init
       procedure, pass :: save => lateral_generic_save
       procedure, pass :: load => lateral_generic_load
       procedure(lateral_generic_update), deferred, pass :: update
+      procedure, pass :: update_bound => lateral_bound_update
    end type
 
    ! Subclasses
@@ -83,14 +86,14 @@ contains
       class(ModelState) :: state
    end subroutine
 
-   subroutine lateral_generic_init(self, state, model_config, input_config, aed2_config, model_param, grid)
+   subroutine lateral_generic_init(self, state, model_config, input_config, fabm_config, model_param, grid)
       implicit none
       class(GenericLateralModule) :: self
       class(ModelState) :: state
       class(StaggeredGrid), target :: grid
       class(ModelConfig), target :: model_config
       class(InputConfig), target :: input_config
-      class(AED2Config), target :: aed2_config
+      class(FABMConfig), target :: fabm_config
       class(ModelParam), target :: model_param
 
       ! Locals
@@ -106,10 +109,10 @@ contains
       self%simstrat_path(3) = input_config%TinpName
       self%simstrat_path(4) = input_config%SinpName
 
-      self%couple_aed2 = model_config%couple_aed2
-      if (self%couple_aed2) then
-         self%n_vars = self%n_vars + state%n_AED2_state
-         self%aed2_path = aed2_config%path_aed2_inflow
+      self%couple_fabm = model_config%couple_fabm
+      if (self%couple_fabm) then
+         self%n_vars = self%n_vars + state%n_fabm_interior_state
+         self%fabm_path = fabm_config%path_fabm_inflow
       end if
 
       self%max_n_inflows = model_config%max_length_input_data
@@ -121,6 +124,7 @@ contains
       allocate(self%tb_start(self%n_vars))
       allocate(self%tb_end(self%n_vars))
       allocate(self%fnum(self%n_vars))
+      allocate(self%fnum_bound(self%n_fabm_bottom_state + self%n_fabm_surface_state))
       allocate(self%number_of_lines_read(self%n_vars))
       self%number_of_lines_read = 0
 
@@ -140,15 +144,29 @@ contains
       allocate(self%has_surface_input(1:self%n_vars))
       allocate(self%has_deep_input(1:self%n_vars))
 
-      ! Get location of pH in AED2 array
-      if (self%couple_aed2) then
-         do i = 1, state%n_AED2_state
-            select case(trim(state%AED2_state_names(i)))
-            case('CAR_pH')
-               state%n_pH = i
-            end select
-         end do
+      ! Bottom- / Surface-bound horizontal inflow for FABM
+      if (self%couple_fabm) then
+         allocate(self%eof_bound(self%n_fabm_bottom_state + self%n_fabm_surface_state))
+         allocate(self%nval_bound(self%n_fabm_bottom_state + self%n_fabm_surface_state))
+         allocate(self%tb_start_bound(self%n_fabm_bottom_state + self%n_fabm_surface_state))
+         allocate(self%tb_end_bound(self%n_fabm_bottom_state + self%n_fabm_surface_state))
+         allocate(self%fnum_bound(self%n_fabm_bottom_state + self%n_fabm_surface_state))
+         allocate(state%Q_inp_bound(self%n_fabm_bottom_state + self%n_fabm_surface_state))
+         allocate (self%Q_start_bound(self%n_fabm_bottom_state + self%n_fabm_surface_state))
+         allocate (self%Q_end_bound(self%n_fabm_bottom_state + self%n_fabm_surface_state))
+         allocate(self%number_of_lines_read_bound(self%n_fabm_bottom_state + self%n_fabm_surface_state))
+         self%number_of_lines_read_bound = 0
       end if
+
+      ! -> Get location of pH in AED2 array
+      ! if (self%couple_aed2) then
+      !    do i = 1, state%n_AED2_state
+      !       select case(trim(state%AED2_state_names(i)))
+      !       case('CAR_pH')
+      !          state%n_pH = i
+      !       end select
+      !    end do
+      ! end if
    end subroutine
 
    subroutine lateral_generic_save(self)
@@ -181,6 +199,18 @@ contains
          call save_matrix(80, self%Inp_read_end)
          call save_matrix(80, self%Qs_read_start)
          call save_matrix(80, self%Qs_read_end)
+         ! Bottom- / Surface-bound horizontal inflow for FABM
+         if (self%couple_fabm) then
+            call save_integer_array(80, self%number_of_lines_read_bound)
+            call save_integer_array(80, self%eof_bound)
+            call save_integer_array(80, self%nval_bound)
+            call save_integer_array(80, self%fnum_bound)
+            call save_array(80, self%tb_start_bound)
+            call save_array(80, self%tb_end_bound)
+            call save_array(80, state%Q_inp_bound)
+            call save_array(80, self%Q_start_bound)
+            call save_array(80, self%Q_end_bound)
+         end if
       end if
    end subroutine
 
@@ -214,6 +244,18 @@ contains
          call read_matrix(81, self%Inp_read_end)
          call read_matrix(81, self%Qs_read_start)
          call read_matrix(81, self%Qs_read_end)
+         ! Bottom- / Surface-bound horizontal inflow for FABM
+         if (self%couple_fabm) then
+            call read_integer_array(81, self%number_of_lines_read_bound)
+            call read_integer_array(81, self%eof_bound)
+            call read_integer_array(81, self%nval_bound)
+            call read_integer_array(81, self%fnum_bound)
+            call read_array(81, self%tb_start_bound)
+            call read_array(81, self%tb_end_bound)
+            call read_array(81, state%Q_inp_bound)
+            call read_array(81, self%Q_start_bound)
+            call read_array(81, self%Q_end_bound)
+         end if
       end if
    end subroutine
       
@@ -229,8 +271,8 @@ contains
       real(RK) :: dummy
       real(RK) :: Q_in(1:self%grid%ubnd_vol), h_in(1:self%grid%ubnd_vol)
       real(RK) :: T_in, S_in, co2_in, ch4_in, rho_in, CD_in, g_red, slope, Ri, E, Q_inp_inc
-      real(RK) :: AED2_in(state%n_AED2_state)
-      integer :: i, j, k, i1, i2, l, status
+      real(RK) :: fabm_in_surface(state%n_fabm_surface_state)
+      integer :: i, j, k, i1, i2, l, status, unit
       character(len=100) :: fname
 
 
@@ -251,7 +293,7 @@ contains
 
                   ! Read inflow files
                   if (i > n_simstrat) then
-                     fname = trim(self%aed2_path)//trim(state%AED2_state_names(i - n_simstrat))//'_inflow.dat'
+                     fname = trim(self%fabm_path)//trim(state%fabm_state_names(i - n_simstrat))//'_inflow.dat'
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
@@ -260,7 +302,12 @@ contains
                   open(self%fnum(i), action='read', status='old', file=fname)
                   
                   if (status .ne. 0) then
-                     call error('File '//fname//' not found.')
+                     if (i > n_simstrat) then
+                        ! -> Not all FABM files defined yet
+                        goto 9
+                     else
+                        call error('File '//fname//' not found.')
+                     end if
                   else
                      write(6,*) 'Reading ', fname
                   end if
@@ -359,7 +406,7 @@ contains
                else ! if start from snapshot
                   ! Open inflow files
                   if (i > n_simstrat) then
-                     fname = trim(self%aed2_path)//trim(state%AED2_state_names(i - n_simstrat))//'_inflow.dat'
+                     fname = trim(self%fabm_path)//trim(state%fabm_state_names(i - n_simstrat))//'_inflow.dat'
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
@@ -475,18 +522,18 @@ contains
          end do
 
          ! Only if biochemistry enabled: Transform pH to [H] for physical mixing processes
-         if (self%couple_aed2 .and.state%n_pH > 0) then
-            ! current pH profile
-            state%AED2_state(:,state%n_pH) = 10.**(-state%AED2_state(:,state%n_pH))
-            do i=1,ubnd_vol
-               if (Q_inp(n_simstrat + state%n_pH,i) > 0) then
-                  ! Surface inflows: pH is given as pH*m2/s, so before transforming to [H], we need to get rid of the m2/s temporarily
-                  Q_inp(n_simstrat + state%n_pH,i) = Q_inp(n_simstrat + state%n_pH,i)/Q_inp(1,i)
-                  Q_inp(n_simstrat + state%n_pH,i) = 10.**(-Q_inp(n_simstrat + state%n_pH,i))
-                  Q_inp(n_simstrat + state%n_pH,i) = Q_inp(n_simstrat + state%n_pH,i)*Q_inp(1,i)
-               end if
-            end do
-         end if
+         ! if (self%couple_aed2 .and.state%n_pH > 0) then
+         !    ! current pH profile
+         !    state%AED2_state(:,state%n_pH) = 10.**(-state%AED2_state(:,state%n_pH))
+         !    do i=1,ubnd_vol
+         !       if (Q_inp(n_simstrat + state%n_pH,i) > 0) then
+         !          ! Surface inflows: pH is given as pH*m2/s, so before transforming to [H], we need to get rid of the m2/s temporarily
+         !          Q_inp(n_simstrat + state%n_pH,i) = Q_inp(n_simstrat + state%n_pH,i)/Q_inp(1,i)
+         !          Q_inp(n_simstrat + state%n_pH,i) = 10.**(-Q_inp(n_simstrat + state%n_pH,i))
+         !          Q_inp(n_simstrat + state%n_pH,i) = Q_inp(n_simstrat + state%n_pH,i)*Q_inp(1,i)
+         !       end if
+         !    end do
+         ! end if
 
          ! Plunging algorithm
          do j = 1,self%nval_deep(1)  ! nval_deep needs to be the same for all i
@@ -502,11 +549,11 @@ contains
                S_in = Inp(4,j) !Inflow salinity [‰]
 
                ! Only if biochemistry enabled
-               if (self%couple_aed2) then
-                  ! Get AED2 values for the plunging inflow (before entrainment of ambient water)
-                  AED2_in = Inp(n_simstrat + 1 : self%n_vars,j)
+               if (self%couple_fabm) then
+                  ! Get FABM values for the plunging inflow (before entrainment of ambient water)
+                  fabm_in_interior = Inp(n_simstrat + 1 : self%n_vars, j)
                   ! Transform pH to [H] for physical mixing processes
-                  if (state%n_pH > 0) AED2_in(state%n_pH) = 10.**(-AED2_in(state%n_pH))
+                  ! if (state%n_pH > 0) AED2_in(state%n_pH) = 10.**(-AED2_in(state%n_pH))
                end if
                ! Compute density as a function of T and S
                call calc_density(rho_in, T_in, S_in)
@@ -528,8 +575,8 @@ contains
                      Q_inp(2,k) = Q_inp(2,k) - (Q_in(k-1) - Q_in(k))
                      T_in = (T_in*Q_in(k) + state%T(k)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
                      S_in = (S_in*Q_in(k) + state%S(k)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
-                     if (self%couple_aed2) then
-                        AED2_in = (AED2_in*Q_in(k) + state%AED2_state(k,:)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
+                     if (self%couple_fabm) then
+                        fabm_in_interior = (fabm_in_interior*Q_in(k) + state%fabm_interior_state(k,:)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
                      end if
                      rho_in = (rho_in*Q_in(k) + state%rho(k)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
                      k = k - 1
@@ -546,8 +593,8 @@ contains
                      Q_inp(2,k) = Q_inp(2,k) - (Q_in(k + 1) - Q_in(k))
                      T_in = (T_in*Q_in(k) + state%T(k)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
                      S_in = (S_in*Q_in(k) + state%S(k)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
-                     if (self%couple_aed2) then
-                        AED2_in = (AED2_in*Q_in(k) + state%AED2_state(k,:)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
+                     if (self%couple_fabm) then
+                        fabm_in_interior = (fabm_in_interior*Q_in(k) + state%fabm_interior_state(k,:)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
                      end if
                      rho_in = (rho_in*Q_in(k) + state%rho(k)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
                      k = k + 1
@@ -565,7 +612,7 @@ contains
                   Q_inp(1,i) = Q_inp(1,i) + Q_inp_inc
                   Q_inp(3,i) = Q_inp(3,i) + T_in*Q_inp_inc
                   Q_inp(4,i) = Q_inp(4,i) + S_in*Q_inp_inc
-                  if (self%couple_aed2) Q_inp(n_simstrat + 1 : self%n_vars,i) = Q_inp(n_simstrat + 1 : self%n_vars,i) + AED2_in*Q_inp_inc
+                  if (self%couple_fabm) Q_inp(n_simstrat + 1 : self%n_vars,i) = Q_inp(n_simstrat + 1 : self%n_vars,i) + fabm_in_interior*Q_inp_inc
                end do
             end if
          end do
@@ -604,7 +651,7 @@ contains
             if (idx) then  ! If first timestep
                if (self%number_of_lines_read(i) == 0) then  ! If not started from snapshot
                   if (i > n_simstrat) then
-                     fname = trim(self%aed2_path)//trim(state%AED2_state_names(i - n_simstrat))//'_inflow.dat'
+                     fname = trim(self%fabm_path)//trim(state%fabm_state_names(i - n_simstrat))//'_inflow.dat'
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
@@ -614,7 +661,12 @@ contains
                   open(self%fnum(i), action='read', status='old', file=fname)
                   
                   if (status .ne. 0) then
-                     call error('File '//fname//' not found.')
+                     if (i > n_simstrat) then
+                        ! -> Not all FABM files defined yet
+                        goto 9
+                     else
+                        call error('File '//fname//' not found.')
+                     end if
                   else
                      write(6,*) 'Reading ', fname
                   end if
@@ -713,7 +765,7 @@ contains
                else ! if start from snapshot
                   ! Open inflow files
                   if (i > n_simstrat) then
-                     fname = trim(self%aed2_path)//trim(state%AED2_state_names(i - n_simstrat))//'_inflow.dat'
+                     fname = trim(self%fabm_path)//trim(state%fabm_state_names(i - n_simstrat))//'_inflow.dat'
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
@@ -802,19 +854,132 @@ contains
          end do
 
          ! Only if biochemistry enabled: Transform pH to [H] for physical mixing processes
-         if (self%couple_aed2 .and. state%n_pH > 0) then
-            ! current pH profile
-            state%AED2_state(:,state%n_pH) = 10.**(-state%AED2_state(:,state%n_pH))
-            do i=1,ubnd_vol
-               if (Q_inp(n_simstrat + state%n_pH,i) > 0) then
-                  ! Surface inflows: pH is given as pH*m2/s, so before transforming to [H], we need to get rid of the m2/s temporarily
-                  Q_inp(n_simstrat + state%n_pH,i) = Q_inp(n_simstrat + state%n_pH,i)/Q_inp(1,i)
-                  Q_inp(n_simstrat + state%n_pH,i) = 10.**(-Q_inp(n_simstrat + state%n_pH,i))
-                  Q_inp(n_simstrat + state%n_pH,i) = Q_inp(n_simstrat + state%n_pH,i)*Q_inp(1,i)
-               end if
-            end do
-         end if
+         ! if (self%couple_aed2 .and. state%n_pH > 0) then
+         !    ! current pH profile
+         !    state%AED2_state(:,state%n_pH) = 10.**(-state%AED2_state(:,state%n_pH))
+         !    do i=1,ubnd_vol
+         !       if (Q_inp(n_simstrat + state%n_pH,i) > 0) then
+         !          ! Surface inflows: pH is given as pH*m2/s, so before transforming to [H], we need to get rid of the m2/s temporarily
+         !          Q_inp(n_simstrat + state%n_pH,i) = Q_inp(n_simstrat + state%n_pH,i)/Q_inp(1,i)
+         !          Q_inp(n_simstrat + state%n_pH,i) = 10.**(-Q_inp(n_simstrat + state%n_pH,i))
+         !          Q_inp(n_simstrat + state%n_pH,i) = Q_inp(n_simstrat + state%n_pH,i)*Q_inp(1,i)
+         !       end if
+         !    end do
+         ! end if
 
+      end associate
+   end subroutine
+
+   ! FABM: Surface- / Bottom-bound inflows and outflows (absolute and concentration-dependent)
+   ! Inflow file consists of one time and two inflow/outflow columns (absolute and concentration-dependent)
+   subroutine lateral_bound_update(self, state)
+      implicit none
+      class(LateralModule) :: self
+      class(ModelState) :: state
+
+      ! Local Declarations
+      integer :: i, l, status, unit
+      character(len=100) :: fname
+
+
+      associate (datum=>state%datum, &
+                 idx=>state%first_timestep, &
+                 number_of_lines_read_bound=>self%number_of_lines_read_bound, &
+                 Q_inp_bound=>state%Q_inp_bound, & ! Q_inp_bound is the absolute in-/output at the bottom/surface for each time step
+                 Q_inp_bound_con=>state%Q_inp_bound_con, & ! Q_inp_bound_con is the concentration-dependent in-/output at the bottom/surface for each time step
+      )
+
+         do i=1, self%n_fabm_bottom_state + self%n_fabm_surface_state
+            if (idx) then  ! If first timestep
+               if (self%number_of_lines_read_bound(i) == 0) then  ! If not started from snapshot
+                  fname = trim(self%fabm_path)//trim(state%fabm_state_names(state%n_fabm_interior_state + i))//'_inflow.dat'
+
+                  ! Read inflow files
+                  open(newunit=unit, action='read', status='old', file=fname)
+                  self%fnum_bound(i) = unit
+                  
+                  if (status .ne. 0) then
+                     goto 9
+                  else
+                     write(6,*) 'Reading ', fname
+                  end if
+
+                   ! Default values
+                  self%Q_start_bound(i) = 0.0_RK
+                  self%Q_end_bound(i) = 0.0_RK
+                  self%Q_start_bound_con(i) = 0.0_RK
+                  self%Q_end_bound_con(i) = 0.0_RK
+
+                  ! Open file and start to read
+                  self%eof_bound(i) = 0
+                  read (self%fnum_bound(i), *, end=9) ! Skip first row: description of columns
+                  call count_read_bound(self, i)
+
+                  ! Number of inputs to read
+                  read (self%fnum_bound(i), *, end=9) self%nval_bound
+                  call count_read_bound(self, i)
+
+                  ! Read first input line
+                  read (self%fnum_bound(i), *, end=9) self%tb_start_bound(i), Q_start_bound(i), Q_start_bound_con(i)
+                  call count_read_bound(self, i)
+
+                  ! Read second line
+                  read (self%fnum_bound(i), *, end=7) self%tb_end_bound(i), Q_end_bound(i), Q_end_bound_con(i)
+                  call count_read_bound(self, i)
+
+                  call ok('Input file successfully read: '//fname)
+               else ! if start from snapshot
+                  ! Open inflow files
+                  fname = trim(self%fabm_path)//trim(state%fabm_state_names(state%n_fabm_interior_state + i))//'_inflow.dat'
+                  
+                  open(self%fnum_bound(i), action='read', status='old', file=fname)
+
+                  do l = 1, self%number_of_lines_read(i)
+                     read (self%fnum_bound(i), *, end=9) ! Skip already read and processed lines
+                  end do
+                  call ok('Input file successfully opened: '//fname)
+               end if
+            end if ! idx = 1
+
+
+
+            ! Temporal treatment of inflow
+            if ((datum <= self%tb_start_bound(i)) .or. (self%eof_bound(i) == 1)) then ! if datum before first date or end of file reached
+               goto 8
+            else
+               do while (.not. ((datum >= self%tb_start_bound(i)) .and. (datum <= self%tb_end_bound(i)))) ! Do until datum between dates
+                  self%tb_start_bound(i) = self%tb_end_bound(i) ! Move one step in time
+                  self%Q_start_bound(i) = self%Q_end_bound(i)
+                  self%Q_start_bound_con(i) = self%Q_end_bound_con(i)
+
+                  read (self%fnum_bound(i), *, end=7) self%tb_end_bound(i), self%Q_end_bound(i), self%Q_end_bound_con(i)
+                  call count_read_bound(self, i)
+               end do ! end do while
+            end if
+
+            ! Linearly interpolate value at correct datum
+            Q_inp_bound(i) = self%Q_start_bound(i) + (datum-self%tb_start_bound(i))/(self%tb_end_bound(i)-self%tb_start_bound(i))* &
+               (self%Q_end_bound(i) - self%Q_start_bound(i))
+            Q_inp_bound_con(i) = self%Q_start_bound_con(i) + (datum-self%tb_start_bound(i))/(self%tb_end_bound(i)-self%tb_start_bound(i))* &
+               (self%Q_end_bound_con(i) - self%Q_start_bound_con(i))
+            goto 11
+
+            ! If end of file reached, set to closest available value
+ 7          self%eof_bound(i) = 1
+ 8          Q_inp_bound(i) = self%Q_start_bound(i)
+ 8          Q_inp_bound_con(i) = self%Q_start_bound_con(i)
+            goto 11
+
+            ! If no data available
+ 9          write(6,*) '[WARNING] ','No data found in ',trim(fname),' file. Values set to zero.'
+            self%eof_bound(i) = 1
+            Q_inp_bound(i) = 0.0_RK
+            self%Q_start_bound(i) = 0.0_RK
+            Q_inp_bound_con(i) = 0.0_RK
+            self%Q_start_bound_con(i) = 0.0_RK
+11          continue
+
+         end do
       end associate
    end subroutine
 
@@ -824,6 +989,14 @@ contains
       integer i
       
       self%number_of_lines_read(i) = self%number_of_lines_read(i) + 1
+   end subroutine
+
+   subroutine count_read_bound(self, i)
+      implicit none
+      class(GenericLateralModule) :: self
+      integer i
+      
+      self%number_of_lines_read_bound(i) = self%number_of_lines_read_bound(i) + 1
    end subroutine
 
 end module

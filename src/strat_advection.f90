@@ -219,9 +219,16 @@ contains
             ! dS = dS(vertical advection) + dS(inflow) + dS(outflow), units: ‰*m^3/s
             dS(1:ubnd_vol) = dS(1:ubnd_vol) + state%Q_inp(4, 1:ubnd_vol) + state%Q_inp(2, 1:ubnd_vol)*state%S(1:ubnd_vol)
             if (self%cfg%couple_fabm) then
-            ! -> dfabm_interior = dfabm_interior + dfabm_interior(inflow) + dfabm_interior(outflow), units: var_unit*m^3/s
-            ! -> dfabm_bottom = dfabm_bottom(inflow) + dfabm_bottom(outflow), units: var_unit*m^2/s
-            ! -> dfabm_surface = dfabm_surface(inflow) + dfabm_surface(outflow), units: var_unit*m^2/s
+               ! -> dfabm_interior = dfabm_interior + dfabm_interior(inflow) + dfabm_interior(outflow), units: var_unit*m^3/s
+               dfabm_interior(1:ubnd_vol, :) = dfabm_interior(1:ubnd_vol, :) +&
+                state%Q_inp(n_simstrat + 1 : n_simstrat + state%n_fabm_interior_state, 1:ubnd_vol) +&
+                state%Q_inp(2, 1:ubnd_vol)*state%fabm_interior_state(1:ubnd_vol, :)
+               ! dfabm_bottom = dfabm_bottom(inflow) + dfabm_bottom(outflow), units: var_unit*m^2/s
+               dfabm_bottom(:) = state%Q_inp_bound(1:state%n_fabm_bottom_state) +&
+                state%Q_inp_bound_con(1:state%n_fabm_bottom_state)*state%fabm_bottom_state(:)
+               ! dfabm_surface = dfabm_surface(inflow) + dfabm_surface(outflow), units: var_unit*m^2/s
+               dfabm_surface(:) = state%Q_inp_bound(state%n_fabm_bottom_state + 1 : state%n_fabm_bottom_state + state%n_fabm_surface_state) +&
+                state%Q_inp_bound_con(state%n_fabm_bottom_state + 1 : state%n_fabm_bottom_state + state%n_fabm_surface_state)*state%fabm_surface_state(:)
             end if
 
             ! Add change to the state variable
@@ -231,7 +238,7 @@ contains
             state%S(1:ubnd_vol) = state%S(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dS(1:ubnd_vol)
             if (self%cfg%couple_fabm) then
                state%fabm_interior_state(1:ubnd_vol,:) = state%fabm_interior_state(1:ubnd_vol,:) + AreaFactor_adv(1:ubnd_vol)*dfabm_interior(1:ubnd_vol,:)
-               state%fabm_bottom_state(:) = state%fabm_bottom_state(:) + dt/grid%Az(ubnd_vol+1)*dfabm_bottom(:)
+               state%fabm_bottom_state(:) = state%fabm_bottom_state(:) + dt/grid%Az(1)*dfabm_bottom(:)
                state%fabm_surface_state(:) = state%fabm_surface_state(:) + dt/grid%Az(ubnd_vol+1)*dfabm_surface(:)
             end if
 

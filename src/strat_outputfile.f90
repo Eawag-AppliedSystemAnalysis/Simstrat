@@ -29,7 +29,7 @@ module strat_outputfile
    use strat_kinds
    use strat_simdata
    use strat_grid
-   use simstrat_aed2
+   use simstrat_fabm
    use utilities
    use csv_module
    implicit none
@@ -42,11 +42,11 @@ module strat_outputfile
       class(OutputConfig), public, pointer   :: output_config
       class(SimConfig), public, pointer :: sim_config
       class(ModelConfig), public, pointer :: model_config
-      class(AED2Config), public, pointer :: aed2_config
+      class(FABMConfig), public, pointer :: fabm_config
       class(StaggeredGrid), public, pointer ::grid
       type(csv_file), dimension(:), allocatable :: output_files
       integer, public :: n_depths
-      integer, public :: n_vars, n_vars_Simstrat, n_vars_AED2_state, n_vars_AED2_diagnostic, n_vars_AED2_diagnostic_sheet
+      integer, public :: n_vars, n_vars_Simstrat, n_vars_fabm_state, n_vars_fabm_interior_state, n_vars_fabm_bottom_state, n_vars_fabm_surface_state ! -> , n_vars_fabm_diagnostic
       integer, public :: counter = 0
       integer(8), public, dimension(2) :: simulation_time_for_next_output = 0
       real(RK), dimension(:,:), allocatable :: last_iteration_data
@@ -86,14 +86,14 @@ module strat_outputfile
       procedure, pass :: add_data_array => output_helper_add_data_array
       procedure, pass :: add_data_scalar => output_helper_add_data_scalar
       procedure, pass :: next_row => output_helper_next_row
-   end type
+   end typeS
 
 
 contains
 
    ! Abstract interface definitions
 
-   subroutine generic_log_init(self, state, sim_config, model_config, aed2_config, output_config, grid, snapshot_file_exists)
+   subroutine generic_log_init(self, state, sim_config, model_config, fabm_config, output_config, grid, snapshot_file_exists)
 
       implicit none
 
@@ -101,7 +101,7 @@ contains
       class(ModelState), target :: state
       class(SimConfig), target :: sim_config
       class(ModelConfig), target :: model_config
-      class(AED2Config), target :: aed2_config
+      class(FABMConfig), target :: fabm_config
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
       logical, intent(in) :: snapshot_file_exists
@@ -153,14 +153,14 @@ contains
 
    ! Init logging for interpolating logger
 
-   subroutine log_init_interpolating(self, state, sim_config, model_config, aed2_config, output_config, grid, snapshot_file_exists)
+   subroutine log_init_interpolating(self, state, sim_config, model_config, fabm_config, output_config, grid, snapshot_file_exists)
 
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
       class(ModelState), target :: state
       class(SimConfig), target :: sim_config
       class(ModelConfig), target :: model_config
-      class(AED2Config), target :: aed2_config
+      class(FABMConfig), target :: fabm_config
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
       logical, intent(in) :: snapshot_file_exists
@@ -169,38 +169,53 @@ contains
 
       self%sim_config => sim_config
       self%model_config => model_config
-      self%aed2_config => aed2_config
+      self%fabm_config => fabm_config
       self%output_config => output_config
       self%grid => grid
       self%n_vars_Simstrat = size(output_config%output_vars)
 
-      if (self%model_config%couple_aed2) then
-        ! allocate AED2 output structure for state variables
-        allocate (output_config%output_vars_aed2_state) ! We don't know yet how many variables
-        output_config%output_vars_aed2_state%names => state%AED2_state_names
-        output_config%output_vars_aed2_state%values => state%AED2_state
-        self%n_vars_AED2_state = state%n_AED2_state
+      if (self%model_config%couple_fabm) then
+        ! allocate FABM output structure for interior state variables
+        allocate (output_config%output_vars_fabm_interior_state) ! We don't know yet how many variables
+        output_config%output_vars_fabm_interior_state%names => state%fabm_state_names(1:state%n_fabm_interior_state)
+        output_config%output_vars_fabm_interior_state%values => state%fabm_interior_state
+        self%n_vars_fabm_interior_state = state%n_fabm_interior_state
+        
+        ! allocate FABM output structure for bottom state variables
+        allocate (output_config%output_vars_fabm_bottom_state) ! We don't know yet how many variables
+        output_config%output_vars_fabm_bottom_state%names => state%fabm_state_names(1:state%n_fabm_bottom_state)
+        output_config%output_vars_fabm_bottom_state%values => state%fabm_bottom_state
+        self%n_vars_fabm_bottom_state = state%n_fabm_bottom_state
+        
+        ! allocate FABM output structure for surface state variables
+        allocate (output_config%output_vars_fabm_surface_state) ! We don't know yet how many variables
+        output_config%output_vars_fabm_surface_state%names => state%fabm_state_names(1:state%n_fabm_surface_state)
+        output_config%output_vars_fabm_surface_state%values => state%fabm_surface_state
+        self%n_vars_fabm_surface_state = state%n_fabm_surface_state
 
-        ! Allocate AED2 output structure for diagnostic variables if necessary
-        if (aed2_config%output_diagnostic_variables) then
-          allocate (output_config%output_vars_aed2_diagnostic) ! We don't know yet how many variables
-          output_config%output_vars_aed2_diagnostic%names => state%AED2_diagnostic_names
-          output_config%output_vars_aed2_diagnostic%values => state%AED2_diagnostic
-          self%n_vars_AED2_diagnostic = state%n_AED2_diagnostic
+        ! -> Allocate FABM output structure for diagnostic variables if necessary
+      !   if (fabm_config%output_diagnostic_variables) then
+      !     allocate (output_config%output_vars_fabm_diagnostic) ! We don't know yet how many variables
+      !     output_config%output_vars_fabm_diagnostic%names => state%fabm_diagnostic_names
+      !     output_config%output_vars_fabm_diagnostic%values => state%fabm_diagnostic
+      !     self%n_vars_fabm_diagnostic = state%n_fabm_diagnostic
 
           ! Surface fluxes
-          allocate (output_config%output_vars_aed2_diagnostic_sheet) ! We don't know yet how many variables
-          output_config%output_vars_aed2_diagnostic_sheet%names => state%AED2_diagnostic_names_sheet
-          output_config%output_vars_aed2_diagnostic_sheet%values_sheet => state%AED2_diagnostic_sheet
-          self%n_vars_AED2_diagnostic_sheet = state%n_AED2_diagnostic_sheet
-        else
-         self%n_vars_AED2_diagnostic = 0
-         self%n_vars_AED2_diagnostic_sheet = 0
-        end if
+         !  allocate (output_config%output_vars_aed2_diagnostic_sheet) ! We don't know yet how many variables
+         !  output_config%output_vars_aed2_diagnostic_sheet%names => state%AED2_diagnostic_names_sheet
+         !  output_config%output_vars_aed2_diagnostic_sheet%values_sheet => state%AED2_diagnostic_sheet
+         !  self%n_vars_AED2_diagnostic_sheet = state%n_AED2_diagnostic_sheet
+      !   else
+      !    self%n_vars_fabm_diagnostic = 0
+      !    self%n_vars_AED2_diagnostic_sheet = 0
+      !   end if
       else
-         self%n_vars_AED2_state = 0
+         self%n_vars_fabm_interior_state = 0
+         self%n_vars_fabm_bottom_state = 0
+         self%n_vars_fabm_surface_state = 0
       end if
-      self%n_vars = self%n_vars_Simstrat + self%n_vars_AED2_state + self%n_vars_AED2_diagnostic + self%n_vars_AED2_diagnostic_sheet
+      self%n_vars_fabm_state = self%n_vars_fabm_interior_state + self%n_vars_fabm_bottom_state + self%n_vars_fabm_surface_state
+      self%n_vars = self%n_vars_Simstrat + self%n_vars_fabm_state ! -> + self%n_vars_fabm_diagnostic
 
       ! If output times are given in file
       if (output_config%thinning_interval == 0) then
@@ -347,34 +362,38 @@ contains
          end if
       end do
 
-      ! AED2 part
-      if (self%model_config%couple_aed2) then
+      ! FABM part
+      if (self%model_config%couple_fabm) then
          do i = self%n_vars_Simstrat + 1, self%n_vars
-            if (i < (self%n_vars_Simstrat + self%n_vars_AED2_state + 1)) then
-               file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_aed2_state%names(i - self%n_vars_Simstrat))//'_out.dat'
-            else if (i < (self%n_vars_Simstrat + self%n_vars_AED2_state + self%n_vars_AED2_diagnostic + 1)) then
-               file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_aed2_diagnostic%names(i - self%n_vars_Simstrat - self%n_vars_AED2_state))//'_out.dat'
-            else
-               file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_aed2_diagnostic_sheet%names(i - self%n_vars_Simstrat - self%n_vars_AED2_state - self%n_vars_AED2_diagnostic))//'_out.dat'
+            if (i < (self%n_vars_Simstrat + self%n_vars_fabm_interior_state + 1)) then
+               file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_fabm_interior_state%names(i - self%n_vars_Simstrat))//'_out.dat'
+            else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_interior_state + self%n_vars_fabm_bottom_state + 1)) then
+               file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_fabm_bottom_state%names(i - self%n_vars_Simstrat - self%n_vars_fabm_interior_state))//'_out.dat'
+            else ! -> if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + 1)) then
+               file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_fabm_surface_state%names(i - self%n_vars_Simstrat - self%n_vars_fabm_interior_state - self%n_vars_fabm_bottom_state))//'_out.dat'
+            ! -> else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state +self%n_vars_fabm_diagnostic + 1)) then
+            !    file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_fabm_diagnostic%names(i - self%n_vars_Simstrat - self%n_vars_fabm_state))//'_out.dat'
+            ! else
+            !    file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_aed2_diagnostic_sheet%names(i - self%n_vars_Simstrat - self%n_vars_fabm_state - self%n_vars_fabm_diagnostic))//'_out.dat'
             end if
             inquire (file=file_path, exist=append)
 
             append = append .and. snapshot_file_exists
 
-            if (i < (self%n_vars_Simstrat + self%n_vars_AED2_state + self%n_vars_AED2_diagnostic + 1)) then
-               call self%output_files(i)%open(file_path, n_cols=self%n_depths + 1, append=append, status_ok=status_ok)
-               if (.not. append) then
-                  call self%output_files(i)%add('Datetime')
-                  call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
-                  call self%output_files(i)%next_row()
-               end if
-            else
-               call self%output_files(i)%open(file_path, n_cols=1 + 1, append=append, status_ok=status_ok)
-               if (.not. append) then
-                  call self%output_files(i)%add('Datetime')
-                  call self%output_files(i)%add(grid%z_face(grid%ubnd_fce), real_fmt='(F12.3)')
-                  call self%output_files(i)%next_row()
-               end if
+            ! for fluxes
+            ! if (i > (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic + 1)) then
+            !    call self%output_files(i)%open(file_path, n_cols=1 + 1, append=append, status_ok=status_ok)
+            !    if (.not. append) then
+            !       call self%output_files(i)%add('Datetime')
+            !       call self%output_files(i)%add(grid%z_face(grid%ubnd_fce), real_fmt='(F12.3)')
+            !       call self%output_files(i)%next_row()
+            !    end if
+            ! else
+            call self%output_files(i)%open(file_path, n_cols=self%n_depths + 1, append=append, status_ok=status_ok)
+            if (.not. append) then
+               call self%output_files(i)%add('Datetime')
+               call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
+               call self%output_files(i)%next_row()
             end if
          end do
       end if
@@ -455,20 +474,26 @@ contains
          call output_helper%next_row(self%output_files(i))
       end do
 
-      ! AED2 part
-      if (self%model_config%couple_aed2) then
+      ! FABM part
+      if (self%model_config%couple_fabm) then
          do i = self%n_vars_Simstrat + 1, self%n_vars
             ! Write datum
             call output_helper%add_datum(self%output_files(i), "(F12.4)")
             ! Interpolate state on volume grid
-            if (i < (self%n_vars_Simstrat + self%n_vars_AED2_state + 1)) then
-               call self%grid%interpolate_from_vol(self%output_config%output_vars_aed2_state%values(:,i - self%n_vars_Simstrat), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
+            if (i < (self%n_vars_Simstrat + self%n_vars_fabm_interior_state + 1)) then
+               call self%grid%interpolate_from_vol(self%output_config%output_vars_fabm_interior_state%values(:,i - self%n_vars_Simstrat), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
                call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
-            else if (i < (self%n_vars_Simstrat + self%n_vars_AED2_state + self%n_vars_AED2_diagnostic + 1)) then
-               call self%grid%interpolate_from_vol(self%output_config%output_vars_aed2_diagnostic%values(:,i - self%n_vars_Simstrat - self%n_vars_AED2_state), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
+            if (i < (self%n_vars_Simstrat + self%n_vars_fabm_interior_state + self%n_vars_fabm_bottom_state + 1)) then
+               call self%grid%interpolate_from_vol(self%output_config%output_vars_fabm_bottom_state%values(:,i - self%n_vars_Simstrat - self%n_vars_fabm_interior_state), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
                call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
-            else
-               call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%output_vars_aed2_diagnostic_sheet%values_sheet(i - self%n_vars_Simstrat - self%n_vars_AED2_state - self%n_vars_AED2_diagnostic), "(ES14.4E3)")
+            if (i < (self%n_vars_Simstrat + self%self%n_vars_fabm_state + 1)) then
+               call self%grid%interpolate_from_vol(self%output_config%output_vars_fabm_surface_state%values(:,i - self%n_vars_Simstrat - self%n_vars_fabm_interior_state - self%n_vars_fabm_bottom_state), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
+               call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
+            ! -> else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic + 1)) then
+            !    call self%grid%interpolate_from_vol(self%output_config%output_vars_fabm_diagnostic%values(:,i - self%n_vars_Simstrat - self%n_vars_fabm_state), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
+            !    call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
+            ! else
+            !    call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%output_vars_aed2_diagnostic_sheet%values_sheet(i - self%n_vars_Simstrat - self%n_vars_fabm_state - self%n_vars_fabm_diagnostic), "(ES14.4E3)")
             end if
 
             ! Advance to next row

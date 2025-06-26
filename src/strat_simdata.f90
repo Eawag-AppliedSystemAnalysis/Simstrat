@@ -59,9 +59,14 @@ module strat_simdata
 
    ! -> Definition of a FABM variable to log
    type, public :: LogVariableFABM
-      character(len=48), pointer, dimension(:) :: names
+      character(len=:), pointer, dimension(:) :: names
       real(RK), dimension(:,:), pointer :: values
-      real(RK), dimension(:), pointer :: values_sheet
+   end type
+
+   ! -> Definition of a FABM variable to log
+   type, public :: LogVariableFABM_bound
+      character(len=:), pointer, dimension(:) :: names
+      real(RK), dimension(:), pointer :: values
    end type
 
    ! Logging configuration
@@ -79,8 +84,8 @@ module strat_simdata
       character(len=20), dimension(:), allocatable :: output_var_names ! Names of output variables
       class(LogVariable), dimension(:), allocatable :: output_vars
       class(LogVariableFABM), allocatable :: output_vars_fabm_interior_state
-      class(LogVariableFABM), allocatable :: output_vars_fabm_bottom_state
-      class(LogVariableFABM), allocatable :: output_vars_fabm_surface_state
+      class(LogVariableFABM_bound), allocatable :: output_vars_fabm_bottom_state
+      class(LogVariableFABM_bound), allocatable :: output_vars_fabm_surface_state
       ! -> class(LogVariableFABM), allocatable :: output_vars_fabm_diagnostic
 
       integer :: output_time_type, output_depth_type, thinning_interval
@@ -178,6 +183,7 @@ module strat_simdata
       real(RK), dimension(:), pointer :: T, S ! Temperature [°C], Salinity [‰], FABM needs pointer attribute
       real(RK), dimension(:), allocatable :: dS ! Source/sink for salinity
       real(RK), dimension(:, :), allocatable :: Q_inp ! Horizontal inflow [m^3/s]
+      real(RK), dimension(:), allocatable :: Q_inp_bound, Q_inp_bound_con ! Bottom- / Surface-bound horizontal inflow [m^2/s] (absolute and concentration dependent)
       real(RK), dimension(:), pointer :: rho ! Water density [kg/m^3], FABM needs pointer attribute
       integer :: n_pH
       
@@ -185,9 +191,9 @@ module strat_simdata
       ! In Simstrat_FABM allocated with shape (grid%nz_grid, size(n_fabm_*_state))
       real(RK), dimension(:,:), pointer, allocatable :: fabm_interior_state
       real(RK), dimension(:), pointer, allocatable :: fabm_bottom_state, fabm_surface_state
-      integer :: n_fabm_interior_state, n_fabm_bottom_state, n_fabm_surface_state ! -> n_fabm_diagnostic
+      integer :: n_fabm_state, n_fabm_interior_state, n_fabm_bottom_state, n_fabm_surface_state ! -> n_fabm_diagnostic
+      character(:), dimension(:), pointer :: fabm_state_names ! Names of FABM state variables used in the simulation
       ! -> real(RK), dimension(:,:), pointer :: fabm_diagnostic ! State matrix of FABM diagnostic svariables
-      ! -> character(len=48), dimension(:), pointer :: fabm_state_names ! Names of FABM state variables used in the simulation
       ! -> character(len=48), dimension(:), pointer :: fabm_diagnostic_names ! Names of FABM diagnostic variables used in the simulation
    
       ! Variables located on z_upp grid
@@ -468,6 +474,10 @@ contains
       if (inflow_mode > 0) then
          call save_matrix(80, self%Q_inp)
          call save_array(80, self%Q_vert)
+         if (self%couple_fabm) then
+            call save_array(80, self%Q_inp_bound)
+            call save_array(80, self%Q_inp_bound_con)
+         end if
       end if
    end subroutine
 
@@ -541,6 +551,10 @@ contains
       if (inflow_mode > 0) then
          call read_matrix(81, self%Q_inp)
          call read_array(81, self%Q_vert)
+         if (self%couple_fabm) then
+            call read_array(81, self%Q_inp_bound)
+            call read_array(81, self%Q_inp_bound_con)
+         end if
       end if
    end subroutine
 

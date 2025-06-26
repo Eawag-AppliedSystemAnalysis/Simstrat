@@ -91,31 +91,47 @@ contains
       ! At this point (after the call to fabm_create_model), memory should be
       ! allocated to hold the values of all size(fabm_model%*_state_variables) state variables
       ! All state variable values are combined in an array *_state with shape grid%nz_grid, state%n_fabm_*_state
-
       ! Interior state variables
-      state%n_fabm_interior_state = size(fabm_model%interior_state_variables)
+      state%n_fabm_interior_state = size(self%fabm_model%interior_state_variables)
       allocate(state%fabm_interior_state(grid%nz_grid, state%n_fabm_interior_state))
       ! Bottom state variables
-      state%n_fabm_bottom_state = size(fabm_model%bottom_state_variables)
+      state%n_fabm_bottom_state = size(self%fabm_model%bottom_state_variables)
       allocate(state%fabm_surface_state(state%n_fabm_bottom_state))
       ! Surface state variables
-      state%n_fabm_surface_state = size(fabm_model%surface_state_variables)
+      state%n_fabm_surface_state = size(self%fabm_model%surface_state_variables)
       allocate(state%fabm_bottom_state(state%n_fabm_surface_state))
 
-      ! Point FABM to fields that hold state variable data
+      ! Total amount of states
+      state%n_fabm_state = state%n_fabm_interior_state + state%n_fabm_bottom_state + state%n_fabm_surface_state
+
+      ! Allocate memory for additional information (name, units, long_name, minimum, maximum, missing_value) on state variables
+      allocate(state%fabm_state_names(state%n_fabm_state))
+
+      ! Point FABM to fields that hold state variable data and get additional information
 
       ! Interior state variables
       do ivar = 1, state%n_fabm_interior_state
          call self%fabm_model%link_interior_state_data(ivar, state%fabm_interior_state(:,ivar))
+         state%fabm_state_names(ivar) = self%fabm_model%surface_state_variables(ivar)%name
       end do
       ! Bottom state variables
       do ivar = 1, state%n_fabm_bottom_state
          call self%fabm_model%link_bottom_state_data(ivar, state%fabm_surface_state(ivar))
+         state%fabm_state_names(state%n_fabm_interior_state + ivar) = self%fabm_model%surface_state_variable(ivar)s%name
       end do
       ! Surface state variables
       do ivar = 1, state%n_fabm_surface_state
          call self%fabm_model%link_surface_state_data(ivar, state%fabm_bottom_state(ivar))
+         state%fabm_state_names(state%n_fabm_interior_state+state%n_fabm_surface_state + ivar) = self%fabm_model%bottom_state_variables(ivar)%name
       end do
+
+      ! Set FABM-provided initial values for state variables (tracers), typically space-independent.
+      ! This sets the values of arrays sent to fabm_model%link_*_state_data,
+      ! in this case those contained in *_state
+      ! -> If model is not initialized with previously stored state (could be added)
+      call self%fabm_model%initialize_interior_state(1, grid%nz_grid)
+      call self%fabm_model%initialize_bottom_state()
+      call self%fabm_model%initialize_surface_state()
 
       ! Get id for standard variable <variable>: if memory location of <variable> changes send updated pointers
       !type(type_fabm_interior_variable_id) :: id_var
@@ -205,14 +221,6 @@ contains
       ! Stop with fatal error if not
       ! Selection of diagnostics that FABM will compute and store becomes frozen
       call self%fabm_model%start()
-
-      ! Set FABM-provided initial values for state variables (tracers), typically space-independent.
-      ! This sets the values of arrays sent to fabm_model%link_*_state_data,
-      ! in this case those contained in *_state
-      ! -> If model is not initialized with previously stored state (could be added)
-      call self%fabm_model%initialize_interior_state(1, grid%nz_grid)
-      call self%fabm_model%initialize_bottom_state()
-      call self%fabm_model%initialize_surface_state()
 
       ! Do the following sequence once to ensure diagnostics called in the model state valdation have been assigned a value
 
@@ -307,7 +315,7 @@ contains
 
       ! This would be the ideal moment for the output: 
       ! All variables (enviromental, state, mask, diagnostics, source, fluxes, vertical velocities) are in sync.
-      ! After the state variables are one step further (does ot matter if Simstrat only outputs those)
+      ! -> Simstrat does output after update_fabm is done: the state variables are one step further (does not matter if only those are output)
 
       ! Time-integrate the advection-diffusion-reaction equations (method up to host)
       ! of all tracers, combining the Simstrat transport terms with the FABM biogeochemical source

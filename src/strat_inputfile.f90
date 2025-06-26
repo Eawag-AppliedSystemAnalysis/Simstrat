@@ -523,7 +523,7 @@ contains
       associate (input_cfg=>self%simdata%input_cfg, &
                  output_cfg=>self%simdata%output_cfg, &
                  model_cfg=>self%simdata%model_cfg, &
-                 !aed2_cfg=>self%simdata%aed2_cfg, &
+                 fabm_cfg=>self%simdata%fabm_cfg, &
                  sim_cfg=>self%simdata%sim_cfg, &
                  model_param=>self%simdata%model_param)
 
@@ -635,10 +635,10 @@ contains
             model_cfg%max_length_input_data = 1000
             call warn('Variable "ModelConfig.MaxLengthInputData" is not set. Assume a value of 1000')
          end if
-         call par_file%get("ModelConfig.CoupleAED2", model_cfg%couple_fabm,found);
+         call par_file%get("ModelConfig.CoupleFABM", model_cfg%couple_fabm,found);
          if (.not. found) then
             model_cfg%couple_fabm = .false.
-            call warn('Variable "ModelConfig.CoupleAED2" is not set. Assume you do not want to couple simstrat with FABM.')
+            call warn('Variable "ModelConfig.CoupleFABM" is not set. Assume you do not want to couple simstrat with FABM.')
          end if
          call par_file%get("ModelConfig.TurbulenceModel", model_cfg%turbulence_model, found); call check_field(found, 'ModelConfig.TurbulenceModel', ParName)
          call par_file%get("ModelConfig.SplitSeicheParameter", model_cfg%split_a_seiche, found); call check_field(found, 'ModelConfig.SplitSeicheParameter', ParName)
@@ -654,19 +654,17 @@ contains
          call par_file%get("ModelConfig.IceModel", model_cfg%ice_model, found); call check_field(found, 'ModelConfig.IceModel', ParName)
          call par_file%get("ModelConfig.SnowModel", model_cfg%snow_model, found); call check_field(found, 'ModelConfig.SnowModel', ParName)
 
-         ! AED2 configuration (or another biogeochemical model if implemented)
-         ! if (model_cfg%couple_aed2) then
-         !    call par_file%get("AED2Config.AED2ConfigFile", aed2_cfg%aed2_config_file,found); call check_field(found, 'AED2Config.AED2ConfigFile', ParName)
-         !    call par_file%get("AED2Config.PathAED2initial", aed2_cfg%path_aed2_initial,found); call check_field(found, 'AED2Config.PathAED2initial', ParName)
-         !    call par_file%get("AED2Config.PathAED2inflow", aed2_cfg%path_aed2_inflow,found); call check_field(found, 'AED2Config.PathAED2inflow',ParName)
-         !    call par_file%get("AED2Config.ParticleMobility", aed2_cfg%particle_mobility,found); call check_field(found, 'AED2Config.ParticleMobility', ParName)
-         !    call par_file%get("AED2Config.BioshadeFeedback", aed2_cfg%bioshade_feedback,found); call check_field(found, 'AED2Config.BioshadeFeedback', ParName)
-         !    call par_file%get("AED2Config.BackgroundExtinction", aed2_cfg%background_extinction,found); call check_field(found, 'AED2Config.BackgroundExtinction', ParName)
-         !    call par_file%get("AED2Config.BenthicMode", aed2_cfg%benthic_mode,found); call check_field(found, 'AED2Config.BenthicMode', ParName)
-         !    !call par_file%get("AED2Config.NZones", aed2_cfg%n_zones,found); call check_field(found, 'AED2Config.NZones', ParName)
-         !    !call par_file%get("AED2Config.ZoneHeights", aed2_cfg%zone_heights,found); call check_field(found, 'AED2Config.ZoneHeights', ParName)
-         !    call par_file%get("AED2Config.OutputDiagnosticVars", aed2_cfg%output_diagnostic_variables,found); call check_field(found, 'AED2Config.OutputDiagnosticVars', ParName)
-         ! end if
+         ! FABM configuration
+         if (model_cfg%couple_fabm) then
+            call par_file%get("FABMConfig.FABMConfigFile", fabm_config%fabm_config_file,found); call check_field(found, 'FABMConfig.FABMConfigFile', ParName)
+            call par_file%get("FABMConfig.PathFABMinitial", fabm_config%path_fabm_initial,found); call check_field(found, 'FABMConfig.PathFABMinitial', ParName)
+            call par_file%get("FABMConfig.PathFABMinflow", fabm_config%path_fabm_inflow,found); call check_field(found, 'FABMConfig.PathFABMinflow',ParName)
+            call par_file%get("FABMConfig.ParticleMobility", fabm_config%particle_mobility,found); call check_field(found, 'FABMConfig.ParticleMobility', ParName)
+            call par_file%get("FABMConfig.BioshadeFeedback", fabm_config%bioshade_feedback,found); call check_field(found, 'FABMConfig.BioshadeFeedback', ParName)
+            call par_file%get("FABMConfig.BackgroundExtinction", fabm_config%background_extinction,found); call check_field(found, 'FABMConfig.BackgroundExtinction', ParName)
+            call par_file%get("FABMConfig.BenthicMode", fabm_config%benthic_mode,found); call check_field(found, 'FABMConfig.BenthicMode', ParName)
+            call par_file%get("FABMConfig.OutputDiagnosticVars", fabm_config%output_diagnostic_variables,found); call check_field(found, 'FABMConfig.OutputDiagnosticVars', ParName)
+         end if
 
          !Model Parameter
          call par_file%get("ModelParameters.lat", model_param%Lat, found); call check_field(found, 'ModelParameters.lat', ParName)
@@ -780,7 +778,7 @@ contains
          call grid%update_depth(z_ini_depth)
 
          ! Set initial lake level
-         allocate(grid%lake_level)  ! Allocation is needed because lake_level is defined as pointer for use with AED2
+         allocate(grid%lake_level)  ! -> Allocation was needed because lake_level is defined as pointer for use with AED2
          grid%lake_level = grid%z_face(grid%ubnd_fce)
 
          grid%lake_level_old = grid%lake_level

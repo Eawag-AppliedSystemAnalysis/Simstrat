@@ -7,7 +7,6 @@ compiler = Gnu
 cflags = -c -O2 -std=f2008 -ffree-line-length-none
 lflags = -static-libgcc -static-libgfortran -static
 src = ../src/
-exclude = ../src/simstrat_aed2.f90 ../src/simstrat_aed2_subroutines.f90 ../src/simstrat_aed2_physics.f90
 lpath = ../lib/fabm/build ../lib/forbear/static 
 libs = fabm forbear
 include = ../lib/fabm/build/ ../lib/forbear/static/ 
