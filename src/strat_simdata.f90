@@ -127,16 +127,12 @@ module strat_simdata
 
    ! FABM configuration (read from file)
    type, public :: FABMConfig
-      character(len=:), allocatable :: fabm_config_file
-      character(len=:), allocatable :: path_fabm_initial
       character(len=:), allocatable :: path_fabm_inflow
-      logical :: particle_mobility
-      logical :: bioshade_feedback
-      logical :: output_diagnostic_variables
-      real(RK) :: background_extinction
-      integer :: benthic_mode
-      !integer :: n_zones
-      real(RK), dimension(:), allocatable :: zone_heights
+      ! -> logical :: bioshade_feedback
+      ! -> real(RK) :: background_extinction
+      ! -> logical :: output_diagnostic_variables
+      ! -> character(len=:), allocatable :: fabm_config_file
+      ! -> character(len=:), allocatable :: path_fabm_initial
    end type
 
    ! Model params (read from file)

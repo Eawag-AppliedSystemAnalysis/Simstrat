@@ -20,7 +20,7 @@
   },
   "ModelConfig" : {
     "MaxLengthInputData"      : 1000,
-    "CoupleFABM"              : false,
+    "CoupleFABM"              : true,
     "TurbulenceModel"         : 1,
     "SplitSeicheParameter"    : false,
     "StabilityFunction"       : 2,
@@ -35,15 +35,13 @@
     "IceModel"                : 1,
     "SnowModel"               : 1
   },
-  "AED2Config" : {
-    "AED2ConfigFile"          : "TestCase_LakeZurich/aed2.nml",
-    "PathAED2initial"         : "TestCase_LakeZurich/AED2_initcond/",
-    "PathAED2inflow"          : "TestCase_LakeZurich/AED2_inflow/",
-    "ParticleMobility"        : 0,
+  "FABMConfig" : {
+    "PathFABMinflow"          : "TestCase_LakeZurich/FABM_inflow/",
     "BioshadeFeedback"        : 0,
     "BackgroundExtinction"    : 0.2,
-    "BenthicMode"             : 1,
-    "OutputDiagnosticVars"    : false
+    "OutputDiagnosticVars"    : false,
+    "FABMConfigFile"          : "TestCase_LakeZurich/fabm.nml",
+    "PathFABMinitial"         : "TestCase_LakeZurich/FABM_initcond/"
   },
   "Simulation" : {
     "Timestep s"                  : 300,

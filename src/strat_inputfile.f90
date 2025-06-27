@@ -656,14 +656,12 @@ contains
 
          ! FABM configuration
          if (model_cfg%couple_fabm) then
-            call par_file%get("FABMConfig.FABMConfigFile", fabm_config%fabm_config_file,found); call check_field(found, 'FABMConfig.FABMConfigFile', ParName)
-            call par_file%get("FABMConfig.PathFABMinitial", fabm_config%path_fabm_initial,found); call check_field(found, 'FABMConfig.PathFABMinitial', ParName)
             call par_file%get("FABMConfig.PathFABMinflow", fabm_config%path_fabm_inflow,found); call check_field(found, 'FABMConfig.PathFABMinflow',ParName)
-            call par_file%get("FABMConfig.ParticleMobility", fabm_config%particle_mobility,found); call check_field(found, 'FABMConfig.ParticleMobility', ParName)
-            call par_file%get("FABMConfig.BioshadeFeedback", fabm_config%bioshade_feedback,found); call check_field(found, 'FABMConfig.BioshadeFeedback', ParName)
-            call par_file%get("FABMConfig.BackgroundExtinction", fabm_config%background_extinction,found); call check_field(found, 'FABMConfig.BackgroundExtinction', ParName)
-            call par_file%get("FABMConfig.BenthicMode", fabm_config%benthic_mode,found); call check_field(found, 'FABMConfig.BenthicMode', ParName)
-            call par_file%get("FABMConfig.OutputDiagnosticVars", fabm_config%output_diagnostic_variables,found); call check_field(found, 'FABMConfig.OutputDiagnosticVars', ParName)
+            ! -> call par_file%get("FABMConfig.BioshadeFeedback", fabm_config%bioshade_feedback,found); call check_field(found, 'FABMConfig.BioshadeFeedback', ParName)
+            ! -> call par_file%get("FABMConfig.BackgroundExtinction", fabm_config%background_extinction,found); call check_field(found, 'FABMConfig.BackgroundExtinction', ParName)
+            ! -> call par_file%get("FABMConfig.OutputDiagnosticVars", fabm_config%output_diagnostic_variables,found); call check_field(found, 'FABMConfig.OutputDiagnosticVars', ParName)
+            ! -> call par_file%get("FABMConfig.FABMConfigFile", fabm_config%fabm_config_file,found); call check_field(found, 'FABMConfig.FABMConfigFile', ParName)
+            ! -> call par_file%get("FABMConfig.PathFABMinitial", fabm_config%path_fabm_initial,found); call check_field(found, 'FABMConfig.PathFABMinitial', ParName)
          end if
 
          !Model Parameter

@@ -128,7 +128,7 @@ contains
       ! Set FABM-provided initial values for state variables (tracers), typically space-independent.
       ! This sets the values of arrays sent to fabm_model%link_*_state_data,
       ! in this case those contained in *_state
-      ! -> If model is not initialized with previously stored state (could be added)
+      ! -> If model not initialized with custom or previously stored state (needs to be added as argument)
       call self%fabm_model%initialize_interior_state(1, grid%nz_grid)
       call self%fabm_model%initialize_bottom_state()
       call self%fabm_model%initialize_surface_state()
