@@ -76,7 +76,7 @@ contains
       ! Set up grid
       call self%read_grid_config
 
-      call self%simdata%model%init(self%simdata%grid%nz_grid)
+      call self%simdata%model%init(simdata%model_param, self%simdata%grid%nz_grid)
 
       ! Read initial data
       call self%read_initial_data
@@ -656,12 +656,10 @@ contains
 
          ! FABM configuration
          if (model_cfg%couple_fabm) then
-            call par_file%get("FABMConfig.PathFABMinflow", fabm_config%path_fabm_inflow,found); call check_field(found, 'FABMConfig.PathFABMinflow',ParName)
-            ! -> call par_file%get("FABMConfig.BioshadeFeedback", fabm_config%bioshade_feedback,found); call check_field(found, 'FABMConfig.BioshadeFeedback', ParName)
-            ! -> call par_file%get("FABMConfig.BackgroundExtinction", fabm_config%background_extinction,found); call check_field(found, 'FABMConfig.BackgroundExtinction', ParName)
-            ! -> call par_file%get("FABMConfig.OutputDiagnosticVars", fabm_config%output_diagnostic_variables,found); call check_field(found, 'FABMConfig.OutputDiagnosticVars', ParName)
-            ! -> call par_file%get("FABMConfig.FABMConfigFile", fabm_config%fabm_config_file,found); call check_field(found, 'FABMConfig.FABMConfigFile', ParName)
-            ! -> call par_file%get("FABMConfig.PathFABMinitial", fabm_config%path_fabm_initial,found); call check_field(found, 'FABMConfig.PathFABMinitial', ParName)
+            call par_file%get("FABMConfig.PathFABMinflow", fabm_cfg%path_fabm_inflow,found); call check_field(found, 'FABMConfig.PathFABMinflow',ParName)
+            ! -> call par_file%get("FABMConfig.BioshadeFeedback", fabm_cfg%bioshade_feedback,found); call check_field(found, 'FABMConfig.BioshadeFeedback', ParName)
+            ! -> call par_file%get("FABMConfig.BackgroundExtinction", fabm_cfg%background_extinction,found); call check_field(found, 'FABMConfig.BackgroundExtinction', ParName)
+            ! -> call par_file%get("FABMConfig.OutputDiagnosticVars", fabm_cfg%output_diagnostic_variables,found); call check_field(found, 'FABMConfig.OutputDiagnosticVars', ParName)
          end if
 
          !Model Parameter

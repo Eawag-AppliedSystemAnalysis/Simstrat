@@ -83,19 +83,15 @@ cmake --build build --target install
 
 to build and install FABM.
 
-### 3. Build
+### 3. Build Simstrat
 
-Once the building environment is setup, you can build Simstrat from the `/build` folder with:
+Now leave the fabm folder and go to `Simstrat/build` folder with:
 ~~~bash
-FoBiS.py build
+cd ../../build
 ~~~
 
-if FABM should be included do the same but add:
-~~~bash
-FoBiS.py build -mode couple-to-fabm
-~~~
+from where you can build Simstrat with:
 
-Or if you want to include it later go to `build` in `lib/fabm` and run:
 ~~~bash
 FoBiS.py build
 ~~~

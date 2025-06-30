@@ -1,96 +1,42 @@
 [modes]
-modes = couple-to-fabm release-gnu release-gnu-dynamic release-intel debug-gnu debug-gnu-dynamic
+modes = release-gnu release-gnu-dynamic release-intel debug-gnu debug-gnu-dynamic
 
-# Needs work
-[couple-to-fabm]
+# Static library linking
+[release-gnu]
 compiler = Gnu
-cflags = -c -O2 -std=f2008 -ffree-line-length-none
+# cflags = -c -O2 -std=f2008 -ffree-line-length-none
+# for debugging:
+cflags = -c -g -O0 -std=f2008 -ffree-line-length-none -fbacktrace -fcheck=all -ffpe-trap=invalid,zero,overflow
 lflags = -static-libgcc -static-libgfortran -static
+build_dir = .
 src = ../src/
-lpath = ../lib/fabm/build ../lib/forbear/static 
-libs = fabm forbear
-include = ../lib/fabm/build/ ../lib/forbear/static/ 
+libs = -L ../lib/fabm/build -lfabm
+include = ../lib/fabm/build/modules/
+colors = False
+quiet = False
 target = ../src/simstrat.f90
 output = simstrat
 dependon=../lib/csv_fortran/fobos:release-gnu((direct))
          ../lib/json_fortran/fobos:release-gnu((direct))
          ../lib/forbear/fobos:static-gnu((direct))
-build_dir = .
 log = True
-quiet = False
 
-[release-gnu]
-compiler=Gnu
-cflags=-c -O2 -std=f2008 -ffree-line-length-none
-lflags=-static-libgcc -static-libgfortran -static
-build_dir=.
-src=../src/
-libs = ../lib/libaed2/obj/aed2_bio_utils.o
-	   ../lib/libaed2/obj/aed2_carbon.o
-	   ../lib/libaed2/obj/aed2_chlorophylla.o
-	   ../lib/libaed2/obj/aed2_common.o
-	   ../lib/libaed2/obj/aed2_core.o
-	   ../lib/libaed2/obj/aed2_csv_reader.o
-	   ../lib/libaed2/obj/aed2_dummy.o
-	   ../lib/libaed2/obj/aed2_nitrogen.o
-	   ../lib/libaed2/obj/aed2_noncohesive.o
-	   ../lib/libaed2/obj/aed2_organic_matter.o
-	   ../lib/libaed2/obj/aed2_oxygen.o
-	   ../lib/libaed2/obj/aed2_phosphorus.o
-	   ../lib/libaed2/obj/aed2_phytoplankton.o
-	   ../lib/libaed2/obj/aed2_sedflux.o
-	   ../lib/libaed2/obj/aed2_silica.o
-	   ../lib/libaed2/obj/aed2_totals.o
-	   ../lib/libaed2/obj/aed2_tracer.o
-	   ../lib/libaed2/obj/aed2_util.o
-	   ../lib/libaed2/obj/aed2_zoop_utils.o
-	   ../lib/libaed2/obj/aed2_zooplankton.o
-	   ../lib/libaed2/obj/ufz_oxygen.o
-include = ../lib/libaed2/mod/
-colors=False
-quiet=False
-target=simstrat.f90
-output=simstrat
-dependon=../lib/csv_fortran/fobos:release-gnu((direct))
-         ../lib/json_fortran/fobos:release-gnu((direct))
-         ../lib/forbear/fobos:static-gnu((direct))
-log=True
-
+# Dynamic library linking
 [release-gnu-dynamic]
-compiler=Gnu
-cflags=-c -O2 -std=f2008 -ffree-line-length-none
-lflags=-dynamic-libgcc -dynamic-libgfortran -dynamic
-build_dir=.
-src=../src/
-libs = ../lib/libaed2/obj/aed2_bio_utils.o
-	   ../lib/libaed2/obj/aed2_carbon.o
-	   ../lib/libaed2/obj/aed2_chlorophylla.o
-	   ../lib/libaed2/obj/aed2_common.o
-	   ../lib/libaed2/obj/aed2_core.o
-	   ../lib/libaed2/obj/aed2_csv_reader.o
-	   ../lib/libaed2/obj/aed2_dummy.o
-	   ../lib/libaed2/obj/aed2_nitrogen.o
-	   ../lib/libaed2/obj/aed2_noncohesive.o
-	   ../lib/libaed2/obj/aed2_organic_matter.o
-	   ../lib/libaed2/obj/aed2_oxygen.o
-	   ../lib/libaed2/obj/aed2_phosphorus.o
-	   ../lib/libaed2/obj/aed2_phytoplankton.o
-	   ../lib/libaed2/obj/aed2_sedflux.o
-	   ../lib/libaed2/obj/aed2_silica.o
-	   ../lib/libaed2/obj/aed2_totals.o
-	   ../lib/libaed2/obj/aed2_tracer.o
-	   ../lib/libaed2/obj/aed2_util.o
-	   ../lib/libaed2/obj/aed2_zoop_utils.o
-	   ../lib/libaed2/obj/aed2_zooplankton.o
-	   ../lib/libaed2/obj/ufz_oxygen.o
-include = ../lib/libaed2/mod/
-colors=False
-quiet=False
-target=simstrat.f90
+compiler = Gnu
+cflags = -c -O2 -std=f2008 -ffree-line-length-none
+lflags = -dynamic-libgcc -dynamic-libgfortran -dynamic
+build_dir = .
+src = ../src/
+libs = -L ../lib/fabm/build -lfabm
+include = ../lib/fabm/build/modules/
+colors = False
+quiet = False
+target = ../src/simstrat.f90
 dependon=../lib/csv_fortran/fobos:release-gnu((direct))
          ../lib/json_fortran/fobos:release-gnu((direct))
          ../lib/forbear/fobos:static-gnu((direct))
-log=True
+log = True
 
 [release-intel]
 compiler=intel

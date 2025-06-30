@@ -64,8 +64,8 @@ module strat_lateral
       procedure, pass :: init => lateral_generic_init
       procedure, pass :: save => lateral_generic_save
       procedure, pass :: load => lateral_generic_load
-      procedure(lateral_generic_update), deferred, pass :: update
       procedure, pass :: update_bound => lateral_bound_update
+      procedure(lateral_generic_update), deferred, pass :: update
    end type
 
    ! Subclasses
@@ -124,7 +124,7 @@ contains
       allocate(self%tb_start(self%n_vars))
       allocate(self%tb_end(self%n_vars))
       allocate(self%fnum(self%n_vars))
-      allocate(self%fnum_bound(self%n_fabm_bottom_state + self%n_fabm_surface_state))
+      allocate(self%fnum_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
       allocate(self%number_of_lines_read(self%n_vars))
       self%number_of_lines_read = 0
 
@@ -146,15 +146,15 @@ contains
 
       ! Bottom- / Surface-bound horizontal inflow for FABM
       if (self%couple_fabm) then
-         allocate(self%eof_bound(self%n_fabm_bottom_state + self%n_fabm_surface_state))
-         allocate(self%nval_bound(self%n_fabm_bottom_state + self%n_fabm_surface_state))
-         allocate(self%tb_start_bound(self%n_fabm_bottom_state + self%n_fabm_surface_state))
-         allocate(self%tb_end_bound(self%n_fabm_bottom_state + self%n_fabm_surface_state))
-         allocate(self%fnum_bound(self%n_fabm_bottom_state + self%n_fabm_surface_state))
-         allocate(state%Q_inp_bound(self%n_fabm_bottom_state + self%n_fabm_surface_state))
-         allocate (self%Q_start_bound(self%n_fabm_bottom_state + self%n_fabm_surface_state))
-         allocate (self%Q_end_bound(self%n_fabm_bottom_state + self%n_fabm_surface_state))
-         allocate(self%number_of_lines_read_bound(self%n_fabm_bottom_state + self%n_fabm_surface_state))
+         allocate(self%eof_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
+         allocate(self%nval_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
+         allocate(self%tb_start_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
+         allocate(self%tb_end_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
+         allocate(self%fnum_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
+         allocate(state%Q_inp_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
+         allocate (self%Q_start_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
+         allocate (self%Q_end_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
+         allocate(self%number_of_lines_read_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
          self%number_of_lines_read_bound = 0
       end if
 
@@ -207,7 +207,6 @@ contains
             call save_integer_array(80, self%fnum_bound)
             call save_array(80, self%tb_start_bound)
             call save_array(80, self%tb_end_bound)
-            call save_array(80, state%Q_inp_bound)
             call save_array(80, self%Q_start_bound)
             call save_array(80, self%Q_end_bound)
          end if
@@ -252,7 +251,6 @@ contains
             call read_integer_array(81, self%fnum_bound)
             call read_array(81, self%tb_start_bound)
             call read_array(81, self%tb_end_bound)
-            call read_array(81, state%Q_inp_bound)
             call read_array(81, self%Q_start_bound)
             call read_array(81, self%Q_end_bound)
          end if
@@ -271,7 +269,7 @@ contains
       real(RK) :: dummy
       real(RK) :: Q_in(1:self%grid%ubnd_vol), h_in(1:self%grid%ubnd_vol)
       real(RK) :: T_in, S_in, co2_in, ch4_in, rho_in, CD_in, g_red, slope, Ri, E, Q_inp_inc
-      real(RK) :: fabm_in_surface(state%n_fabm_surface_state)
+      real(RK) :: fabm_in_interior(state%n_fabm_interior_state)
       integer :: i, j, k, i1, i2, l, status, unit
       character(len=100) :: fname
 
@@ -874,22 +872,21 @@ contains
    ! Inflow file consists of one time and two inflow/outflow columns (absolute and concentration-dependent)
    subroutine lateral_bound_update(self, state)
       implicit none
-      class(LateralModule) :: self
+      class(GenericLateralModule) :: self
       class(ModelState) :: state
 
       ! Local Declarations
-      integer :: i, l, status, unit
+      integer :: i, l, status, unit, interpolation_factor
       character(len=100) :: fname
 
+      do i=1, state%n_fabm_bottom_state + state%n_fabm_surface_state
 
-      associate (datum=>state%datum, &
-                 idx=>state%first_timestep, &
-                 number_of_lines_read_bound=>self%number_of_lines_read_bound, &
-                 Q_inp_bound=>state%Q_inp_bound, & ! Q_inp_bound is the absolute in-/output at the bottom/surface for each time step
-                 Q_inp_bound_con=>state%Q_inp_bound_con, & ! Q_inp_bound_con is the concentration-dependent in-/output at the bottom/surface for each time step
-      )
+         associate (datum=>state%datum, &
+               idx=>state%first_timestep, &
+               number_of_lines_read_bound=>self%number_of_lines_read_bound, &
+               Q_inp_bound=>state%Q_inp_bound, & ! Q_inp_bound is the absolute in-/output at the bottom/surface for each time step
+               Q_inp_bound_con=>state%Q_inp_bound_con) ! Q_inp_bound_con is the concentration-dependent in-/output at the bottom/surface for each time step
 
-         do i=1, self%n_fabm_bottom_state + self%n_fabm_surface_state
             if (idx) then  ! If first timestep
                if (self%number_of_lines_read_bound(i) == 0) then  ! If not started from snapshot
                   fname = trim(self%fabm_path)//trim(state%fabm_state_names(state%n_fabm_interior_state + i))//'_inflow.dat'
@@ -904,7 +901,7 @@ contains
                      write(6,*) 'Reading ', fname
                   end if
 
-                   ! Default values
+                  ! Default values
                   self%Q_start_bound(i) = 0.0_RK
                   self%Q_end_bound(i) = 0.0_RK
                   self%Q_start_bound_con(i) = 0.0_RK
@@ -920,11 +917,11 @@ contains
                   call count_read_bound(self, i)
 
                   ! Read first input line
-                  read (self%fnum_bound(i), *, end=9) self%tb_start_bound(i), Q_start_bound(i), Q_start_bound_con(i)
+                  read (self%fnum_bound(i), *, end=9) self%tb_start_bound(i), self%Q_start_bound(i), self%Q_start_bound_con(i)
                   call count_read_bound(self, i)
 
                   ! Read second line
-                  read (self%fnum_bound(i), *, end=7) self%tb_end_bound(i), Q_end_bound(i), Q_end_bound_con(i)
+                  read (self%fnum_bound(i), *, end=7) self%tb_end_bound(i), self%Q_end_bound(i), self%Q_end_bound_con(i)
                   call count_read_bound(self, i)
 
                   call ok('Input file successfully read: '//fname)
@@ -941,8 +938,6 @@ contains
                end if
             end if ! idx = 1
 
-
-
             ! Temporal treatment of inflow
             if ((datum <= self%tb_start_bound(i)) .or. (self%eof_bound(i) == 1)) then ! if datum before first date or end of file reached
                goto 8
@@ -958,29 +953,28 @@ contains
             end if
 
             ! Linearly interpolate value at correct datum
-            Q_inp_bound(i) = self%Q_start_bound(i) + (datum-self%tb_start_bound(i))/(self%tb_end_bound(i)-self%tb_start_bound(i))* &
-               (self%Q_end_bound(i) - self%Q_start_bound(i))
-            Q_inp_bound_con(i) = self%Q_start_bound_con(i) + (datum-self%tb_start_bound(i))/(self%tb_end_bound(i)-self%tb_start_bound(i))* &
-               (self%Q_end_bound_con(i) - self%Q_start_bound_con(i))
+            interpolation_factor = (datum-self%tb_start_bound(i))/(self%tb_end_bound(i)-self%tb_start_bound(i))
+            Q_inp_bound(i) = self%Q_start_bound(i) + interpolation_factor * (self%Q_end_bound(i) - self%Q_start_bound(i))
+            Q_inp_bound_con(i) = self%Q_start_bound_con(i) + interpolation_factor * (self%Q_end_bound_con(i) - self%Q_start_bound_con(i))
             goto 11
 
             ! If end of file reached, set to closest available value
- 7          self%eof_bound(i) = 1
- 8          Q_inp_bound(i) = self%Q_start_bound(i)
- 8          Q_inp_bound_con(i) = self%Q_start_bound_con(i)
+7              self%eof_bound(i) = 1
+8              Q_inp_bound(i) = self%Q_start_bound(i)
+            Q_inp_bound_con(i) = self%Q_start_bound_con(i)
             goto 11
 
             ! If no data available
- 9          write(6,*) '[WARNING] ','No data found in ',trim(fname),' file. Values set to zero.'
+9              write(6,*) '[WARNING] ','No data found in ',trim(fname),' file. Values set to zero.'
             self%eof_bound(i) = 1
             Q_inp_bound(i) = 0.0_RK
             self%Q_start_bound(i) = 0.0_RK
             Q_inp_bound_con(i) = 0.0_RK
             self%Q_start_bound_con(i) = 0.0_RK
-11          continue
-
-         end do
-      end associate
+11             continue
+         end associate
+         
+      end do
    end subroutine
 
    subroutine count_read(self, i)

@@ -276,7 +276,8 @@ contains
 
          ! Update absorption (except if FABM is off or if FABM is on but bioshade feedback is off)
          if (simdata%model_cfg%couple_fabm) then
-            if (.not. simdata%fabm_cfg%bioshade_feedback) then
+            ! -> if (.not. simdata%fabm_cfg%bioshade_feedback) then
+            if (.true.) then
                call mod_absorption%update(simdata%model)
             end if
          else
@@ -290,7 +291,9 @@ contains
          if (simdata%model_cfg%inflow_mode > 0) then
             ! Treat inflow/outflow
             call mod_lateral%update(simdata%model)
-            call mod_lateral%update_bound(simdata%model)
+            if (simdata%model%n_fabm_bottom_state > 0 .or. simdata%model%n_fabm_surface_state > 0) then
+               call mod_lateral%update_bound(simdata%model)
+            end if
             ! Set old lake level (before it is changed by advection module)
             simdata%grid%lake_level_old = simdata%grid%z_face(simdata%grid%ubnd_fce)
 
@@ -327,7 +330,7 @@ contains
 
          ! Update biogeochemistry
          if (simdata%model_cfg%couple_fabm) then
-            call mod_fabm%update()
+            call mod_fabm%update(simdata%model, simdata%grid)
          end if
 
          ! Call logger to write files

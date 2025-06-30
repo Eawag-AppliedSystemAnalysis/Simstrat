@@ -39,9 +39,7 @@
     "PathFABMinflow"          : "TestCase_LakeZurich/FABM_inflow/",
     "BioshadeFeedback"        : 0,
     "BackgroundExtinction"    : 0.2,
-    "OutputDiagnosticVars"    : false,
-    "FABMConfigFile"          : "TestCase_LakeZurich/fabm.nml",
-    "PathFABMinitial"         : "TestCase_LakeZurich/FABM_initcond/"
+    "OutputDiagnosticVars"    : false
   },
   "Simulation" : {
     "Timestep s"                  : 300,

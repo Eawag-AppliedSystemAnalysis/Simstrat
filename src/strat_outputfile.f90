@@ -86,7 +86,7 @@ module strat_outputfile
       procedure, pass :: add_data_array => output_helper_add_data_array
       procedure, pass :: add_data_scalar => output_helper_add_data_scalar
       procedure, pass :: next_row => output_helper_next_row
-   end typeS
+   end type
 
 
 contains
@@ -457,6 +457,7 @@ contains
          write(6,'(F12.4,F20.4,F15.4,F15.4)') simdata%model%datum, simdata%grid%lake_level, &
                                               simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
       end if
+
       do i = 1, self%n_vars_Simstrat
          call output_helper%add_datum(self%output_files(i), "(F12.4)")
          ! If on volume or faces grid
@@ -483,12 +484,10 @@ contains
             if (i < (self%n_vars_Simstrat + self%n_vars_fabm_interior_state + 1)) then
                call self%grid%interpolate_from_vol(self%output_config%output_vars_fabm_interior_state%values(:,i - self%n_vars_Simstrat), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
                call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
-            if (i < (self%n_vars_Simstrat + self%n_vars_fabm_interior_state + self%n_vars_fabm_bottom_state + 1)) then
-               call self%grid%interpolate_from_vol(self%output_config%output_vars_fabm_bottom_state%values(:,i - self%n_vars_Simstrat - self%n_vars_fabm_interior_state), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-               call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
-            if (i < (self%n_vars_Simstrat + self%self%n_vars_fabm_state + 1)) then
-               call self%grid%interpolate_from_vol(self%output_config%output_vars_fabm_surface_state%values(:,i - self%n_vars_Simstrat - self%n_vars_fabm_interior_state - self%n_vars_fabm_bottom_state), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-               call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
+            else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_interior_state + self%n_vars_fabm_bottom_state + 1)) then
+               call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%output_vars_fabm_bottom_state%values(i - self%n_vars_Simstrat - self%n_vars_fabm_interior_state), "(ES14.4E3)")
+            else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + 1)) then
+               call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%output_vars_fabm_surface_state%values(i - self%n_vars_Simstrat - self%n_vars_fabm_interior_state - self%n_vars_fabm_bottom_state), "(ES14.4E3)")
             ! -> else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic + 1)) then
             !    call self%grid%interpolate_from_vol(self%output_config%output_vars_fabm_diagnostic%values(:,i - self%n_vars_Simstrat - self%n_vars_fabm_state), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
             !    call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")

@@ -31,6 +31,7 @@
 module simstrat_fabm
    use fabm ! main FABM module
    use strat_simdata
+   use strat_kinds
    use strat_grid
    use strat_solver
 
@@ -44,45 +45,49 @@ module simstrat_fabm
       ! Arrays to hold the values of all biogeochemical state variables
       ! Where this memory resides and how it is laid out is typically host-specific
 
-      ! Array for interior tracer source terms
-      real(RK), dimension(:,:), allocatable :: sms_int
+      ! Array for interior tracer source terms and vertical velocities
+      real(RK), dimension(:,:), allocatable :: sms_int, velocity
       ! Arrays for fluxes and tracer source terms at bottom
       ! -> Consider that there is a bottom at every layer
-      real(RK), dimension(:), allocatable :: flux_bt 
-      real(RK), dimension(:), allocatable :: sms_bt
+      real(RK), dimension(:), allocatable :: flux_bt, sms_bt
       ! Arrays for fluxes and tracer source terms at surface
-      real(RK), dimension(:), allocatable :: flux_sf
-      real(RK), dimension(:), allocatable :: sms_sf
-      ! Array for vertical velocities
-      real(RK), dimension(:), allocatable :: velocity
+      real(RK), dimension(:), allocatable :: flux_sf, sms_sf
 
       ! Variables for validity of state
       logical :: repair = .true. ! Whether to clip all state variables to valid range from bgc models when update is called
       logical :: valid_int, valid_sf, valid_bt
    contains
-      procedure, pass(self), public :: init_fabm
-      procedure, pass(self), public :: update_fabm
+      procedure, pass(self), public :: init
+      procedure, pass(self), public :: update
    end type SimstratFABM
 
 contains
 
    ! Initialize: called once in within the initialization of Simstrat
    ! Sets up memory, reads FABM configuration from fabm.yaml, links the external Simstrat variables and sets the initial conditions of FABM variables
-   subroutine init_fabm(self, state, grid)
+   subroutine init(self, state, grid)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       class(ModelState) :: state
       class(StaggeredGrid) :: grid
       !class(type_fabm_model), pointer :: fabm_model
 
+      ! Local variables
+      integer :: ivar
+
       ! Create an alias of the model
       !fabm_model => self%fabm_model
 
-      ! Initialize the model (reads run-time FABM model configuration from fabm/yaml and stores it in fabm_model)
+      ! Initialize the model (reads run-time FABM model configuration from fabm.yaml and stores it in fabm_model)
       ! After this the number of biogeochemical variables is fixed
       ! (access variable metadata in fabm_model%interior_state_variables, fabm_model%interior_diagnostic_variables)
       ! The model interacts iwth FABM and describes properties of all bgc variables and parameters
       self%fabm_model => fabm_create_model()
+      if (.not. associated(self%fabm_model)) then
+         print *, "FABM model creation failed"
+         stop 1
+      end if
+
       ! Provide extents of the spatial domain (number of layers nz for a 1D column)
       ! Used to allocate memory for FABM-managed spatially explicit fields
       ! -> Because the entire extent is given some layers might be claculated that are not physical, be aware of that in the output
@@ -96,10 +101,14 @@ contains
       allocate(state%fabm_interior_state(grid%nz_grid, state%n_fabm_interior_state))
       ! Bottom state variables
       state%n_fabm_bottom_state = size(self%fabm_model%bottom_state_variables)
-      allocate(state%fabm_surface_state(state%n_fabm_bottom_state))
+      if (state%n_fabm_bottom_state > 0) then
+         allocate(state%fabm_bottom_state(state%n_fabm_bottom_state))
+      end if
       ! Surface state variables
       state%n_fabm_surface_state = size(self%fabm_model%surface_state_variables)
-      allocate(state%fabm_bottom_state(state%n_fabm_surface_state))
+      if (state%n_fabm_surface_state > 0) then
+         allocate(state%fabm_surface_state(state%n_fabm_surface_state))
+      end if
 
       ! Total amount of states
       state%n_fabm_state = state%n_fabm_interior_state + state%n_fabm_bottom_state + state%n_fabm_surface_state
@@ -112,19 +121,24 @@ contains
       ! Interior state variables
       do ivar = 1, state%n_fabm_interior_state
          call self%fabm_model%link_interior_state_data(ivar, state%fabm_interior_state(:,ivar))
-         state%fabm_state_names(ivar) = self%fabm_model%surface_state_variables(ivar)%name
+         state%fabm_state_names(ivar) = self%fabm_model%interior_state_variables(ivar)%name
       end do
       ! Bottom state variables
-      do ivar = 1, state%n_fabm_bottom_state
-         call self%fabm_model%link_bottom_state_data(ivar, state%fabm_surface_state(ivar))
-         state%fabm_state_names(state%n_fabm_interior_state + ivar) = self%fabm_model%surface_state_variable(ivar)s%name
-      end do
+      if (state%n_fabm_bottom_state > 0) then
+         do ivar = 1, state%n_fabm_bottom_state
+            call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(ivar))
+            state%fabm_state_names(state%n_fabm_interior_state + ivar) = self%fabm_model%bottom_state_variables(ivar)%name
+         end do
+      end if
       ! Surface state variables
-      do ivar = 1, state%n_fabm_surface_state
-         call self%fabm_model%link_surface_state_data(ivar, state%fabm_bottom_state(ivar))
-         state%fabm_state_names(state%n_fabm_interior_state+state%n_fabm_surface_state + ivar) = self%fabm_model%bottom_state_variables(ivar)%name
-      end do
+      if (state%n_fabm_surface_state > 0) then
+         do ivar = 1, state%n_fabm_surface_state
+            call self%fabm_model%link_surface_state_data(ivar, state%fabm_surface_state(ivar))
+            state%fabm_state_names(state%n_fabm_interior_state + state%n_fabm_bottom_state + ivar) = self%fabm_model%surface_state_variables(ivar)%name
+         end do
+      end if
 
+      ! -> Program received signal SIGSEGV: Segmentation fault - invalid memory reference.
       ! Set FABM-provided initial values for state variables (tracers), typically space-independent.
       ! This sets the values of arrays sent to fabm_model%link_*_state_data,
       ! in this case those contained in *_state
@@ -172,49 +186,49 @@ contains
       ! Vertical tracer diffusity [m2 s-1]: defined in GOTM, not defined in Simstrat
       !link_interior_data(type_interior_standard_variable(name='vertical_tracer_diffusivity', units='m2 s-1'))
 
-      ! Scalars (in a model with more dimensions some would be in the horizontal_data category)
-      ! Depth relative to surface [m]
-      call self%fabm_model%link_scalar(fabm_standard_variables%depth, grid%max_depth)
+      ! Scalars (horizontal data in a 1D model)
       ! Absolute depth [m]
-      call self%fabm_model%link_scalar(fabm_standard_variables%bottom_depth, grid%z_zero)
+      call self%fabm_model%link_horizontal_data(fabm_standard_variables%bottom_depth, grid%z_zero)
       ! Bottom stress [Pa]
-      call self%fabm_model%link_scalar(fabm_standard_variables%bottom_stress, state%u_taub)
+      call self%fabm_model%link_horizontal_data(fabm_standard_variables%bottom_stress, state%u_taub)
       ! Cloud area fraction [-]
-      call self%fabm_model%link_scalar(fabm_standard_variables%cloud_area_fraction, state%Cloud)
+      call self%fabm_model%link_horizontal_data(fabm_standard_variables%cloud_area_fraction, state%Cloud)
       ! Ice area fraction [-]: 1 as soon as ice height is larger than ice_tolerance, 0 else
-      call self%fabm_model%link_scalar(fabm_standard_variables%ice_area_fraction, state%ice_area_fraction)
+      call self%fabm_model%link_horizontal_data(fabm_standard_variables%ice_area_fraction, state%ice_area_fraction)
       ! Surface air pressure [Pa]
-      call self%fabm_model%link_scalar(fabm_standard_variables%surface_air_pressure, state%p_air)
+      call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_air_pressure, state%p_air)
       ! Surface albedo [-]
-      call self%fabm_model%link_scalar(fabm_standard_variables%surface_albedo, state%wat_albedo)
+      call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_albedo, state%wat_albedo)
       ! PAR flux at surface [W m-2]
-      call self%fabm_model%link_scalar(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux, state%par0)
+      call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux, state%par0)
       ! SWR flux at surface [W m-2]
-      call self%fabm_model%link_scalar(fabm_standard_variables%surface_downwelling_shortwave_flux, state%rad0)
+      call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_flux, state%rad0)
       ! Surface drag coefficient [-]
-      call self%fabm_model%link_scalar(fabm_standard_variables%surface_drag_coefficient_in_air, state%C10)
+      call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_drag_coefficient_in_air, state%C10)
       ! Surface specific humidity [-]
-      call self%fabm_model%link_scalar(fabm_standard_variables%surface_specific_humidity, state%qa)
+      call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_specific_humidity, state%qa)
       ! Surface temperature [°C]
-      call self%fabm_model%link_scalar(fabm_standard_variables%surface_temperature, state%T_atm)
+      call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_temperature, state%T_atm)
       ! Total wind speed [m s-1]
-      call self%fabm_model%link_scalar(fabm_standard_variables%wind_speed, state%uv10)
+      call self%fabm_model%link_horizontal_data(fabm_standard_variables%wind_speed, state%uv10)
       ! latitude [degree_north]
-      call self%fabm_model%link_scalar(fabm_standard_variables%latitude, state%Lat)
+      call self%fabm_model%link_horizontal_data(fabm_standard_variables%latitude, state%Lat)
+      ! Depth relative to surface [m], not foud in FABM alhough in list, bot provided in GOTM
+      ! call self%fabm_model%link_scalar(fabm_standard_variables%depth, grid%max_depth)
       ! Secchi depth [m], not defined in Simstrat
-      !call self%fabm_model%link_scalar(fabm_standard_variables%secchi_depth)
+      !call self%fabm_model%link_horizontal_data(fabm_standard_variables%secchi_depth)
       ! Depth below geoid [m], provided in GOTM but only necessary when coupling with geodetic data, not defined in Simstrat
-      !call self%fabm_model%link_scalar(fabm_standard_variables%bottom_depth_below_geoid)
+      !call self%fabm_model%link_horizontal_data(fabm_standard_variables%bottom_depth_below_geoid)
       ! Bottom roughness [m], provided in GOTM, constant in Simstrat
-      !call self%fabm_model%link_scalar(fabm_standard_variables%bottom_roughness_length)
+      !call self%fabm_model%link_horizontal_data(fabm_standard_variables%bottom_roughness_length)
       ! PAR flux in air [W m-2], not defined in Simstrat
-      !call self%fabm_model%link_scalar(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux_in_air)
+      !call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux_in_air)
       ! SWR flux in air [W m-2], not defined in Simstrat
-      !call self%fabm_model%link_scalar(fabm_standard_variables%surface_downwelling_shortwave_flux_in_air)
+      !call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_flux_in_air)
       ! Longitude [degree_east], provided in GOTM, not defined in Simstrat
-      !call self%fabm_model%link_scalar(fabm_standard_variables%longitude)
+      !call self%fabm_model%link_horizontal_data(fabm_standard_variables%longitude)
       ! Number of days since start of the year [days], provided in GOTM, could be calculated in Simstrat but only if albedo is calculated
-      !call self%fabm_model%link_scalar(fabm_standard_variables%number_of_days_since_start_of_the_year)
+      !call self%fabm_model%link_horizontal_data(fabm_standard_variables%number_of_days_since_start_of_the_year)
 
       ! Complete initialization and check whether FABM has all dependencies fulfilled
       ! (i.e., whether all required calls to fabm_model%link_*_data have been made and all required data have been provided)
@@ -232,20 +246,24 @@ contains
       ! 2a. Allocate and initialize with 0 (and then retrieve) interior tracer source terms (tracer units s-1)
       allocate(self%sms_int(grid%nz_grid, state%n_fabm_interior_state))
       self%sms_int = 0
-      !call self%fabm_model%get_interior_sources(1, grid%nz_grid, self%sms)
+      !call self%fabm_model%get_interior_sources(1, grid%nz_grid, self%sms_int)
 
       ! 2b. Allocate and initialize with 0 (and then retrieve) fluxes and tracer source terms at bottom
       allocate(self%flux_bt(state%n_fabm_interior_state))
-      allocate(self%sms_bt(state%n_fabm_bottom_state))
       self%flux_bt = 0
-      self%sms_bt = 0
+      if (state%n_fabm_bottom_state > 0) then
+         allocate(self%sms_bt(state%n_fabm_bottom_state))
+         self%sms_bt = 0
+      end if
       !call self%fabm_model%get_bottom_sources(self%flux_bt, self%sms_bt)
 
       ! 2c. Allocate and initialize with 0 (and then retrieve) fluxes and tracer source terms at surface
-      allocate(flux_sf(state%n_fabm_interior_state))
-      allocate(sms_sf(state%n_fabm_surface_state))
+      allocate(self%flux_sf(state%n_fabm_interior_state))
       self%flux_sf = 0
-      self%sms_sf = 0
+      if (state%n_fabm_surface_state > 0) then
+         allocate(self%sms_sf(state%n_fabm_surface_state))
+         self%sms_sf = 0
+      end if
       !call self%fabm_model%get_surface_sources(self%flux_sf, self%sms_sf)
 
       ! 3. Allocate and initialize with 0 (and then retrieve) vertical velocities (sinking, floating, active movement) in m s-1
@@ -259,18 +277,19 @@ contains
       ! At this point, initialization is complete
       ! Assign local alias back to self
       !self%fabm_model => fabm_model
-   end subroutine init_fabm
+   end subroutine init
 
    ! The update function is called in the main loop of simstrat (in simstrat.f90) at every time step
    ! Particle atmospheric, pelagic and benthic fluxes and diffusion are computed to update bgc state variable values
-   subroutine update_fabm(self)
+   subroutine update(self, state, grid)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       class(ModelState), intent(inout) :: state
       class(StaggeredGrid) :: grid
-      class(Discretization) :: disc ! Discretization scheme
-      class(LinSysSolver) :: solver ! Solver
       !class(type_fabm_model), pointer :: fabm_model
+
+      ! Local variables
+      integer :: ivar
 
       ! Create an alias of the model
       !fabm_model => self%fabm_model
@@ -295,7 +314,7 @@ contains
       ! <0: flux out of water
 
       ! 3a. Retrieve interior tracer source terms
-      call self%fabm_model%get_interior_sources(1, grid%nz_grid, self%sms)
+      call self%fabm_model%get_interior_sources(1, grid%nz_grid, self%sms_int)
 
       ! 3b. Retrieve fluxes over pelagic-benthic interface and bottom tracer source terms
       call self%fabm_model%get_bottom_sources(self%flux_bt, self%sms_bt)
@@ -321,25 +340,25 @@ contains
       ! of all tracers, combining the Simstrat transport terms with the FABM biogeochemical source
       ! terms and fluxes (sms, flux) and vertical velocities (velocity). This results in an updated interior_state.
       do ivar = 1, state%n_fabm_interior_state
-         call diffusion_FABM_interior_state(self, state, grid, disc, solver, ivar)
+         call diffusion_FABM_interior_state(self, state, grid, ivar)
       end do
 
       ! Direct time integration of source terms to update bottom_state and surface_state
-      self%fabm_model%bottom_state_variables = self%fabm_model%bottom_state_variables + state%dt * self%sms_bt
-      self%fabm_model%surface_state_variables = self%fabm_model%surface_state_variables + state%dt * self%sms_sf
+      if (state%n_fabm_bottom_state > 0) state%fabm_bottom_state = state%fabm_bottom_state + state%dt * self%sms_bt
+      if (state%n_fabm_surface_state > 0) state%fabm_surface_state = state%fabm_surface_state + state%dt * self%sms_sf
 
       ! Assign local alias back to self
       !self%fabm_model => fabm_model
-   end subroutine update_fabm
+   end subroutine update
 
    ! Diffusion algorithm for interior state variables: Simstrat transport terms and FABM biogeochemical terms integrated simultaneously
    ! Assuming small enough dt such that only fluxes between neighbouring layers are relevant
-   subroutine diffusion_fabm_interior_state(self, state, grid, disc, solver, ivar)
+   subroutine diffusion_fabm_interior_state(self, state, grid, ivar)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       class(ModelState), intent(inout) :: state
       class(StaggeredGrid) :: grid
-      class(LinSysSolver) :: solver
+      integer, intent(in) :: ivar
       
       ! Total Flux
          ! real(RK), dimension(0:grid%nz_grid+1) :: flux_tot ! Include air and benthic layer
@@ -373,35 +392,41 @@ contains
       lower_diag(1:grid%nz_grid-1) = state%dt*state%nuh(2:grid%nz_grid)*grid%AreaFactor_2(1:grid%nz_grid - 1)
       lower_diag(grid%nz_grid) = 0.0_RK
       ! 1 - downward flux - upward flux
-      main_diag(1:grid%nz_grid) = 1.0_RK - upper_diag(1:grid%nz_grid) - lower_diag(1:grid%nz_grid)
+      main_diag(:) = 1.0_RK - upper_diag(:) - lower_diag(:)
 
       ! Add FABM fluxes to A as residual verical advection terms
       ! Area factors for external fluxes
       AreaFactor_ext_1(2:grid%nz_grid) = grid%Az(2:grid%nz_grid)/grid%Az_vol(2:grid%nz_grid)/grid%h(2:grid%nz_grid)
       AreaFactor_ext_2(1:grid%nz_grid-1) = grid%Az(2:grid%nz_grid)/grid%Az_vol(1:grid%nz_grid-1)/grid%h(1:grid%nz_grid-1)
       ! Upward and downward movement rates for each layer (positive)
-      velocity_up(1:grid%nz_grid) = max(0.0, velocity(1:grid%nz_grid))
-      velocity_down(1:grid%nz_grid) = max(0.0, -velocity(1:grid%nz_grid))
+      velocity_up = self%velocity(:, ivar)
+      where (velocity_up < 0.0_RK)
+         velocity_up = 0.0_RK
+      end where
+      velocity_down = -self%velocity(:, ivar)
+      where (velocity_down < 0.0_RK)
+         velocity_down = 0.0_RK
+      end where
       ! Downward flux to each layer
       upper_diag(2:grid%nz_grid) = upper_diag(2:grid%nz_grid) + state%dt*velocity_down(2:grid%nz_grid)*AreaFactor_ext_1(2:grid%nz_grid)
       ! Upward flux to each layer
       lower_diag(1:grid%nz_grid-1) = lower_diag(1:grid%nz_grid-1) + state%dt*velocity_up(1:grid%nz_grid-1)*AreaFactor_ext_2(1:grid%nz_grid-1)
       ! Flux away from each layer
-      main_diag(1:grid%nz_grid) = main_diag(1:grid%nz_grid) - state%dt*velocity(1:grid%nz_grid)/grid%h(1:grid%nz_grid)
+      main_diag(:) = main_diag(:) - state%dt*self%velocity(:, ivar)/grid%h(:)
 
       ! Get source S^{n}
       ! Source at each layer
-      sources = self%sms(:, ivar)
+      sources = self%sms_int(:, ivar)
       ! Add pelagic-benthic and air-water flux [var_unit m s-1] as source [var_unit s-1]
       ! Convert to source by division by height of bottomost / uppermost layer [m]
       sources(1) = self%flux_bt(ivar) / grid%h(1)
       sources(grid%nz_grid) = self%flux_sf(ivar) / grid%h(grid%nz_grid)
 
       ! Calculate RHS (phi^{n}+dt*S^{n})
-      rhs(1:grid%nz_grid) = self%fabm_model%interior_state_variables(:, ivar) + state%dt*source(1:grid%nz_grid)
+      rhs(:) = state%fabm_interior_state(:, ivar) + state%dt*sources(:)
 
       ! Solve LES to get phi^{n+1}
-      call solver%solve(lower_diag, main_diag, upper_diag, rhs, self%fabm_model%interior_state_variables(:, ivar), grid%nz_grid)
+      call solve_tridiag_thomas(lower_diag, main_diag, upper_diag, rhs, state%fabm_interior_state(:, ivar), grid%nz_grid)
    end subroutine diffusion_fabm_interior_state
 
    ! Deallocate memory
@@ -410,7 +435,7 @@ contains
       class(SimstratFABM), intent(inout) :: self
 
       ! Deallocate model
-      if (associated(self%fabm_model) deallocate(model))
+      if (associated(self%fabm_model)) deallocate(self%fabm_model)
       ! Deallocate internal arrays
       if (allocated(self%sms_int)) deallocate(self%sms_int)
       if (allocated(self%flux_bt)) deallocate(self%flux_bt)
@@ -423,7 +448,7 @@ contains
    ! Process feedbacks from bgc to physics (absorption, albedo, wind drag changes, ...)
 
    ! -> Light absorption feedback by AED2 variables
-   subroutine absorption_updateAED2(self, state)
+   ! subroutine absorption_updateAED2(self, state)
 
       ! ! Arguments
       ! class(SimstratAED2) :: self
@@ -442,12 +467,12 @@ contains
       ! ! Interpolate to faces to be compatible with Simstrat temperature module
       ! call self%grid%interpolate_to_face(self%grid%z_volume, state%absorb_vol, self%grid%nz_occupied, state%absorb)
 
-   end subroutine
+   ! end subroutine
 
    ! -> Calculate photosynthetically active radiation (PAR) and short wave
    ! radiation (SWR) over entire column, using surface short wave radiation,
    ! and background and biotic extinction.
-   subroutine light(nlev)
+   ! subroutine light(nlev)
       ! !INPUT PARAMETERS:
       ! integer, intent(in) :: nlev
       ! !LOCAL VARIABLES:
@@ -466,6 +491,6 @@ contains
       !    ! Add the extinction of the second half of the grid box.
       !    bioext = bioext+localexts(i)*curh(i)/2
       ! end do
-   end subroutine light
+   ! end subroutine light
 
 end module simstrat_fabm

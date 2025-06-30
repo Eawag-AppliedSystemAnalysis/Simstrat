@@ -185,10 +185,10 @@ module strat_simdata
       
       ! All FABM biogeochemical state variable values in an array *_state
       ! In Simstrat_FABM allocated with shape (grid%nz_grid, size(n_fabm_*_state))
-      real(RK), dimension(:,:), pointer, allocatable :: fabm_interior_state
-      real(RK), dimension(:), pointer, allocatable :: fabm_bottom_state, fabm_surface_state
+      real(RK), dimension(:,:), pointer :: fabm_interior_state
+      real(RK), dimension(:), pointer :: fabm_bottom_state, fabm_surface_state
       integer :: n_fabm_state, n_fabm_interior_state, n_fabm_bottom_state, n_fabm_surface_state ! -> n_fabm_diagnostic
-      character(:), dimension(:), pointer :: fabm_state_names ! Names of FABM state variables used in the simulation
+      character(len=48), dimension(:), pointer :: fabm_state_names ! Names of FABM state variables used in the simulation
       ! -> real(RK), dimension(:,:), pointer :: fabm_diagnostic ! State matrix of FABM diagnostic svariables
       ! -> character(len=48), dimension(:), pointer :: fabm_diagnostic_names ! Names of FABM diagnostic variables used in the simulation
    
@@ -272,15 +272,16 @@ module strat_simdata
    end type
 
 contains
-   subroutine simulation_data_init(self, state_size)
+   subroutine simulation_data_init(self, param, state_size)
       class(SimulationData), intent(inout) :: self
+      class(ModelParam), intent(in) :: param
       integer, intent(in) :: state_size
       ! Init model data structures
-      call self%model%init(state_size)
+      call self%model%init(param, state_size)
    end subroutine
 
    ! Allocates all arrays of the model state in the correct size
-   subroutine model_state_init(self, state_size)
+   subroutine model_state_init(self, param, state_size)
       class(ModelState), intent(inout) :: self
       class(ModelParam), intent(in) :: param
       integer, intent(in) :: state_size
@@ -389,6 +390,8 @@ contains
       self%qa = 0.0_RK
       allocate(self%Cloud)
       self%Cloud = 0.0_RK
+
+      ! Get initial values from parameters
       allocate(self%Lat)
       self%Lat = param%Lat
       allocate(self%p_air)
@@ -439,8 +442,8 @@ contains
       write(80) self%Cloud, self%qa, self%Lat, self%p_air, self%wat_albedo
       call save_array(80, self%rad)
       call save_array(80, self%rad_vol)
-      call save_array(80, self%swr_vol)
-      call save_array(80, self%par_vol)
+      call save_array_pointer(80, self%swr_vol)
+      call save_array_pointer(80, self%par_vol)
       write(80) self%albedo_data
       write(80) self%albedo_water
       write(80) self%lat_number
@@ -463,14 +466,14 @@ contains
       call save_array(80, self%fgeo_add)
       if (couple_fabm) then
          call save_matrix_pointer(80, self%fabm_interior_state)
-         call save_matrix_pointer(80, self%fabm_bottom_state)
-         call save_matrix_pointer(80, self%fabm_surface_state)
+         call save_array_pointer(80, self%fabm_bottom_state)
+         call save_array_pointer(80, self%fabm_surface_state)
          ! -> call save_matrix_pointer(80, self%FABM_diagnostic)
       end if
       if (inflow_mode > 0) then
          call save_matrix(80, self%Q_inp)
          call save_array(80, self%Q_vert)
-         if (self%couple_fabm) then
+         if (couple_fabm) then
             call save_array(80, self%Q_inp_bound)
             call save_array(80, self%Q_inp_bound_con)
          end if
@@ -516,8 +519,8 @@ contains
       read(81) self%Cloud, self%qa, self%Lat, self%p_air, self%wat_albedo
       call read_array(81, self%rad)
       call read_array(81, self%rad_vol)
-      call read_array(81, self%swr_vol)
-      call read_array(81, self%par_vol)
+      call read_array_pointer(81, self%swr_vol)
+      call read_array_pointer(81, self%par_vol)
       read(81) self%albedo_data
       read(81) self%albedo_water
       read(81) self%lat_number
@@ -540,14 +543,14 @@ contains
       call read_array(81, self%fgeo_add)
       if (couple_fabm) then
          call read_matrix_pointer(81, self%fabm_interior_state)
-         call read_matrix_pointer(81, self%fabm_bottom_state)
-         call read_matrix_pointer(81, self%fabm_surface_state)
+         call read_array_pointer(81, self%fabm_bottom_state)
+         call read_array_pointer(81, self%fabm_surface_state)
          ! -> call read_matrix_pointer(81, self%fabm_diagnostic)
       end if
       if (inflow_mode > 0) then
          call read_matrix(81, self%Q_inp)
          call read_array(81, self%Q_vert)
-         if (self%couple_fabm) then
+         if (couple_fabm) then
             call read_array(81, self%Q_inp_bound)
             call read_array(81, self%Q_inp_bound_con)
          end if

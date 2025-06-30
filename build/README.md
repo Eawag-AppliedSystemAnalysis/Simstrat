@@ -17,7 +17,7 @@ cmake --build build --target install
 
 to build and install FABM.
 
-Then, from this folder (`build`), run:
+Then, from `Simstrat/build`, run:
 
 ~~~bash
 FoBiS.py -h
