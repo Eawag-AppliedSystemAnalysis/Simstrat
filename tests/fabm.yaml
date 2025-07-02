@@ -59,13 +59,13 @@ instances:
       w_p3: 0.1           # m/d (vertical velocity of cyanobacteria (< for sinking)), default = -5.0
       w_de: -3.0          # m/d (vertical velocity of detritus (< for sinking)), default = -3.0
     initialization:
-      dia: 0.1            # diatoms (mmol N/m3)
-      fla: 0.1            # flagellates (mmol N/m3)
-      cya: 0.1            # cyanobacteria (mmol N/m3)
-      zoo: 0.1            # zooplankton (mmol N/m3)
-      det: 5.0            # detritus (mmol N/m3)
-      amm: 0.1            # ammonium (mmol N/m3)
-      nit: 5.0            # nitrate (mmol N/m3)
-      pho: 0.6            # phosphate (mmol P/m3)
-      oxy: 85.0           # oxygen (mmol O2/m3)
-      flf: 0.0            # fluff (mmol N/m2)
+      dia: 0.1            # diatoms (mmol N/m3) : interior
+      fla: 0.1            # flagellates (mmol N/m3) : interior
+      cya: 0.1            # cyanobacteria (mmol N/m3) : interior
+      zoo: 0.1            # zooplankton (mmol N/m3) : interior
+      det: 5.0            # detritus (mmol N/m3) : interior
+      amm: 0.1            # ammonium (mmol N/m3) : interior
+      nit: 5.0            # nitrate (mmol N/m3) : interior
+      pho: 0.6            # phosphate (mmol P/m3) : interior
+      oxy: 85.0           # oxygen (mmol O2/m3) : interior
+      flf: 0.0            # fluff (mmol N/m2) : bottom

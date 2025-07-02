@@ -219,18 +219,22 @@ contains
             ! dS = dS(vertical advection) + dS(inflow) + dS(outflow), units: ‰*m^3/s
             dS(1:ubnd_vol) = dS(1:ubnd_vol) + state%Q_inp(4, 1:ubnd_vol) + state%Q_inp(2, 1:ubnd_vol)*state%S(1:ubnd_vol)
             if (self%cfg%couple_fabm) then
-               ! -> dfabm_interior = dfabm_interior + dfabm_interior(inflow) + dfabm_interior(outflow), units: var_unit*m^3/s
+               ! dfabm_interior = dfabm_interior + dfabm_interior(inflow) + dfabm_interior(outflow), units: var_unit*m^3/s
                do ivar = 1, state%n_fabm_interior_state
                   dfabm_interior(1:ubnd_vol, ivar) = dfabm_interior(1:ubnd_vol, ivar) +&
                      state%Q_inp(n_simstrat + ivar, 1:ubnd_vol) +&
                      state%Q_inp(2, 1:ubnd_vol)*state%fabm_interior_state(1:ubnd_vol, ivar)
                end do
                ! dfabm_bottom = dfabm_bottom(inflow) + dfabm_bottom(outflow), units: var_unit*m^2/s
-               dfabm_bottom(:) = state%Q_inp_bound(1:state%n_fabm_bottom_state) +&
-                  state%Q_inp_bound_con(1:state%n_fabm_bottom_state)*state%fabm_bottom_state(:)
+               if (state%n_fabm_bottom_state > 0) then
+                  dfabm_bottom(:) = state%Q_inp_bound(1:state%n_fabm_bottom_state) +&
+                     state%Q_inp_bound_con(1:state%n_fabm_bottom_state)*state%fabm_bottom_state(:)
+               end if
                ! dfabm_surface = dfabm_surface(inflow) + dfabm_surface(outflow), units: var_unit*m^2/s
-               dfabm_surface(:) = state%Q_inp_bound(state%n_fabm_bottom_state + 1 : state%n_fabm_bottom_state + state%n_fabm_surface_state) +&
-                  state%Q_inp_bound_con(state%n_fabm_bottom_state + 1 : state%n_fabm_bottom_state + state%n_fabm_surface_state)*state%fabm_surface_state(:)
+               if (state%n_fabm_surface_state > 0) then
+                  dfabm_surface(:) = state%Q_inp_bound(state%n_fabm_bottom_state + 1 : state%n_fabm_bottom_state + state%n_fabm_surface_state) +&
+                     state%Q_inp_bound_con(state%n_fabm_bottom_state + 1 : state%n_fabm_bottom_state + state%n_fabm_surface_state)*state%fabm_surface_state(:)
+               end if
             end if
 
             ! Add change to the state variable
@@ -243,8 +247,8 @@ contains
                   state%fabm_interior_state(1:ubnd_vol, ivar) = state%fabm_interior_state(1:ubnd_vol, ivar) + &
                      AreaFactor_adv(1:ubnd_vol) * dfabm_interior(1:ubnd_vol, ivar)
                end do
-               state%fabm_bottom_state(:) = state%fabm_bottom_state(:) + state%dt/self%grid%Az(1)*dfabm_bottom(:)
-               state%fabm_surface_state(:) = state%fabm_surface_state(:) + state%dt/self%grid%Az(ubnd_vol+1)*dfabm_surface(:)
+               if (state%n_fabm_bottom_state > 0) state%fabm_bottom_state(:) = state%fabm_bottom_state(:) + state%dt/self%grid%Az(1)*dfabm_bottom(:)
+               if (state%n_fabm_surface_state > 0) state%fabm_surface_state(:) = state%fabm_surface_state(:) + state%dt/self%grid%Az(ubnd_vol+1)*dfabm_surface(:)
             end if
 
             ! Variation of variables due to change in volume

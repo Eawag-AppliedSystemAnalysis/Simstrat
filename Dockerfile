@@ -31,8 +31,9 @@ COPY build /simstrat/build
 COPY lib /simstrat/lib
 COPY src /simstrat/src
 ENV F90=gfortran
-WORKDIR /simstrat/lib/libaed2
-RUN make
+WORKDIR /simstrat/lib/fabm
+RUN cmake -S ./ -B build -DFABM_HOST=simstrat
+RUN cmake --build build --target install
 WORKDIR /simstrat/build
 RUN FoBiS.py build
 COPY entrypoint.sh /entrypoint.sh

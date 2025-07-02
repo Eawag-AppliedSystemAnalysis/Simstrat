@@ -774,7 +774,7 @@ contains
          call grid%update_depth(z_ini_depth)
 
          ! Set initial lake level
-         allocate(grid%lake_level)  ! -> Allocation was needed because lake_level is defined as pointer for use with AED2
+         allocate(grid%lake_level)  ! -> Allocation was needed because lake_level is defined as pointer for use with old bgc model
          grid%lake_level = grid%z_face(grid%ubnd_fce)
 
          grid%lake_level_old = grid%lake_level

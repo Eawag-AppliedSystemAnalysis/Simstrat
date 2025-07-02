@@ -124,7 +124,6 @@ contains
       allocate(self%tb_start(self%n_vars))
       allocate(self%tb_end(self%n_vars))
       allocate(self%fnum(self%n_vars))
-      allocate(self%fnum_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
       allocate(self%number_of_lines_read(self%n_vars))
       self%number_of_lines_read = 0
 
@@ -152,16 +151,19 @@ contains
          allocate(self%tb_end_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
          allocate(self%fnum_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
          allocate(state%Q_inp_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
-         allocate (self%Q_start_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
-         allocate (self%Q_end_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
+         allocate(state%Q_inp_bound_con(state%n_fabm_bottom_state + state%n_fabm_surface_state))
+         allocate(self%Q_start_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
+         allocate(self%Q_start_bound_con(state%n_fabm_bottom_state + state%n_fabm_surface_state))
+         allocate(self%Q_end_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
+         allocate(self%Q_end_bound_con(state%n_fabm_bottom_state + state%n_fabm_surface_state))
          allocate(self%number_of_lines_read_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
          self%number_of_lines_read_bound = 0
       end if
 
-      ! -> Get location of pH in AED2 array
-      ! if (self%couple_aed2) then
-      !    do i = 1, state%n_AED2_state
-      !       select case(trim(state%AED2_state_names(i)))
+      ! -> Get location of pH in FABM array
+      ! if (self%couple_fabm) then
+      !    do i = 1, state%n_fabm_state
+      !       select case(trim(state%fabm_state_names(i)))
       !       case('CAR_pH')
       !          state%n_pH = i
       !       end select
@@ -286,8 +288,9 @@ contains
          do i=1, self%n_vars
             if (idx) then  ! If first timestep
                if (self%number_of_lines_read(i) == 0) then ! If start is not from snapshot
-                  ! max_n_inflows was set to 1000 automatically. To reduce the size, it is redetermined here.
-                  self%max_n_inflows = 0
+                  ! max_n_inflows was set to 1000 automatically. To reduce the size, it is redetermined here
+                  ! for the first variable and then increased if any variable has more inflows
+                  if (i == 1) self%max_n_inflows = 0
 
                   ! Read inflow files
                   if (i > n_simstrat) then
@@ -297,7 +300,7 @@ contains
                   end if
 
                   self%fnum(i) = i + 60  ! Should find a better way to manage unit numbers
-                  open(self%fnum(i), action='read', status='old', file=fname)
+                  open(self%fnum(i), action='read', status='old', file=fname, iostat = status)
                   
                   if (status .ne. 0) then
                      if (i > n_simstrat) then
@@ -408,7 +411,7 @@ contains
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
-                  open(self%fnum(i), action='read', status='old', file=fname)
+                  open(self%fnum(i), action='read', status='old', file=fname, iostat = status)
                   
                   if (status .ne. 0) then
                      call error('File '//fname//' not found.')
@@ -519,10 +522,10 @@ contains
             Q_inp(i,ubnd_vol + 1) = 0
          end do
 
-         ! Only if biochemistry enabled: Transform pH to [H] for physical mixing processes
-         ! if (self%couple_aed2 .and.state%n_pH > 0) then
+         ! -> Only if biochemistry enabled: Transform pH to [H] for physical mixing processes
+         ! if (self%couple_fabm .and.state%n_pH > 0) then
          !    ! current pH profile
-         !    state%AED2_state(:,state%n_pH) = 10.**(-state%AED2_state(:,state%n_pH))
+         !    state%fabm_state(:,state%n_pH) = 10.**(-state%fabm_state(:,state%n_pH))
          !    do i=1,ubnd_vol
          !       if (Q_inp(n_simstrat + state%n_pH,i) > 0) then
          !          ! Surface inflows: pH is given as pH*m2/s, so before transforming to [H], we need to get rid of the m2/s temporarily
@@ -550,8 +553,8 @@ contains
                if (self%couple_fabm) then
                   ! Get FABM values for the plunging inflow (before entrainment of ambient water)
                   fabm_in_interior = Inp(n_simstrat + 1 : self%n_vars, j)
-                  ! Transform pH to [H] for physical mixing processes
-                  ! if (state%n_pH > 0) AED2_in(state%n_pH) = 10.**(-AED2_in(state%n_pH))
+                  ! -> Transform pH to [H] for physical mixing processes
+                  ! if (state%n_pH > 0) fabm_in(state%n_pH) = 10.**(-fabm_in(state%n_pH))
                end if
                ! Compute density as a function of T and S
                call calc_density(rho_in, T_in, S_in)
@@ -656,7 +659,7 @@ contains
 
                   ! Read inflow files
                   self%fnum(i) = i + 60  ! Should find a better way to manage unit numbers
-                  open(self%fnum(i), action='read', status='old', file=fname)
+                  open(self%fnum(i), action='read', status='old', file=fname, iostat = status)
                   
                   if (status .ne. 0) then
                      if (i > n_simstrat) then
@@ -851,10 +854,10 @@ contains
             Q_inp(i,ubnd_vol + 1) = 0
          end do
 
-         ! Only if biochemistry enabled: Transform pH to [H] for physical mixing processes
-         ! if (self%couple_aed2 .and. state%n_pH > 0) then
+         ! -> Only if biochemistry enabled: Transform pH to [H] for physical mixing processes
+         ! if (self%couple_fabm .and. state%n_pH > 0) then
          !    ! current pH profile
-         !    state%AED2_state(:,state%n_pH) = 10.**(-state%AED2_state(:,state%n_pH))
+         !    state%fabm_state(:,state%n_pH) = 10.**(-state%fabm_state(:,state%n_pH))
          !    do i=1,ubnd_vol
          !       if (Q_inp(n_simstrat + state%n_pH,i) > 0) then
          !          ! Surface inflows: pH is given as pH*m2/s, so before transforming to [H], we need to get rid of the m2/s temporarily
@@ -892,7 +895,7 @@ contains
                   fname = trim(self%fabm_path)//trim(state%fabm_state_names(state%n_fabm_interior_state + i))//'_inflow.dat'
 
                   ! Read inflow files
-                  open(newunit=unit, action='read', status='old', file=fname)
+                  open(newunit=unit, action='read', status='old', file=fname, iostat = status)
                   self%fnum_bound(i) = unit
                   
                   if (status .ne. 0) then
@@ -959,19 +962,20 @@ contains
             goto 11
 
             ! If end of file reached, set to closest available value
-7              self%eof_bound(i) = 1
-8              Q_inp_bound(i) = self%Q_start_bound(i)
+7           self%eof_bound(i) = 1
+8           Q_inp_bound(i) = self%Q_start_bound(i)
             Q_inp_bound_con(i) = self%Q_start_bound_con(i)
             goto 11
 
             ! If no data available
-9              write(6,*) '[WARNING] ','No data found in ',trim(fname),' file. Values set to zero.'
+9           write(6,*) '[WARNING] ','No data found in ',trim(fname),' file. Values set to zero.'
             self%eof_bound(i) = 1
             Q_inp_bound(i) = 0.0_RK
             self%Q_start_bound(i) = 0.0_RK
             Q_inp_bound_con(i) = 0.0_RK
             self%Q_start_bound_con(i) = 0.0_RK
-11             continue
+11          continue
+
          end associate
          
       end do

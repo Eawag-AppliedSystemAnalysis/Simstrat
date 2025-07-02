@@ -7,8 +7,6 @@
 !
 !     Copyright (C) 2020, Eawag
 !     FABM: Copyright (C) 2014, Bolding & Bruggeman ApS
-!     GOTM: Copyright by the GOTM-team under the GNU Public License - www.gnu.org
-!           Original author(s): Jorn Bruggeman (rem.: for every subroutine)
 !
 !
 !     This program is free software: you can redistribute it and/or modify
@@ -138,15 +136,6 @@ contains
          end do
       end if
 
-      ! -> Program received signal SIGSEGV: Segmentation fault - invalid memory reference.
-      ! Set FABM-provided initial values for state variables (tracers), typically space-independent.
-      ! This sets the values of arrays sent to fabm_model%link_*_state_data,
-      ! in this case those contained in *_state
-      ! -> If model not initialized with custom or previously stored state (needs to be added as argument)
-      call self%fabm_model%initialize_interior_state(1, grid%nz_grid)
-      call self%fabm_model%initialize_bottom_state()
-      call self%fabm_model%initialize_surface_state()
-
       ! Get id for standard variable <variable>: if memory location of <variable> changes send updated pointers
       !type(type_fabm_interior_variable_id) :: id_var
       !id_var = fabm_model%get_interior_variable_id(fabm_standard_variables%variable)
@@ -235,6 +224,15 @@ contains
       ! Stop with fatal error if not
       ! Selection of diagnostics that FABM will compute and store becomes frozen
       call self%fabm_model%start()
+
+      ! -> Program received signal SIGSEGV: Segmentation fault - invalid memory reference.
+      ! Set FABM-provided initial values for state variables (tracers), typically space-independent.
+      ! This sets the values of arrays sent to fabm_model%link_*_state_data,
+      ! in this case those contained in *_state
+      ! -> If model not initialized with custom or previously stored state (needs to be added as argument)
+      call self%fabm_model%initialize_interior_state(1, grid%nz_grid)
+      call self%fabm_model%initialize_bottom_state()
+      call self%fabm_model%initialize_surface_state()
 
       ! Do the following sequence once to ensure diagnostics called in the model state valdation have been assigned a value
 
@@ -396,7 +394,7 @@ contains
 
       ! Add FABM fluxes to A as residual verical advection terms
       ! Area factors for external fluxes
-      AreaFactor_ext_1(2:grid%nz_grid) = grid%Az(2:grid%nz_grid)/grid%Az_vol(2:grid%nz_grid)/grid%h(2:grid%nz_grid)
+      AreaFactor_ext_1(1:grid%nz_grid-1) = grid%Az(2:grid%nz_grid)/grid%Az_vol(2:grid%nz_grid)/grid%h(2:grid%nz_grid)
       AreaFactor_ext_2(1:grid%nz_grid-1) = grid%Az(2:grid%nz_grid)/grid%Az_vol(1:grid%nz_grid-1)/grid%h(1:grid%nz_grid-1)
       ! Upward and downward movement rates for each layer (positive)
       velocity_up = self%velocity(:, ivar)
@@ -408,11 +406,11 @@ contains
          velocity_down = 0.0_RK
       end where
       ! Downward flux to each layer
-      upper_diag(2:grid%nz_grid) = upper_diag(2:grid%nz_grid) + state%dt*velocity_down(2:grid%nz_grid)*AreaFactor_ext_1(2:grid%nz_grid)
+      upper_diag(2:grid%nz_grid) = upper_diag(2:grid%nz_grid) + state%dt*velocity_down(2:grid%nz_grid)*AreaFactor_ext_1(1:grid%nz_grid-1)
       ! Upward flux to each layer
       lower_diag(1:grid%nz_grid-1) = lower_diag(1:grid%nz_grid-1) + state%dt*velocity_up(1:grid%nz_grid-1)*AreaFactor_ext_2(1:grid%nz_grid-1)
       ! Flux away from each layer
-      main_diag(:) = main_diag(:) - state%dt*self%velocity(:, ivar)/grid%h(:)
+      main_diag(:) = main_diag(:) - state%dt*self%velocity(:, ivar)/grid%h(1:grid%nz_grid)
 
       ! Get source S^{n}
       ! Source at each layer
@@ -447,11 +445,11 @@ contains
 
    ! Process feedbacks from bgc to physics (absorption, albedo, wind drag changes, ...)
 
-   ! -> Light absorption feedback by AED2 variables
-   ! subroutine absorption_updateAED2(self, state)
+   ! -> Light absorption feedback by FAMB variables
+   ! subroutine absorption_update_fabmS(self, state)
 
       ! ! Arguments
-      ! class(SimstratAED2) :: self
+      ! class(SimstratFABM) :: self
       ! class(ModelState) :: state
 
       ! ! Local variables
@@ -460,8 +458,8 @@ contains
 
       ! do i=self%grid%nz_occupied, 1, -1
       !    bio_extinction = 0.0_RK
-      !    call aed2_light_extinction(self%column, i, bio_extinction)
-      !    state%absorb_vol(i) = self%aed2_cfg%background_extinction + bio_extinction
+      !    call fabm_light_extinction(self%column, i, bio_extinction) : change for fabm
+      !    state%absorb_vol(i) = self%fabm_cfg%background_extinction + bio_extinction
 
       ! end do
       ! ! Interpolate to faces to be compatible with Simstrat temperature module
@@ -472,6 +470,8 @@ contains
    ! -> Calculate photosynthetically active radiation (PAR) and short wave
    ! radiation (SWR) over entire column, using surface short wave radiation,
    ! and background and biotic extinction.
+   !     GOTM: Copyright by the GOTM-team under the GNU Public License - www.gnu.org
+   !     Original author(s): Jorn Bruggeman (rem.: for every subroutine)
    ! subroutine light(nlev)
       ! !INPUT PARAMETERS:
       ! integer, intent(in) :: nlev

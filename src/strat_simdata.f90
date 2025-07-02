@@ -59,13 +59,13 @@ module strat_simdata
 
    ! -> Definition of a FABM variable to log
    type, public :: LogVariableFABM
-      character(len=:), pointer, dimension(:) :: names
+      character(len=48), pointer, dimension(:) :: names
       real(RK), dimension(:,:), pointer :: values
    end type
 
    ! -> Definition of a FABM variable to log
    type, public :: LogVariableFABM_bound
-      character(len=:), pointer, dimension(:) :: names
+      character(len=48), pointer, dimension(:) :: names
       real(RK), dimension(:), pointer :: values
    end type
 

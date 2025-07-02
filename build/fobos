@@ -6,7 +6,7 @@ modes = release-gnu release-gnu-dynamic release-intel debug-gnu debug-gnu-dynami
 compiler = Gnu
 # cflags = -c -O2 -std=f2008 -ffree-line-length-none
 # for debugging:
-cflags = -c -g -O0 -std=f2008 -ffree-line-length-none -fbacktrace -fcheck=all -ffpe-trap=invalid,zero,overflow
+cflags = -c -g -O0 -std=f2008 -ffree-line-length-none -fbacktrace -fcheck=all
 lflags = -static-libgcc -static-libgfortran -static
 build_dir = .
 src = ../src/

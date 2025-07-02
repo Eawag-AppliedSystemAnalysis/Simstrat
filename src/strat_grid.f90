@@ -70,7 +70,7 @@ module strat_grid
       integer :: max_length_input_data  ! Hard limit of grid cells for reading files of unknnown length etc
 
       integer :: ubnd_vol, ubnd_fce, length_vol, length_fce   ! Upper and lenght for volume (vol) and face(fce) grids
-      real(RK), pointer :: lake_level ! -> pointer attribute was needed for AED2
+      real(RK), pointer :: lake_level ! -> pointer attribute was needed for old bgc model
       real(RK) :: lake_level_old
 
    contains
