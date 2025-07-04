@@ -376,7 +376,7 @@ contains
                call self%output_files(i)%open(file_path, n_cols=2, append=append, status_ok=status_ok)
                if (.not. append) then
                   call self%output_files(i)%add('Datetime')
-                  call self%output_files(i)%add(self%output_config%zout(1), real_fmt='(F12.3)')
+                  call self%output_files(i)%add('Concentration')
                   call self%output_files(i)%next_row()
                else
                   call error('Cannot write to output directory. Make sure you have writing access.')
@@ -389,7 +389,7 @@ contains
                call self%output_files(i)%open(file_path, n_cols=2, append=append, status_ok=status_ok)
                if (.not. append) then
                   call self%output_files(i)%add('Datetime')
-                  call self%output_files(i)%add(self%output_config%zout(size(self%output_config%zout)-1), real_fmt='(F12.3)')
+                  call self%output_files(i)%add('Concentration')
                   call self%output_files(i)%next_row()
                else
                   call error('Cannot write to output directory. Make sure you have writing access.')

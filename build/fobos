@@ -90,4 +90,4 @@ help = Clean all the libraries (.mod and .obj)
 rule_1 = cd ../lib/csv_fortran && FoBiS.py clean
 rule_2 = cd ../lib/json_fortran/static && FoBiS.py clean
 rule_3 = cd ../lib/forbear/static && FoBiS.py clean
-rule_4 = echo Please clean libaed2 subdirectories lib, mod and obj manually!
+rule_4 = echo Please clean fabm subdirectory build manually!

@@ -32,6 +32,8 @@ module simstrat_fabm
    use strat_kinds
    use strat_grid
    use strat_solver
+   use utilities
+   use, intrinsic :: ieee_arithmetic
 
    implicit none
    private
@@ -82,13 +84,12 @@ contains
       ! The model interacts iwth FABM and describes properties of all bgc variables and parameters
       self%fabm_model => fabm_create_model()
       if (.not. associated(self%fabm_model)) then
-         print *, "FABM model creation failed"
-         stop 1
+         call error("FABM model creation failed")
       end if
 
       ! Provide extents of the spatial domain (number of layers nz for a 1D column)
       ! Used to allocate memory for FABM-managed spatially explicit fields
-      ! -> Because the entire extent is given some layers might be claculated that are not physical, be aware of that in the output
+      ! Because the entire extent is given some layers might be calculated that are not physical, be aware of that in the output
       call self%fabm_model%set_domain(grid%nz_grid)
 
       ! At this point (after the call to fabm_create_model), memory should be
@@ -117,10 +118,12 @@ contains
       ! Point FABM to fields that hold state variable data and get additional information
 
       ! Interior state variables
-      do ivar = 1, state%n_fabm_interior_state
-         call self%fabm_model%link_interior_state_data(ivar, state%fabm_interior_state(:,ivar))
-         state%fabm_state_names(ivar) = self%fabm_model%interior_state_variables(ivar)%name
-      end do
+      if (state%n_fabm_interior_state > 0) then
+         do ivar = 1, state%n_fabm_interior_state
+            call self%fabm_model%link_interior_state_data(ivar, state%fabm_interior_state(:,ivar))
+            state%fabm_state_names(ivar) = self%fabm_model%interior_state_variables(ivar)%name
+         end do
+      end if
       ! Bottom state variables
       if (state%n_fabm_bottom_state > 0) then
          do ivar = 1, state%n_fabm_bottom_state
@@ -242,31 +245,37 @@ contains
       ! 2. Retrieve sources and fluxes across whole domain: order of call and of processing grid points is up to host
       
       ! 2a. Allocate and initialize with 0 (and then retrieve) interior tracer source terms (tracer units s-1)
-      allocate(self%sms_int(grid%nz_grid, state%n_fabm_interior_state))
-      self%sms_int = 0
+      if (state%n_fabm_interior_state > 0) then
+         allocate(self%sms_int(grid%nz_grid, state%n_fabm_interior_state))
+         self%sms_int = 0.0
+      end if
       !call self%fabm_model%get_interior_sources(1, grid%nz_grid, self%sms_int)
 
       ! 2b. Allocate and initialize with 0 (and then retrieve) fluxes and tracer source terms at bottom
-      allocate(self%flux_bt(state%n_fabm_interior_state))
-      self%flux_bt = 0
+      if (state%n_fabm_interior_state > 0) then
+         allocate(self%flux_bt(state%n_fabm_interior_state))
+         self%flux_bt = 0.0
+      end if
       if (state%n_fabm_bottom_state > 0) then
          allocate(self%sms_bt(state%n_fabm_bottom_state))
-         self%sms_bt = 0
+         self%sms_bt = 0.0
       end if
       !call self%fabm_model%get_bottom_sources(self%flux_bt, self%sms_bt)
 
       ! 2c. Allocate and initialize with 0 (and then retrieve) fluxes and tracer source terms at surface
-      allocate(self%flux_sf(state%n_fabm_interior_state))
-      self%flux_sf = 0
+      if (state%n_fabm_interior_state > 0) then
+         allocate(self%flux_sf(state%n_fabm_interior_state))
+         self%flux_sf = 0.0
+      end if
       if (state%n_fabm_surface_state > 0) then
          allocate(self%sms_sf(state%n_fabm_surface_state))
-         self%sms_sf = 0
+         self%sms_sf = 0.0
       end if
       !call self%fabm_model%get_surface_sources(self%flux_sf, self%sms_sf)
 
       ! 3. Allocate and initialize with 0 (and then retrieve) vertical velocities (sinking, floating, active movement) in m s-1
       allocate(self%velocity(grid%nz_grid, state%n_fabm_interior_state))
-      self%velocity = 0
+      self%velocity = 0.0
       !call self%fabm_model%get_vertical_movement(1,grid%nz_grid, self%velocity)
 
       ! 4. Compute any remaining diagnostics
@@ -313,18 +322,66 @@ contains
 
       ! 3a. Retrieve interior tracer source terms
       call self%fabm_model%get_interior_sources(1, grid%nz_grid, self%sms_int)
+      if (allocated(self%sms_int)) then
+         if (any(ieee_is_nan(self%sms_int))) then
+            call warn("FABM Interior Source contains NaNs, set to 0")
+            where (ieee_is_nan(self%sms_int))
+               self%sms_int = 0.0
+            end where
+         end if
+      end if
 
       ! 3b. Retrieve fluxes over pelagic-benthic interface and bottom tracer source terms
       call self%fabm_model%get_bottom_sources(self%flux_bt, self%sms_bt)
+      if (allocated(self%flux_bt)) then
+         if (any(ieee_is_nan(self%flux_bt))) then
+            call warn("FABM Bottom Flux contains NaN, set to 0")
+            where (ieee_is_nan(self%flux_bt))
+               self%flux_bt = 0.0
+            end where
+         end if
+      end if
+      if (allocated(self%sms_bt)) then
+         if (any(ieee_is_nan(self%sms_bt))) then
+            call warn("FABM Bottom Source contains NaN, set to 0")
+            where (ieee_is_nan(self%sms_bt))
+               self%sms_bt = 0.0
+            end where
+         end if
+      end if
 
       ! 3c. Retrieve fluxes over air-water surface and surface tracer source terms
       call self%fabm_model%get_surface_sources(self%flux_sf, self%sms_sf)
+      if (allocated(self%flux_sf)) then
+         if (any(ieee_is_nan(self%flux_sf))) then
+            call warn("FABM Surface Flux contains NaN, set to 0")
+            where (ieee_is_nan(self%flux_sf))
+               self%flux_sf = 0.0
+            end where
+         end if
+      end if
+      if (allocated(self%sms_sf)) then
+         if (any(ieee_is_nan(self%sms_sf))) then
+            call warn("FABM Surface Source contains NaN, set to 0")
+            where (ieee_is_nan(self%sms_sf))
+               self%sms_sf = 0.0
+            end where
+         end if
+      end if
 
       ! 4. Retrieve local vertical velocities of pelagic state variables [m s-1]
       ! Movement through water, independent of water flow
       ! >0: upward movement (floating, active movement)
       ! <0: downward ovement (sinking, sedimentation, active movement)
       call self%fabm_model%get_vertical_movement(1, grid%nz_grid, self%velocity)
+      if (allocated(self%velocity)) then
+         if (any(ieee_is_nan(self%velocity))) then
+            call warn("FABM Interior Velocity contains NaN, set to 0")
+            where (ieee_is_nan(self%velocity))
+               self%velocity = 0.0
+            end where
+         end if
+      end if
 
       ! 5. Compute any remaining diagnostics not computed by preceding routines
       ! Operates on entire active spatial domain

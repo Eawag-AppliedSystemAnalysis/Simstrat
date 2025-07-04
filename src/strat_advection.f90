@@ -225,12 +225,12 @@ contains
                      state%Q_inp(n_simstrat + ivar, 1:ubnd_vol) +&
                      state%Q_inp(2, 1:ubnd_vol)*state%fabm_interior_state(1:ubnd_vol, ivar)
                end do
-               ! dfabm_bottom = dfabm_bottom(inflow) + dfabm_bottom(outflow), units: var_unit*m^2/s
+               ! dfabm_bottom = dfabm_bottom(absolute in/outflow) + dfabm_bottom(concentration-dependent in/outflow), units: var_unit*m^2/s
                if (state%n_fabm_bottom_state > 0) then
                   dfabm_bottom(:) = state%Q_inp_bound(1:state%n_fabm_bottom_state) +&
                      state%Q_inp_bound_con(1:state%n_fabm_bottom_state)*state%fabm_bottom_state(:)
                end if
-               ! dfabm_surface = dfabm_surface(inflow) + dfabm_surface(outflow), units: var_unit*m^2/s
+               ! dfabm_surface = dfabm_surface(absolute in/outflow) + dfabm_surface(concentration-dependent in/outflow), units: var_unit*m^2/s
                if (state%n_fabm_surface_state > 0) then
                   dfabm_surface(:) = state%Q_inp_bound(state%n_fabm_bottom_state + 1 : state%n_fabm_bottom_state + state%n_fabm_surface_state) +&
                      state%Q_inp_bound_con(state%n_fabm_bottom_state + 1 : state%n_fabm_bottom_state + state%n_fabm_surface_state)*state%fabm_surface_state(:)

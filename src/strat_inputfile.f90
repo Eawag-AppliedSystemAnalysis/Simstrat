@@ -76,6 +76,7 @@ contains
       ! Set up grid
       call self%read_grid_config
 
+      ! Initialize model with state_size = nz_grid
       call self%simdata%model%init(simdata%model_param, self%simdata%grid%nz_grid)
 
       ! Read initial data

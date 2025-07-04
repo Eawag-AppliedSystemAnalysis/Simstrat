@@ -915,10 +915,6 @@ contains
                   read (self%fnum_bound(i), *, end=9) ! Skip first row: description of columns
                   call count_read_bound(self, i)
 
-                  ! Number of inputs to read
-                  read (self%fnum_bound(i), *, end=9) self%nval_bound
-                  call count_read_bound(self, i)
-
                   ! Read first input line
                   read (self%fnum_bound(i), *, end=9) self%tb_start_bound(i), self%Q_start_bound(i), self%Q_start_bound_con(i)
                   call count_read_bound(self, i)
@@ -927,7 +923,7 @@ contains
                   read (self%fnum_bound(i), *, end=7) self%tb_end_bound(i), self%Q_end_bound(i), self%Q_end_bound_con(i)
                   call count_read_bound(self, i)
 
-                  call ok('Input file successfully read: '//fname)
+                  call ok('FABM bound input file successfully read: '//fname)
                else ! if start from snapshot
                   ! Open inflow files
                   fname = trim(self%fabm_path)//trim(state%fabm_state_names(state%n_fabm_interior_state + i))//'_inflow.dat'
@@ -937,7 +933,7 @@ contains
                   do l = 1, self%number_of_lines_read(i)
                      read (self%fnum_bound(i), *, end=9) ! Skip already read and processed lines
                   end do
-                  call ok('Input file successfully opened: '//fname)
+                  call ok('FABM bound input file successfully opened: '//fname)
                end if
             end if ! idx = 1
 
