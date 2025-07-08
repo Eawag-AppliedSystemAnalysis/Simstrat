@@ -86,7 +86,7 @@ to create the new directory `build` and generate the build configuration inside 
 > ~~~bash
 > -DFABM_<INSTITUTE-NAME>_BASE=<DIR>
 > ~~~  
-> for every institute in `<INSTITUTE-NAMES>`. A list of available externally maintained models can be found here: [Available Models in FABM Wiki](https://github.com/fabm-model/fabm/wiki/Biogeochemical-models-in-FABM#available-models)
+> for every institute in `<INSTITUTE-NAMES>`. A list of available externally maintained models can be found here: [Available Models in FABM Wiki](https://github.com/fabm-model/fabm/wiki/Biogeochemical-models-in-FABM#available-models).
 
 > **N.B.2** Add  
 > ~~~bash
