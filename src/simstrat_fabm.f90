@@ -122,6 +122,7 @@ contains
          do ivar = 1, state%n_fabm_interior_state
             call self%fabm_model%link_interior_state_data(ivar, state%fabm_interior_state(:,ivar))
             state%fabm_state_names(ivar) = self%fabm_model%interior_state_variables(ivar)%name
+            print *, "int: ", self%fabm_model%interior_state_variables(ivar)%minimum
          end do
       end if
       ! Bottom state variables
@@ -129,6 +130,7 @@ contains
          do ivar = 1, state%n_fabm_bottom_state
             call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(ivar))
             state%fabm_state_names(state%n_fabm_interior_state + ivar) = self%fabm_model%bottom_state_variables(ivar)%name
+            print *, "bot: ", self%fabm_model%bottom_state_variables(ivar)%minimum
          end do
       end if
       ! Surface state variables
@@ -309,7 +311,13 @@ contains
       call self%fabm_model%check_interior_state(1 ,grid%nz_grid, self%repair, self%valid_int)
       call self%fabm_model%check_bottom_state(self%repair, self%valid_bt)
       call self%fabm_model%check_surface_state(self%repair, self%valid_sf)
-      if (.not. (self%valid_int .and. self%valid_bt .and. self%valid_sf) .and. .not. self%repair) stop
+      if (.not. (self%valid_int .and. self%valid_bt .and. self%valid_sf)) then
+         if (self%repair) then
+            ! call warn("FABM Variable repaired")
+         else
+            call error("FABM Variable out of bounds")
+         end if
+      end if
 
       ! 2. Prepare all fields (e.g. light attenuation) FABM needs to compute source terms (e.g. light)
       ! Operates on entire active spatial domain
@@ -324,7 +332,7 @@ contains
       call self%fabm_model%get_interior_sources(1, grid%nz_grid, self%sms_int)
       if (allocated(self%sms_int)) then
          if (any(ieee_is_nan(self%sms_int))) then
-            call warn("FABM Interior Source contains NaNs, set to 0")
+            ! call warn("FABM Interior Source contains NaNs, set to 0")
             where (ieee_is_nan(self%sms_int))
                self%sms_int = 0.0
             end where
@@ -335,7 +343,7 @@ contains
       call self%fabm_model%get_bottom_sources(self%flux_bt, self%sms_bt)
       if (allocated(self%flux_bt)) then
          if (any(ieee_is_nan(self%flux_bt))) then
-            call warn("FABM Bottom Flux contains NaN, set to 0")
+            ! call warn("FABM Bottom Flux contains NaN, set to 0")
             where (ieee_is_nan(self%flux_bt))
                self%flux_bt = 0.0
             end where
@@ -343,7 +351,7 @@ contains
       end if
       if (allocated(self%sms_bt)) then
          if (any(ieee_is_nan(self%sms_bt))) then
-            call warn("FABM Bottom Source contains NaN, set to 0")
+            ! call warn("FABM Bottom Source contains NaN, set to 0")
             where (ieee_is_nan(self%sms_bt))
                self%sms_bt = 0.0
             end where
@@ -354,7 +362,7 @@ contains
       call self%fabm_model%get_surface_sources(self%flux_sf, self%sms_sf)
       if (allocated(self%flux_sf)) then
          if (any(ieee_is_nan(self%flux_sf))) then
-            call warn("FABM Surface Flux contains NaN, set to 0")
+            ! call warn("FABM Surface Flux contains NaN, set to 0")
             where (ieee_is_nan(self%flux_sf))
                self%flux_sf = 0.0
             end where
@@ -362,7 +370,7 @@ contains
       end if
       if (allocated(self%sms_sf)) then
          if (any(ieee_is_nan(self%sms_sf))) then
-            call warn("FABM Surface Source contains NaN, set to 0")
+            ! call warn("FABM Surface Source contains NaN, set to 0")
             where (ieee_is_nan(self%sms_sf))
                self%sms_sf = 0.0
             end where
@@ -376,7 +384,7 @@ contains
       call self%fabm_model%get_vertical_movement(1, grid%nz_grid, self%velocity)
       if (allocated(self%velocity)) then
          if (any(ieee_is_nan(self%velocity))) then
-            call warn("FABM Interior Velocity contains NaN, set to 0")
+            ! call warn("FABM Interior Velocity contains NaN, set to 0")
             where (ieee_is_nan(self%velocity))
                self%velocity = 0.0
             end where

@@ -72,8 +72,23 @@ Go to `lib/fabm` and run:
 cmake -S ./ -B build -DFABM_HOST=simstrat
 ~~~
 
-to create the new directory `build` and generate the build configuration inside it,
-with the Simstrat preprocesser definitions for information about the spatial domain.
+to create the new directory `build` and generate the build configuration inside it, with the Simstrat preprocesser definitions for information about the spatial domain.
+
+> **N.B.1** By default FABM includes biogeochemical models from all "institute directories" under `lib/fabm/src/models`. You can restrict this to a subset of directories by providing 
+~~~bash
+-DFABM_INSTITUTES=<INSTITUTE-NAMES>
+~~~
+as argument to cmake. To add externally maintained models add the argument
+~~~bash
+-DFABM_EXTRA_INSTITUTES=<INSTITUTES-NAMES>.
+~~~
+Here, <INSTITUTE-NAMES> is a semi-colon-separated list of institute names. You may need to enclose this list in quotes to prevent the shell from interpreting the semi-colon. For the externally maintained models, you additionally need to point FABM to the directory with the source code by specifying 
+~~~bash
+-DFABM_<INSTITUTE-NAME>_BASE=<DIR>.
+~~~
+A list of available externally maintained models can be found here: https://github.com/fabm-model/fabm/wiki/Biogeochemical-models-in-FABM#available-models
+
+> **N.B.2** Add -DCMAKE_BUILD_TYPE=Debug as argument to cmake to compile FABM in debug mode.
 
 Then run:
 

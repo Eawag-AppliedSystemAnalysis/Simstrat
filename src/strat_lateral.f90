@@ -270,7 +270,7 @@ contains
       real(RK) :: Inp(1:self%n_vars,1:self%max_n_inflows)
       real(RK) :: dummy
       real(RK) :: Q_in(1:self%grid%ubnd_vol), h_in(1:self%grid%ubnd_vol)
-      real(RK) :: T_in, S_in, co2_in, ch4_in, rho_in, CD_in, g_red, slope, Ri, E, Q_inp_inc
+      real(RK) :: T_in, S_in, rho_in, CD_in, g_red, slope, Ri, E, Q_inp_inc
       real(RK) :: fabm_in_interior(state%n_fabm_interior_state)
       integer :: i, j, k, i1, i2, l, status, unit
       character(len=100) :: fname
@@ -322,7 +322,7 @@ contains
                   ! End of file is not reached
                   self%eof(i) = 0
 
-                  ! Read input depths
+                  ! Skip first row: description of columns
                   read(self%fnum(i),*,end=9)
                   call count_read(self, i)
 
@@ -414,7 +414,12 @@ contains
                   open(self%fnum(i), action='read', status='old', file=fname, iostat = status)
                   
                   if (status .ne. 0) then
-                     call error('File '//fname//' not found.')
+                     if (i > n_simstrat) then
+                        ! -> Not all FABM files defined yet
+                        goto 9
+                     else
+                        call error('File '//fname//' not found.')
+                     end if
                   else
                      write(6,*) 'Reading ', fname
                   end if
@@ -551,11 +556,12 @@ contains
 
                ! Only if biochemistry enabled
                if (self%couple_fabm) then
-                  ! Get FABM values for the plunging inflow (before entrainment of ambient water)
-                  fabm_in_interior = Inp(n_simstrat + 1 : self%n_vars, j)
+                  ! Get initial FABM values for the plunging inflow (before entrainment of ambient water)
+                  fabm_in_interior = Inp(n_simstrat + 1 : self%n_vars, j) !Inflow [var_unit]
                   ! -> Transform pH to [H] for physical mixing processes
                   ! if (state%n_pH > 0) fabm_in(state%n_pH) = 10.**(-fabm_in(state%n_pH))
                end if
+
                ! Compute density as a function of T and S
                call calc_density(rho_in, T_in, S_in)
                g_red = g*(rho_in - state%rho(k))/rho_in !Reduced gravity [m/s2]
@@ -607,7 +613,7 @@ contains
                   end do
                end if
 
-               ! Deep plunging input is added to Q_inp for i=1,3,4 (inflow, temperature, salinity)
+               ! Deep plunging input is added to Q_inp for i=1,3,4 (inflow, temperature, salinity) and FABM variables (if enabled)
                do i = i2,i1
                   Q_inp_inc = Q_in(k)/(grid%z_face(i1 + 1) - grid%z_face(i2))*grid%h(i)
                   Q_inp(1,i) = Q_inp(1,i) + Q_inp_inc
@@ -770,7 +776,18 @@ contains
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
-                  open(self%fnum(i), action='read', status='old', file=fname)
+                  open(self%fnum(i), action='read', status='old', file=fname, iostat = status)
+                  
+                  if (status .ne. 0) then
+                     if (i > n_simstrat) then
+                        ! -> Not all FABM files defined yet
+                        goto 9
+                     else
+                        call error('File '//fname//' not found.')
+                     end if
+                  else
+                     write(6,*) 'Reading ', fname
+                  end if
 
                   do l = 1, self%number_of_lines_read(i)
                      read (self%fnum(i), *, end=9) ! Skip already read and processed lines
