@@ -128,7 +128,7 @@ program simstrat_main
 
    ! Initialize biogeochemical model "FABM" if used
    if (simdata%model_cfg%couple_fabm) then
-      call mod_fabm%init(simdata%model, simdata%grid)
+      call mod_fabm%init(simdata%model, simdata%grid, simdata%fabm_cfg)
    end if
 
    ! If there is advection (due to inflow)

@@ -247,7 +247,8 @@ contains
                   state%fabm_interior_state(1:ubnd_vol, ivar) = state%fabm_interior_state(1:ubnd_vol, ivar) + &
                      AreaFactor_adv(1:ubnd_vol) * dfabm_interior(1:ubnd_vol, ivar)
                end do
-               if (state%n_fabm_bottom_state > 0) state%fabm_bottom_state(:) = state%fabm_bottom_state(:) + state%dt*dfabm_bottom(:)
+               ! -> gives NaNs: if (state%n_fabm_bottom_state > 0) state%fabm_bottom_state(:) = state%fabm_bottom_state(:) + state%dt/self%grid%Az(1)*dfabm_bottom(:)
+               if (state%n_fabm_bottom_state > 0) state%fabm_bottom_state(:) = state%fabm_bottom_state(:) + state%dt/self%grid%Az(ubnd_vol+1)*dfabm_bottom(:)
                if (state%n_fabm_surface_state > 0) state%fabm_surface_state(:) = state%fabm_surface_state(:) + state%dt/self%grid%Az(ubnd_vol+1)*dfabm_surface(:)
             end if
 

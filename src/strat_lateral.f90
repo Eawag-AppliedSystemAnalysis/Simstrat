@@ -515,6 +515,10 @@ contains
             if(i==2) Q_inp(i,1:ubnd_vol) = 0.0_RK
             if(i==2) self%Q_start(i,1:ubnd_fce) = 0.0_RK
             self%Qs_start(i,1:ubnd_fce) = 0.0_RK
+            self%has_deep_input(i) = .false.
+            self%has_surface_input(i) = .false.
+            self%nval_deep(i) = 0.0_RK
+            self%nval_surface(i) = 0.0_RK
 
 11          continue
          end do      ! end do i=1,n_vars

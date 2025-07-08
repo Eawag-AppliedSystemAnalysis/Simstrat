@@ -37,6 +37,7 @@
   },
   "FABMConfig" : {
     "PathFABMinflow"          : "TestCase_LakeZurich/FABM_inflow/",
+    "FABMConfigFile"          : "FABMConfigurations/fabm-gotm-npzd.yaml",
     "BioshadeFeedback"        : 0,
     "BackgroundExtinction"    : 0.2,
     "OutputDiagnosticVars"    : false

@@ -1,5 +1,5 @@
-# FABM configuration file called by fabm_create_model()
-# This is a copy of fabm-gotm-ergom.yaml
+# FABM configuration file called by fabm_create_model() if selected as FABMConfigFile
+# This is a copy from lib/fabm/testcases
 # General information, on how to create a fabm.yaml is found here:
 # https://github.com/fabm-model/fabm/wiki/Setting-up-a-simulation#fabmyaml
 

@@ -64,12 +64,13 @@ module simstrat_fabm
 contains
 
    ! Initialize: called once in within the initialization of Simstrat
-   ! Sets up memory, reads FABM configuration from fabm.yaml, links the external Simstrat variables and sets the initial conditions of FABM variables
-   subroutine init(self, state, grid)
+   ! Sets up memory, reads FABM configuration from fabm_config_file, links the external Simstrat variables and sets the initial conditions of FABM variables
+   subroutine init(self, state, grid, fabm_config)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       class(ModelState) :: state
       class(StaggeredGrid) :: grid
+      class(FABMConfig) :: fabm_config
       !class(type_fabm_model), pointer :: fabm_model
 
       ! Local variables
@@ -78,11 +79,14 @@ contains
       ! Create an alias of the model
       !fabm_model => self%fabm_model
 
-      ! Initialize the model (reads run-time FABM model configuration from fabm.yaml and stores it in fabm_model)
-      ! After this the number of biogeochemical variables is fixed
+      ! make sure everything is deallocated
+      call deallocate_fabm(self)
+
+      ! Initialize the model: Reads run-time FABM model configuration from fabm_config%fabm_config_file (YAML format)
+      ! and stores it in fabm_model. After this the number of biogeochemical variables is fixed
       ! (access variable metadata in fabm_model%interior_state_variables, fabm_model%interior_diagnostic_variables)
-      ! The model interacts iwth FABM and describes properties of all bgc variables and parameters
-      self%fabm_model => fabm_create_model()
+      ! The model interacts with FABM and describes properties of all bgc variables and parameters
+      self%fabm_model => fabm_create_model(fabm_config%fabm_config_file)
       if (.not. associated(self%fabm_model)) then
          call error("FABM model creation failed")
       end if
@@ -122,7 +126,6 @@ contains
          do ivar = 1, state%n_fabm_interior_state
             call self%fabm_model%link_interior_state_data(ivar, state%fabm_interior_state(:,ivar))
             state%fabm_state_names(ivar) = self%fabm_model%interior_state_variables(ivar)%name
-            print *, "int: ", self%fabm_model%interior_state_variables(ivar)%minimum
          end do
       end if
       ! Bottom state variables
@@ -130,7 +133,6 @@ contains
          do ivar = 1, state%n_fabm_bottom_state
             call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(ivar))
             state%fabm_state_names(state%n_fabm_interior_state + ivar) = self%fabm_model%bottom_state_variables(ivar)%name
-            print *, "bot: ", self%fabm_model%bottom_state_variables(ivar)%minimum
          end do
       end if
       ! Surface state variables
@@ -254,30 +256,32 @@ contains
       !call self%fabm_model%get_interior_sources(1, grid%nz_grid, self%sms_int)
 
       ! 2b. Allocate and initialize with 0 (and then retrieve) fluxes and tracer source terms at bottom
+      allocate(self%flux_bt(state%n_fabm_interior_state))
       if (state%n_fabm_interior_state > 0) then
-         allocate(self%flux_bt(state%n_fabm_interior_state))
          self%flux_bt = 0.0
       end if
+      allocate(self%sms_bt(state%n_fabm_bottom_state))
       if (state%n_fabm_bottom_state > 0) then
-         allocate(self%sms_bt(state%n_fabm_bottom_state))
          self%sms_bt = 0.0
       end if
       !call self%fabm_model%get_bottom_sources(self%flux_bt, self%sms_bt)
 
       ! 2c. Allocate and initialize with 0 (and then retrieve) fluxes and tracer source terms at surface
+      allocate(self%flux_sf(state%n_fabm_interior_state))
       if (state%n_fabm_interior_state > 0) then
-         allocate(self%flux_sf(state%n_fabm_interior_state))
          self%flux_sf = 0.0
       end if
+      allocate(self%sms_sf(state%n_fabm_surface_state))
       if (state%n_fabm_surface_state > 0) then
-         allocate(self%sms_sf(state%n_fabm_surface_state))
          self%sms_sf = 0.0
       end if
       !call self%fabm_model%get_surface_sources(self%flux_sf, self%sms_sf)
 
       ! 3. Allocate and initialize with 0 (and then retrieve) vertical velocities (sinking, floating, active movement) in m s-1
       allocate(self%velocity(grid%nz_grid, state%n_fabm_interior_state))
-      self%velocity = 0.0
+      if (state%n_fabm_interior_state > 0) then
+         self%velocity = 0.0
+      end if
       !call self%fabm_model%get_vertical_movement(1,grid%nz_grid, self%velocity)
 
       ! 4. Compute any remaining diagnostics
@@ -332,7 +336,7 @@ contains
       call self%fabm_model%get_interior_sources(1, grid%nz_grid, self%sms_int)
       if (allocated(self%sms_int)) then
          if (any(ieee_is_nan(self%sms_int))) then
-            ! call warn("FABM Interior Source contains NaNs, set to 0")
+            call warn("FABM Interior Source contains NaNs, set to 0")
             where (ieee_is_nan(self%sms_int))
                self%sms_int = 0.0
             end where
@@ -343,7 +347,7 @@ contains
       call self%fabm_model%get_bottom_sources(self%flux_bt, self%sms_bt)
       if (allocated(self%flux_bt)) then
          if (any(ieee_is_nan(self%flux_bt))) then
-            ! call warn("FABM Bottom Flux contains NaN, set to 0")
+            call warn("FABM Bottom Flux contains NaN, set to 0")
             where (ieee_is_nan(self%flux_bt))
                self%flux_bt = 0.0
             end where
@@ -351,7 +355,7 @@ contains
       end if
       if (allocated(self%sms_bt)) then
          if (any(ieee_is_nan(self%sms_bt))) then
-            ! call warn("FABM Bottom Source contains NaN, set to 0")
+            call warn("FABM Bottom Source contains NaN, set to 0")
             where (ieee_is_nan(self%sms_bt))
                self%sms_bt = 0.0
             end where
@@ -362,7 +366,7 @@ contains
       call self%fabm_model%get_surface_sources(self%flux_sf, self%sms_sf)
       if (allocated(self%flux_sf)) then
          if (any(ieee_is_nan(self%flux_sf))) then
-            ! call warn("FABM Surface Flux contains NaN, set to 0")
+            call warn("FABM Surface Flux contains NaN, set to 0")
             where (ieee_is_nan(self%flux_sf))
                self%flux_sf = 0.0
             end where
@@ -370,7 +374,7 @@ contains
       end if
       if (allocated(self%sms_sf)) then
          if (any(ieee_is_nan(self%sms_sf))) then
-            ! call warn("FABM Surface Source contains NaN, set to 0")
+            call warn("FABM Surface Source contains NaN, set to 0")
             where (ieee_is_nan(self%sms_sf))
                self%sms_sf = 0.0
             end where
@@ -406,9 +410,26 @@ contains
          call diffusion_FABM_interior_state(self, state, grid, ivar)
       end do
 
-      ! Direct time integration of source terms to update bottom_state and surface_state
-      if (state%n_fabm_bottom_state > 0) state%fabm_bottom_state = state%fabm_bottom_state + state%dt * self%sms_bt
-      if (state%n_fabm_surface_state > 0) state%fabm_surface_state = state%fabm_surface_state + state%dt * self%sms_sf
+      ! Direct time integration of source terms to update bottom_state and surface_state inside FABM bounds
+      ! -> maybe some variables could be lower than 0: adapt max()
+      do ivar = 1, state%n_fabm_bottom_state
+         if (state%fabm_bottom_state(ivar) + state%dt * self%sms_bt(ivar) < max(0.0_RK, self%fabm_model%bottom_state_variables(ivar)%minimum)) then
+            state%fabm_bottom_state(ivar) = max(0.0_RK, self%fabm_model%bottom_state_variables(ivar)%minimum)
+         else if (state%fabm_bottom_state(ivar) + state%dt * self%sms_bt(ivar) > self%fabm_model%bottom_state_variables(ivar)%maximum) then
+            state%fabm_bottom_state(ivar) = self%fabm_model%bottom_state_variables(ivar)%maximum
+         else
+            state%fabm_bottom_state(ivar) = state%fabm_bottom_state(ivar) + state%dt * self%sms_bt(ivar)
+         end if
+      end do
+      do ivar = 1, state%n_fabm_surface_state
+         if (state%fabm_surface_state(ivar) + state%dt * self%sms_sf(ivar) < max(0.0_RK, self%fabm_model%surface_state_variables(ivar)%minimum)) then
+            state%fabm_surface_state(ivar) = max(0.0_RK, self%fabm_model%surface_state_variables(ivar)%minimum)
+         else if (state%fabm_surface_state(ivar) + state%dt * self%sms_sf(ivar) > self%fabm_model%surface_state_variables(ivar)%maximum) then
+            state%fabm_surface_state(ivar) = self%fabm_model%surface_state_variables(ivar)%maximum
+         else
+            state%fabm_surface_state(ivar) = state%fabm_surface_state(ivar) + state%dt * self%sms_sf(ivar)
+         end if
+      end do
 
       ! Assign local alias back to self
       !self%fabm_model => fabm_model
@@ -482,14 +503,23 @@ contains
       sources = self%sms_int(:, ivar)
       ! Add pelagic-benthic and air-water flux [var_unit m s-1] as source [var_unit s-1]
       ! Convert to source by division by height of bottomost / uppermost layer [m]
-      sources(1) = self%flux_bt(ivar) / grid%h(1)
-      sources(grid%nz_grid) = self%flux_sf(ivar) / grid%h(grid%nz_grid)
+      sources(1) = sources(1) + (self%flux_bt(ivar) / grid%h(1))
+      sources(grid%nz_grid) = sources(grid%nz_grid) + (self%flux_sf(ivar) / grid%h(grid%nz_grid))
 
       ! Calculate RHS (phi^{n}+dt*S^{n})
       rhs(:) = state%fabm_interior_state(:, ivar) + state%dt*sources(:)
 
       ! Solve LES to get phi^{n+1}
       call solve_tridiag_thomas(lower_diag, main_diag, upper_diag, rhs, state%fabm_interior_state(:, ivar), grid%nz_grid)
+      
+      ! Ensure that variable stays inside bounds
+      ! -> maybe some variables could be lower than 0: adapt max()
+      where (state%fabm_interior_state(:, ivar) < max(0.0_RK, self%fabm_model%interior_state_variables(ivar)%minimum))
+         state%fabm_interior_state(:, ivar) = max(0.0_RK, self%fabm_model%interior_state_variables(ivar)%minimum)
+      end where
+      where (state%fabm_interior_state(:, ivar) > self%fabm_model%interior_state_variables(ivar)%maximum)
+         state%fabm_interior_state(:, ivar) = self%fabm_model%interior_state_variables(ivar)%maximum
+      end where
    end subroutine diffusion_fabm_interior_state
 
    ! Deallocate memory
