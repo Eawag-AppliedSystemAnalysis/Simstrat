@@ -43,7 +43,7 @@
   },
   "FABMConfig" : {
 		"PathFABMinflow"          : "TestCase_LakeConstance/FABM_inflow/",
-    "FABMConfigFile"          : "FABMConfigurations/fabm-gotm-npzd.yaml",
+    "FABMConfigFile"          : "FABMConfigurations/fabm-gotm-ergom.yaml",
 		"BioshadeFeedback"        : 0,
 		"BackgroundExtinction"    : 0.2,
 		"OutputDiagnosticVars"    : true
