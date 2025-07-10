@@ -74,19 +74,23 @@ cmake -S ./ -B build -DFABM_HOST=simstrat
 
 to create the new directory `build` and generate the build configuration inside it, with the Simstrat preprocesser definitions for information about the spatial domain.
 
-> **N.B.1** By default FABM includes biogeochemical models from all "institute directories" under `lib/fabm/src/models`. You can restrict this to a subset of directories by providing  
+> **N.B.1** By default FABM includes all biogeochemical models from `lib/fabm/src/models`. You can restrict this to a subset of directories by providing  
 > ~~~bash
 > -DFABM_INSTITUTES=<INSTITUTE-NAMES>
 > ~~~  
-> as argument to `cmake`. To add externally maintained models add the argument  
+> as an argument to the `cmake` command above. To add externally maintained models add the argument  
 > ~~~bash
 > -DFABM_EXTRA_INSTITUTES=<INSTITUTES-NAMES>
 > ~~~  
-> to `cmake`. Here, `<INSTITUTE-NAMES>` is a semi-colon-separated list of institute names. You may need to enclose this list in quotes to prevent the shell from interpreting the semi-colon. For the externally maintained models, you additionally need to point FABM to the directory with the source code by specifying:  
+> to the `cmake` command. Here, `<INSTITUTE-NAMES>` is a semi-colon-separated list of institute names (all in lower case). You may need to enclose this list in quotes to prevent the shell from interpreting the semi-colon. For the externally maintained models, you additionally need to point FABM to the directory with the source code by adding the argument  
 > ~~~bash
 > -DFABM_<INSTITUTE-NAME>_BASE=<DIR>
 > ~~~  
-> for every institute in `<INSTITUTE-NAMES>`. A list of available externally maintained models can be found here: [Available Models in FABM Wiki](https://github.com/fabm-model/fabm/wiki/Biogeochemical-models-in-FABM#available-models).
+> to the `cmake` command for every `<INSTITUTE-NAME>` (here all in upper case) in `<INSTITUTE-NAMES>`. With `<DIR>` the corresponding directory on your device. A list of available externally maintained models can be found here: [Available Models in FABM Wiki](https://github.com/fabm-model/fabm/wiki/Biogeochemical-models-in-FABM#available-models). For instance to build FABM with [the Selmaprotbas model](https://github.com/jorritmesman/Selmaprotbas) the full cmake command is
+> ~~~bash
+> cmake -S ./ -B build -DFABM_HOST=simstrat -DFABM_EXTRA_INSTITUTES=selmaprotbas -DFABM_SELMAPROTBAS_BASE=<DIR>
+> ~~~ 
+> with `<DIR>` the directory of the selmaprotbas repository on your device.
 
 > **N.B.2** Add  
 > ~~~bash

@@ -414,7 +414,10 @@ contains
       ! -> maybe some variables could be lower than 0: adapt max()
       do ivar = 1, state%n_fabm_bottom_state
          if (state%fabm_bottom_state(ivar) + state%dt * self%sms_bt(ivar) < max(0.0_RK, self%fabm_model%bottom_state_variables(ivar)%minimum)) then
-            state%fabm_bottom_state(ivar) = max(0.0_RK, self%fabm_model%bottom_state_variables(ivar)%minimum)
+            ! state%fabm_bottom_state(ivar) = max(0.0_RK, self%fabm_model%bottom_state_variables(ivar)%minimum)
+            state%fabm_bottom_state(ivar) = state%fabm_bottom_state(ivar) + state%dt * self%sms_bt(ivar)
+            print *, 'FABM Variable value is ', state%fabm_bottom_state(ivar)
+            call error('FABM Variable '//self%fabm_model%bottom_state_variables(ivar)%name//' below zero.')
          else if (state%fabm_bottom_state(ivar) + state%dt * self%sms_bt(ivar) > self%fabm_model%bottom_state_variables(ivar)%maximum) then
             state%fabm_bottom_state(ivar) = self%fabm_model%bottom_state_variables(ivar)%maximum
          else
@@ -423,7 +426,10 @@ contains
       end do
       do ivar = 1, state%n_fabm_surface_state
          if (state%fabm_surface_state(ivar) + state%dt * self%sms_sf(ivar) < max(0.0_RK, self%fabm_model%surface_state_variables(ivar)%minimum)) then
-            state%fabm_surface_state(ivar) = max(0.0_RK, self%fabm_model%surface_state_variables(ivar)%minimum)
+            ! state%fabm_surface_state(ivar) = max(0.0_RK, self%fabm_model%surface_state_variables(ivar)%minimum)
+            state%fabm_surface_state(ivar) = state%fabm_surface_state(ivar) + state%dt * self%sms_sf(ivar)
+            print *, 'FABM Variable value is ', state%fabm_surface_state(ivar)
+            call error('FABM Variable '//self%fabm_model%surface_state_variables(ivar)%name//' below zero.')
          else if (state%fabm_surface_state(ivar) + state%dt * self%sms_sf(ivar) > self%fabm_model%surface_state_variables(ivar)%maximum) then
             state%fabm_surface_state(ivar) = self%fabm_model%surface_state_variables(ivar)%maximum
          else
@@ -463,6 +469,7 @@ contains
       ! Local variables
       real(RK), dimension(grid%nz_grid) :: velocity_up, velocity_down, sources, lower_diag, main_diag, upper_diag, rhs
       real(RK), dimension(grid%nz_grid-1) :: AreaFactor_ext_1, AreaFactor_ext_2
+      integer :: j
 
       ! Create linear system of equations with transport and source terms
       ! A*phi^{n+1} = phi^{n}+dt*S^{n}
@@ -511,6 +518,16 @@ contains
 
       ! Solve LES to get phi^{n+1}
       call solve_tridiag_thomas(lower_diag, main_diag, upper_diag, rhs, state%fabm_interior_state(:, ivar), grid%nz_grid)
+
+      if (any(state%fabm_interior_state(:, ivar) < max(0.0_RK, self%fabm_model%interior_state_variables(ivar)%minimum))) then
+         do j = 1, size(state%fabm_interior_state(:, ivar))
+            if (state%fabm_interior_state(j, ivar) < max(0.0_RK, self%fabm_model%interior_state_variables(ivar)%minimum)) then
+               print *, 'FABM Variable value is ', state%fabm_interior_state(j, ivar)
+               print * ,' at z = ', j
+            end if
+         end do
+         call error('FABM Variable '//self%fabm_model%interior_state_variables(ivar)%name//' below zero.')
+      end if
       
       ! Ensure that variable stays inside bounds
       ! -> maybe some variables could be lower than 0: adapt max()
