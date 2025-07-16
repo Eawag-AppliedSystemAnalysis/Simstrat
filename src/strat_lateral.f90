@@ -51,9 +51,9 @@ module strat_lateral
       real(RK), dimension(:, :), allocatable   :: z_Inp, Q_start, Qs_start, Q_end, Qs_end, Q_read_start, Q_read_end
       real(RK), dimension(:, :), allocatable   :: Inp_read_start, Inp_read_end, Qs_read_start, Qs_read_end
       real(RK), dimension(:), allocatable  :: tb_start, tb_end ! Start time, end time
-      real(RK), dimension(:), allocatable  :: Q_start_bound, Q_end_bound, Q_start_bound_con, Q_end_bound_con, tb_start_bound, tb_end_bound ! For surface- / bottom-bound inflow
+      real(RK), dimension(:), allocatable  :: Q_start_bound, Q_end_bound, Q_start_bound_con, Q_end_bound_con, tb_start_bound, tb_end_bound ! For surface-bound inflow
       integer, dimension(:), allocatable  :: eof, nval, nval_deep, nval_surface, fnum
-      integer, dimension(:), allocatable  :: eof_bound, nval_bound, fnum_bound, number_of_lines_read_bound ! For surface- / bottom-bound inflow
+      integer, dimension(:), allocatable  :: eof_bound, nval_bound, fnum_bound, number_of_lines_read_bound ! For surface-bound inflow
       integer, dimension(:), allocatable :: number_of_lines_read
       logical, dimension(:), allocatable :: has_surface_input, has_deep_input
       integer :: n_vars, max_n_inflows
@@ -143,21 +143,21 @@ contains
       allocate(self%has_surface_input(1:self%n_vars))
       allocate(self%has_deep_input(1:self%n_vars))
 
-      ! Bottom- / Surface-bound horizontal inflow for FABM
+      ! Surface-bound horizontal inflow for FABM
       if (self%couple_fabm) then
-         allocate(self%eof_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
-         allocate(self%nval_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
-         allocate(self%tb_start_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
-         allocate(self%tb_end_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
-         allocate(self%fnum_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
-         allocate(state%Q_inp_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
-         allocate(state%Q_inp_bound_con(state%n_fabm_bottom_state + state%n_fabm_surface_state))
-         allocate(self%Q_start_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
-         allocate(self%Q_start_bound_con(state%n_fabm_bottom_state + state%n_fabm_surface_state))
-         allocate(self%Q_end_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
-         allocate(self%Q_end_bound_con(state%n_fabm_bottom_state + state%n_fabm_surface_state))
          allocate(self%number_of_lines_read_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
+         allocate(self%fnum_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
          self%number_of_lines_read_bound = 0
+         allocate(self%eof_bound(state%n_fabm_surface_state))
+         allocate(self%nval_bound(state%n_fabm_surface_state))
+         allocate(self%tb_start_bound(state%n_fabm_surface_state))
+         allocate(self%tb_end_bound(state%n_fabm_surface_state))
+         allocate(state%Q_inp_bound(state%n_fabm_surface_state))
+         allocate(state%Q_inp_bound_con(state%n_fabm_surface_state))
+         allocate(self%Q_start_bound(state%n_fabm_surface_state))
+         allocate(self%Q_start_bound_con(state%n_fabm_surface_state))
+         allocate(self%Q_end_bound(state%n_fabm_surface_state))
+         allocate(self%Q_end_bound_con(state%n_fabm_surface_state))
       end if
 
       ! -> Get location of pH in FABM array
@@ -201,7 +201,7 @@ contains
          call save_matrix(80, self%Inp_read_end)
          call save_matrix(80, self%Qs_read_start)
          call save_matrix(80, self%Qs_read_end)
-         ! Bottom- / Surface-bound horizontal inflow for FABM
+         ! Surface-bound horizontal inflow for FABM
          if (self%couple_fabm) then
             call save_integer_array(80, self%number_of_lines_read_bound)
             call save_integer_array(80, self%eof_bound)
@@ -245,7 +245,7 @@ contains
          call read_matrix(81, self%Inp_read_end)
          call read_matrix(81, self%Qs_read_start)
          call read_matrix(81, self%Qs_read_end)
-         ! Bottom- / Surface-bound horizontal inflow for FABM
+         ! Surface-bound horizontal inflow for FABM
          if (self%couple_fabm) then
             call read_integer_array(81, self%number_of_lines_read_bound)
             call read_integer_array(81, self%eof_bound)
@@ -292,6 +292,15 @@ contains
                   ! for the first variable and then increased if any variable has more inflows
                   if (i == 1) self%max_n_inflows = 0
 
+                  ! Default values
+                  self%Q_start(i,:) = 0.0_RK
+                  self%Q_end(i,:) = 0.0_RK
+                  self%Qs_start(i,:) = 0.0_RK
+                  self%Qs_end(i,:) = 0.0_RK
+
+                  ! End of file is not reached
+                  self%eof(i) = 0
+
                   ! Read inflow files
                   if (i > n_simstrat) then
                      fname = trim(self%fabm_path)//trim(state%fabm_state_names(i - n_simstrat))//'_inflow.dat'
@@ -304,7 +313,13 @@ contains
                   
                   if (status .ne. 0) then
                      if (i > n_simstrat) then
-                        ! -> Not all FABM files defined yet
+                        ! Do not need to define all FABM inflow files, set depths to values from Qin
+                        self%has_deep_input(i) = self%has_deep_input(1)
+                        self%has_surface_input(i) = self%has_surface_input(1)
+                        self%nval_deep(i) = self%nval_deep(1)
+                        self%nval_surface(i) =self%nval_surface(1)
+                        self%nval(i) = self%nval(1)
+                        self%z_Inp(i,:) = self%z_Inp(1,:)
                         goto 9
                      else
                         call error('File '//fname//' not found.')
@@ -312,15 +327,6 @@ contains
                   else
                      write(6,*) 'Reading ', fname
                   end if
-
-                  ! Default values
-                  self%Q_start(i,:) = 0.0_RK
-                  self%Q_end(i,:) = 0.0_RK
-                  self%Qs_start(i,:) = 0.0_RK
-                  self%Qs_end(i,:) = 0.0_RK
-
-                  ! End of file is not reached
-                  self%eof(i) = 0
 
                   ! Skip first row: description of columns
                   read(self%fnum(i),*,end=9)
@@ -508,17 +514,11 @@ contains
             Q_inp(i,1:ubnd_vol) = self%Q_start(i,1:ubnd_vol) + self%Qs_start(i,1:ubnd_vol) ! Set to closest available value
             goto 11
 
-9           write(6,*) '[WARNING] ','No data found in ',trim(fname),' file. Check number of depths. Values set to zero.'
+9           write(6,*) '[WARNING] ','No data found in ',trim(fname),' file. Values set to zero.'
             self%eof(i) = 1
-            self%Qs_start(i,1:ubnd_fce) = 0.0_RK
-            self%has_deep_input(i) = .false.
-            self%has_surface_input(i) = .false.
-            self%nval_deep(i) = 0.0_RK
-            self%nval_surface(i) = 0.0_RK
             if(i/=2) Inp(i,1:self%nval_deep(i)) = 0.0_RK
             if(i/=2) self%Inp_read_start(i,1) = 0.0_RK
             if(i==2) Q_inp(i,1:ubnd_vol) = 0.0_RK
-            if(i==2) self%Q_start(i,1:ubnd_fce) = 0.0_RK
 
 11          continue
          end do      ! end do i=1,n_vars
@@ -661,6 +661,14 @@ contains
          do i=1, self%n_vars
             if (idx) then  ! If first timestep
                if (self%number_of_lines_read(i) == 0) then  ! If not started from snapshot
+                  ! Default values
+                  self%Q_start(i,:) = 0.0_RK
+                  self%Q_end(i,:) = 0.0_RK
+                  self%Qs_start(i,:) = 0.0_RK
+                  self%Qs_end(i,:) = 0.0_RK
+
+                  ! End of file is not reached
+                  self%eof(i) = 0
                   if (i > n_simstrat) then
                      fname = trim(self%fabm_path)//trim(state%fabm_state_names(i - n_simstrat))//'_inflow.dat'
                   else
@@ -673,7 +681,13 @@ contains
                   
                   if (status .ne. 0) then
                      if (i > n_simstrat) then
-                        ! -> Not all FABM files defined yet
+                        ! Do not need to define all FABM inflow files, set depths to values from Qin
+                        self%has_deep_input(i) = self%has_deep_input(1)
+                        self%has_surface_input(i) = self%has_surface_input(1)
+                        self%nval_deep(i) = self%nval_deep(1)
+                        self%nval_surface(i) =self%nval_surface(1)
+                        self%nval(i) = self%nval(1)
+                        self%z_Inp(i,:) = self%z_Inp(1,:)
                         goto 9
                      else
                         call error('File '//fname//' not found.')
@@ -682,14 +696,7 @@ contains
                      write(6,*) 'Reading ', fname
                   end if
 
-                   ! Default values
-                  self%Q_start(i,:) = 0.0_RK
-                  self%Q_end(i,:) = 0.0_RK
-                  self%Qs_start(i, :) = 0.0_RK
-                  self%Qs_end(i, :) = 0.0_RK
-
-                  ! Open file and start to read
-                  self%eof(i) = 0
+                  ! Start to read
                   read (self%fnum(i), *, end=9) ! Skip first row: description of columns
                   call count_read(self, i)
 
@@ -857,8 +864,6 @@ contains
 
             self%eof(i) = 1
             Q_inp(i, 1:ubnd_fce) = 0.0_RK
-            self%Q_start(i, 1:ubnd_fce) = 0.0_RK
-            self%Qs_start(i, 1:ubnd_fce) = 0.0_RK
 11          continue
 
          end do ! end do i=1,self%n_vars
@@ -908,8 +913,8 @@ contains
          associate (datum=>state%datum, &
                idx=>state%first_timestep, &
                number_of_lines_read_bound=>self%number_of_lines_read_bound, &
-               Q_inp_bound=>state%Q_inp_bound, & ! Q_inp_bound is the absolute in-/output at the bottom/surface for each time step
-               Q_inp_bound_con=>state%Q_inp_bound_con) ! Q_inp_bound_con is the concentration-dependent in-/output at the bottom/surface for each time step
+               Q_inp_bound=>state%Q_inp_bound, & ! Q_inp_bound is the absolute in-/output at the surface for each time step
+               Q_inp_bound_con=>state%Q_inp_bound_con) ! Q_inp_bound_con is the concentration-dependent in-/output at the surface for each time step
 
             if (idx) then  ! If first timestep
                if (self%number_of_lines_read_bound(i) == 0) then  ! If not started from snapshot
@@ -919,10 +924,20 @@ contains
                   open(newunit=unit, action='read', status='old', file=fname, iostat = status)
                   self%fnum_bound(i) = unit
                   
+                  ! Check whether the inflow file has been read and whether it is for a surface state variable
                   if (status .ne. 0) then
-                     goto 9
+                     if (i > state%n_fabm_bottom_state) then
+                        goto 9
+                     else
+                        cycle
+                     end if
                   else
-                     write(6,*) 'Reading ', fname
+                     if (i > state%n_fabm_bottom_state) then
+                        write(6,*) 'Reading ', fname
+                     else
+                        call warn('Bottom Inflow File '//fname//' ignored')
+                        cycle
+                     end if
                   end if
 
                   ! Default values
@@ -957,6 +972,9 @@ contains
                   call ok('FABM bound input file successfully opened: '//fname)
                end if
             end if ! idx = 1
+            
+            ! Exit loop for bottom state variables
+            if (i <= state%n_fabm_bottom_state) cycle
 
             ! Temporal treatment of inflow
             if ((datum <= self%tb_start_bound(i)) .or. (self%eof_bound(i) == 1)) then ! if datum before first date or end of file reached

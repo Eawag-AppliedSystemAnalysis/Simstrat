@@ -128,7 +128,7 @@ program simstrat_main
 
    ! Initialize biogeochemical model "FABM" if used
    if (simdata%model_cfg%couple_fabm) then
-      call mod_fabm%init(simdata%model, simdata%grid, simdata%fabm_cfg)
+      call mod_fabm%init(simdata%model, simdata%fabm_cfg, simdata%grid)
    end if
 
    ! If there is advection (due to inflow)
@@ -138,7 +138,6 @@ program simstrat_main
 
       ! initialize lateral module based on configuration
       if (simdata%model_cfg%inflow_mode == 1) then
-
          ! Gravity based inflow
          mod_lateral => mod_lateral_normal
       else if (simdata%model_cfg%inflow_mode == 2) then
@@ -291,6 +290,7 @@ contains
          if (simdata%model_cfg%inflow_mode > 0) then
             ! Treat inflow/outflow
             call mod_lateral%update(simdata%model)
+            ! Surface-bound in/outflow, no in/outflow for bottom state variables
             if (simdata%model%n_fabm_bottom_state > 0 .or. simdata%model%n_fabm_surface_state > 0) then
                call mod_lateral%update_bound(simdata%model)
             end if
@@ -330,7 +330,7 @@ contains
 
          ! Update biogeochemistry
          if (simdata%model_cfg%couple_fabm) then
-            call mod_fabm%update(simdata%model, simdata%grid)
+            call mod_fabm%update(simdata%model, simdata%fabm_cfg, simdata%grid)
          end if
 
          ! Call logger to write files

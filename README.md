@@ -82,15 +82,15 @@ to create the new directory `build` and generate the build configuration inside 
 > ~~~bash
 > -DFABM_EXTRA_INSTITUTES=<INSTITUTES-NAMES>
 > ~~~  
-> to the `cmake` command. Here, `<INSTITUTE-NAMES>` is a semi-colon-separated list of institute names (all in lower case). You may need to enclose this list in quotes to prevent the shell from interpreting the semi-colon. For the externally maintained models, you additionally need to point FABM to the directory with the source code by adding the argument  
+> to the `cmake` command. `<INSTITUTE-NAMES>` is a semi-colon-separated list of institute names (all in lower case). You may need to enclose this list in quotes to prevent the shell from interpreting the semi-colon. For the externally maintained models, you additionally need to point FABM to the directory with the source code by adding the argument  
 > ~~~bash
 > -DFABM_<INSTITUTE-NAME>_BASE=<DIR>
 > ~~~  
-> to the `cmake` command for every `<INSTITUTE-NAME>` (here all in upper case) in `<INSTITUTE-NAMES>`. With `<DIR>` the corresponding directory on your device. A list of available externally maintained models can be found here: [Available Models in FABM Wiki](https://github.com/fabm-model/fabm/wiki/Biogeochemical-models-in-FABM#available-models). For instance to build FABM with [the Selmaprotbas model](https://github.com/jorritmesman/Selmaprotbas) the full cmake command is
+> to the `cmake` command for every `<INSTITUTE-NAME>` (here all in upper case) in `<INSTITUTE-NAMES>`. With `<DIR>` the directory of the corresponding source code on your device. A list of available externally maintained models can be found here: [Available Models in FABM Wiki](https://github.com/fabm-model/fabm/wiki/Biogeochemical-models-in-FABM#available-models). For instance to build FABM with [the Selmaprotbas model](https://github.com/jorritmesman/Selmaprotbas) the full cmake command is
 > ~~~bash
-> cmake -S ./ -B build -DFABM_HOST=simstrat -DFABM_EXTRA_INSTITUTES=selmaprotbas -DFABM_SELMAPROTBAS_BASE=<DIR>
+> cmake -S ./ -B build -DFABM_HOST=simstrat -DFABM_EXTRA_INSTITUTES=selmaprotbas -DFABM_SELMAPROTBAS_BASE=pathto/selmaprotbas-main
 > ~~~ 
-> with `<DIR>` the directory of the selmaprotbas repository on your device.
+> with `pathto` the path to the location of the selmaprotbas repository on your device.
 
 > **N.B.2** Add  
 > ~~~bash

@@ -84,7 +84,7 @@ module strat_simdata
       character(len=20), dimension(:), allocatable :: output_var_names ! Names of output variables
       class(LogVariable), dimension(:), allocatable :: output_vars
       class(LogVariableFABM), allocatable :: output_vars_fabm_interior_state
-      class(LogVariableFABM_bound), allocatable :: output_vars_fabm_bottom_state
+      class(LogVariableFABM), allocatable :: output_vars_fabm_bottom_state
       class(LogVariableFABM_bound), allocatable :: output_vars_fabm_surface_state
       ! -> class(LogVariableFABM), allocatable :: output_vars_fabm_diagnostic
 
@@ -127,8 +127,14 @@ module strat_simdata
 
    ! FABM configuration (read from file)
    type, public :: FABMConfig
+      ! Path to Inflow files
       character(len=:), allocatable :: path_fabm_inflow
+      ! Directory of YAML file with all biogeochemical configuration
       character(len=:), allocatable :: fabm_config_file
+      ! Whether to clip all state variables to valid range from bgc models when update is called
+      logical :: repair_fabm
+      ! Whether there is a pelagic-benthic interface at every depth
+      logical :: bottom_everywhere
       ! -> logical :: bioshade_feedback
       ! -> real(RK) :: background_extinction
       ! -> logical :: output_diagnostic_variables
@@ -184,8 +190,8 @@ module strat_simdata
       
       ! All FABM biogeochemical state variable values in an array *_state
       ! In Simstrat_FABM allocated with shape (grid%nz_grid, size(n_fabm_*_state))
-      real(RK), dimension(:,:), pointer :: fabm_interior_state
-      real(RK), dimension(:), pointer :: fabm_bottom_state, fabm_surface_state
+      real(RK), dimension(:,:), pointer :: fabm_interior_state, fabm_bottom_state
+      real(RK), dimension(:), pointer :: fabm_surface_state
       integer :: n_fabm_state, n_fabm_interior_state, n_fabm_bottom_state, n_fabm_surface_state ! -> n_fabm_diagnostic
       character(len=48), dimension(:), pointer :: fabm_state_names ! Names of FABM state variables used in the simulation
       ! -> real(RK), dimension(:,:), pointer :: fabm_diagnostic ! State matrix of FABM diagnostic svariables
@@ -465,7 +471,7 @@ contains
       call save_array(80, self%fgeo_add)
       if (couple_fabm) then
          call save_matrix_pointer(80, self%fabm_interior_state)
-         call save_array_pointer(80, self%fabm_bottom_state)
+         call save_matrix_pointer(80, self%fabm_bottom_state)
          call save_array_pointer(80, self%fabm_surface_state)
          ! -> call save_matrix_pointer(80, self%FABM_diagnostic)
       end if
@@ -542,7 +548,7 @@ contains
       call read_array(81, self%fgeo_add)
       if (couple_fabm) then
          call read_matrix_pointer(81, self%fabm_interior_state)
-         call read_array_pointer(81, self%fabm_bottom_state)
+         call read_matrix_pointer(81, self%fabm_bottom_state)
          call read_array_pointer(81, self%fabm_surface_state)
          ! -> call read_matrix_pointer(81, self%fabm_diagnostic)
       end if

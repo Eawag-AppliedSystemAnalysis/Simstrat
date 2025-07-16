@@ -356,7 +356,7 @@ contains
       if (self%model_config%couple_fabm) then
          do i = self%n_vars_Simstrat + 1, self%n_vars
             if (i < (self%n_vars_Simstrat + self%n_vars_fabm_interior_state + 1)) then
-               ! Interior FABM variable: NaN at bottom layer, Output at others (including surface layer)
+               ! Interior FABM variable: Output at every layer
                file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_fabm_interior_state%names(i - self%n_vars_Simstrat))//'_out.dat'
                inquire (file=file_path, exist=append)
                append = append .and. snapshot_file_exists
@@ -373,10 +373,18 @@ contains
                file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_fabm_bottom_state%names(i - self%n_vars_Simstrat - self%n_vars_fabm_interior_state))//'_out.dat'
                inquire (file=file_path, exist=append)
                append = append .and. snapshot_file_exists
-               call self%output_files(i)%open(file_path, n_cols=2, append=append, status_ok=status_ok)
+               if (self%fabm_config%bottom_everywhere) then
+                  call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
+               else
+                  call self%output_files(i)%open(file_path, n_cols=2, append=append, status_ok=status_ok)
+               end if
                if (.not. append) then
                   call self%output_files(i)%add('Datetime')
-                  call self%output_files(i)%add('Concentration')
+                  if (self%fabm_config%bottom_everywhere) then
+                     call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
+                  else
+                     call self%output_files(i)%add('Concentration')
+                  end if
                   call self%output_files(i)%next_row()
                else
                   call error('Cannot write to output directory. Make sure you have writing access.')
@@ -490,7 +498,12 @@ contains
                call self%grid%interpolate_from_vol(self%output_config%output_vars_fabm_interior_state%values(:,i - self%n_vars_Simstrat), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
                call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
             else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_interior_state + self%n_vars_fabm_bottom_state + 1)) then
-               call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%output_vars_fabm_bottom_state%values(i - self%n_vars_Simstrat - self%n_vars_fabm_interior_state), "(ES14.4E3)")
+               if (self%fabm_config%bottom_everywhere) then
+                  call self%grid%interpolate_from_vol(self%output_config%output_vars_fabm_bottom_state%values(:,i - self%n_vars_Simstrat - self%n_vars_fabm_interior_state), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
+                  call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
+               else
+                  call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%output_vars_fabm_bottom_state%values(1, i - self%n_vars_Simstrat - self%n_vars_fabm_interior_state), "(ES14.4E3)")
+               end if
             else
                call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%output_vars_fabm_surface_state%values(i - self%n_vars_Simstrat - self%n_vars_fabm_interior_state - self%n_vars_fabm_bottom_state), "(ES14.4E3)")
             ! -> else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + 1)) then

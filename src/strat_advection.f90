@@ -157,7 +157,7 @@ contains
       integer :: i, top, ivar
       real(RK) :: dU(self%grid%nz_grid), dV(self%grid%nz_grid), dTemp(self%grid%nz_grid), dS(self%grid%nz_grid)
       real(RK) :: dfabm_interior(self%grid%nz_grid, state%n_fabm_interior_state)
-      real(RK) :: dfabm_bottom(state%n_fabm_bottom_state), dfabm_surface(state%n_fabm_bottom_state)
+      real(RK) :: dfabm_surface(state%n_fabm_surface_state)
       integer :: outflow_above, outflow_below
 
       associate(ubnd_vol => self%grid%ubnd_vol, &
@@ -225,11 +225,6 @@ contains
                      state%Q_inp(n_simstrat + ivar, 1:ubnd_vol) +&
                      state%Q_inp(2, 1:ubnd_vol)*state%fabm_interior_state(1:ubnd_vol, ivar)
                end do
-               ! dfabm_bottom = dfabm_bottom(absolute in/outflow) + dfabm_bottom(concentration-dependent in/outflow), units: var_unit*m^2/s
-               if (state%n_fabm_bottom_state > 0) then
-                  dfabm_bottom(:) = state%Q_inp_bound(1:state%n_fabm_bottom_state) +&
-                     state%Q_inp_bound_con(1:state%n_fabm_bottom_state)*state%fabm_bottom_state(:)
-               end if
                ! dfabm_surface = dfabm_surface(absolute in/outflow) + dfabm_surface(concentration-dependent in/outflow), units: var_unit*m^2/s
                if (state%n_fabm_surface_state > 0) then
                   dfabm_surface(:) = state%Q_inp_bound(state%n_fabm_bottom_state + 1 : state%n_fabm_bottom_state + state%n_fabm_surface_state) +&
@@ -247,8 +242,6 @@ contains
                   state%fabm_interior_state(1:ubnd_vol, ivar) = state%fabm_interior_state(1:ubnd_vol, ivar) + &
                      AreaFactor_adv(1:ubnd_vol) * dfabm_interior(1:ubnd_vol, ivar)
                end do
-               ! -> gives NaNs: if (state%n_fabm_bottom_state > 0) state%fabm_bottom_state(:) = state%fabm_bottom_state(:) + state%dt/self%grid%Az(1)*dfabm_bottom(:)
-               if (state%n_fabm_bottom_state > 0) state%fabm_bottom_state(:) = state%fabm_bottom_state(:) + state%dt/self%grid%Az(ubnd_vol+1)*dfabm_bottom(:)
                if (state%n_fabm_surface_state > 0) state%fabm_surface_state(:) = state%fabm_surface_state(:) + state%dt/self%grid%Az(ubnd_vol+1)*dfabm_surface(:)
             end if
 

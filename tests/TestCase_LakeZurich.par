@@ -37,10 +37,12 @@
   },
   "FABMConfig" : {
     "PathFABMinflow"          : "TestCase_LakeZurich/FABM_inflow/",
-    "FABMConfigFile"          : "FABMConfigurations/fabm-gotm-npzd.yaml",
+    "FABMConfigFile"          : "FABMConfigurations/selmaprotbas.yaml",
     "BioshadeFeedback"        : 0,
     "BackgroundExtinction"    : 0.2,
-    "OutputDiagnosticVars"    : false
+    "OutputDiagnosticVars"    : false,
+    "RepairFABMStates"        : true,
+    "BottomEverywhere"        : true
   },
   "Simulation" : {
     "Timestep s"                  : 300,

@@ -48,14 +48,20 @@ module simstrat_fabm
       ! Array for interior tracer source terms and vertical velocities
       real(RK), dimension(:,:), allocatable :: sms_int, velocity
       ! Arrays for fluxes and tracer source terms at bottom
-      ! -> Consider that there is a bottom at every layer
-      real(RK), dimension(:), allocatable :: flux_bt, sms_bt
+      ! two-dimensional if there is a bottom at every layer
+      real(RK), dimension(:,:), allocatable :: flux_bt, sms_bt
       ! Arrays for fluxes and tracer source terms at surface
       real(RK), dimension(:), allocatable :: flux_sf, sms_sf
 
       ! Variables for validity of state
-      logical :: repair = .true. ! Whether to clip all state variables to valid range from bgc models when update is called
       logical :: valid_int, valid_sf, valid_bt
+
+      ! Index of current bottom location (pelagic-benthic interface)
+      integer, dimension(:), pointer :: bottom_index
+      ! Variable to enumerate over all layers if bottom_everywhere is true
+      ! 1 if bottom_everywhere is false, nz_grid if bottom_everywhere is true
+      ! All associated code copied and adapted from https://gitlab.com/wateritech-public/waterecosystemstool/gotm
+      integer :: kmax_bot
    contains
       procedure, pass(self), public :: init
       procedure, pass(self), public :: update
@@ -64,17 +70,17 @@ module simstrat_fabm
 contains
 
    ! Initialize: called once in within the initialization of Simstrat
-   ! Sets up memory, reads FABM configuration from fabm_config_file, links the external Simstrat variables and sets the initial conditions of FABM variables
-   subroutine init(self, state, grid, fabm_config)
+   ! Sets up memory, reads FABM configuration from fabm_cfg_file, links the external Simstrat variables and sets the initial conditions of FABM variables
+   subroutine init(self, state, fabm_cfg, grid)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       class(ModelState) :: state
+      class(FABMConfig) :: fabm_cfg
       class(StaggeredGrid) :: grid
-      class(FABMConfig) :: fabm_config
       !class(type_fabm_model), pointer :: fabm_model
 
       ! Local variables
-      integer :: ivar
+      integer :: ivar, k
 
       ! Create an alias of the model
       !fabm_model => self%fabm_model
@@ -82,11 +88,11 @@ contains
       ! make sure everything is deallocated
       call deallocate_fabm(self)
 
-      ! Initialize the model: Reads run-time FABM model configuration from fabm_config%fabm_config_file (YAML format)
+      ! Initialize the model: Reads run-time FABM model configuration from fabm_cfg%fabm_cfg_file (YAML format)
       ! and stores it in fabm_model. After this the number of biogeochemical variables is fixed
       ! (access variable metadata in fabm_model%interior_state_variables, fabm_model%interior_diagnostic_variables)
       ! The model interacts with FABM and describes properties of all bgc variables and parameters
-      self%fabm_model => fabm_create_model(fabm_config%fabm_config_file)
+      self%fabm_model => fabm_create_model(fabm_cfg%fabm_config_file)
       if (.not. associated(self%fabm_model)) then
          call error("FABM model creation failed")
       end if
@@ -96,16 +102,28 @@ contains
       ! Because the entire extent is given some layers might be calculated that are not physical, be aware of that in the output
       call self%fabm_model%set_domain(grid%nz_grid)
 
+      ! Allocate bottom index with one value and link FABM to it
+      ! Set bottom location (pelagic-benthic interface) to 1 (default)
+      allocate(self%bottom_index(1))
+      self%bottom_index(1) = 1
+      call self%fabm_model%set_bottom_index(self%bottom_index(1))
+
+      ! Set kmax_bot to nz_grid if bottom_everywhere is true
+      self%kmax_bot = 1
+      if (fabm_cfg%bottom_everywhere) self%kmax_bot = grid%nz_grid
+
       ! At this point (after the call to fabm_create_model), memory should be
       ! allocated to hold the values of all size(fabm_model%*_state_variables) state variables
       ! All state variable values are combined in an array *_state with shape grid%nz_grid, state%n_fabm_*_state
       ! Interior state variables
       state%n_fabm_interior_state = size(self%fabm_model%interior_state_variables)
-      allocate(state%fabm_interior_state(grid%nz_grid, state%n_fabm_interior_state))
+      if (state%n_fabm_interior_state > 0) then
+         allocate(state%fabm_interior_state(grid%nz_grid, state%n_fabm_interior_state))
+      end if
       ! Bottom state variables
       state%n_fabm_bottom_state = size(self%fabm_model%bottom_state_variables)
       if (state%n_fabm_bottom_state > 0) then
-         allocate(state%fabm_bottom_state(state%n_fabm_bottom_state))
+         allocate(state%fabm_bottom_state(self%kmax_bot, state%n_fabm_bottom_state))
       end if
       ! Surface state variables
       state%n_fabm_surface_state = size(self%fabm_model%surface_state_variables)
@@ -128,10 +146,10 @@ contains
             state%fabm_state_names(ivar) = self%fabm_model%interior_state_variables(ivar)%name
          end do
       end if
-      ! Bottom state variables
+      ! Bottom state variables: link for bottom-most layer to fulfill FABM requirements, link for other layers later
       if (state%n_fabm_bottom_state > 0) then
          do ivar = 1, state%n_fabm_bottom_state
-            call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(ivar))
+            call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1,ivar))
             state%fabm_state_names(state%n_fabm_interior_state + ivar) = self%fabm_model%bottom_state_variables(ivar)%name
          end do
       end if
@@ -237,8 +255,29 @@ contains
       ! This sets the values of arrays sent to fabm_model%link_*_state_data,
       ! in this case those contained in *_state
       ! -> If model not initialized with custom or previously stored state (needs to be added as argument)
+      ! Interior state variables
       call self%fabm_model%initialize_interior_state(1, grid%nz_grid)
+      ! Bottom state variables
       call self%fabm_model%initialize_bottom_state()
+      ! If bottom_everywhere is set, at every depth:
+      ! FABM is pointed to location that holds state data for the current depth
+      ! The bottom (the location of the pelagic-benthic interface) is moved to the current depth
+      ! The bottom state at the current depth is initialized
+      if (fabm_cfg%bottom_everywhere) then
+         do k = 2, self%kmax_bot
+            do ivar = 1, state%n_fabm_bottom_state
+               call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k, ivar))
+            end do
+            self%bottom_index(1) = k
+            call self%fabm_model%initialize_bottom_state()
+         end do
+         ! Reset Botom to 1
+         do ivar = 1, state%n_fabm_bottom_state
+            call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
+         end do
+         self%bottom_index(1) = 1
+      end if
+      ! Surface state variables
       call self%fabm_model%initialize_surface_state()
 
       ! Do the following sequence once to ensure diagnostics called in the model state valdation have been assigned a value
@@ -253,18 +292,16 @@ contains
          allocate(self%sms_int(grid%nz_grid, state%n_fabm_interior_state))
          self%sms_int = 0.0
       end if
-      !call self%fabm_model%get_interior_sources(1, grid%nz_grid, self%sms_int)
 
       ! 2b. Allocate and initialize with 0 (and then retrieve) fluxes and tracer source terms at bottom
-      allocate(self%flux_bt(state%n_fabm_interior_state))
+      allocate(self%flux_bt(self%kmax_bot, state%n_fabm_interior_state))
       if (state%n_fabm_interior_state > 0) then
          self%flux_bt = 0.0
       end if
-      allocate(self%sms_bt(state%n_fabm_bottom_state))
+      allocate(self%sms_bt(self%kmax_bot, state%n_fabm_bottom_state))
       if (state%n_fabm_bottom_state > 0) then
          self%sms_bt = 0.0
       end if
-      !call self%fabm_model%get_bottom_sources(self%flux_bt, self%sms_bt)
 
       ! 2c. Allocate and initialize with 0 (and then retrieve) fluxes and tracer source terms at surface
       allocate(self%flux_sf(state%n_fabm_interior_state))
@@ -275,14 +312,12 @@ contains
       if (state%n_fabm_surface_state > 0) then
          self%sms_sf = 0.0
       end if
-      !call self%fabm_model%get_surface_sources(self%flux_sf, self%sms_sf)
 
       ! 3. Allocate and initialize with 0 (and then retrieve) vertical velocities (sinking, floating, active movement) in m s-1
       allocate(self%velocity(grid%nz_grid, state%n_fabm_interior_state))
       if (state%n_fabm_interior_state > 0) then
          self%velocity = 0.0
       end if
-      !call self%fabm_model%get_vertical_movement(1,grid%nz_grid, self%velocity)
 
       ! 4. Compute any remaining diagnostics
       call self%fabm_model%finalize_outputs()
@@ -294,15 +329,16 @@ contains
 
    ! The update function is called in the main loop of simstrat (in simstrat.f90) at every time step
    ! Particle atmospheric, pelagic and benthic fluxes and diffusion are computed to update bgc state variable values
-   subroutine update(self, state, grid)
+   subroutine update(self, state, fabm_cfg, grid)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       class(ModelState), intent(inout) :: state
+      class(FABMConfig), intent(in) :: fabm_cfg
       class(StaggeredGrid) :: grid
       !class(type_fabm_model), pointer :: fabm_model
 
       ! Local variables
-      integer :: ivar
+      integer :: ivar, k
 
       ! Create an alias of the model
       !fabm_model => self%fabm_model
@@ -312,11 +348,33 @@ contains
       ! 1. Validate the model state, stop if variables are not valid
       ! Only run after first time step has been run
       ! -> maybe do this after the update again
-      call self%fabm_model%check_interior_state(1 ,grid%nz_grid, self%repair, self%valid_int)
-      call self%fabm_model%check_bottom_state(self%repair, self%valid_bt)
-      call self%fabm_model%check_surface_state(self%repair, self%valid_sf)
+      ! Interior state variables
+      call self%fabm_model%check_interior_state(1, grid%nz_grid, fabm_cfg%repair_fabm, self%valid_int)
+      ! Bottom state variables
+      call self%fabm_model%check_bottom_state(fabm_cfg%repair_fabm, self%valid_bt)
+      if (fabm_cfg%bottom_everywhere) then
+         ! If bottom_everywhere is set, at every depth:
+         ! FABM is pointed to location that holds state data for the current depth
+         ! The bottom (the location of the pelagic-benthic interface) is moved to the current depth
+         ! The bottom state at the current depth is validated
+         do k = 2, self%kmax_bot
+            do ivar = 1, state%n_fabm_bottom_state
+               call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k, ivar))
+            end do
+            self%bottom_index(1) = k
+            call self%fabm_model%check_bottom_state(fabm_cfg%repair_fabm, self%valid_bt)
+         end do
+         ! Reset Bottom to 1
+         do ivar = 1, state%n_fabm_bottom_state
+            call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
+         end do
+         self%bottom_index(1) = 1
+      end if
+      ! Surface state variables
+      call self%fabm_model%check_surface_state(fabm_cfg%repair_fabm, self%valid_sf)
+      ! Error if out of bounds and not repaired
       if (.not. (self%valid_int .and. self%valid_bt .and. self%valid_sf)) then
-         if (self%repair) then
+         if (fabm_cfg%repair_fabm) then
             ! call warn("FABM Variable repaired")
          else
             call error("FABM Variable out of bounds")
@@ -333,6 +391,8 @@ contains
       ! <0: flux out of water
 
       ! 3a. Retrieve interior tracer source terms
+      ! FABM increments rather than sets argument sms_int: initialize with 0 before
+      self%sms_int = 0.0_RK
       call self%fabm_model%get_interior_sources(1, grid%nz_grid, self%sms_int)
       if (allocated(self%sms_int)) then
          if (any(ieee_is_nan(self%sms_int))) then
@@ -344,7 +404,28 @@ contains
       end if
 
       ! 3b. Retrieve fluxes over pelagic-benthic interface and bottom tracer source terms
-      call self%fabm_model%get_bottom_sources(self%flux_bt, self%sms_bt)
+      ! FABM increments rather than sets argument flux_bt, sms_bt: initialize with 0 before
+      self%flux_bt = 0.0_RK
+      self%sms_bt = 0.0_RK
+      call self%fabm_model%get_bottom_sources(self%flux_bt(1, :), self%sms_bt(1, :))
+      if (fabm_cfg%bottom_everywhere) then
+         ! If bottom_everywhere is set, at every depth:
+         ! FABM is pointed to location that holds state data for the current depth
+         ! The bottom (the location of the pelagic-benthic interface) is moved to the current depth
+         ! The fluxes and sources at the current depth are calculated
+         do k = 2, self%kmax_bot
+            do ivar = 1, state%n_fabm_bottom_state
+               call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k, ivar))
+            end do
+            self%bottom_index(1) = k
+            call self%fabm_model%get_bottom_sources(self%flux_bt(k, :), self%sms_bt(k, :))
+         end do
+         ! Reset Botom to 1
+         do ivar = 1, state%n_fabm_bottom_state
+            call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
+         end do
+         self%bottom_index(1) = 1
+      end if
       if (allocated(self%flux_bt)) then
          if (any(ieee_is_nan(self%flux_bt))) then
             call warn("FABM Bottom Flux contains NaN, set to 0")
@@ -363,6 +444,9 @@ contains
       end if
 
       ! 3c. Retrieve fluxes over air-water surface and surface tracer source terms
+      ! FABM increments rather than sets argument flux_sf, sms_sf: initialize with 0 before
+      self%flux_sf = 0.0_RK
+      self%sms_sf = 0.0_RK
       call self%fabm_model%get_surface_sources(self%flux_sf, self%sms_sf)
       if (allocated(self%flux_sf)) then
          if (any(ieee_is_nan(self%flux_sf))) then
@@ -407,28 +491,33 @@ contains
       ! of all tracers, combining the Simstrat transport terms with the FABM biogeochemical source
       ! terms and fluxes (sms, flux) and vertical velocities (velocity). This results in an updated interior_state.
       do ivar = 1, state%n_fabm_interior_state
-         call diffusion_FABM_interior_state(self, state, grid, ivar)
+         call diffusion_FABM_interior_state(self, state, fabm_cfg, grid, ivar)
       end do
 
       ! Direct time integration of source terms to update bottom_state and surface_state inside FABM bounds
       ! -> maybe some variables could be lower than 0: adapt max()
       do ivar = 1, state%n_fabm_bottom_state
-         if (state%fabm_bottom_state(ivar) + state%dt * self%sms_bt(ivar) < max(0.0_RK, self%fabm_model%bottom_state_variables(ivar)%minimum)) then
-            ! state%fabm_bottom_state(ivar) = max(0.0_RK, self%fabm_model%bottom_state_variables(ivar)%minimum)
-            state%fabm_bottom_state(ivar) = state%fabm_bottom_state(ivar) + state%dt * self%sms_bt(ivar)
-            print *, 'FABM Variable value is ', state%fabm_bottom_state(ivar)
-            call error('FABM Variable '//self%fabm_model%bottom_state_variables(ivar)%name//' below zero.')
-         else if (state%fabm_bottom_state(ivar) + state%dt * self%sms_bt(ivar) > self%fabm_model%bottom_state_variables(ivar)%maximum) then
-            state%fabm_bottom_state(ivar) = self%fabm_model%bottom_state_variables(ivar)%maximum
-         else
-            state%fabm_bottom_state(ivar) = state%fabm_bottom_state(ivar) + state%dt * self%sms_bt(ivar)
-         end if
+         do k = 1, self%kmax_bot
+            if (state%fabm_bottom_state(k, ivar) + state%dt * self%sms_bt(k, ivar) < max(0.0_RK, self%fabm_model%bottom_state_variables(ivar)%minimum)) then
+               ! state%fabm_bottom_state(ivar) = max(0.0_RK, self%fabm_model%bottom_state_variables(ivar)%minimum)
+               state%fabm_bottom_state(k, ivar) = state%fabm_bottom_state(k, ivar) + state%dt * self%sms_bt(k, ivar)
+               print *, 'FABM Variable value is ', state%fabm_bottom_state(k, ivar)
+               print *, 'at z = ', k
+               print *, 'at time (days, seconds) = ', state%simulation_time
+               call error('FABM Variable '//self%fabm_model%bottom_state_variables(ivar)%name//' below zero.')
+            else if (state%fabm_bottom_state(k, ivar) + state%dt * self%sms_bt(k, ivar) > self%fabm_model%bottom_state_variables(ivar)%maximum) then
+               state%fabm_bottom_state(k, ivar) = self%fabm_model%bottom_state_variables(ivar)%maximum
+            else
+               state%fabm_bottom_state(k, ivar) = state%fabm_bottom_state(k, ivar) + state%dt * self%sms_bt(k, ivar)
+            end if
+         end do
       end do
       do ivar = 1, state%n_fabm_surface_state
          if (state%fabm_surface_state(ivar) + state%dt * self%sms_sf(ivar) < max(0.0_RK, self%fabm_model%surface_state_variables(ivar)%minimum)) then
             ! state%fabm_surface_state(ivar) = max(0.0_RK, self%fabm_model%surface_state_variables(ivar)%minimum)
             state%fabm_surface_state(ivar) = state%fabm_surface_state(ivar) + state%dt * self%sms_sf(ivar)
             print *, 'FABM Variable value is ', state%fabm_surface_state(ivar)
+            print *, 'at time (days, seconds) = ', state%simulation_time
             call error('FABM Variable '//self%fabm_model%surface_state_variables(ivar)%name//' below zero.')
          else if (state%fabm_surface_state(ivar) + state%dt * self%sms_sf(ivar) > self%fabm_model%surface_state_variables(ivar)%maximum) then
             state%fabm_surface_state(ivar) = self%fabm_model%surface_state_variables(ivar)%maximum
@@ -443,32 +532,16 @@ contains
 
    ! Diffusion algorithm for interior state variables: Simstrat transport terms and FABM biogeochemical terms integrated simultaneously
    ! Assuming small enough dt such that only fluxes between neighbouring layers are relevant
-   subroutine diffusion_fabm_interior_state(self, state, grid, ivar)
+   subroutine diffusion_fabm_interior_state(self, state, fabm_cfg, grid, ivar)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       class(ModelState), intent(inout) :: state
+      class(FABMConfig), intent(in) :: fabm_cfg
       class(StaggeredGrid) :: grid
       integer, intent(in) :: ivar
-      
-      ! Total Flux
-         ! real(RK), dimension(0:grid%nz_grid+1) :: flux_tot ! Include air and benthic layer
-         ! real(RK), dimension(grid%nz_grid) :: boundaries, source, lower_diag, main_diag, upper_diag, rhs
-         ! flux_tot(1:grid%nz_grid) = self%velocity(:, ivar) * state%fabm_interior_state(:, ivar) ! Local flux
-         ! if (self%flux_bt(ivar) > 0) then
-         !    flux_tot(0) = self%flux_bt(ivar) ! flux into water
-         ! else
-         !    flux_tot(0) = 0 ! -> verify: flux out of water is same as negative local flux at 1
-         ! end if
-         ! if (self%flux_sf(ivar) > 0) then
-         !    flux_tot(grid%nz_grid+1) = -self%flux_sf(ivar) ! flux into water
-         ! else
-         !    flux_tot(grid%nz_grid+1) = 0 ! -> verify: flux out of water is same as positive local flux at grid%nz_grid
-         ! end if
-      ! Total Flux
 
       ! Local variables
-      real(RK), dimension(grid%nz_grid) :: velocity_up, velocity_down, sources, lower_diag, main_diag, upper_diag, rhs
-      real(RK), dimension(grid%nz_grid-1) :: AreaFactor_ext_1, AreaFactor_ext_2
+      real(RK), dimension(grid%nz_occupied) :: velocity_up, velocity_down, sources, lower_diag_diff, main_diag_diff, upper_diag_diff, lower_diag, main_diag, upper_diag, rhs, AreaFactor_ext_1, AreaFactor_ext_2
       integer :: j
 
       ! Create linear system of equations with transport and source terms
@@ -476,54 +549,103 @@ contains
 
       ! Build diagonals of A with Simstrat transport terms (code from discretization module)
       ! With diffusivity for temperature nuh
-      ! Downward flux to/from each layer
-      upper_diag(1) = 0.0_RK
-      upper_diag(2:grid%nz_grid) = state%dt*state%nuh(2:grid%nz_grid)*grid%AreaFactor_1(2:grid%nz_grid)
-      ! Upward flux to/from each layer
-      lower_diag(1:grid%nz_grid-1) = state%dt*state%nuh(2:grid%nz_grid)*grid%AreaFactor_2(1:grid%nz_grid - 1)
-      lower_diag(grid%nz_grid) = 0.0_RK
-      ! 1 - downward flux - upward flux
-      main_diag(:) = 1.0_RK - upper_diag(:) - lower_diag(:)
+      ! Upward flux from (1:grid%nz_occupied - 1) to (2:grid%nz_occupied): upper_diag(z) describes the upward flux into cell z
+      upper_diag_diff(2:grid%nz_occupied) = state%dt*state%nuh(2:grid%nz_occupied)*grid%AreaFactor_1(2:grid%nz_occupied)
+      upper_diag_diff(1) = 0.0_RK ! No upward flux into bottommost cell
+      ! Downward flux from (2:grid%nz_occupied) to (1:grid%nz_occupied - 1): lower_diag(z) describes the downward flux into cell z
+      lower_diag_diff(1:grid%nz_occupied-1) = state%dt*state%nuh(2:grid%nz_occupied)*grid%AreaFactor_2(1:grid%nz_occupied - 1)
+      lower_diag_diff(grid%nz_occupied) = 0.0_RK ! No downward flux into uppermost cell
+      ! 1 - downward flux out - upward flux out
+      main_diag_diff(1:grid%nz_occupied) = 1.0_RK - upper_diag_diff(1:grid%nz_occupied) - lower_diag_diff(1:grid%nz_occupied)
 
       ! Add FABM fluxes to A as residual verical advection terms
-      ! Area factors for external fluxes
-      AreaFactor_ext_1(1:grid%nz_grid-1) = grid%Az(2:grid%nz_grid)/grid%Az_vol(2:grid%nz_grid)/grid%h(2:grid%nz_grid)
-      AreaFactor_ext_2(1:grid%nz_grid-1) = grid%Az(2:grid%nz_grid)/grid%Az_vol(1:grid%nz_grid-1)/grid%h(1:grid%nz_grid-1)
-      ! Upward and downward movement rates for each layer (positive)
-      velocity_up = self%velocity(:, ivar)
-      where (velocity_up < 0.0_RK)
-         velocity_up = 0.0_RK
-      end where
-      velocity_down = -self%velocity(:, ivar)
-      where (velocity_down < 0.0_RK)
-         velocity_down = 0.0_RK
-      end where
-      ! Downward flux to each layer
-      upper_diag(2:grid%nz_grid) = upper_diag(2:grid%nz_grid) + state%dt*velocity_down(2:grid%nz_grid)*AreaFactor_ext_1(1:grid%nz_grid-1)
-      ! Upward flux to each layer
-      lower_diag(1:grid%nz_grid-1) = lower_diag(1:grid%nz_grid-1) + state%dt*velocity_up(1:grid%nz_grid-1)*AreaFactor_ext_2(1:grid%nz_grid-1)
-      ! Flux away from each layer
-      main_diag(:) = main_diag(:) - state%dt*self%velocity(:, ivar)/grid%h(1:grid%nz_grid)
+      ! Benthic-pelagic and air-water fluxes are added as source terms below
+      ! Area factors for external fluxes, minus sign to be closer to the AreaFactors from grid
+      ! AreaFactor_ext_1 is for upward fluxes:
+      ! Multiply by the layer through which the flux passes (z = i) and divide by the volume of the receiving cell (z = i)
+      AreaFactor_ext_1(1:grid%nz_occupied) = -grid%Az(1:grid%nz_occupied) / (grid%h(1:grid%nz_occupied) * grid%Az_vol(1:grid%nz_occupied))
+      ! AreaFactor_ext_2 is for downward fluxes: 
+      ! Multiply by the layer through which the flux passes (z = i+1) and divide by the volume of the receiving cell (z = i)
+      AreaFactor_ext_2(1:grid%nz_occupied) = -grid%Az(2:grid%nz_occupied+1) / (grid%h(1:grid%nz_occupied) * grid%Az_vol(1:grid%nz_occupied))
+      ! Upward and downward movement rates for each layer
+      ! if the variable moves upward velocity_up is positive and velocity_down zero
+      ! vice versa if the variable moves downward
+      do j = 1, grid%nz_occupied
+         if (self%velocity(j, ivar) >= 0) then
+            velocity_up(j) = self%velocity(j, ivar)
+            velocity_down(j) = 0
+         else
+            velocity_up(j) = 0
+            velocity_down(j) = -self%velocity(j, ivar)
+         end if
+      end do
+      ! Add upward flux from (1:grid%nz_occupied-1) to (2:grid%nz_occupied): upper_diag(z) describes the upward flux into cell z
+      ! upper_diag should be <= 0
+      ! Benthic-pelagic flux is treated as source term below
+      upper_diag(2:grid%nz_occupied) = upper_diag_diff(2:grid%nz_occupied) + state%dt*velocity_up(1:grid%nz_occupied-1)*AreaFactor_ext_1(2:grid%nz_occupied)
+      upper_diag(1) = upper_diag_diff(1)
+      ! Subtract upward flux from cell z to cell z+1
+      ! main_diag should be >= 0
+      ! Water-air flux is treated as sink term below
+      main_diag(1:grid%nz_occupied-1) = main_diag_diff(1:grid%nz_occupied-1) - state%dt*velocity_up(1:grid%nz_occupied-1)*AreaFactor_ext_2(1:grid%nz_occupied-1)
+      main_diag(grid%nz_occupied) = main_diag_diff(grid%nz_occupied)
+      ! Add downward flux from (2:grid%nz_occupied) to (1:grid%nz_occupied - 1): lower_diag(z) describes the downward flux into cell z
+      ! lower_diag should be <= 0
+      ! Air-water flux is treated as source term below
+      lower_diag(1:grid%nz_occupied-1) = lower_diag_diff(1:grid%nz_occupied-1) + state%dt*velocity_down(2:grid%nz_occupied)*AreaFactor_ext_2(1:grid%nz_occupied-1)
+      lower_diag(grid%nz_occupied) = lower_diag_diff(grid%nz_occupied)
+      ! Subtract downward flux from cell z to cell z-1
+      ! main_diag should be >= 0
+      ! Pelagic-benthic flux is treated as sink term below
+      main_diag(2:grid%nz_occupied) = main_diag(2:grid%nz_occupied) - state%dt*velocity_down(2:grid%nz_occupied)*AreaFactor_ext_1(2:grid%nz_occupied)
+      main_diag(1) = main_diag(1)
 
       ! Get source S^{n}
       ! Source at each layer
-      sources = self%sms_int(:, ivar)
+      sources = self%sms_int(1:grid%nz_occupied, ivar)
       ! Add pelagic-benthic and air-water flux [var_unit m s-1] as source [var_unit s-1]
-      ! Convert to source by division by height of bottomost / uppermost layer [m]
-      sources(1) = sources(1) + (self%flux_bt(ivar) / grid%h(1))
-      sources(grid%nz_grid) = sources(grid%nz_grid) + (self%flux_sf(ivar) / grid%h(grid%nz_grid))
+      ! Convert to source by division by height of current bottom / uppermost layer [m]
+      if (fabm_cfg%bottom_everywhere) then
+         sources(:) = sources(:) + (self%flux_bt(1:grid%nz_occupied, ivar) / grid%h(1:grid%nz_occupied)) ! pelagic-benthic flux at every layer
+      else
+         sources(1) = sources(1) + (self%flux_bt(1, ivar) / grid%h(1)) ! pelagic-benthic flux only at bottommost layer
+      end if
+      sources(grid%nz_occupied) = sources(grid%nz_occupied) + (self%flux_sf(ivar) / grid%h(grid%nz_occupied))
 
       ! Calculate RHS (phi^{n}+dt*S^{n})
-      rhs(:) = state%fabm_interior_state(:, ivar) + state%dt*sources(:)
+      rhs(:) = state%fabm_interior_state(1:grid%nz_occupied, ivar) + state%dt*sources(:)
 
       ! Solve LES to get phi^{n+1}
-      call solve_tridiag_thomas(lower_diag, main_diag, upper_diag, rhs, state%fabm_interior_state(:, ivar), grid%nz_grid)
+      call solve_tridiag_thomas(lower_diag, main_diag, upper_diag, rhs, state%fabm_interior_state(1:grid%nz_occupied, ivar), grid%nz_occupied)
 
-      if (any(state%fabm_interior_state(:, ivar) < max(0.0_RK, self%fabm_model%interior_state_variables(ivar)%minimum))) then
-         do j = 1, size(state%fabm_interior_state(:, ivar))
+      if (any(state%fabm_interior_state(1: grid%nz_occupied, ivar) < max(0.0_RK, self%fabm_model%interior_state_variables(ivar)%minimum))) then
+         do j = 1, size(state%fabm_interior_state(1:grid%nz_occupied, ivar))
             if (state%fabm_interior_state(j, ivar) < max(0.0_RK, self%fabm_model%interior_state_variables(ivar)%minimum)) then
                print *, 'FABM Variable value is ', state%fabm_interior_state(j, ivar)
-               print * ,' at z = ', j
+               print *, 'at grid point ', j
+               print *, 'at time (days, seconds) = ', state%simulation_time
+               print *, 'velocity = ', self%velocity(max(j-1, 1) : min(j+1, grid%nz_occupied) , ivar)
+               print *, 'source = ', sources(j)
+               print *, 'dt = ', state%dt
+               print *, 'nuh = ', state%nuh(max(j-1, 1) :  min(j+1, grid%nz_occupied))
+               print *, 'AreaFactor_ext_1 = ', AreaFactor_ext_1(max(j-1, 1) :  min(j+1, grid%nz_occupied))
+               print *, 'AreaFactor_ext_2 = ', AreaFactor_ext_2(max(j-1, 1) :  min(j+1, grid%nz_occupied))
+               print *, 'AreaFactor_1 = ', grid%AreaFactor_1(max(j-1, 1) :  min(j+1, grid%nz_occupied))
+               print *, 'AreaFactor_2 = ', grid%AreaFactor_2(max(j-1, 1) :  min(j+1, grid%nz_occupied))
+               print *, 'upper diag diff = ', upper_diag_diff(max(j-1, 1) :  min(j+1, grid%nz_occupied))
+               print *, 'main diag diff = ', main_diag_diff(max(j-1, 1) :  min(j+1, grid%nz_occupied))
+               print *, 'lower diag diff = ', lower_diag_diff(max(j-1, 1) :  min(j+1, grid%nz_occupied))
+               print *, 'matrix row sum diff = ', upper_diag_diff(max(j-1, 1) :  min(j+1, grid%nz_occupied)) + main_diag_diff(max(j-1, 1) :  min(j+1, grid%nz_occupied)) + lower_diag_diff(max(j-1, 1) :  min(j+1, grid%nz_occupied)) 
+               print *, 'upper diag = ', upper_diag(max(j-1, 1) :  min(j+1, grid%nz_occupied))
+               print *, 'main diag = ', main_diag(max(j-1, 1) :  min(j+1, grid%nz_occupied))
+               print *, 'lower diag = ', lower_diag(max(j-1, 1) :  min(j+1, grid%nz_occupied))
+               print *, 'matrix row sum = ', upper_diag(max(j-1, 1) :  min(j+1, grid%nz_occupied)) + main_diag(max(j-1, 1) :  min(j+1, grid%nz_occupied)) + lower_diag(max(j-1, 1) :  min(j+1, grid%nz_occupied))  
+               ! matrix row sum should be <= 1
+               if (fabm_cfg%bottom_everywhere .or. j == 1) print *, 'flux_bt = ', self%flux_bt(j, ivar)
+               print *, "h = ", grid%h(j)
+               print *, 'flux_sf = ', (self%flux_sf(ivar) / grid%h(grid%nz_occupied))
+               print *, 'sources = ', sources(max(j-1, 1) :  min(j+1, grid%nz_occupied))
+               print *, 'rhs = ', rhs(max(j-1, 1) :  min(j+1, grid%nz_occupied))
             end if
          end do
          call error('FABM Variable '//self%fabm_model%interior_state_variables(ivar)%name//' below zero.')
@@ -531,12 +653,9 @@ contains
       
       ! Ensure that variable stays inside bounds
       ! -> maybe some variables could be lower than 0: adapt max()
-      where (state%fabm_interior_state(:, ivar) < max(0.0_RK, self%fabm_model%interior_state_variables(ivar)%minimum))
-         state%fabm_interior_state(:, ivar) = max(0.0_RK, self%fabm_model%interior_state_variables(ivar)%minimum)
-      end where
-      where (state%fabm_interior_state(:, ivar) > self%fabm_model%interior_state_variables(ivar)%maximum)
-         state%fabm_interior_state(:, ivar) = self%fabm_model%interior_state_variables(ivar)%maximum
-      end where
+      !where (state%fabm_interior_state(1:grid%nz_occupied, ivar) > self%fabm_model%interior_state_variables(ivar)%maximum)
+      !   state%fabm_interior_state(1:grid%nz_occupied, ivar) = self%fabm_model%interior_state_variables(ivar)%maximum
+      !end where
    end subroutine diffusion_fabm_interior_state
 
    ! Deallocate memory
@@ -553,6 +672,7 @@ contains
       if (allocated(self%flux_sf)) deallocate(self%flux_sf)
       if (allocated(self%sms_sf)) deallocate(self%sms_sf)
       if (allocated(self%velocity)) deallocate(self%velocity)
+      if (associated(self%bottom_index)) deallocate(self%bottom_index)
    end subroutine deallocate_fabm
 
    ! Process feedbacks from bgc to physics (absorption, albedo, wind drag changes, ...)

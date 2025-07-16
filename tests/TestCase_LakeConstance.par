@@ -43,10 +43,12 @@
   },
   "FABMConfig" : {
 		"PathFABMinflow"          : "TestCase_LakeConstance/FABM_inflow/",
-    "FABMConfigFile"          : "FABMConfigurations/fabm-gotm-ergom.yaml",
+    "FABMConfigFile"          : "FABMConfigurations/selmaprotbas.yaml",
 		"BioshadeFeedback"        : 0,
 		"BackgroundExtinction"    : 0.2,
-		"OutputDiagnosticVars"    : true
+		"OutputDiagnosticVars"    : true,
+    "RepairFABMStates"        : true,
+    "BottomEverywhere"        : true
   },
   "Simulation": {
     "Timestep s": 3600,
