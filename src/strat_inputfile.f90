@@ -657,13 +657,13 @@ contains
 
          ! FABM configuration
          if (model_cfg%couple_fabm) then
-            call par_file%get("FABMConfig.PathFABMinflow", fabm_cfg%path_fabm_inflow,found); call check_field(found, 'FABMConfig.PathFABMinflow',ParName)
             call par_file%get("FABMConfig.FABMConfigFile", fabm_cfg%fabm_config_file,found); call check_field(found, 'FABMConfig.FABMConfigFile',ParName)
+            call par_file%get("FABMConfig.PathFABMinflow", fabm_cfg%path_fabm_inflow,found); call check_field(found, 'FABMConfig.PathFABMinflow',ParName)
+            call par_file%get("FABMConfig.SetDiagnosticVars", fabm_cfg%set_diag_vars,found); call check_field(found, 'FABMConfig.SetDiagnosticVars',ParName)
+            call par_file%get("FABMConfig.OutputDiagnosticVars", fabm_cfg%output_diagnostic_variables,found); call check_field(found, 'FABMConfig.OutputDiagnosticVars', ParName)
             call par_file%get("FABMConfig.RepairFABMStates", fabm_cfg%repair_fabm,found); call check_field(found, 'FABMConfig.RepairFABMStates',ParName)
             call par_file%get("FABMConfig.BottomEverywhere", fabm_cfg%bottom_everywhere,found); call check_field(found, 'FABMConfig.BottomEverywhere',ParName)
-            ! -> call par_file%get("FABMConfig.BioshadeFeedback", fabm_cfg%bioshade_feedback,found); call check_field(found, 'FABMConfig.BioshadeFeedback', ParName)
-            ! -> call par_file%get("FABMConfig.BackgroundExtinction", fabm_cfg%background_extinction,found); call check_field(found, 'FABMConfig.BackgroundExtinction', ParName)
-            ! -> call par_file%get("FABMConfig.OutputDiagnosticVars", fabm_cfg%output_diagnostic_variables,found); call check_field(found, 'FABMConfig.OutputDiagnosticVars', ParName)
+            call par_file%get("FABMConfig.BioshadeFeedback", fabm_cfg%bioshade_feedback,found); call check_field(found, 'FABMConfig.BioshadeFeedback', ParName)
          end if
 
          !Model Parameter

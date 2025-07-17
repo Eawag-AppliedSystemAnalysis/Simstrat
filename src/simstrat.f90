@@ -275,8 +275,7 @@ contains
 
          ! Update absorption (except if FABM is off or if FABM is on but bioshade feedback is off)
          if (simdata%model_cfg%couple_fabm) then
-            ! -> if (.not. simdata%fabm_cfg%bioshade_feedback) then
-            if (.true.) then
+            if (.not. simdata%fabm_cfg%bioshade_feedback) then
                call mod_absorption%update(simdata%model)
             end if
          else

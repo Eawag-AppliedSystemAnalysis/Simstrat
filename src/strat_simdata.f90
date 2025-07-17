@@ -57,15 +57,15 @@ module strat_simdata
       logical :: volume_grid, face_grid
    end type
 
-   ! -> Definition of a FABM variable to log
+   ! Definition of a FABM variable to log
    type, public :: LogVariableFABM
-      character(len=48), pointer, dimension(:) :: names
+      character(len=80), pointer, dimension(:) :: names
       real(RK), dimension(:,:), pointer :: values
    end type
 
-   ! -> Definition of a FABM variable to log
+   ! Definition of a FABM variable to log
    type, public :: LogVariableFABM_bound
-      character(len=48), pointer, dimension(:) :: names
+      character(len=80), pointer, dimension(:) :: names
       real(RK), dimension(:), pointer :: values
    end type
 
@@ -86,7 +86,8 @@ module strat_simdata
       class(LogVariableFABM), allocatable :: output_vars_fabm_interior_state
       class(LogVariableFABM), allocatable :: output_vars_fabm_bottom_state
       class(LogVariableFABM_bound), allocatable :: output_vars_fabm_surface_state
-      ! -> class(LogVariableFABM), allocatable :: output_vars_fabm_diagnostic
+      class(LogVariableFABM), allocatable :: output_vars_fabm_diagnostic_interior
+      class(LogVariableFABM_bound), allocatable :: output_vars_fabm_diagnostic_horizontal
 
       integer :: output_time_type, output_depth_type, thinning_interval
       real(RK) :: depth_interval, thinning_interval_read ! thinning_interval_read is a real to make sure that also values
@@ -127,17 +128,20 @@ module strat_simdata
 
    ! FABM configuration (read from file)
    type, public :: FABMConfig
-      ! Path to Inflow files
-      character(len=:), allocatable :: path_fabm_inflow
       ! Directory of YAML file with all biogeochemical configuration
       character(len=:), allocatable :: fabm_config_file
+      ! Path to Inflow files
+      character(len=:), allocatable :: path_fabm_inflow
+      ! Directory of file with names of diagnostic variables to output
+      character(len=:), allocatable :: set_diag_vars
+      ! Whether to output diagnostic variables
+      logical :: output_diagnostic_variables
       ! Whether to clip all state variables to valid range from bgc models when update is called
       logical :: repair_fabm
       ! Whether there is a pelagic-benthic interface at every depth
       logical :: bottom_everywhere
-      ! -> logical :: bioshade_feedback
-      ! -> real(RK) :: background_extinction
-      ! -> logical :: output_diagnostic_variables
+      ! Whether to calculate the attenuation coefficient with FABM
+      logical :: bioshade_feedback
    end type
 
    ! Model params (read from file)
@@ -192,10 +196,11 @@ module strat_simdata
       ! In Simstrat_FABM allocated with shape (grid%nz_grid, size(n_fabm_*_state))
       real(RK), dimension(:,:), pointer :: fabm_interior_state, fabm_bottom_state
       real(RK), dimension(:), pointer :: fabm_surface_state
-      integer :: n_fabm_state, n_fabm_interior_state, n_fabm_bottom_state, n_fabm_surface_state ! -> n_fabm_diagnostic
-      character(len=48), dimension(:), pointer :: fabm_state_names ! Names of FABM state variables used in the simulation
-      ! -> real(RK), dimension(:,:), pointer :: fabm_diagnostic ! State matrix of FABM diagnostic svariables
-      ! -> character(len=48), dimension(:), pointer :: fabm_diagnostic_names ! Names of FABM diagnostic variables used in the simulation
+      integer :: n_fabm_state, n_fabm_interior_state, n_fabm_bottom_state, n_fabm_surface_state, n_fabm_diagnostic, n_fabm_diagnostic_interior, n_fabm_diagnostic_horizontal
+      character(len=80), dimension(:), pointer :: fabm_state_names ! Names of FABM state variables used in the simulation
+      real(RK), dimension(:,:), pointer :: fabm_diagnostic_interior ! State matrix of FABM diagnostic variables
+      real(RK), dimension(:), pointer :: fabm_diagnostic_horizontal ! State matrix of FABM diagnostic variables
+      character(len=80), dimension(:), pointer :: fabm_diagnostic_names ! Names of FABM diagnostic variables in output
    
       ! Variables located on z_upp grid
       real(RK), dimension(:), allocatable :: k, ko ! Turbulent kinetic energy (TKE) [J/kg]
@@ -473,7 +478,8 @@ contains
          call save_matrix_pointer(80, self%fabm_interior_state)
          call save_matrix_pointer(80, self%fabm_bottom_state)
          call save_array_pointer(80, self%fabm_surface_state)
-         ! -> call save_matrix_pointer(80, self%FABM_diagnostic)
+         call save_matrix_pointer(80, self%fabm_diagnostic_interior)
+         call save_array_pointer(80, self%fabm_diagnostic_horizontal)
       end if
       if (inflow_mode > 0) then
          call save_matrix(80, self%Q_inp)
@@ -550,7 +556,8 @@ contains
          call read_matrix_pointer(81, self%fabm_interior_state)
          call read_matrix_pointer(81, self%fabm_bottom_state)
          call read_array_pointer(81, self%fabm_surface_state)
-         ! -> call read_matrix_pointer(81, self%fabm_diagnostic)
+         call read_matrix_pointer(80, self%fabm_diagnostic_interior)
+         call read_array_pointer(80, self%fabm_diagnostic_horizontal)
       end if
       if (inflow_mode > 0) then
          call read_matrix(81, self%Q_inp)

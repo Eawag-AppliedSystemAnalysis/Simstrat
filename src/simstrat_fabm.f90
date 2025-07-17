@@ -62,6 +62,9 @@ module simstrat_fabm
       ! 1 if bottom_everywhere is false, nz_grid if bottom_everywhere is true
       ! All associated code copied and adapted from https://gitlab.com/wateritech-public/waterecosystemstool/gotm
       integer :: kmax_bot
+
+      integer :: att_index ! Index of attenuation_coefficient_of_photosynthetic_radiative_flux in FABM diagnostic variables
+      integer, dimension(:), allocatable :: diagnostic_index ! Index of FABM diagnostic variables
    contains
       procedure, pass(self), public :: init
       procedure, pass(self), public :: update
@@ -160,6 +163,30 @@ contains
             state%fabm_state_names(state%n_fabm_interior_state + state%n_fabm_bottom_state + ivar) = self%fabm_model%surface_state_variables(ivar)%name
          end do
       end if
+      
+      ! Allocate interior tracer source terms [var_unit s-1]
+      ! FABM increments rather than sets argument sms_int: initialize with 0 at every time step
+      if (state%n_fabm_interior_state > 0) then
+         allocate(self%sms_int(grid%nz_grid, state%n_fabm_interior_state))
+      end if
+
+      ! Allocate  fluxes over pelagic-benthic interface [var_unit m s-1] and bottom tracer source terms [var_unit s-1]
+      if (state%n_fabm_interior_state > 0 .or. state%n_fabm_bottom_state > 0) then
+         allocate(self%flux_bt(self%kmax_bot, state%n_fabm_interior_state))
+         allocate(self%sms_bt(self%kmax_bot, state%n_fabm_bottom_state))
+      end if
+
+      ! Allocate retrieve fluxes over air-water surface [var_unit m s-1] and surface tracer source terms [var_unit s-1]
+      if (state%n_fabm_interior_state > 0 .or. state%n_fabm_surface_state > 0) then
+         allocate(self%flux_sf(state%n_fabm_interior_state))
+         allocate(self%sms_sf(state%n_fabm_surface_state))
+      end if
+
+      ! Allocate local vertical velocities of pelagic state variables (sinking, floating, active movement) [m s-1]
+      ! Movement through water, independent of water flow
+      if (state%n_fabm_interior_state > 0) then
+         allocate(self%velocity(grid%nz_grid, state%n_fabm_interior_state))
+      end if
 
       ! Get id for standard variable <variable>: if memory location of <variable> changes send updated pointers
       !type(type_fabm_interior_variable_id) :: id_var
@@ -243,14 +270,34 @@ contains
       !call self%fabm_model%link_horizontal_data(fabm_standard_variables%longitude)
       ! Number of days since start of the year [days], provided in GOTM, could be calculated in Simstrat but only if albedo is calculated
       !call self%fabm_model%link_horizontal_data(fabm_standard_variables%number_of_days_since_start_of_the_year)
+      
+      if (fabm_cfg%bioshade_feedback) then
+         do ivar = 1, size(self%fabm_model%interior_diagnostic_variables)
+            if (self%fabm_model%interior_diagnostic_variables(ivar)%name == 'attenuation_coefficient_of_photosynthetic_radiative_flux') then
+               self%fabm_model%interior_diagnostic_variables(ivar)%save = .true.
+               self%att_index = ivar
+            end if
+         end do
+      end if
 
+      if (fabm_cfg%output_diagnostic_variables) then
+         call set_fabm_diagnostic_vars(self, state, fabm_cfg)
+
+         if (state%n_fabm_diagnostic_interior > 0) then
+            allocate(state%fabm_diagnostic_interior(grid%nz_grid, state%n_fabm_diagnostic_interior))
+         end if
+
+         if (state%n_fabm_diagnostic_horizontal > 0) then
+            allocate(state%fabm_diagnostic_horizontal(state%n_fabm_diagnostic_horizontal))
+         end if
+      end if
+      
       ! Complete initialization and check whether FABM has all dependencies fulfilled
       ! (i.e., whether all required calls to fabm_model%link_*_data have been made and all required data have been provided)
       ! Stop with fatal error if not
       ! Selection of diagnostics that FABM will compute and store becomes frozen
       call self%fabm_model%start()
 
-      ! -> Program received signal SIGSEGV: Segmentation fault - invalid memory reference.
       ! Set FABM-provided initial values for state variables (tracers), typically space-independent.
       ! This sets the values of arrays sent to fabm_model%link_*_state_data,
       ! in this case those contained in *_state
@@ -280,121 +327,128 @@ contains
       ! Surface state variables
       call self%fabm_model%initialize_surface_state()
 
-      ! Do the following sequence once to ensure diagnostics called in the model state valdation have been assigned a value
-
-      ! 1. Prepare all fields FABM needs to compute source terms (e.g., light)
-      call self%fabm_model%prepare_inputs()
-
-      ! 2. Retrieve sources and fluxes across whole domain: order of call and of processing grid points is up to host
-      
-      ! 2a. Allocate and initialize with 0 (and then retrieve) interior tracer source terms (tracer units s-1)
-      if (state%n_fabm_interior_state > 0) then
-         allocate(self%sms_int(grid%nz_grid, state%n_fabm_interior_state))
-         self%sms_int = 0.0
-      end if
-
-      ! 2b. Allocate and initialize with 0 (and then retrieve) fluxes and tracer source terms at bottom
-      allocate(self%flux_bt(self%kmax_bot, state%n_fabm_interior_state))
-      if (state%n_fabm_interior_state > 0) then
-         self%flux_bt = 0.0
-      end if
-      allocate(self%sms_bt(self%kmax_bot, state%n_fabm_bottom_state))
-      if (state%n_fabm_bottom_state > 0) then
-         self%sms_bt = 0.0
-      end if
-
-      ! 2c. Allocate and initialize with 0 (and then retrieve) fluxes and tracer source terms at surface
-      allocate(self%flux_sf(state%n_fabm_interior_state))
-      if (state%n_fabm_interior_state > 0) then
-         self%flux_sf = 0.0
-      end if
-      allocate(self%sms_sf(state%n_fabm_surface_state))
-      if (state%n_fabm_surface_state > 0) then
-         self%sms_sf = 0.0
-      end if
-
-      ! 3. Allocate and initialize with 0 (and then retrieve) vertical velocities (sinking, floating, active movement) in m s-1
-      allocate(self%velocity(grid%nz_grid, state%n_fabm_interior_state))
-      if (state%n_fabm_interior_state > 0) then
-         self%velocity = 0.0
-      end if
-
-      ! 4. Compute any remaining diagnostics
-      call self%fabm_model%finalize_outputs()
-
-      ! At this point, initialization is complete
-      ! Assign local alias back to self
-      !self%fabm_model => fabm_model
+      ! Call the update function once as a first call to initialize fluxes, sources and vertical velocities
+      call self%update(state, fabm_cfg, grid, .true.)
    end subroutine init
 
    ! The update function is called in the main loop of simstrat (in simstrat.f90) at every time step
    ! Particle atmospheric, pelagic and benthic fluxes and diffusion are computed to update bgc state variable values
-   subroutine update(self, state, fabm_cfg, grid)
+   subroutine update(self, state, fabm_cfg, grid, first_call)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       class(ModelState), intent(inout) :: state
       class(FABMConfig), intent(in) :: fabm_cfg
-      class(StaggeredGrid) :: grid
-      !class(type_fabm_model), pointer :: fabm_model
+      class(StaggeredGrid) :: grid  
+      logical, intent(in), optional :: first_call
 
       ! Local variables
-      integer :: ivar, k
+      integer :: ivar, k, index
+      logical :: first_call_local
 
-      ! Create an alias of the model
-      !fabm_model => self%fabm_model
-
-      ! Follow steps 1 to 5 before output and time integration
-
-      ! 1. Validate the model state, stop if variables are not valid
-      ! Only run after first time step has been run
-      ! -> maybe do this after the update again
-      ! Interior state variables
-      call self%fabm_model%check_interior_state(1, grid%nz_grid, fabm_cfg%repair_fabm, self%valid_int)
-      ! Bottom state variables
-      call self%fabm_model%check_bottom_state(fabm_cfg%repair_fabm, self%valid_bt)
-      if (fabm_cfg%bottom_everywhere) then
-         ! If bottom_everywhere is set, at every depth:
-         ! FABM is pointed to location that holds state data for the current depth
-         ! The bottom (the location of the pelagic-benthic interface) is moved to the current depth
-         ! The bottom state at the current depth is validated
-         do k = 2, self%kmax_bot
-            do ivar = 1, state%n_fabm_bottom_state
-               call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k, ivar))
-            end do
-            self%bottom_index(1) = k
-            call self%fabm_model%check_bottom_state(fabm_cfg%repair_fabm, self%valid_bt)
-         end do
-         ! Reset Bottom to 1
-         do ivar = 1, state%n_fabm_bottom_state
-            call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
-         end do
-         self%bottom_index(1) = 1
+      ! Default not first call
+      if (present(first_call)) then
+         first_call_local = first_call
+      else
+         first_call_local = .false.
       end if
-      ! Surface state variables
-      call self%fabm_model%check_surface_state(fabm_cfg%repair_fabm, self%valid_sf)
-      ! Error if out of bounds and not repaired
-      if (.not. (self%valid_int .and. self%valid_bt .and. self%valid_sf)) then
-         if (fabm_cfg%repair_fabm) then
-            ! call warn("FABM Variable repaired")
-         else
-            call error("FABM Variable out of bounds")
+
+      ! If it is not the first call: 1. calculate and 2. validate the new model state, stop if variables are not valid
+      if (.not. first_call_local) then
+         ! 1a. Time-integrate the advection-diffusion-reaction equations
+         ! of all tracers, combining the Simstrat transport terms with the FABM biogeochemical source
+         ! terms and fluxes (sms, flux) and vertical velocities (velocity). This results in an updated interior_state.
+         do ivar = 1, state%n_fabm_interior_state  
+            call diffusion_FABM_interior_state(self, state, fabm_cfg, grid, ivar)
+            ! Check for negative values
+            if (any(state%fabm_interior_state(1: grid%nz_occupied, ivar) < 0.0_RK)) then
+               do k = 1, size(state%fabm_interior_state(1:grid%nz_occupied, ivar))
+                  if (state%fabm_interior_state(k, ivar) < 0.0_RK) then
+                     print *, 'FABM Interior Variable value is ', state%fabm_interior_state(k, ivar)
+                     print *, 'at grid point ', k
+                     print *, 'at time (days, seconds) = ', state%simulation_time
+                  end if
+               end do
+               call error('FABM Variable '//self%fabm_model%interior_state_variables(ivar)%name//' below zero.')
+            end if
+         end do
+
+         ! 1b. Direct time integration of source terms to update bottom_state
+         do ivar = 1, state%n_fabm_bottom_state
+            state%fabm_bottom_state(:, ivar) = state%fabm_bottom_state(:, ivar) + state%dt * self%sms_bt(:, ivar)
+            ! Check for negative values
+            if (any(state%fabm_bottom_state(:, ivar) + state%dt * self%sms_bt(:, ivar) < 0.0_RK)) then
+               do k = 1, self%kmax_bot
+                  if (state%fabm_bottom_state(k, ivar) + state%dt * self%sms_bt(k, ivar) < 0.0_RK) then
+                     print *, 'FABM Bottom Variable value is ', state%fabm_bottom_state(k, ivar)
+                     print *, 'at grid point ', k
+                     print *, 'at time (days, seconds) = ', state%simulation_time
+                  end if
+                  call error('FABM Bottom Variable '//self%fabm_model%bottom_state_variables(ivar)%name//' below zero.')
+               end do
+            end if
+         end do
+
+         ! 1c. Direct time integration of source terms to update surface_state
+         do ivar = 1, state%n_fabm_surface_state
+            state%fabm_surface_state(ivar) = state%fabm_surface_state(ivar) + state%dt * self%sms_sf(ivar)
+            ! Check for negative values
+            if (state%fabm_surface_state(ivar) < 0.0_RK) then
+               print *, 'FABM Surface Variable value is ', state%fabm_surface_state(ivar)
+               print *, 'at time (days, seconds) = ', state%simulation_time
+               call error('FABM Surface Variable '//self%fabm_model%surface_state_variables(ivar)%name//' below zero.')
+            end if
+         end do
+
+         ! 2a.Interior state variables
+         call self%fabm_model%check_interior_state(1, grid%nz_grid, fabm_cfg%repair_fabm, self%valid_int)
+         
+         ! 2b. Bottom state variables
+         call self%fabm_model%check_bottom_state(fabm_cfg%repair_fabm, self%valid_bt)
+         if (fabm_cfg%bottom_everywhere) then
+            ! If bottom_everywhere is set, at every depth:
+            ! FABM is pointed to location that holds state data for the current depth
+            ! The bottom (the location of the pelagic-benthic interface) is moved to the current depth
+            ! The bottom state at the current depth is validated
+            do k = 2, self%kmax_bot
+               do ivar = 1, state%n_fabm_bottom_state
+                  call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k, ivar))
+               end do
+               self%bottom_index(1) = k
+               call self%fabm_model%check_bottom_state(fabm_cfg%repair_fabm, self%valid_bt)
+            end do
+            ! Reset Bottom to 1
+            do ivar = 1, state%n_fabm_bottom_state
+               call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
+            end do
+            self%bottom_index(1) = 1
+         end if
+
+         ! 2c. Surface state variables
+         call self%fabm_model%check_surface_state(fabm_cfg%repair_fabm, self%valid_sf)
+         ! Error if out of bounds and not repaired
+         if (.not. (self%valid_int .and. self%valid_bt .and. self%valid_sf)) then
+            if (fabm_cfg%repair_fabm) then
+               call warn("FABM Variable repaired")
+            else
+               call error("FABM Variable out of bounds")
+            end if
          end if
       end if
 
-      ! 2. Prepare all fields (e.g. light attenuation) FABM needs to compute source terms (e.g. light)
+      ! 1. Prepare all fields (e.g. light attenuation) FABM needs to compute fluxes and source terms
       ! Operates on entire active spatial domain
       call self%fabm_model%prepare_inputs()
 
-      ! 3. Retrieve sources [var_unit s-1] and fluxes [var_unit m s-1] across entire domain
-      ! Order of call and of processing grid points is up to host
+      ! 2. Retrieve sources, fluxes and vertical velocities
       ! >0: flux into water
       ! <0: flux out of water
-
-      ! 3a. Retrieve interior tracer source terms
-      ! FABM increments rather than sets argument sms_int: initialize with 0 before
-      self%sms_int = 0.0_RK
-      call self%fabm_model%get_interior_sources(1, grid%nz_grid, self%sms_int)
-      if (allocated(self%sms_int)) then
+      
+      ! 2a. Initialize with 0 and then retrieve interior tracer source terms
+      ! FABM increments rather than sets argument sms_int: initialize with 0 at every time step
+      if (state%n_fabm_interior_state > 0) then
+         self%sms_int = 0.0
+         call self%fabm_model%get_interior_sources(1, grid%nz_grid, self%sms_int)
+         ! Set NaNs to 0
          if (any(ieee_is_nan(self%sms_int))) then
             call warn("FABM Interior Source contains NaNs, set to 0")
             where (ieee_is_nan(self%sms_int))
@@ -403,131 +457,112 @@ contains
          end if
       end if
 
-      ! 3b. Retrieve fluxes over pelagic-benthic interface and bottom tracer source terms
-      ! FABM increments rather than sets argument flux_bt, sms_bt: initialize with 0 before
-      self%flux_bt = 0.0_RK
-      self%sms_bt = 0.0_RK
-      call self%fabm_model%get_bottom_sources(self%flux_bt(1, :), self%sms_bt(1, :))
-      if (fabm_cfg%bottom_everywhere) then
-         ! If bottom_everywhere is set, at every depth:
-         ! FABM is pointed to location that holds state data for the current depth
-         ! The bottom (the location of the pelagic-benthic interface) is moved to the current depth
-         ! The fluxes and sources at the current depth are calculated
-         do k = 2, self%kmax_bot
-            do ivar = 1, state%n_fabm_bottom_state
-               call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k, ivar))
+      ! 2b. Initialize with 0 and then retrieve fluxes over pelagic-benthic interface and bottom tracer source terms
+      ! FABM increments rather than sets argument flux_bt, sms_bt: initialize with 0 at every time step
+      if (state%n_fabm_interior_state > 0 .or. state%n_fabm_bottom_state > 0) then
+         if (state%n_fabm_interior_state > 0) self%flux_bt = 0.0
+         if (state%n_fabm_bottom_state > 0) self%sms_bt = 0.0
+         call self%fabm_model%get_bottom_sources(self%flux_bt(1, :), self%sms_bt(1, :))
+         if (fabm_cfg%bottom_everywhere) then
+            ! If bottom_everywhere is set, at every depth:
+            ! FABM is pointed to location that holds state data for the current depth
+            ! The bottom (the location of the pelagic-benthic interface) is moved to the current depth
+            ! The fluxes and sources at the current depth are calculated
+            do k = 2, self%kmax_bot
+               do ivar = 1, state%n_fabm_bottom_state
+                  call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k, ivar))
+               end do
+               self%bottom_index(1) = k
+               call self%fabm_model%get_bottom_sources(self%flux_bt(k, :), self%sms_bt(k, :))
             end do
-            self%bottom_index(1) = k
-            call self%fabm_model%get_bottom_sources(self%flux_bt(k, :), self%sms_bt(k, :))
-         end do
-         ! Reset Botom to 1
-         do ivar = 1, state%n_fabm_bottom_state
-            call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
-         end do
-         self%bottom_index(1) = 1
-      end if
-      if (allocated(self%flux_bt)) then
-         if (any(ieee_is_nan(self%flux_bt))) then
-            call warn("FABM Bottom Flux contains NaN, set to 0")
-            where (ieee_is_nan(self%flux_bt))
-               self%flux_bt = 0.0
-            end where
+            ! Reset Botom to 1
+            do ivar = 1, state%n_fabm_bottom_state
+               call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
+            end do
+            self%bottom_index(1) = 1
          end if
-      end if
-      if (allocated(self%sms_bt)) then
-         if (any(ieee_is_nan(self%sms_bt))) then
-            call warn("FABM Bottom Source contains NaN, set to 0")
-            where (ieee_is_nan(self%sms_bt))
-               self%sms_bt = 0.0
-            end where
+         ! Set NaNs to 0
+         if (state%n_fabm_interior_state > 0) then
+            if (any(ieee_is_nan(self%flux_bt))) then
+               call warn("FABM Bottom Flux contains NaN, set to 0")
+               where (ieee_is_nan(self%flux_bt))
+                  self%flux_bt = 0.0
+               end where
+            end if
          end if
-      end if
-
-      ! 3c. Retrieve fluxes over air-water surface and surface tracer source terms
-      ! FABM increments rather than sets argument flux_sf, sms_sf: initialize with 0 before
-      self%flux_sf = 0.0_RK
-      self%sms_sf = 0.0_RK
-      call self%fabm_model%get_surface_sources(self%flux_sf, self%sms_sf)
-      if (allocated(self%flux_sf)) then
-         if (any(ieee_is_nan(self%flux_sf))) then
-            call warn("FABM Surface Flux contains NaN, set to 0")
-            where (ieee_is_nan(self%flux_sf))
-               self%flux_sf = 0.0
-            end where
-         end if
-      end if
-      if (allocated(self%sms_sf)) then
-         if (any(ieee_is_nan(self%sms_sf))) then
-            call warn("FABM Surface Source contains NaN, set to 0")
-            where (ieee_is_nan(self%sms_sf))
-               self%sms_sf = 0.0
-            end where
+         if (state%n_fabm_bottom_state > 0) then
+            if (any(ieee_is_nan(self%sms_bt))) then
+               call warn("FABM Bottom Source contains NaN, set to 0")
+               where (ieee_is_nan(self%sms_bt))
+                  self%sms_bt = 0.0
+               end where
+            end if
          end if
       end if
 
-      ! 4. Retrieve local vertical velocities of pelagic state variables [m s-1]
-      ! Movement through water, independent of water flow
+      ! 2c. Initialize with 0 and then retrieve fluxes over air-water surface and surface tracer source terms
+      ! FABM increments rather than sets argument flux_sf, sms_sf: initialize with 0 at every time step
+      if (state%n_fabm_interior_state > 0 .or. state%n_fabm_surface_state > 0) then
+         if (state%n_fabm_interior_state > 0) self%flux_sf = 0.0
+         if (state%n_fabm_surface_state > 0) self%sms_sf = 0.0
+         call self%fabm_model%get_surface_sources(self%flux_sf, self%sms_sf)
+         ! Set NaNs to 0
+         if (state%n_fabm_interior_state > 0) then
+            if (any(ieee_is_nan(self%flux_sf))) then
+               call warn("FABM Surface Flux contains NaN, set to 0")
+               where (ieee_is_nan(self%flux_sf))
+                  self%flux_sf = 0.0
+               end where
+            end if
+         end if
+         if (state%n_fabm_surface_state > 0) then
+            if (any(ieee_is_nan(self%sms_sf))) then
+               call warn("FABM Surface Source contains NaN, set to 0")
+               where (ieee_is_nan(self%sms_sf))
+                  self%sms_sf = 0.0
+               end where
+            end if
+         end if
+      end if
+
+      ! 3. Initialize with 0 and retrieve local vertical velocities of pelagic state variables
       ! >0: upward movement (floating, active movement)
-      ! <0: downward ovement (sinking, sedimentation, active movement)
-      call self%fabm_model%get_vertical_movement(1, grid%nz_grid, self%velocity)
-      if (allocated(self%velocity)) then
+      ! <0: downward movement (sinking, sedimentation, active movement)
+      if (state%n_fabm_interior_state > 0) then
+         if (first_call_local) self%velocity = 0.0
+         call self%fabm_model%get_vertical_movement(1, grid%nz_grid, self%velocity)
+         ! Set NaNs to 0
          if (any(ieee_is_nan(self%velocity))) then
-            ! call warn("FABM Interior Velocity contains NaN, set to 0")
+            call warn("FABM Interior Velocity contains NaN, set to 0")
             where (ieee_is_nan(self%velocity))
                self%velocity = 0.0
             end where
          end if
       end if
 
-      ! 5. Compute any remaining diagnostics not computed by preceding routines
+      ! 4. Compute any remaining diagnostics not computed by preceding routines
       ! Operates on entire active spatial domain
       call self%fabm_model%finalize_outputs()
 
-      ! This would be the ideal moment for the output: 
-      ! All variables (enviromental, state, mask, diagnostics, source, fluxes, vertical velocities) are in sync.
-      ! -> Simstrat does output after update_fabm is done: the state variables are one step further (does not matter if only those are output)
-
-      ! Time-integrate the advection-diffusion-reaction equations (method up to host)
-      ! of all tracers, combining the Simstrat transport terms with the FABM biogeochemical source
-      ! terms and fluxes (sms, flux) and vertical velocities (velocity). This results in an updated interior_state.
-      do ivar = 1, state%n_fabm_interior_state
-         call diffusion_FABM_interior_state(self, state, fabm_cfg, grid, ivar)
-      end do
-
-      ! Direct time integration of source terms to update bottom_state and surface_state inside FABM bounds
-      ! -> maybe some variables could be lower than 0: adapt max()
-      do ivar = 1, state%n_fabm_bottom_state
-         do k = 1, self%kmax_bot
-            if (state%fabm_bottom_state(k, ivar) + state%dt * self%sms_bt(k, ivar) < max(0.0_RK, self%fabm_model%bottom_state_variables(ivar)%minimum)) then
-               ! state%fabm_bottom_state(ivar) = max(0.0_RK, self%fabm_model%bottom_state_variables(ivar)%minimum)
-               state%fabm_bottom_state(k, ivar) = state%fabm_bottom_state(k, ivar) + state%dt * self%sms_bt(k, ivar)
-               print *, 'FABM Variable value is ', state%fabm_bottom_state(k, ivar)
-               print *, 'at z = ', k
-               print *, 'at time (days, seconds) = ', state%simulation_time
-               call error('FABM Variable '//self%fabm_model%bottom_state_variables(ivar)%name//' below zero.')
-            else if (state%fabm_bottom_state(k, ivar) + state%dt * self%sms_bt(k, ivar) > self%fabm_model%bottom_state_variables(ivar)%maximum) then
-               state%fabm_bottom_state(k, ivar) = self%fabm_model%bottom_state_variables(ivar)%maximum
-            else
-               state%fabm_bottom_state(k, ivar) = state%fabm_bottom_state(k, ivar) + state%dt * self%sms_bt(k, ivar)
-            end if
+      ! 5. Save diagnostic variables
+      if (fabm_cfg%output_diagnostic_variables) then
+         do ivar = 1, state%n_fabm_diagnostic_interior
+            index = self%diagnostic_index(ivar)
+            state%fabm_diagnostic_interior(:, ivar) = self%fabm_model%get_interior_diagnostic_data(index)
          end do
-      end do
-      do ivar = 1, state%n_fabm_surface_state
-         if (state%fabm_surface_state(ivar) + state%dt * self%sms_sf(ivar) < max(0.0_RK, self%fabm_model%surface_state_variables(ivar)%minimum)) then
-            ! state%fabm_surface_state(ivar) = max(0.0_RK, self%fabm_model%surface_state_variables(ivar)%minimum)
-            state%fabm_surface_state(ivar) = state%fabm_surface_state(ivar) + state%dt * self%sms_sf(ivar)
-            print *, 'FABM Variable value is ', state%fabm_surface_state(ivar)
-            print *, 'at time (days, seconds) = ', state%simulation_time
-            call error('FABM Variable '//self%fabm_model%surface_state_variables(ivar)%name//' below zero.')
-         else if (state%fabm_surface_state(ivar) + state%dt * self%sms_sf(ivar) > self%fabm_model%surface_state_variables(ivar)%maximum) then
-            state%fabm_surface_state(ivar) = self%fabm_model%surface_state_variables(ivar)%maximum
-         else
-            state%fabm_surface_state(ivar) = state%fabm_surface_state(ivar) + state%dt * self%sms_sf(ivar)
-         end if
-      end do
+         do ivar = 1, state%n_fabm_diagnostic_horizontal
+            index = self%diagnostic_index(state%n_fabm_diagnostic_interior + ivar)
+            state%fabm_diagnostic_horizontal(ivar) = self%fabm_model%get_horizontal_diagnostic_data(index)
+         end do
+      end if      
+      
+      ! 6. Retrieve attenuation coefficient after state variables have been calculated once
+      if (fabm_cfg%bioshade_feedback .and. (.not. first_call_local)) then
+         call absorption_update_fabm(self, state, grid)
+      end if
 
-      ! Assign local alias back to self
-      !self%fabm_model => fabm_model
+      ! This is the ideal moment for the output: 
+      ! All variables (enviromental, state, diagnostics, source, fluxes, vertical velocities) are in sync
    end subroutine update
 
    ! Diffusion algorithm for interior state variables: Simstrat transport terms and FABM biogeochemical terms integrated simultaneously
@@ -542,13 +577,13 @@ contains
 
       ! Local variables
       real(RK), dimension(grid%nz_occupied) :: velocity_up, velocity_down, sources, lower_diag_diff, main_diag_diff, upper_diag_diff, lower_diag, main_diag, upper_diag, rhs, AreaFactor_ext_1, AreaFactor_ext_2
-      integer :: j
+      integer :: k
 
       ! Create linear system of equations with transport and source terms
       ! A*phi^{n+1} = phi^{n}+dt*S^{n}
 
       ! Build diagonals of A with Simstrat transport terms (code from discretization module)
-      ! With diffusivity for temperature nuh
+      ! With diffusivity for temperature (nuh)
       ! Upward flux from (1:grid%nz_occupied - 1) to (2:grid%nz_occupied): upper_diag(z) describes the upward flux into cell z
       upper_diag_diff(2:grid%nz_occupied) = state%dt*state%nuh(2:grid%nz_occupied)*grid%AreaFactor_1(2:grid%nz_occupied)
       upper_diag_diff(1) = 0.0_RK ! No upward flux into bottommost cell
@@ -570,13 +605,13 @@ contains
       ! Upward and downward movement rates for each layer
       ! if the variable moves upward velocity_up is positive and velocity_down zero
       ! vice versa if the variable moves downward
-      do j = 1, grid%nz_occupied
-         if (self%velocity(j, ivar) >= 0) then
-            velocity_up(j) = self%velocity(j, ivar)
-            velocity_down(j) = 0
+      do k = 1, grid%nz_occupied
+         if (self%velocity(k, ivar) >= 0) then
+            velocity_up(k) = self%velocity(k, ivar)
+            velocity_down(k) = 0
          else
-            velocity_up(j) = 0
-            velocity_down(j) = -self%velocity(j, ivar)
+            velocity_up(k) = 0
+            velocity_down(k) = -self%velocity(k, ivar)
          end if
       end do
       ! Add upward flux from (1:grid%nz_occupied-1) to (2:grid%nz_occupied): upper_diag(z) describes the upward flux into cell z
@@ -617,46 +652,102 @@ contains
 
       ! Solve LES to get phi^{n+1}
       call solve_tridiag_thomas(lower_diag, main_diag, upper_diag, rhs, state%fabm_interior_state(1:grid%nz_occupied, ivar), grid%nz_occupied)
+   end subroutine diffusion_fabm_interior_state
 
-      if (any(state%fabm_interior_state(1: grid%nz_occupied, ivar) < max(0.0_RK, self%fabm_model%interior_state_variables(ivar)%minimum))) then
-         do j = 1, size(state%fabm_interior_state(1:grid%nz_occupied, ivar))
-            if (state%fabm_interior_state(j, ivar) < max(0.0_RK, self%fabm_model%interior_state_variables(ivar)%minimum)) then
-               print *, 'FABM Variable value is ', state%fabm_interior_state(j, ivar)
-               print *, 'at grid point ', j
-               print *, 'at time (days, seconds) = ', state%simulation_time
-               print *, 'velocity = ', self%velocity(max(j-1, 1) : min(j+1, grid%nz_occupied) , ivar)
-               print *, 'source = ', sources(j)
-               print *, 'dt = ', state%dt
-               print *, 'nuh = ', state%nuh(max(j-1, 1) :  min(j+1, grid%nz_occupied))
-               print *, 'AreaFactor_ext_1 = ', AreaFactor_ext_1(max(j-1, 1) :  min(j+1, grid%nz_occupied))
-               print *, 'AreaFactor_ext_2 = ', AreaFactor_ext_2(max(j-1, 1) :  min(j+1, grid%nz_occupied))
-               print *, 'AreaFactor_1 = ', grid%AreaFactor_1(max(j-1, 1) :  min(j+1, grid%nz_occupied))
-               print *, 'AreaFactor_2 = ', grid%AreaFactor_2(max(j-1, 1) :  min(j+1, grid%nz_occupied))
-               print *, 'upper diag diff = ', upper_diag_diff(max(j-1, 1) :  min(j+1, grid%nz_occupied))
-               print *, 'main diag diff = ', main_diag_diff(max(j-1, 1) :  min(j+1, grid%nz_occupied))
-               print *, 'lower diag diff = ', lower_diag_diff(max(j-1, 1) :  min(j+1, grid%nz_occupied))
-               print *, 'matrix row sum diff = ', upper_diag_diff(max(j-1, 1) :  min(j+1, grid%nz_occupied)) + main_diag_diff(max(j-1, 1) :  min(j+1, grid%nz_occupied)) + lower_diag_diff(max(j-1, 1) :  min(j+1, grid%nz_occupied)) 
-               print *, 'upper diag = ', upper_diag(max(j-1, 1) :  min(j+1, grid%nz_occupied))
-               print *, 'main diag = ', main_diag(max(j-1, 1) :  min(j+1, grid%nz_occupied))
-               print *, 'lower diag = ', lower_diag(max(j-1, 1) :  min(j+1, grid%nz_occupied))
-               print *, 'matrix row sum = ', upper_diag(max(j-1, 1) :  min(j+1, grid%nz_occupied)) + main_diag(max(j-1, 1) :  min(j+1, grid%nz_occupied)) + lower_diag(max(j-1, 1) :  min(j+1, grid%nz_occupied))  
-               ! matrix row sum should be <= 1
-               if (fabm_cfg%bottom_everywhere .or. j == 1) print *, 'flux_bt = ', self%flux_bt(j, ivar)
-               print *, "h = ", grid%h(j)
-               print *, 'flux_sf = ', (self%flux_sf(ivar) / grid%h(grid%nz_occupied))
-               print *, 'sources = ', sources(max(j-1, 1) :  min(j+1, grid%nz_occupied))
-               print *, 'rhs = ', rhs(max(j-1, 1) :  min(j+1, grid%nz_occupied))
+   ! Read names of diagnostic Vars in SetDiagnosticVars file
+   subroutine set_fabm_diagnostic_vars(self, state, fabm_cfg)
+      ! Arguments
+      class(SimstratFABM), intent(inout) :: self
+      class(ModelState), intent(inout) :: state
+      class(FABMConfig), intent(in) :: fabm_cfg
+
+      integer :: i, j, n, n_int, n_hor, unit, status
+      character(len=100) :: line
+      integer, parameter :: max_lines = 100
+      character(len=80), dimension(max_lines) :: temp_names
+      integer, dimension(max_lines) :: temp_index
+      logical, dimension(max_lines) :: is_int
+
+      open(newunit=unit, action='read', status='old', file=fabm_cfg%set_diag_vars, iostat = status)
+
+      if (status .ne. 0) then
+         call warn("No Output of FABM Diagnostic Variables")
+      else
+         write(6,*) 'Reading ', fabm_cfg%set_diag_vars
+      end if
+
+      n = 0
+      n_int = 0
+      n_hor = 0
+      do
+         read(unit, '(A)', iostat=status) line
+         if (status .ne. 0) exit
+         n = n + 1
+         if (n > max_lines) then
+            call error('Too many lines in '//fabm_cfg%set_diag_vars//', increase max_lines in set_fabm_diagnostic_vars')
+         end if
+         ! Trim line and assign to temp_names, cut to length 48
+         temp_names(n) = adjustl(trim(line))
+         do j = 1, size(self%fabm_model%interior_diagnostic_variables)
+            if (self%fabm_model%interior_diagnostic_variables(j)%name == temp_names(n)) then
+               self%fabm_model%interior_diagnostic_variables(j)%save = .true.
+               temp_index(n) = j
+               is_int(n) = .true.
+               n_int = n_int + 1
             end if
          end do
-         call error('FABM Variable '//self%fabm_model%interior_state_variables(ivar)%name//' below zero.')
-      end if
-      
-      ! Ensure that variable stays inside bounds
-      ! -> maybe some variables could be lower than 0: adapt max()
-      !where (state%fabm_interior_state(1:grid%nz_occupied, ivar) > self%fabm_model%interior_state_variables(ivar)%maximum)
-      !   state%fabm_interior_state(1:grid%nz_occupied, ivar) = self%fabm_model%interior_state_variables(ivar)%maximum
-      !end where
-   end subroutine diffusion_fabm_interior_state
+         do j = 1, size(self%fabm_model%horizontal_diagnostic_variables)
+            if (self%fabm_model%horizontal_diagnostic_variables(j)%name == temp_names(n)) then
+               self%fabm_model%horizontal_diagnostic_variables(j)%save = .true.
+               temp_index(n) = j
+               is_int(n) = .false.
+               n_hor = n_hor + 1
+            end if
+         end do
+      end do
+
+      state%n_fabm_diagnostic = n
+      state%n_fabm_diagnostic_interior = n_int
+      state%n_fabm_diagnostic_horizontal = n_hor
+
+      ! Allocate array of proper size
+      allocate(state%fabm_diagnostic_names(n))
+      allocate(self%diagnostic_index(n))
+
+      ! Copy names to array
+      j = 1
+      do i = 1, n
+         if (is_int(i)) then
+            state%fabm_diagnostic_names(j) = temp_names(i)
+            self%diagnostic_index(j) = temp_index(i)
+            j = j + 1
+         end if
+      end do
+      do i = 1, n
+         if (.not. is_int(i)) then
+            state%fabm_diagnostic_names(j) = temp_names(i)
+            self%diagnostic_index(j) = temp_index(i)
+         end if
+      end do
+   end subroutine set_fabm_diagnostic_vars
+
+   ! Light absorption feedback by FABM variables
+   subroutine absorption_update_fabm(self, state, grid)
+      ! Arguments
+      class(SimstratFABM) :: self
+      class(ModelState) :: state
+      class(StaggeredGrid) :: grid
+
+      ! Local variables
+      real(RK), dimension(grid%nz_grid) :: attenuation_coefficient_of_photosynthetic_radiative_flux
+
+      ! Retrieve attenuation_coefficient_of_photosynthetic_radiative_flux and set as absorb_vol
+      attenuation_coefficient_of_photosynthetic_radiative_flux = self%fabm_model%get_interior_diagnostic_data(self%att_index)
+      state%absorb_vol(1 : grid%nz_occupied) = attenuation_coefficient_of_photosynthetic_radiative_flux(1 : grid%nz_occupied)
+
+      ! Interpolate to faces to be compatible with Simstrat temperature module
+      call grid%interpolate_to_face(grid%z_volume, state%absorb_vol, grid%nz_occupied, state%absorb)
+   end subroutine absorption_update_fabm
 
    ! Deallocate memory
    subroutine deallocate_fabm(self)
@@ -673,56 +764,7 @@ contains
       if (allocated(self%sms_sf)) deallocate(self%sms_sf)
       if (allocated(self%velocity)) deallocate(self%velocity)
       if (associated(self%bottom_index)) deallocate(self%bottom_index)
+      if (allocated(self%diagnostic_index)) deallocate(self%diagnostic_index)
    end subroutine deallocate_fabm
-
-   ! Process feedbacks from bgc to physics (absorption, albedo, wind drag changes, ...)
-
-   ! -> Light absorption feedback by FAMB variables
-   ! subroutine absorption_update_fabmS(self, state)
-
-      ! ! Arguments
-      ! class(SimstratFABM) :: self
-      ! class(ModelState) :: state
-
-      ! ! Local variables
-      ! integer :: i
-      ! real(RK) :: bio_extinction
-
-      ! do i=self%grid%nz_occupied, 1, -1
-      !    bio_extinction = 0.0_RK
-      !    call fabm_light_extinction(self%column, i, bio_extinction) : change for fabm
-      !    state%absorb_vol(i) = self%fabm_cfg%background_extinction + bio_extinction
-
-      ! end do
-      ! ! Interpolate to faces to be compatible with Simstrat temperature module
-      ! call self%grid%interpolate_to_face(self%grid%z_volume, state%absorb_vol, self%grid%nz_occupied, state%absorb)
-
-   ! end subroutine
-
-   ! -> Calculate photosynthetically active radiation (PAR) and short wave
-   ! radiation (SWR) over entire column, using surface short wave radiation,
-   ! and background and biotic extinction.
-   !     GOTM: Copyright by the GOTM-team under the GNU Public License - www.gnu.org
-   !     Original author(s): Jorn Bruggeman (rem.: for every subroutine)
-   ! subroutine light(nlev)
-      ! !INPUT PARAMETERS:
-      ! integer, intent(in) :: nlev
-      ! !LOCAL VARIABLES:
-      ! integer :: i
-      ! real(RK) :: bioext
-      ! real(RK) :: localexts(1:nlev)
-      ! bioext = 0
-      ! call fabm_get_light_extinction(model,1,nlev,localexts(1:nlev))
-      ! do i=nlev,1,-1
-      !    ! Add the extinction of the first half of the grid box.
-      !    bioext = bioext+localexts(i)*curh(i)/2
-      !    ! Calculate photosynthetically active radiation (PAR), shortwave radiation, and PAR attenuation.
-      !    par(i) = I_0*(1-A)*exp(-z(i)/g2-bioext)
-      !    swr(i) = par(i)+I_0*A*exp(-z(i)/g1)
-      !    k_par(i) = 1/g2+localexts(i)
-      !    ! Add the extinction of the second half of the grid box.
-      !    bioext = bioext+localexts(i)*curh(i)/2
-      ! end do
-   ! end subroutine light
 
 end module simstrat_fabm

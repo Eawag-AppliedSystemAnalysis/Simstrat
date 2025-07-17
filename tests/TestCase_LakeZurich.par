@@ -36,13 +36,13 @@
     "SnowModel"               : 1
   },
   "FABMConfig" : {
-    "PathFABMinflow"          : "TestCase_LakeZurich/FABM_inflow/",
     "FABMConfigFile"          : "FABMConfigurations/selmaprotbas.yaml",
-    "BioshadeFeedback"        : 0,
-    "BackgroundExtinction"    : 0.2,
-    "OutputDiagnosticVars"    : false,
+    "PathFABMinflow"          : "TestCase_LakeZurich/FABM_inflow/",
+    "SetDiagnosticVars"       : "TestCase_LakeZurich/SetFABMDiagnosticVars.dat",
+    "OutputDiagnosticVars"    : true,
     "RepairFABMStates"        : true,
-    "BottomEverywhere"        : true
+    "BottomEverywhere"        : true,
+    "BioshadeFeedback"        : true
   },
   "Simulation" : {
     "Timestep s"                  : 300,

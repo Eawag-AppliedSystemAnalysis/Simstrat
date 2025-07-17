@@ -159,16 +159,6 @@ contains
          allocate(self%Q_end_bound(state%n_fabm_surface_state))
          allocate(self%Q_end_bound_con(state%n_fabm_surface_state))
       end if
-
-      ! -> Get location of pH in FABM array
-      ! if (self%couple_fabm) then
-      !    do i = 1, state%n_fabm_state
-      !       select case(trim(state%fabm_state_names(i)))
-      !       case('CAR_pH')
-      !          state%n_pH = i
-      !       end select
-      !    end do
-      ! end if
    end subroutine
 
    subroutine lateral_generic_save(self)
@@ -421,7 +411,6 @@ contains
                   
                   if (status .ne. 0) then
                      if (i > n_simstrat) then
-                        ! -> Not all FABM files defined yet
                         goto 9
                      else
                         call error('File '//fname//' not found.')
@@ -531,20 +520,6 @@ contains
             Q_inp(i,ubnd_vol + 1) = 0
          end do
 
-         ! -> Only if biochemistry enabled: Transform pH to [H] for physical mixing processes
-         ! if (self%couple_fabm .and.state%n_pH > 0) then
-         !    ! current pH profile
-         !    state%fabm_state(:,state%n_pH) = 10.**(-state%fabm_state(:,state%n_pH))
-         !    do i=1,ubnd_vol
-         !       if (Q_inp(n_simstrat + state%n_pH,i) > 0) then
-         !          ! Surface inflows: pH is given as pH*m2/s, so before transforming to [H], we need to get rid of the m2/s temporarily
-         !          Q_inp(n_simstrat + state%n_pH,i) = Q_inp(n_simstrat + state%n_pH,i)/Q_inp(1,i)
-         !          Q_inp(n_simstrat + state%n_pH,i) = 10.**(-Q_inp(n_simstrat + state%n_pH,i))
-         !          Q_inp(n_simstrat + state%n_pH,i) = Q_inp(n_simstrat + state%n_pH,i)*Q_inp(1,i)
-         !       end if
-         !    end do
-         ! end if
-
          ! Plunging algorithm
          do j = 1,self%nval_deep(1)  ! nval_deep needs to be the same for all i
             if (Inp(1,j) > 1E-15) then
@@ -561,9 +536,7 @@ contains
                ! Only if biochemistry enabled
                if (self%couple_fabm) then
                   ! Get initial FABM values for the plunging inflow (before entrainment of ambient water)
-                  fabm_in_interior = Inp(n_simstrat + 1 : self%n_vars, j) !Inflow [var_unit]
-                  ! -> Transform pH to [H] for physical mixing processes
-                  ! if (state%n_pH > 0) fabm_in(state%n_pH) = 10.**(-fabm_in(state%n_pH))
+                  fabm_in_interior = Inp(n_simstrat + 1 : self%n_vars, j) ! Inflow [var_unit]
                end if
 
                ! Compute density as a function of T and S
@@ -791,7 +764,6 @@ contains
                   
                   if (status .ne. 0) then
                      if (i > n_simstrat) then
-                        ! -> Not all FABM files defined yet
                         goto 9
                      else
                         call error('File '//fname//' not found.')
@@ -879,20 +851,6 @@ contains
             end do
             Q_inp(i,ubnd_vol + 1) = 0
          end do
-
-         ! -> Only if biochemistry enabled: Transform pH to [H] for physical mixing processes
-         ! if (self%couple_fabm .and. state%n_pH > 0) then
-         !    ! current pH profile
-         !    state%fabm_state(:,state%n_pH) = 10.**(-state%fabm_state(:,state%n_pH))
-         !    do i=1,ubnd_vol
-         !       if (Q_inp(n_simstrat + state%n_pH,i) > 0) then
-         !          ! Surface inflows: pH is given as pH*m2/s, so before transforming to [H], we need to get rid of the m2/s temporarily
-         !          Q_inp(n_simstrat + state%n_pH,i) = Q_inp(n_simstrat + state%n_pH,i)/Q_inp(1,i)
-         !          Q_inp(n_simstrat + state%n_pH,i) = 10.**(-Q_inp(n_simstrat + state%n_pH,i))
-         !          Q_inp(n_simstrat + state%n_pH,i) = Q_inp(n_simstrat + state%n_pH,i)*Q_inp(1,i)
-         !       end if
-         !    end do
-         ! end if
 
       end associate
    end subroutine
