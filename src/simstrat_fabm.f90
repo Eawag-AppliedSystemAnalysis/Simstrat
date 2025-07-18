@@ -67,26 +67,24 @@ module simstrat_fabm
       integer, dimension(:), allocatable :: diagnostic_index ! Index of FABM diagnostic variables
    contains
       procedure, pass(self), public :: init
+      procedure, pass(self), public :: list_diagnostic
       procedure, pass(self), public :: update
    end type SimstratFABM
 
 contains
 
-   ! Initialize: called once in within the initialization of Simstrat
+   ! Initialize: called once within the initialization of Simstrat
    ! Sets up memory, reads FABM configuration from fabm_cfg_file, links the external Simstrat variables and sets the initial conditions of FABM variables
-   subroutine init(self, state, fabm_cfg, grid)
+   subroutine init(self, state, fabm_cfg, sim_cfg, grid)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       class(ModelState) :: state
       class(FABMConfig) :: fabm_cfg
+      class(SimConfig) :: sim_cfg
       class(StaggeredGrid) :: grid
-      !class(type_fabm_model), pointer :: fabm_model
 
       ! Local variables
       integer :: ivar, k
-
-      ! Create an alias of the model
-      !fabm_model => self%fabm_model
 
       ! make sure everything is deallocated
       call deallocate_fabm(self)
@@ -102,7 +100,6 @@ contains
 
       ! Provide extents of the spatial domain (number of layers nz for a 1D column)
       ! Used to allocate memory for FABM-managed spatially explicit fields
-      ! Because the entire extent is given some layers might be calculated that are not physical, be aware of that in the output
       call self%fabm_model%set_domain(grid%nz_grid)
 
       ! Allocate bottom index with one value and link FABM to it
@@ -111,7 +108,7 @@ contains
       self%bottom_index(1) = 1
       call self%fabm_model%set_bottom_index(self%bottom_index(1))
 
-      ! Set kmax_bot to nz_grid if bottom_everywhere is true
+      ! Set kmax_bot to nz_grid if bottom_everywhere is true, 1 else
       self%kmax_bot = 1
       if (fabm_cfg%bottom_everywhere) self%kmax_bot = grid%nz_grid
 
@@ -165,18 +162,17 @@ contains
       end if
       
       ! Allocate interior tracer source terms [var_unit s-1]
-      ! FABM increments rather than sets argument sms_int: initialize with 0 at every time step
       if (state%n_fabm_interior_state > 0) then
          allocate(self%sms_int(grid%nz_grid, state%n_fabm_interior_state))
       end if
 
-      ! Allocate  fluxes over pelagic-benthic interface [var_unit m s-1] and bottom tracer source terms [var_unit s-1]
+      ! Allocate fluxes over pelagic-benthic interface [var_unit m s-1] and bottom tracer source terms [var_unit s-1]
       if (state%n_fabm_interior_state > 0 .or. state%n_fabm_bottom_state > 0) then
          allocate(self%flux_bt(self%kmax_bot, state%n_fabm_interior_state))
          allocate(self%sms_bt(self%kmax_bot, state%n_fabm_bottom_state))
       end if
 
-      ! Allocate retrieve fluxes over air-water surface [var_unit m s-1] and surface tracer source terms [var_unit s-1]
+      ! Allocate fluxes over air-water surface [var_unit m s-1] and surface tracer source terms [var_unit s-1]
       if (state%n_fabm_interior_state > 0 .or. state%n_fabm_surface_state > 0) then
          allocate(self%flux_sf(state%n_fabm_interior_state))
          allocate(self%sms_sf(state%n_fabm_surface_state))
@@ -187,13 +183,6 @@ contains
       if (state%n_fabm_interior_state > 0) then
          allocate(self%velocity(grid%nz_grid, state%n_fabm_interior_state))
       end if
-
-      ! Get id for standard variable <variable>: if memory location of <variable> changes send updated pointers
-      !type(type_fabm_interior_variable_id) :: id_var
-      !id_var = fabm_model%get_interior_variable_id(fabm_standard_variables%variable)
-      !call fabm_model%link_varkind(id_var, var)
-      ! Determine whether a particular variable is needed by the bgc models in FABM
-      !call fabm_model%varibale_needs_values(fabm_standard_variables%variable)
 
       ! Point FABM to fields that contain values for environmental data, all variables are assumed to be allocated
       ! Do this for all variables on FABM's standard variable list that the model can provide
@@ -271,6 +260,7 @@ contains
       ! Number of days since start of the year [days], provided in GOTM, could be calculated in Simstrat but only if albedo is calculated
       !call self%fabm_model%link_horizontal_data(fabm_standard_variables%number_of_days_since_start_of_the_year)
       
+      ! Get index of attenuation coefficient FABM diagnostic variable
       if (fabm_cfg%bioshade_feedback) then
          do ivar = 1, size(self%fabm_model%interior_diagnostic_variables)
             if (self%fabm_model%interior_diagnostic_variables(ivar)%name == 'attenuation_coefficient_of_photosynthetic_radiative_flux') then
@@ -280,13 +270,12 @@ contains
          end do
       end if
 
+      ! Allocate arrays for diagnostic variables in SetDiagnosticVars and retrieve their index in the list of all interior and horizontal diagnostic variables
       if (fabm_cfg%output_diagnostic_variables) then
          call set_fabm_diagnostic_vars(self, state, fabm_cfg)
-
          if (state%n_fabm_diagnostic_interior > 0) then
             allocate(state%fabm_diagnostic_interior(grid%nz_grid, state%n_fabm_diagnostic_interior))
          end if
-
          if (state%n_fabm_diagnostic_horizontal > 0) then
             allocate(state%fabm_diagnostic_horizontal(state%n_fabm_diagnostic_horizontal))
          end if
@@ -301,31 +290,33 @@ contains
       ! Set FABM-provided initial values for state variables (tracers), typically space-independent.
       ! This sets the values of arrays sent to fabm_model%link_*_state_data,
       ! in this case those contained in *_state
-      ! -> If model not initialized with custom or previously stored state (needs to be added as argument)
-      ! Interior state variables
-      call self%fabm_model%initialize_interior_state(1, grid%nz_grid)
-      ! Bottom state variables
-      call self%fabm_model%initialize_bottom_state()
-      ! If bottom_everywhere is set, at every depth:
-      ! FABM is pointed to location that holds state data for the current depth
-      ! The bottom (the location of the pelagic-benthic interface) is moved to the current depth
-      ! The bottom state at the current depth is initialized
-      if (fabm_cfg%bottom_everywhere) then
-         do k = 2, self%kmax_bot
-            do ivar = 1, state%n_fabm_bottom_state
-               call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k, ivar))
+      ! If model is not initialized with custom or previously stored state
+      if (.not. sim_cfg%continue_from_snapshot) then
+         ! Interior state variables
+         call self%fabm_model%initialize_interior_state(1, grid%nz_grid)
+         ! Bottom state variables
+         call self%fabm_model%initialize_bottom_state()
+         ! If bottom_everywhere is set, at every depth:
+         ! FABM is pointed to location that holds state data for the current depth
+         ! The bottom (the location of the pelagic-benthic interface) is moved to the current depth
+         ! The bottom state at the current depth is initialized
+         if (fabm_cfg%bottom_everywhere) then
+            do k = 2, self%kmax_bot
+               do ivar = 1, state%n_fabm_bottom_state
+                  call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k, ivar))
+               end do
+               self%bottom_index(1) = k
+               call self%fabm_model%initialize_bottom_state()
             end do
-            self%bottom_index(1) = k
-            call self%fabm_model%initialize_bottom_state()
-         end do
-         ! Reset Botom to 1
-         do ivar = 1, state%n_fabm_bottom_state
-            call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
-         end do
-         self%bottom_index(1) = 1
+            ! Reset Botom to 1
+            do ivar = 1, state%n_fabm_bottom_state
+               call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
+            end do
+            self%bottom_index(1) = 1
+         end if
+         ! Surface state variables
+         call self%fabm_model%initialize_surface_state()
       end if
-      ! Surface state variables
-      call self%fabm_model%initialize_surface_state()
 
       ! Call the update function once as a first call to initialize fluxes, sources and vertical velocities
       call self%update(state, fabm_cfg, grid, .true.)
@@ -399,10 +390,10 @@ contains
             end if
          end do
 
-         ! 2a.Interior state variables
+         ! 2a. Check interior state variables
          call self%fabm_model%check_interior_state(1, grid%nz_grid, fabm_cfg%repair_fabm, self%valid_int)
          
-         ! 2b. Bottom state variables
+         ! 2b. Check bottom state variables
          call self%fabm_model%check_bottom_state(fabm_cfg%repair_fabm, self%valid_bt)
          if (fabm_cfg%bottom_everywhere) then
             ! If bottom_everywhere is set, at every depth:
@@ -423,9 +414,10 @@ contains
             self%bottom_index(1) = 1
          end if
 
-         ! 2c. Surface state variables
+         ! 2c. Check surface state variables
          call self%fabm_model%check_surface_state(fabm_cfg%repair_fabm, self%valid_sf)
-         ! Error if out of bounds and not repaired
+
+         ! 2. Error if out of bounds and not repaired
          if (.not. (self%valid_int .and. self%valid_bt .and. self%valid_sf)) then
             if (fabm_cfg%repair_fabm) then
                call warn("FABM Variable repaired")
@@ -544,7 +536,7 @@ contains
       ! Operates on entire active spatial domain
       call self%fabm_model%finalize_outputs()
 
-      ! 5. Save diagnostic variables
+      ! 5. Retrieve values of diagnostic variables
       if (fabm_cfg%output_diagnostic_variables) then
          do ivar = 1, state%n_fabm_diagnostic_interior
             index = self%diagnostic_index(ivar)
@@ -584,10 +576,10 @@ contains
 
       ! Build diagonals of A with Simstrat transport terms (code from discretization module)
       ! With diffusivity for temperature (nuh)
-      ! Upward flux from (1:grid%nz_occupied - 1) to (2:grid%nz_occupied): upper_diag(z) describes the upward flux into cell z
+      ! Upward flux from (1:grid%nz_occupied - 1) to (2:grid%nz_occupied): upper_diag_diff(z) describes the upward flux into cell z
       upper_diag_diff(2:grid%nz_occupied) = state%dt*state%nuh(2:grid%nz_occupied)*grid%AreaFactor_1(2:grid%nz_occupied)
       upper_diag_diff(1) = 0.0_RK ! No upward flux into bottommost cell
-      ! Downward flux from (2:grid%nz_occupied) to (1:grid%nz_occupied - 1): lower_diag(z) describes the downward flux into cell z
+      ! Downward flux from (2:grid%nz_occupied) to (1:grid%nz_occupied - 1): lower_diag_diff(z) describes the downward flux into cell z
       lower_diag_diff(1:grid%nz_occupied-1) = state%dt*state%nuh(2:grid%nz_occupied)*grid%AreaFactor_2(1:grid%nz_occupied - 1)
       lower_diag_diff(grid%nz_occupied) = 0.0_RK ! No downward flux into uppermost cell
       ! 1 - downward flux out - upward flux out
@@ -661,24 +653,28 @@ contains
       class(ModelState), intent(inout) :: state
       class(FABMConfig), intent(in) :: fabm_cfg
 
+      ! Local variables
       integer :: i, j, n, n_int, n_hor, unit, status
-      character(len=100) :: line
-      integer, parameter :: max_lines = 100
-      character(len=80), dimension(max_lines) :: temp_names
+      character(len=256) :: line
+      integer, parameter :: max_lines = 100 ! Maximum amount of diagnostic variables in SetDiagnosticVars file
+      character(len=100), dimension(max_lines) :: temp_names ! Same len as fabm_diagnostic_names
       integer, dimension(max_lines) :: temp_index
       logical, dimension(max_lines) :: is_int
 
+      ! Read from SetDiagVars
       open(newunit=unit, action='read', status='old', file=fabm_cfg%set_diag_vars, iostat = status)
-
       if (status .ne. 0) then
          call warn("No Output of FABM Diagnostic Variables")
       else
          write(6,*) 'Reading ', fabm_cfg%set_diag_vars
       end if
-
+      ! Skip header
+      read(unit, '(A)', iostat=status)
+      ! Initialize counts to 0
       n = 0
       n_int = 0
       n_hor = 0
+      ! Read every diagnostic variable and find in fabm_model
       do
          read(unit, '(A)', iostat=status) line
          if (status .ne. 0) exit
@@ -686,8 +682,12 @@ contains
          if (n > max_lines) then
             call error('Too many lines in '//fabm_cfg%set_diag_vars//', increase max_lines in set_fabm_diagnostic_vars')
          end if
-         ! Trim line and assign to temp_names, cut to length 48
+         if (len_trim(temp_names(n)) > 100) then
+            call warn('FABM diagnostic variable '//line//' name will be truncated to 100 characters')
+         end if
          temp_names(n) = adjustl(trim(line))
+         temp_index(n) = 0
+         ! Set index at location in fabm_model%interior_diagnostic_variables
          do j = 1, size(self%fabm_model%interior_diagnostic_variables)
             if (self%fabm_model%interior_diagnostic_variables(j)%name == temp_names(n)) then
                self%fabm_model%interior_diagnostic_variables(j)%save = .true.
@@ -696,6 +696,7 @@ contains
                n_int = n_int + 1
             end if
          end do
+         ! Set index at location in fabm_model%horizontal_diagnostic_variables
          do j = 1, size(self%fabm_model%horizontal_diagnostic_variables)
             if (self%fabm_model%horizontal_diagnostic_variables(j)%name == temp_names(n)) then
                self%fabm_model%horizontal_diagnostic_variables(j)%save = .true.
@@ -704,17 +705,20 @@ contains
                n_hor = n_hor + 1
             end if
          end do
+         ! If not found in fabm_model
+         if (temp_index(n) == 0) then
+            call error('FABM diagnostic variable '//temp_names(n)//' not found.')
+         end if
       end do
 
+      ! Allocate array of proper size
       state%n_fabm_diagnostic = n
       state%n_fabm_diagnostic_interior = n_int
       state%n_fabm_diagnostic_horizontal = n_hor
-
-      ! Allocate array of proper size
       allocate(state%fabm_diagnostic_names(n))
       allocate(self%diagnostic_index(n))
 
-      ! Copy names to array
+      ! Copy names and indices to array
       j = 1
       do i = 1, n
          if (is_int(i)) then
@@ -730,6 +734,55 @@ contains
          end if
       end do
    end subroutine set_fabm_diagnostic_vars
+
+   ! Output list of diagnostic variables
+   subroutine list_diagnostic(self, output_cfg)
+      ! Arguments
+      class(SimstratFABM), intent(inout) :: self
+      class(OutputConfig), intent(in) :: output_cfg
+
+      ! Local variables
+      integer :: i, unit
+      character(len=256) :: file_path
+
+      ! Write the names of all interior diagnostic variables
+      if (size(self%fabm_model%interior_diagnostic_variables) > 0) then
+         ! Construct the file path
+         file_path = trim(output_cfg%PathOut)//'/fabm_list_diagnostic_interior.dat'
+         ! Creat new file or replace already existing one
+         open(newunit=unit, file=file_path, status='replace', action='write')
+         ! Write the header
+         write(unit, '(A)', advance = 'no') 'Short Name, '
+         write(unit, '(A)', advance = 'no') 'Long Name, '
+         write(unit, '(A)') 'Units'
+         ! Write the names and units of interior diagnostic variables
+         do i = 1, size(self%fabm_model%interior_diagnostic_variables)
+            write(unit, '(A)', advance = 'no') trim(self%fabm_model%interior_diagnostic_variables(i)%name)//', '
+            write(unit, '(A)', advance = 'no') trim(self%fabm_model%interior_diagnostic_variables(i)%long_name)//', '
+            write(unit, '(A)') trim(self%fabm_model%interior_diagnostic_variables(i)%units)
+         end do
+         close(unit)
+      end if
+
+      ! Write the names of all horizontal diagnostic variables
+      if (size(self%fabm_model%horizontal_diagnostic_variables) > 0) then
+         ! Construct the file path for Horizontal Diagnostic Variable List
+         file_path = trim(output_cfg%PathOut)//'/fabm_list_diagnostic_horizontal.dat'
+         ! Creat new file or replace already existing one
+         open(newunit=unit, file=file_path, status='replace', action='write')
+         ! Write the header
+         write(unit, '(A)', advance = 'no') 'Short Name, '
+         write(unit, '(A)', advance = 'no') 'Long Name, '
+         write(unit, '(A)') 'Units'
+         ! Write the names and units of horizontal diagnostic variables
+         do i = 1, size(self%fabm_model%horizontal_diagnostic_variables)
+            write(unit, '(A)', advance = 'no') trim(self%fabm_model%horizontal_diagnostic_variables(i)%name)//', '
+            write(unit, '(A)', advance = 'no') trim(self%fabm_model%horizontal_diagnostic_variables(i)%long_name)//', '
+            write(unit, '(A)') trim(self%fabm_model%horizontal_diagnostic_variables(i)%units)
+         end do
+         close(unit)
+      end if
+   end subroutine list_diagnostic
 
    ! Light absorption feedback by FABM variables
    subroutine absorption_update_fabm(self, state, grid)

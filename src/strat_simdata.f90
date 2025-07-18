@@ -59,13 +59,13 @@ module strat_simdata
 
    ! Definition of a FABM variable to log
    type, public :: LogVariableFABM
-      character(len=80), pointer, dimension(:) :: names
+      character(len=100), pointer, dimension(:) :: names
       real(RK), dimension(:,:), pointer :: values
    end type
 
    ! Definition of a FABM variable to log
    type, public :: LogVariableFABM_bound
-      character(len=80), pointer, dimension(:) :: names
+      character(len=100), pointer, dimension(:) :: names
       real(RK), dimension(:), pointer :: values
    end type
 
@@ -82,12 +82,12 @@ module strat_simdata
       logical :: write_to_file, output_all
       integer :: number_output_vars
       character(len=20), dimension(:), allocatable :: output_var_names ! Names of output variables
-      class(LogVariable), dimension(:), allocatable :: output_vars
-      class(LogVariableFABM), allocatable :: output_vars_fabm_interior_state
-      class(LogVariableFABM), allocatable :: output_vars_fabm_bottom_state
-      class(LogVariableFABM_bound), allocatable :: output_vars_fabm_surface_state
-      class(LogVariableFABM), allocatable :: output_vars_fabm_diagnostic_interior
-      class(LogVariableFABM_bound), allocatable :: output_vars_fabm_diagnostic_horizontal
+      class(LogVariable), dimension(:), allocatable :: output_vars ! Output structure for Sismtrat variables
+      class(LogVariableFABM), allocatable :: output_vars_fabm_interior_state ! Output structure for FABM interior state variables
+      class(LogVariableFABM), allocatable :: output_vars_fabm_bottom_state ! Output structure for FABM bottom state variables
+      class(LogVariableFABM_bound), allocatable :: output_vars_fabm_surface_state ! Output structure for FABM surface state variables
+      class(LogVariableFABM), allocatable :: output_vars_fabm_diagnostic_interior ! Output structure for FABM interior diagnostic variables
+      class(LogVariableFABM_bound), allocatable :: output_vars_fabm_diagnostic_horizontal ! Output structure for FABM horizontal diagnostic variables
 
       integer :: output_time_type, output_depth_type, thinning_interval
       real(RK) :: depth_interval, thinning_interval_read ! thinning_interval_read is a real to make sure that also values
@@ -197,10 +197,10 @@ module strat_simdata
       real(RK), dimension(:,:), pointer :: fabm_interior_state, fabm_bottom_state
       real(RK), dimension(:), pointer :: fabm_surface_state
       integer :: n_fabm_state, n_fabm_interior_state, n_fabm_bottom_state, n_fabm_surface_state, n_fabm_diagnostic, n_fabm_diagnostic_interior, n_fabm_diagnostic_horizontal
-      character(len=80), dimension(:), pointer :: fabm_state_names ! Names of FABM state variables used in the simulation
+      character(len=100), dimension(:), pointer :: fabm_state_names ! Names of FABM state variables used in the simulation
       real(RK), dimension(:,:), pointer :: fabm_diagnostic_interior ! State matrix of FABM diagnostic variables
       real(RK), dimension(:), pointer :: fabm_diagnostic_horizontal ! State matrix of FABM diagnostic variables
-      character(len=80), dimension(:), pointer :: fabm_diagnostic_names ! Names of FABM diagnostic variables in output
+      character(len=100), dimension(:), pointer :: fabm_diagnostic_names ! Names of FABM diagnostic variables in output
    
       ! Variables located on z_upp grid
       real(RK), dimension(:), allocatable :: k, ko ! Turbulent kinetic energy (TKE) [J/kg]

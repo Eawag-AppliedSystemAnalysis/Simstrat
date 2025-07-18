@@ -128,7 +128,7 @@ program simstrat_main
 
    ! Initialize biogeochemical model "FABM" if used
    if (simdata%model_cfg%couple_fabm) then
-      call mod_fabm%init(simdata%model, simdata%fabm_cfg, simdata%grid)
+      call mod_fabm%init(simdata%model, simdata%fabm_cfg, simdata%sim_cfg, simdata%grid)
    end if
 
    ! If there is advection (due to inflow)
@@ -163,6 +163,11 @@ program simstrat_main
 
    ! Setup logger
    call logger%initialize(simdata%model, simdata%sim_cfg, simdata%model_cfg, simdata%fabm_cfg, simdata%output_cfg, simdata%grid, continue_from_snapshot)
+
+   ! Write list of all FABM diagnostic variables
+   if (simdata%fabm_cfg%output_diagnostic_variables) then
+      call mod_fabm%list_diagnostic(simdata%output_cfg)
+   end if
 
    ! Calculate simulation_end_time, which is a tuple of integers (days, seconds)
 
@@ -346,7 +351,6 @@ contains
       end do
       if (simdata%sim_cfg%continue_from_snapshot) call save_snapshot(snapshot_file_path, simdata%model_cfg%couple_fabm)
       if (simdata%sim_cfg%save_text_restart) then
-         ! -> if (simdata%model_cfg%couple_fabm) call warn('Text restart is not working for FABM variables.')
          call save_restart(file_text_restart, file_text_restart2)
       end if
    end subroutine
