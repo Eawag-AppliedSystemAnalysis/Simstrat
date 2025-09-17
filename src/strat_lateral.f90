@@ -456,6 +456,8 @@ contains
             goto 11
 
 9           write(6,*) '[WARNING] ','No data found in ',trim(fname),' file. Check number of depths. Values set to zero.'
+            self%has_deep_input(i) = .false.
+            self%has_surface_input(i) = .false.
             self%eof(i) = 1
             if(i/=2) Inp(i,1:self%nval_deep(i)) = 0.0_RK
             if(i/=2) self%Inp_read_start(i,1) = 0.0_RK
@@ -780,7 +782,8 @@ contains
 
             ! If no data available
  9          write(6,*) '[WARNING] ','No data found in ',trim(fname),' file. Check number of depths. Values set to zero.'
-
+            self%has_deep_input(i) = .false.
+            self%has_surface_input(i) = .false.
             self%eof(i) = 1
             Q_inp(i, 1:ubnd_fce) = 0.0_RK
             self%Q_start(i, 1:ubnd_fce) = 0.0_RK
