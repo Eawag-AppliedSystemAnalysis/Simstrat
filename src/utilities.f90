@@ -59,11 +59,13 @@ contains
       do while (zi(posk1) <= z(1))
          yi(posk1) = y(1)
          posk1 = posk1 + 1
+         if (posk1 > size(zi)) exit
       end do
       posk2 = num_zi
       do while (zi(posk2) >= z(num_z))
          yi(posk2) = y(num_z)
          posk2 = posk2 - 1
+         if (posk2 < 1) exit
       end do
 
       ! Linear interpolation
