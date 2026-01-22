@@ -1,1 +1,0 @@
-../build/simstrat TestCase_LakeConstance.par
