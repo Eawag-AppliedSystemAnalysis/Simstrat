@@ -287,6 +287,8 @@ contains
                   self%Q_end(i,:) = 0.0_RK
                   self%Qs_start(i,:) = 0.0_RK
                   self%Qs_end(i,:) = 0.0_RK
+                  self%has_deep_input(i) = .false.
+                  self%has_surface_input(i) = .false.
 
                   ! End of file is not reached
                   self%eof(i) = 0
@@ -346,13 +348,9 @@ contains
                   ! Check whether there is deep inflow (fixed) or surface inflow (varies with lake level)
                   if (self%nval_deep(i) > 0) then
                      self%has_deep_input(i) = .true.
-                  else
-                     self%has_deep_input(i) = .false.
                   end if
                   if (self%nval_surface(i) > 0) then
                      self%has_surface_input(i) = .true.
-                  else
-                     self%has_surface_input(i) = .false.
                   end if
 
                   ! Total number of values to read
@@ -411,7 +409,7 @@ contains
                   
                   if (status .ne. 0) then
                      if (i > n_simstrat) then
-                        goto 9
+                        goto 10
                      else
                         call error('File '//fname//' not found.')
                      end if
@@ -419,7 +417,7 @@ contains
                      write(6,*) 'Reading ', fname
                   end if
                   do l = 1, self%number_of_lines_read(i)
-                     read (self%fnum(i), *, end=9) ! Skip already read and processed lines
+                     read (self%fnum(i), *, end=10) ! Skip already read and processed lines
                   end do
                   call ok('Input file successfully opened: '//fname)
                end if
@@ -503,13 +501,27 @@ contains
             Q_inp(i,1:ubnd_vol) = self%Q_start(i,1:ubnd_vol) + self%Qs_start(i,1:ubnd_vol) ! Set to closest available value
             goto 11
 
+            ! If no data available from input
 9           write(6,*) '[WARNING] ','No data found in ',trim(fname),' file. Values set to zero.'
             self%eof(i) = 1
             if(i/=2) Inp(i,1:self%nval_deep(i)) = 0.0_RK
             if(i/=2) self%Inp_read_start(i,1) = 0.0_RK
             if(i==2) Q_inp(i,1:ubnd_vol) = 0.0_RK
+            goto 11
+
+            ! If no data available from snapshot
+10          write(6,*) '[WARNING] ','No data found in ',trim(fname),' file. Values set to zero.'
+            self%eof(i) = 1
+            if(i/=2) Inp(i,1:self%nval_deep(i)) = 0.0_RK
+            if(i/=2) self%Inp_read_start(i,1) = 0.0_RK
+            if(i==2) Q_inp(i,1:ubnd_vol) = 0.0_RK
+            if(i==2) self%Q_start(i,1:ubnd_fce) = 0.0_RK
+            self%Qs_start(i,1:ubnd_fce) = 0.0_RK
+            self%has_deep_input(i) = .false.
+            self%has_surface_input(i) = .false.
 
 11          continue
+
          end do      ! end do i=1,n_vars
 
          !Set Q_inp to the differences (from the integrals)
@@ -634,11 +646,14 @@ contains
          do i=1, self%n_vars
             if (idx) then  ! If first timestep
                if (self%number_of_lines_read(i) == 0) then  ! If not started from snapshot
+
                   ! Default values
                   self%Q_start(i,:) = 0.0_RK
                   self%Q_end(i,:) = 0.0_RK
                   self%Qs_start(i,:) = 0.0_RK
                   self%Qs_end(i,:) = 0.0_RK
+                  self%has_deep_input(i) = .false.
+                  self%has_surface_input(i) = .false.
 
                   ! End of file is not reached
                   self%eof(i) = 0
@@ -697,13 +712,9 @@ contains
                   ! Check whether there is deep inflow (fixed) or surface inflow (varies with lake level)
                   if (self%nval_deep(i) > 0) then
                      self%has_deep_input(i) = .true.
-                  else
-                     self%has_deep_input(i) = .false.
                   end if
                   if (self%nval_surface(i) > 0) then
                      self%has_surface_input(i) = .true.
-                  else
-                     self%has_surface_input(i) = .false.
                   end if
 
                   ! Total number of values to read
@@ -764,7 +775,7 @@ contains
                   
                   if (status .ne. 0) then
                      if (i > n_simstrat) then
-                        goto 9
+                        goto 10
                      else
                         call error('File '//fname//' not found.')
                      end if
@@ -773,7 +784,7 @@ contains
                   end if
 
                   do l = 1, self%number_of_lines_read(i)
-                     read (self%fnum(i), *, end=9) ! Skip already read and processed lines
+                     read (self%fnum(i), *, end=10) ! Skip already read and processed lines
                   end do
                   call ok('Input file successfully opened: '//fname)
                end if
@@ -827,15 +838,25 @@ contains
             goto 11
 
             ! If end of file reached, set to closest available value
- 7          self%eof(i) = 1
- 8          Q_inp(i,1:ubnd_fce) = self%Q_start(i,1:ubnd_fce) + self%Qs_start(i,1:ubnd_fce)
+7           self%eof(i) = 1
+8           Q_inp(i,1:ubnd_fce) = self%Q_start(i,1:ubnd_fce) + self%Qs_start(i,1:ubnd_fce)
             goto 11
 
-            ! If no data available
- 9          write(6,*) '[WARNING] ','No data found in ',trim(fname),' file. Check number of depths. Values set to zero.'
-
+            ! If no data available from input
+9           write(6,*) '[WARNING] ','No data found in ',trim(fname),' file. Check number of depths. Values set to zero.'
             self%eof(i) = 1
             Q_inp(i, 1:ubnd_fce) = 0.0_RK
+            goto 11
+
+            ! If no data available from snapshot
+10          write(6,*) '[WARNING] ','No data found in ',trim(fname),' file. Check number of depths. Values set to zero.'
+            self%eof(i) = 1
+            Q_inp(i, 1:ubnd_fce) = 0.0_RK
+            self%Q_start(i, 1:ubnd_fce) = 0.0_RK
+            self%Qs_start(i, 1:ubnd_fce) = 0.0_RK
+            self%has_deep_input(i) = .false.
+            self%has_surface_input(i) = .false.
+
 11          continue
 
          end do ! end do i=1,self%n_vars
@@ -876,6 +897,7 @@ contains
 
             if (idx) then  ! If first timestep
                if (self%number_of_lines_read_bound(i) == 0) then  ! If not started from snapshot
+
                   fname = trim(self%fabm_path)//trim(state%fabm_state_names(state%n_fabm_interior_state + i))//'_inflow.dat'
 
                   ! Read inflow files
@@ -967,6 +989,7 @@ contains
             self%Q_start_bound(i) = 0.0_RK
             Q_inp_bound_con(i) = 0.0_RK
             self%Q_start_bound_con(i) = 0.0_RK
+
 11          continue
 
          end associate
