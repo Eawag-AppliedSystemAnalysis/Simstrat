@@ -88,9 +88,9 @@ to create the new directory `build` and generate the build configuration inside 
 > ~~~  
 > to the `cmake` command for every `<INSTITUTE-NAME>` (here all in upper case) in `<INSTITUTE-NAMES>`. With `<DIR>` the directory of the corresponding source code on your device. A list of available externally maintained models can be found here: [Available Models in FABM Wiki](https://github.com/fabm-model/fabm/wiki/Biogeochemical-models-in-FABM#available-models). For instance to build FABM with [the Selmaprotbas model](https://github.com/jorritmesman/Selmaprotbas) the full cmake command is
 > ~~~bash
-> cmake -S ./ -B build -DFABM_HOST=simstrat -DFABM_EXTRA_INSTITUTES=selmaprotbas -DFABM_SELMAPROTBAS_BASE=pathto/selmaprotbas-main
+> cmake -S ./ -B build -DFABM_HOST=simstrat -DFABM_EXTRA_INSTITUTES=selmaprotbas -DFABM_SELMAPROTBAS_BASE=pathto/selmaprotbas
 > ~~~ 
-> with `pathto` the path to the location of the selmaprotbas repository on your device.
+> with `pathto` the path to the location of the selmaprotbas repository on your device, relative to `lib/fabm`.
 
 > **N.B.2** Add  
 > ~~~bash
