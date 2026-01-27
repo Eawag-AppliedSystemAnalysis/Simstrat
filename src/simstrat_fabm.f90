@@ -27,7 +27,7 @@
 !<    +---------------------------------------------------------------+
 
 module simstrat_fabm
-   use fabm, only: fabm_create_model, type_fabm_model, fabm_standard_variables ! main FABM module
+   use fabm ! main FABM module
    use strat_simdata
    use strat_kinds
    use strat_grid
