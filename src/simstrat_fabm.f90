@@ -350,50 +350,22 @@ contains
          ! terms and fluxes (sms, flux) and vertical velocities (velocity). This results in an updated interior_state.
          do ivar = 1, state%n_fabm_interior_state  
             call diffusion_FABM_interior_state(self, state, fabm_cfg, grid, ivar)
-            ! Check for negative values
-            if (any(state%fabm_interior_state(1: grid%nz_occupied, ivar) < 0.0_RK)) then
-               do k = 1, size(state%fabm_interior_state(1:grid%nz_occupied, ivar))
-                  if (state%fabm_interior_state(k, ivar) < 0.0_RK) then
-                     print *, 'FABM Interior Variable value is ', state%fabm_interior_state(k, ivar)
-                     print *, 'at grid point ', k
-                     print *, 'at time (days, seconds) = ', state%simulation_time
-                  end if
-               end do
-               call error('FABM Variable '//self%fabm_model%interior_state_variables(ivar)%name//' below zero.')
-            end if
          end do
 
          ! 1b. Direct time integration of source terms to update bottom_state
          do ivar = 1, state%n_fabm_bottom_state
             state%fabm_bottom_state(:, ivar) = state%fabm_bottom_state(:, ivar) + state%dt * self%sms_bt(:, ivar)
-            ! Check for negative values
-            if (any(state%fabm_bottom_state(:, ivar) + state%dt * self%sms_bt(:, ivar) < 0.0_RK)) then
-               do k = 1, self%kmax_bot
-                  if (state%fabm_bottom_state(k, ivar) + state%dt * self%sms_bt(k, ivar) < 0.0_RK) then
-                     print *, 'FABM Bottom Variable value is ', state%fabm_bottom_state(k, ivar)
-                     print *, 'at grid point ', k
-                     print *, 'at time (days, seconds) = ', state%simulation_time
-                  end if
-                  call error('FABM Bottom Variable '//self%fabm_model%bottom_state_variables(ivar)%name//' below zero.')
-               end do
-            end if
          end do
 
          ! 1c. Direct time integration of source terms to update surface_state
          do ivar = 1, state%n_fabm_surface_state
             state%fabm_surface_state(ivar) = state%fabm_surface_state(ivar) + state%dt * self%sms_sf(ivar)
-            ! Check for negative values
-            if (state%fabm_surface_state(ivar) < 0.0_RK) then
-               print *, 'FABM Surface Variable value is ', state%fabm_surface_state(ivar)
-               print *, 'at time (days, seconds) = ', state%simulation_time
-               call error('FABM Surface Variable '//self%fabm_model%surface_state_variables(ivar)%name//' below zero.')
-            end if
          end do
 
-         ! 2a. Check interior state variables
+         ! 2a. FABM check interior state variables
          call self%fabm_model%check_interior_state(1, grid%nz_grid, fabm_cfg%repair_fabm, self%valid_int)
          
-         ! 2b. Check bottom state variables
+         ! 2b. FABM check bottom state variables
          call self%fabm_model%check_bottom_state(fabm_cfg%repair_fabm, self%valid_bt)
          if (fabm_cfg%bottom_everywhere) then
             ! If bottom_everywhere is set, at every depth:
@@ -414,10 +386,10 @@ contains
             self%bottom_index = 1
          end if
 
-         ! 2c. Check surface state variables
+         ! 2c. FABM check surface state variables
          call self%fabm_model%check_surface_state(fabm_cfg%repair_fabm, self%valid_sf)
 
-         ! 2. Error if out of bounds and not repaired
+         ! 2d. Error if FABM out of bounds and not repaired
          if (.not. (self%valid_int .and. self%valid_bt .and. self%valid_sf)) then
             if (fabm_cfg%repair_fabm) then
                call warn("FABM Variable repaired")
@@ -425,6 +397,43 @@ contains
                call error("FABM Variable out of bounds")
             end if
          end if
+
+         ! 2e. Simstrat check for negative FABM interior state variables
+         do ivar = 1, state%n_fabm_interior_state  
+            if (any(state%fabm_interior_state(1: grid%nz_occupied, ivar) < 0.0_RK)) then
+               do k = 1, size(state%fabm_interior_state(1:grid%nz_occupied, ivar))
+                  if (state%fabm_interior_state(k, ivar) < 0.0_RK) then
+                     print *, 'FABM Interior Variable value is ', state%fabm_interior_state(k, ivar)
+                     print *, 'at grid point ', k
+                     print *, 'at time (days, seconds) = ', state%simulation_time
+                  end if
+               end do
+               call error('FABM Variable '//self%fabm_model%interior_state_variables(ivar)%name//' below zero.')
+            end if
+         end do
+
+         ! 2f. Simstrat check for negative FABM bottom state variables
+         do ivar = 1, state%n_fabm_bottom_state
+            if (any(state%fabm_bottom_state(:, ivar) + state%dt * self%sms_bt(:, ivar) < 0.0_RK)) then
+               do k = 1, self%kmax_bot
+                  if (state%fabm_bottom_state(k, ivar) + state%dt * self%sms_bt(k, ivar) < 0.0_RK) then
+                     print *, 'FABM Bottom Variable value is ', state%fabm_bottom_state(k, ivar)
+                     print *, 'at grid point ', k
+                     print *, 'at time (days, seconds) = ', state%simulation_time
+                  end if
+                  call error('FABM Bottom Variable '//self%fabm_model%bottom_state_variables(ivar)%name//' below zero.')
+               end do
+            end if
+         end do
+
+         ! 2g. Simstrat check for negative FABM surface state variables
+         do ivar = 1, state%n_fabm_surface_state
+            if (state%fabm_surface_state(ivar) < 0.0_RK) then
+               print *, 'FABM Surface Variable value is ', state%fabm_surface_state(ivar)
+               print *, 'at time (days, seconds) = ', state%simulation_time
+               call error('FABM Surface Variable '//self%fabm_model%surface_state_variables(ivar)%name//' below zero.')
+            end if
+         end do
       end if
 
       ! 1. Prepare all fields (e.g. light attenuation) FABM needs to compute fluxes and source terms
