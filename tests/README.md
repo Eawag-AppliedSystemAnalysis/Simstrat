@@ -13,7 +13,9 @@ under windows, or run:
 ./run_testcase.sh
 ~~~
 
-under linux to start a simulation with the executable "simstrat" and the Simstrat configuration file "TestCase_LakeZurich.par". The FABM configuration files ("Simstrat/lib/fabm/yaml") are called by simstrat_fabm in create_model() and the output of the simulation is stored in ´TestCases_Results´.
+under linux to start a simulation with the executable "simstrat" and the Simstrat configuration file "TestCase_LakeZurich.par". 
+
+The FABM configuration file is called by simstrat_fabm in create_model() and the output of the simulation is stored in `TestCases_Results`. The testcase uses the "fabm-selma.yaml" configuration from the default FABM testcases under `../lib/fabm/testcases`. Inflow for FABM variables can be added at `TestCase_LakeZurich/FABM_inflow/`.
 
 To check whether changes in the source code caused changes in simulation output run:
 
@@ -31,5 +33,5 @@ under linux.
 
 # Expected test case results
 
-The expected results of the test cases are always generated using the latest release. Current Simstrat release is 3.02 and current FABM release is 2.1.5. In windows, Simstrat and FABM were compiled using gfortran 8.1 and in Linux using gfortran 7.5.
+The expected results of the test cases are always generated using the latest release. Current Simstrat release is 3.02 and current FABM release is 3.0.0. In windows, Simstrat and FABM were compiled using gfortran 8.1 and in Linux using gfortran 7.5.
 Fobos settings used for Simstrat calibration can be found in the latest release
