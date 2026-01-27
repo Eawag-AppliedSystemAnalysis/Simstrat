@@ -362,10 +362,24 @@ contains
             state%fabm_surface_state(ivar) = state%fabm_surface_state(ivar) + state%dt * self%sms_sf(ivar)
          end do
 
-         ! 2a. FABM check interior state variables
+         ! 2a. FABM check (and repair) interior state variables
          call self%fabm_model%check_interior_state(1, grid%nz_grid, fabm_cfg%repair_fabm, self%valid_int)
+
+         ! 2a. Simstrat check for negative FABM interior state variables
+         do ivar = 1, state%n_fabm_interior_state  
+            if (any(state%fabm_interior_state(1: grid%nz_occupied, ivar) < 0.0_RK)) then
+               do k = 1, size(state%fabm_interior_state(1:grid%nz_occupied, ivar))
+                  if (state%fabm_interior_state(k, ivar) < 0.0_RK) then
+                     print *, 'FABM Interior Variable value is ', state%fabm_interior_state(k, ivar)
+                     print *, 'at grid point ', k
+                     print *, 'at time (days, seconds) = ', state%simulation_time
+                  end if
+               end do
+               call error('FABM Variable '//self%fabm_model%interior_state_variables(ivar)%name//' below zero.')
+            end if
+         end do
          
-         ! 2b. FABM check bottom state variables
+         ! 2b. FABM check (and repair) bottom state variables
          call self%fabm_model%check_bottom_state(fabm_cfg%repair_fabm, self%valid_bt)
          if (fabm_cfg%bottom_everywhere) then
             ! If bottom_everywhere is set, at every depth:
@@ -386,33 +400,7 @@ contains
             self%bottom_index = 1
          end if
 
-         ! 2c. FABM check surface state variables
-         call self%fabm_model%check_surface_state(fabm_cfg%repair_fabm, self%valid_sf)
-
-         ! 2d. Error if FABM out of bounds and not repaired
-         if (.not. (self%valid_int .and. self%valid_bt .and. self%valid_sf)) then
-            if (fabm_cfg%repair_fabm) then
-               call warn("FABM Variable repaired")
-            else
-               call error("FABM Variable out of bounds")
-            end if
-         end if
-
-         ! 2e. Simstrat check for negative FABM interior state variables
-         do ivar = 1, state%n_fabm_interior_state  
-            if (any(state%fabm_interior_state(1: grid%nz_occupied, ivar) < 0.0_RK)) then
-               do k = 1, size(state%fabm_interior_state(1:grid%nz_occupied, ivar))
-                  if (state%fabm_interior_state(k, ivar) < 0.0_RK) then
-                     print *, 'FABM Interior Variable value is ', state%fabm_interior_state(k, ivar)
-                     print *, 'at grid point ', k
-                     print *, 'at time (days, seconds) = ', state%simulation_time
-                  end if
-               end do
-               call error('FABM Variable '//self%fabm_model%interior_state_variables(ivar)%name//' below zero.')
-            end if
-         end do
-
-         ! 2f. Simstrat check for negative FABM bottom state variables
+         ! 2b. Simstrat check for negative FABM bottom state variables
          do ivar = 1, state%n_fabm_bottom_state
             if (any(state%fabm_bottom_state(:, ivar) + state%dt * self%sms_bt(:, ivar) < 0.0_RK)) then
                do k = 1, self%kmax_bot
@@ -426,7 +414,10 @@ contains
             end if
          end do
 
-         ! 2g. Simstrat check for negative FABM surface state variables
+         ! 2c. FABM check (and repair) surface state variables
+         call self%fabm_model%check_surface_state(fabm_cfg%repair_fabm, self%valid_sf)
+
+         ! 2c. Simstrat check for negative FABM surface state variables
          do ivar = 1, state%n_fabm_surface_state
             if (state%fabm_surface_state(ivar) < 0.0_RK) then
                print *, 'FABM Surface Variable value is ', state%fabm_surface_state(ivar)
@@ -434,6 +425,15 @@ contains
                call error('FABM Surface Variable '//self%fabm_model%surface_state_variables(ivar)%name//' below zero.')
             end if
          end do
+
+         ! 2. Error if FABM out of bounds and not repaired
+         if (.not. (self%valid_int .and. self%valid_bt .and. self%valid_sf)) then
+            if (fabm_cfg%repair_fabm) then
+               call warn("FABM Variable repaired")
+            else
+               call error("FABM Variable out of bounds")
+            end if
+         end if
       end if
 
       ! 1. Prepare all fields (e.g. light attenuation) FABM needs to compute fluxes and source terms
