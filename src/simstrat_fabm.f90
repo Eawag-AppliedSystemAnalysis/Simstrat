@@ -27,7 +27,7 @@
 !<    +---------------------------------------------------------------+
 
 module simstrat_fabm
-   use fabm ! main FABM module
+   use fabm, only: fabm_create_model, type_fabm_model, fabm_standard_variables ! main FABM module
    use strat_simdata
    use strat_kinds
    use strat_grid
@@ -57,7 +57,7 @@ module simstrat_fabm
       logical :: valid_int, valid_sf, valid_bt
 
       ! Index of current bottom location (pelagic-benthic interface)
-      integer, dimension(:), pointer :: bottom_index
+      integer, pointer :: bottom_index
       ! Variable to enumerate over all layers if bottom_everywhere is true
       ! 1 if bottom_everywhere is false, nz_grid if bottom_everywhere is true
       ! All associated code copied and adapted from https://gitlab.com/wateritech-public/waterecosystemstool/gotm
@@ -104,9 +104,9 @@ contains
 
       ! Allocate bottom index with one value and link FABM to it
       ! Set bottom location (pelagic-benthic interface) to 1 (default)
-      allocate(self%bottom_index(1))
-      self%bottom_index(1) = 1
-      call self%fabm_model%set_bottom_index(self%bottom_index(1))
+      allocate(self%bottom_index)
+      self%bottom_index = 1
+      call self%fabm_model%set_bottom_index(self%bottom_index)
 
       ! Set kmax_bot to nz_grid if bottom_everywhere is true, 1 else
       self%kmax_bot = 1
@@ -305,14 +305,14 @@ contains
                do ivar = 1, state%n_fabm_bottom_state
                   call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k, ivar))
                end do
-               self%bottom_index(1) = k
+               self%bottom_index = k
                call self%fabm_model%initialize_bottom_state()
             end do
             ! Reset Botom to 1
             do ivar = 1, state%n_fabm_bottom_state
                call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
             end do
-            self%bottom_index(1) = 1
+            self%bottom_index = 1
          end if
          ! Surface state variables
          call self%fabm_model%initialize_surface_state()
@@ -404,14 +404,14 @@ contains
                do ivar = 1, state%n_fabm_bottom_state
                   call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k, ivar))
                end do
-               self%bottom_index(1) = k
+               self%bottom_index = k
                call self%fabm_model%check_bottom_state(fabm_cfg%repair_fabm, self%valid_bt)
             end do
             ! Reset Bottom to 1
             do ivar = 1, state%n_fabm_bottom_state
                call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
             end do
-            self%bottom_index(1) = 1
+            self%bottom_index = 1
          end if
 
          ! 2c. Check surface state variables
@@ -464,14 +464,14 @@ contains
                do ivar = 1, state%n_fabm_bottom_state
                   call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k, ivar))
                end do
-               self%bottom_index(1) = k
+               self%bottom_index = k
                call self%fabm_model%get_bottom_sources(self%flux_bt(k, :), self%sms_bt(k, :))
             end do
             ! Reset Botom to 1
             do ivar = 1, state%n_fabm_bottom_state
                call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
             end do
-            self%bottom_index(1) = 1
+            self%bottom_index = 1
          end if
          ! Set NaNs to 0
          if (state%n_fabm_interior_state > 0) then
