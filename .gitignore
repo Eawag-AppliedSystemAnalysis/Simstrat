@@ -247,4 +247,4 @@ doc/developer/ford/**/*
 
 #notebook files
 tools/ModifyInput/__pycache__/
-tools/ModifyInput/.ipynb_checkpoints
+tools/ModifyInput/.ipynb_checkpoints/
