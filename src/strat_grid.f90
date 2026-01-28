@@ -69,7 +69,7 @@ module strat_grid
       integer :: nz_occupied  ! number of grid cells in use as per current lake depth
       integer :: max_length_input_data  ! Hard limit of grid cells for reading files of unknnown length etc
 
-      integer :: ubnd_vol, ubnd_fce, length_vol, length_fce   ! Upper and lenght for volume (vol) and face(fce) grids
+      integer :: ubnd_vol, ubnd_fce ! Upper bound for volume (vol) and face (fce) grids
       real(RK) :: lake_level
       real(RK) :: lake_level_old
 
@@ -115,6 +115,7 @@ contains
       call save_array(80, self%z_face)
       call save_array(80, self%z_volume)
       call save_array(80, self%Az)
+      call save_array_pointer(80, self%Az_vol)
       call save_array(80, self%dAz)
       call save_array(80, self%meanint)
       write(80) self%volume, self%h_old, self%max_depth
@@ -124,7 +125,7 @@ contains
       call save_array(80, self%AreaFactor_k2)
       call save_array(80, self%AreaFactor_eps)
       write(80) self%nz_grid, self%nz_occupied, self%max_length_input_data
-      write(80) self%ubnd_vol, self%ubnd_fce, self%length_vol, self%length_fce
+      write(80) self%ubnd_vol, self%ubnd_fce
       write(80) self%z_zero, self%lake_level, self%lake_level_old
    end subroutine
 
@@ -136,6 +137,7 @@ contains
       call read_array(81, self%z_face)
       call read_array(81, self%z_volume)
       call read_array(81, self%Az)
+      call read_array_pointer(81, self%Az_vol)
       call read_array(81, self%dAz)
       call read_array(81, self%meanint)
       read(81) self%volume, self%h_old, self%max_depth
@@ -145,7 +147,7 @@ contains
       call read_array(81, self%AreaFactor_k2)
       call read_array(81, self%AreaFactor_eps)
       read(81) self%nz_grid, self%nz_occupied, self%max_length_input_data
-      read(81) self%ubnd_vol, self%ubnd_fce, self%length_vol, self%length_fce
+      read(81) self%ubnd_vol, self%ubnd_fce
       read(81) self%z_zero, self%lake_level, self%lake_level_old
    end subroutine
 
@@ -364,7 +366,7 @@ contains
                   Az_vol=>self%Az_vol, &
                   dAz=>self%dAz)
 
-      if (h(ubnd_vol) > self%h_old) then
+      if ((h(ubnd_vol) > self%h_old) .and. (size(dAz) >= (ubnd_vol + 1))) then
          Az(ubnd_fce) = Az(ubnd_fce) + dAz(ubnd_vol + 1)*dh
       else
          Az(ubnd_fce) = Az(ubnd_fce) + dAz(ubnd_vol)*dh
@@ -588,8 +590,6 @@ contains
 
       self%ubnd_vol = self%nz_occupied
       self%ubnd_fce = self%nz_occupied + 1
-      self%length_vol = self%nz_occupied
-      self%length_fce = self%nz_occupied + 1
    end subroutine
 
    pure function grid_convert2height_above_sed(z, z_zero) result(h)

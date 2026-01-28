@@ -99,7 +99,7 @@ contains
       real(RK), dimension(:), intent(inout) :: NN, rho
 
       ! Local variables
-      real(RK) :: buoy(self%grid%length_vol)
+      real(RK) :: buoy(self%grid%ubnd_vol)
       integer :: i
 
       associate (grd=>self%grid)
