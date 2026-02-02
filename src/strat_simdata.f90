@@ -178,6 +178,7 @@ module strat_simdata
       integer :: current_year ! Current year of simulation, used for zenith angle dependent water albedo
       integer :: current_month ! Current month of simulation, used for zenith angle dependent water albedo
       real(RK) :: current_day ! Current day of simulation, used for zenith angle dependent water albedo
+      real(RK), pointer :: current_day_of_year ! Current day of the year, used for FABM
       real(RK) :: datum, dt
       integer(8), dimension(2) :: simulation_time, simulation_time_old
       logical :: first_timestep = .true.
@@ -388,6 +389,8 @@ contains
       self%n_pH = 0
 
       ! init pointers
+      allocate(self%current_day_of_year)
+      self%current_day_of_year = 0.0_RK
       allocate(self%uv10)
       self%uv10 = 0.0_RK
       allocate(self%u_taub)
@@ -420,7 +423,7 @@ contains
       logical, intent(in) :: couple_fabm
       integer, intent(in) :: inflow_mode
 
-      !write(80) self%current_year, self%current_month, self%current_day, self%datum
+      !write(80) self%current_year, self%current_month, self%current_day, self%current_day_of_year, self%datum
       !write(80) self%simulation_time(1), self%simulation_time(2), self%simulation_time_old(1), self%simulation_time_old(2)
       call save_array(80, self%U)
       call save_array(80, self%V)
@@ -498,7 +501,7 @@ contains
       logical, intent(in) :: couple_fabm
       integer, intent(in) :: inflow_mode
 
-      read(81) self%current_year, self%current_month, self%current_day, self%datum
+      read(81) self%current_year, self%current_month, self%current_day, self%current_day_of_year, self%datum
       read(81) self%simulation_time(1), self%simulation_time(2), self%simulation_time_old(1), self%simulation_time_old(2)
       call read_array(81, self%U)
       call read_array(81, self%V)

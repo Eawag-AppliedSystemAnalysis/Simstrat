@@ -107,6 +107,11 @@ program simstrat_main
    call euler_i_disc%init(simdata%grid)
    call euler_i_disc_keps%init(simdata%grid)
 
+   ! Initialize calendar (needed for albedo calculation and FABM number_of_days_since_start_of_the_year)
+   if ((.not. simdata%model_cfg%user_defined_water_albedo) .or. simdata%model_cfg%couple_fabm) then
+      call init_calendar(simdata%sim_cfg%reference_year, simdata%model%datum, simdata%model%current_year, simdata%model%current_month, simdata%model%current_day, simdata%model%current_day_of_year)
+   end if
+
    ! Initialize forcing module
    call mod_forcing%init(simdata%model_cfg, &
                          simdata%model_param, &
@@ -117,7 +122,7 @@ program simstrat_main
    if (simdata%model_cfg%user_defined_water_albedo) then
       simdata%model%albedo_water = simdata%model_param%wat_albedo
    else
-      call mod_forcing%init_albedo(simdata%model, simdata%sim_cfg)
+      call mod_forcing%init_albedo(simdata%model)
    end if
 
    ! Initialize absorption module
@@ -269,6 +274,11 @@ contains
          ! ************************************
          ! ***** Compute next model state *****
          ! ************************************
+
+         ! Determine current calendar day and month (needed for albedo calculation and FABM number_of_days_since_start_of_the_year)
+         if ((.not. simdata%model_cfg%user_defined_water_albedo) .or. simdata%model_cfg%couple_fabm) then
+            call update_calendar(simdata%model%current_year, simdata%model%current_month, simdata%model%current_day, simdata%model%current_day_of_year, simdata%model%dt)
+         end if
 
          ! Update water albedo
          if (.not. simdata%model_cfg%user_defined_water_albedo) then

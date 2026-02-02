@@ -329,12 +329,12 @@ contains
    end function
 
    ! Initialize the calender (day, month and year) based on the given starting year and and start datum
-   subroutine init_calendar(start_year, datum, current_year, current_month, current_day)
+   subroutine init_calendar(start_year, datum, current_year, current_month, current_day, current_day_of_year)
       implicit none
       integer, intent(in) :: start_year
       real(RK), intent(in) :: datum
       integer, intent(out) :: current_year, current_month
-      real(RK), intent(out) :: current_day
+      real(RK), intent(out) :: current_day, current_day_of_year
 
       ! Local variables
       real(RK) :: elapsed_days, days_left, days_per_year
@@ -358,17 +358,17 @@ contains
             exit
          end if
       end do
-      days_left = datum - elapsed_days
+      current_day = datum - elapsed_days
+      current_day_of_year =  current_day
 
       ! Determine current month and day
       days_per_month = calc_days_per_month(current_year)
 
       do i=1,12
-         if (days_left > days_per_month(i)) then
-            days_left = days_left - days_per_month(i)
+         if (current_day > days_per_month(i)) then
+            current_day = current_day - days_per_month(i)
          else
             current_month = i
-            current_day = days_left
             exit
          end if
       end do
@@ -376,10 +376,10 @@ contains
 
 
    ! Update calendar month and day (used for albedo assignment)
-   subroutine update_calendar(current_year, current_month, current_day, dt)
+   subroutine update_calendar(current_year, current_month, current_day, current_day_of_year, dt)
       implicit none
       integer, intent(inout) :: current_year, current_month
-      real(RK), intent(inout) :: current_day
+      real(RK), intent(inout) :: current_day, current_day_of_year
       real(RK), intent(in) :: dt
 
       ! Local variables
@@ -392,6 +392,7 @@ contains
 
       ! Update current day
       current_day_new = current_day + dt/24/60/60
+      current_day_of_year = current_day_of_year + dt/24/60/60
 
       ! If new month is reached
       if (ceiling(current_day_new) > days_per_month(current_month)) then
@@ -400,6 +401,7 @@ contains
 
          ! If new year is reached
          if (current_month > 12) then
+            current_day_of_year = 1
             current_month = 1
             current_year = current_year + 1
          end if
@@ -407,7 +409,6 @@ contains
          ! If not a new month, just go on counting
          current_day = current_day_new
       end if
-
    end subroutine
 
    ! Calculate density as a function of T and S

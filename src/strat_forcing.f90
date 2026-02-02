@@ -509,13 +509,10 @@ contains
       end associate
    end subroutine
 
-   subroutine forcing_init_albedo(self, state, sim_cfg)
+   subroutine forcing_init_albedo(self, state)
       implicit none
       class(ForcingModule) :: self
       class(ModelState) :: state
-      class(SimConfig) :: sim_cfg
-
-      call init_calendar(sim_cfg%reference_year, state%datum, state%current_year, state%current_month, state%current_day)
 
       ! Monthly albedo data according to Grishchenko, in Cogley 1979
       if (self%param%Lat > 0)  then ! Northern hemisphere (1.000 if no sun)
@@ -595,9 +592,6 @@ contains
       ! Local variables
       real(RK) :: albedo_start, albedo_end
       integer :: previous_month, next_month
-
-      ! Determine current calendar day and month
-      call update_calendar(state%current_year, state%current_month, state%current_day, state%dt)
 
       ! Determine albedo as a function of latitude and month according to Grishchenko (in Cogley 1979)
       ! Linear interpolation, assuming that the monthly data is representative of the 15. of each month (also for months with 28, 29 and 31 days)

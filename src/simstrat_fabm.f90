@@ -189,7 +189,7 @@ contains
       ! For this list, visit https://github.com/fabm-model/fabm/wiki/List-of-standard-variables
       ! Listed below are all non biogeochemical variables from that list
       
-      ! Interior data (arrays)
+      ! Interior variables (arrays)
       ! Attenuation coefficient of photosynthetically active radiative (PAR) flux, a fraction of shortwave radiative (SWR) flux [m-1]
       call self%fabm_model%link_interior_data(fabm_standard_variables%attenuation_coefficient_of_photosynthetic_radiative_flux, state%absorb_vol)
       ! Attenuation coefficient of SWR flux [m-1]
@@ -201,6 +201,8 @@ contains
       call self%fabm_model%link_interior_data(fabm_standard_variables%cell_thickness, grid%h(1:grid%nz_grid))
       ! Density of each layer [kg m-3]
       call self%fabm_model%link_interior_data(fabm_standard_variables%density, state%rho)
+      ! Depth relative to surface [m]
+      call self%fabm_model%link_interior_data(fabm_standard_variables%depth, grid%layer_depth)
       ! PAR flux [W m-2]
       call self%fabm_model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux, state%par_vol)
       ! SWR flux [W m-2]
@@ -211,12 +213,14 @@ contains
       call self%fabm_model%link_interior_data(fabm_standard_variables%pressure, grid%layer_depth)
       ! Temperature at each layer [°C]
       call self%fabm_model%link_interior_data(fabm_standard_variables%temperature, state%T)
+      ! Secchi depth [m], not defined in Simstrat
+      !call self%fabm_model%link_interior_data(fabm_standard_variables%secchi_depth)
       ! Net rate of SWR energy absorption at each layer [W m-2], not defined in Simstrat
       !call fabm_model%link_interior_data(fabm_standard_variables%net_rate_of_absorption_of_shortwave_energy_in_layer)
       ! Vertical tracer diffusity [m2 s-1]: defined in GOTM, not defined in Simstrat
       !link_interior_data(type_interior_standard_variable(name='vertical_tracer_diffusivity', units='m2 s-1'))
 
-      ! Scalars (horizontal data in a 1D model)
+      ! Horizontal variables (scalars in a 1D model)
       ! Absolute depth [m]
       call self%fabm_model%link_horizontal_data(fabm_standard_variables%bottom_depth, grid%z_zero)
       ! Bottom stress [Pa]
@@ -243,10 +247,6 @@ contains
       call self%fabm_model%link_horizontal_data(fabm_standard_variables%wind_speed, state%uv10)
       ! latitude [degree_north]
       call self%fabm_model%link_horizontal_data(fabm_standard_variables%latitude, state%Lat)
-      ! Depth relative to surface [m], not foud in FABM alhough in list, bot provided in GOTM
-      ! call self%fabm_model%link_scalar(fabm_standard_variables%depth, grid%max_depth)
-      ! Secchi depth [m], not defined in Simstrat
-      !call self%fabm_model%link_horizontal_data(fabm_standard_variables%secchi_depth)
       ! Depth below geoid [m], provided in GOTM but only necessary when coupling with geodetic data, not defined in Simstrat
       !call self%fabm_model%link_horizontal_data(fabm_standard_variables%bottom_depth_below_geoid)
       ! Bottom roughness [m], provided in GOTM, constant in Simstrat
@@ -257,8 +257,10 @@ contains
       !call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_flux_in_air)
       ! Longitude [degree_east], provided in GOTM, not defined in Simstrat
       !call self%fabm_model%link_horizontal_data(fabm_standard_variables%longitude)
-      ! Number of days since start of the year [days], provided in GOTM, could be calculated in Simstrat but only if albedo is calculated
-      !call self%fabm_model%link_horizontal_data(fabm_standard_variables%number_of_days_since_start_of_the_year)
+
+      ! Global variables (scalars)
+      ! Number of days since start of the year [days]
+      call self%fabm_model%link_scalar(fabm_standard_variables%number_of_days_since_start_of_the_year, state%current_day_of_year)
       
       ! Get index of attenuation coefficient FABM diagnostic variable
       if (fabm_cfg%bioshade_feedback) then
