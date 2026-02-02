@@ -369,7 +369,7 @@ contains
 
          ! 2a. Simstrat check for negative FABM interior state variables
          do ivar = 1, state%n_fabm_interior_state  
-            if (any(state%fabm_interior_state(1: grid%nz_occupied, ivar) < 0.0_RK)) then
+            if (any(state%fabm_interior_state(1: grid%nz_occupied, ivar) < -fabm_cfg%negative_tolerance)) then
                do k = 1, size(state%fabm_interior_state(1:grid%nz_occupied, ivar))
                   if (state%fabm_interior_state(k, ivar) < 0.0_RK) then
                      print *, 'FABM Interior Variable value is ', state%fabm_interior_state(k, ivar)
@@ -404,9 +404,9 @@ contains
 
          ! 2b. Simstrat check for negative FABM bottom state variables
          do ivar = 1, state%n_fabm_bottom_state
-            if (any(state%fabm_bottom_state(:, ivar) + state%dt * self%sms_bt(:, ivar) < 0.0_RK)) then
+            if (any(state%fabm_bottom_state(:, ivar) + state%dt * self%sms_bt(:, ivar) < -fabm_cfg%negative_tolerance)) then
                do k = 1, self%kmax_bot
-                  if (state%fabm_bottom_state(k, ivar) + state%dt * self%sms_bt(k, ivar) < 0.0_RK) then
+                  if (state%fabm_bottom_state(k, ivar) + state%dt * self%sms_bt(k, ivar) < -fabm_cfg%negative_tolerance) then
                      print *, 'FABM Bottom Variable value is ', state%fabm_bottom_state(k, ivar)
                      print *, 'at grid point ', k
                      print *, 'at time (days, seconds) = ', state%simulation_time
@@ -421,7 +421,7 @@ contains
 
          ! 2c. Simstrat check for negative FABM surface state variables
          do ivar = 1, state%n_fabm_surface_state
-            if (state%fabm_surface_state(ivar) < 0.0_RK) then
+            if (state%fabm_surface_state(ivar) < -fabm_cfg%negative_tolerance) then
                print *, 'FABM Surface Variable value is ', state%fabm_surface_state(ivar)
                print *, 'at time (days, seconds) = ', state%simulation_time
                call error('FABM Surface Variable '//self%fabm_model%surface_state_variables(ivar)%name//' below zero.')

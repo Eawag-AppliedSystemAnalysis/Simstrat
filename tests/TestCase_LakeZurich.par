@@ -42,7 +42,8 @@
     "OutputDiagnosticVars"    : true,
     "RepairFABMStates"        : true,
     "BottomEverywhere"        : true,
-    "BioshadeFeedback"        : true
+    "BioshadeFeedback"        : true,
+    "FABMNegativeTolerance"   : 0.01
   },
   "Simulation" : {
     "Timestep s"                  : 300,
