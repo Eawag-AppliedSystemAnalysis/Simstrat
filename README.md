@@ -6,52 +6,68 @@ Simstrat is a one-dimensional physical lake model for the simulation of stratifi
 
 There are a number of options for running Simstrat: 
 
-- Pre-built binaries are available [here](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/releases).
+- Pre-built binaries are available [here](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/releases)
+- Docker container
 - Build Simstrat
 - [LakeEnsemblR](https://github.com/aemon-j/LakeEnsemblR)
-- Docker container
 
-### Pre-build binary
+### Pre-built binary
 
 1. Download the appropriate binary for your operating system and version requirements.
-2. Make the binary executable `chmod +x simstrat_linux_303`
-3. Pass the location of the par file to the binary
+
+2. Make the binary executable:
+
+~~~bash
+chmod +x simstrat_linux_303
+~~~
+
+3. Pass the location of the par file to the binary:
+
 ~~~bash
 /pathtobinary/simstrat_linux_303 /pathtoparfile/test.par
 ~~~
 
 ### Docker container
 
-To use the docker container all input files, including the par file must be in the same folder. The file paths in the 
-par file must be relative to the parent folder that is mounted to the docker container.
+To use the docker container all input files, including the par file must be in the same folder. The file paths in the par file must be relative to the parent folder that is mounted to the docker container.
 
-Download the docker container
+Download the docker container:
 
-`docker pull eawag/simstrat:3.0.3`
+~~~bash
+docker pull eawag/simstrat:3.0.3
+~~~
 
-Run the docker container for `test.par` where all input files including `test.par` are located in `/pathtoinputfiles`.
-```bash
+Run the docker container for `test.par` where all input files including `test.par` are located in `/pathtoinputfiles`:
+
+~~~bash
 cd /pathtoinputfiles
 docker run -v $(pwd):/simstrat/run eawag/simstrat:3.0.3 test.par
-```
+~~~
 
+### Build Simstrat
 
-## Build Simstrat
-After cloning the git repository for the first time,  you need to initialize the 3rd-party libraries with the given script
+#### 1. Initialize 3rd-party libraries
+
+After cloning the git repository for the first time, you need to initialize the 3rd-party libraries with the given script:
+
 ~~~bash
 ./git_lib_initialize.sh
 ~~~
+
 If you are not using git, you can manually download the library source files from the addresses listed in the `.gitmodules` file and save them into the `lib` subfolder.
 
+#### 2. Setup building environment
 
 Before building an executable of Simstrat, you need to setup your building environment. We suggest two alternative options:
 
-### 1a. Setup building environment using Docker
+##### 2a. Setup building environment using Docker
+
 You can setup the building environment using Docker for Linux, MacOS and Win hosting systems; a complete step-by-step guide to use a docker container is available
 [here](misc/docker_build_env).
 
 
-### 1b. Manual setup of the building environment
+##### 2b. Manual setup of the building environment
+
 Please install the following required packages:
 
 **System requirements**
@@ -61,12 +77,19 @@ Please install the following required packages:
 - 2 compiler options:
     - [Intel Fortran (Intel Parallel Studio XE 2016)](https://software.intel.com/en-us/parallel-studio-xe/choose-download) (commercial)
     - Gfortran 6.3 or later (free)
+- [CMake](https://cmake.org/) 3.13 or later, to build FABM
 
 In principle, the manual installation is platform independent. Be aware that other programs on your computer might already use some version of Python and thus interfere with any new installation of Python.
 
-### 2. Build FABM
+#### 3. Build FABM
 
-Go to `lib/fabm` and run:
+Make sure you're inside your Simstrat build environment and go to `Simstrat/lib/fabm` with:
+
+~~~bash
+cd ../../lib/fabm
+~~~
+
+There, run:
 
 ~~~bash
 cmake -S ./ -B build -DFABM_HOST=simstrat
@@ -78,21 +101,21 @@ to create the new directory `build` and generate the build configuration inside 
 > ~~~bash
 > -DFABM_INSTITUTES=<INSTITUTE-NAMES>
 > ~~~  
-> as an argument to the `cmake` command above. To add externally maintained models add the argument  
+> as an argument to the `cmake` command above. To add externally maintained models add the argument:
 > ~~~bash
 > -DFABM_EXTRA_INSTITUTES=<INSTITUTES-NAMES>
 > ~~~  
-> to the `cmake` command. `<INSTITUTE-NAMES>` is a semi-colon-separated list of institute names (all in lower case). You may need to enclose this list in quotes to prevent the shell from interpreting the semi-colon. For the externally maintained models, you additionally need to point FABM to the directory with the source code by adding the argument  
+> to the `cmake` command. `<INSTITUTE-NAMES>` is a semi-colon-separated list of institute names (all in lower case). You may need to enclose this list in quotes to prevent the shell from interpreting the semi-colon. For the externally maintained models, you additionally need to clone their repositories and point FABM to the directory with the source code by adding the argument:
 > ~~~bash
 > -DFABM_<INSTITUTE-NAME>_BASE=<DIR>
 > ~~~  
-> to the `cmake` command for every `<INSTITUTE-NAME>` (here all in upper case) in `<INSTITUTE-NAMES>`. With `<DIR>` the directory of the corresponding source code on your device. A list of available externally maintained models can be found here: [Available Models in FABM Wiki](https://github.com/fabm-model/fabm/wiki/Biogeochemical-models-in-FABM#available-models). For instance to build FABM with [the Selmaprotbas model](https://github.com/jorritmesman/Selmaprotbas) the full cmake command is
+> to the `cmake` command for every `<INSTITUTE-NAME>` (here all in upper case) in `<INSTITUTE-NAMES>`. With `<DIR>` the directory of the corresponding source code on your device. A list of available externally maintained models can be found here: [Available Models in FABM Wiki](https://github.com/fabm-model/fabm/wiki/Biogeochemical-models-in-FABM#available-models). For instance to build FABM with [the Selmaprotbas model](https://github.com/jorritmesman/Selmaprotbas) the full cmake command is:
 > ~~~bash
 > cmake -S ./ -B build -DFABM_HOST=simstrat -DFABM_EXTRA_INSTITUTES=selmaprotbas -DFABM_SELMAPROTBAS_BASE=pathto/selmaprotbas
 > ~~~ 
 > with `pathto` the path to the location of the selmaprotbas repository on your device, relative to `lib/fabm`.
 
-> **N.B.2** Add  
+> **N.B.2** Add:
 > ~~~bash
 > -DCMAKE_BUILD_TYPE=Debug
 > ~~~  
@@ -106,9 +129,10 @@ cmake --build build --target install
 
 to build and install FABM.
 
-### 3. Build Simstrat
+#### 4. Build Simstrat
 
-Now leave the fabm folder and go to `Simstrat/build` folder with:
+Now leave `Simstrat/lib/fabm` and go to `Simstrat/build` with:
+
 ~~~bash
 cd ../../build
 ~~~
@@ -119,22 +143,45 @@ from where you can build Simstrat with:
 FoBiS.py build
 ~~~
 
-> **N.B.1** macOS seems to allow only dynamic library linking. To build for this target, use the `release-gnu-dynamic` compiling mode  
+> **N.B.1** macOS seems to allow only dynamic library linking. To build for this target, use the `release-gnu-dynamic` compiling mode: 
 > ~~~bash
 > FoBiS.py build -mode release-gnu-dynamic
 > ~~~
 
 > **N.B.2** you can find more building options [here](build).
 
+> **N.B.3** you can use one-line command to call the final Simstrat build procedure from any folder, e.g. from `tests`:
+>~~~bash
+>cd ../build; FoBiS.py build; cd -
+>~~~
 
+#### 5. Run Simstrat
 
+To run the Zurichsee testcase, go to `Simstrat/tests` with:
+
+~~~bash
+cd ../tests
+~~~ 
+
+and use the script: 
+
+~~~bash
+./run_testcase.sh
+~~~
+
+> **N.B.** you can use a one-line command to call the script from the root repository folder:
+>~~~bash
+>cd tests; ./run_testcase.sh; cd -
+>~~~
+
+Enjoy your Simstrat simulations!
 
 ## Documentation
 
 The user manual can be found [here](doc).
 
 The developer documentation can be generated with the FORD python module (`pip install ford`).
-To generate the documentation, run
+To generate the documentation, go to `Simstrat/build` and run:
 
 ~~~bash
 FoBiS.py rule -ex makedoc
