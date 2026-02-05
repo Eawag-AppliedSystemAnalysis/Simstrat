@@ -404,9 +404,9 @@ contains
 
          ! 2b. Simstrat check for negative FABM bottom state variables
          do ivar = 1, state%n_fabm_bottom_state
-            if (any(state%fabm_bottom_state(:, ivar) + state%dt * self%sms_bt(:, ivar) < 0.0_RK)) then
+            if (any(state%fabm_bottom_state(:, ivar) < 0.0_RK)) then
                do k = 1, self%kmax_bot
-                  if (state%fabm_bottom_state(k, ivar) + state%dt * self%sms_bt(k, ivar) < 0.0_RK) then
+                  if (state%fabm_bottom_state(k, ivar) < 0.0_RK) then
                      print *, 'FABM Bottom Variable value is ', state%fabm_bottom_state(k, ivar)
                      print *, 'at grid point ', k
                      print *, 'at time (days, seconds) = ', state%simulation_time
