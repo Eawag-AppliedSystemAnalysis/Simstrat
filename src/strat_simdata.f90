@@ -142,8 +142,6 @@ module strat_simdata
       logical :: bottom_everywhere
       ! Whether to calculate the attenuation coefficient with FABM
       logical :: bioshade_feedback
-      ! Tolerance for negative FABM values
-      real(RK) :: negative_tolerance
    end type
 
    ! Model params (read from file)

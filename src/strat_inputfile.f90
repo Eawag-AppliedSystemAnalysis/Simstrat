@@ -664,7 +664,6 @@ contains
             call par_file%get("FABMConfig.RepairFABMStates", fabm_cfg%repair_fabm,found); call check_field(found, 'FABMConfig.RepairFABMStates',ParName)
             call par_file%get("FABMConfig.BottomEverywhere", fabm_cfg%bottom_everywhere,found); call check_field(found, 'FABMConfig.BottomEverywhere',ParName)
             call par_file%get("FABMConfig.BioshadeFeedback", fabm_cfg%bioshade_feedback,found); call check_field(found, 'FABMConfig.BioshadeFeedback', ParName)
-            call par_file%get("FABMConfig.FABMNegativeTolerance", fabm_cfg%negative_tolerance,found); call check_field(found, 'FABMConfig.FABMNegativeTolerance',ParName)
          end if
 
          !Model Parameter
