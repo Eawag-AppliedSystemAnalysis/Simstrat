@@ -67,7 +67,7 @@ module simstrat_fabm
       integer :: att_index ! Index of attenuation_coefficient_of_photosynthetic_radiative_flux in FABM diagnostic variables
       integer, dimension(:), allocatable :: diagnostic_index ! Index of FABM diagnostic variables
       
-      ! Define additional FABM standard variables, used by specific models
+      ! Define additional FABM standard variables, used by specific biogeochemical models
       ! Projection factor for benthic flux into horizontal layer volume
       type(type_interior_standard_variable) :: bot_pel_conv = type_interior_standard_variable(name="bot_pel_conv", units="-")
    contains
@@ -223,7 +223,7 @@ contains
       ! Net rate of SWR energy absorption at each layer [W m-2], not defined in Simstrat
       !call self%fabm_model%link_interior_data(fabm_standard_variables%net_rate_of_absorption_of_shortwave_energy_in_layer)
       ! Projection factor for benthic flux into horizontal layer volume [m-1]
-      call self%fabm_model%link_interior_data(self%bot_pel_conv, grid%dAz_norm)
+      call self%fabm_model%link_interior_data(self%bot_pel_conv, grid%A_sed)
       ! Vertical tracer diffusity [m2 s-1]: defined in GOTM, not defined in Simstrat
       ! Declaration would be in Simstrat_FABM type
       !type(type_interior_standard_variable) :: vertical_tracer_diffusivity = type_interior_standard_variable(name='vertical_tracer_diffusivity', units='m2 s-1')
@@ -653,9 +653,10 @@ contains
       ! Add pelagic-benthic and air-water flux [var_unit m s-1] as source [var_unit s-1]
       ! Convert bottom flux to source by division by effective height of current layer [m]
       ! The effective height is the vertically projected sediment area over layer volume
-      sources(1) = sources(1) + (self%flux_bt(1, ivar) * grid%Az(1) / (grid%h(1) * grid%Az_vol(1))) ! pelagic-benthic flux at bottommost layer
       if (fabm_cfg%bottom_everywhere) then
-         sources(2:grid%nz_occupied) = sources(2:grid%nz_occupied) + (self%flux_bt(2:grid%nz_occupied, ivar) * grid%dAz_norm(2:grid%nz_occupied)) ! pelagic-benthic flux at every layer
+         sources(1:grid%nz_occupied) = sources(1:grid%nz_occupied) + (self%flux_bt(1:grid%nz_occupied, ivar) * grid%A_sed(1:grid%nz_occupied)) ! pelagic-benthic flux at every layer
+      else
+         sources(1) = sources(1) + (self%flux_bt(1, ivar) * grid%A_sed(1)) ! pelagic-benthic flux at bottommost layer
       end if
       ! Convert surface flux to source by division by surface area over volume of uppermost layer [m]
       sources(grid%nz_occupied) = sources(grid%nz_occupied) + (self%flux_sf(ivar) * grid%Az(grid%nz_occupied) / (grid%h(grid%nz_occupied) * grid%Az_vol(grid%nz_occupied)))
