@@ -28,6 +28,7 @@
 
 module simstrat_fabm
    use fabm ! main FABM module
+   use fabm_types, only: type_interior_standard_variable ! For additional standard variables
    use strat_simdata
    use strat_kinds
    use strat_grid
@@ -65,6 +66,10 @@ module simstrat_fabm
 
       integer :: att_index ! Index of attenuation_coefficient_of_photosynthetic_radiative_flux in FABM diagnostic variables
       integer, dimension(:), allocatable :: diagnostic_index ! Index of FABM diagnostic variables
+      
+      ! Define additional FABM standard variables, used by specific models
+      ! Projection factor for benthic flux into horizontal layer volume
+      type(type_interior_standard_variable) :: bot_pel_conv = type_interior_standard_variable(name="bot_pel_conv", units="-")
    contains
       procedure, pass(self), public :: init
       procedure, pass(self), public :: list_diagnostic
@@ -216,9 +221,13 @@ contains
       ! Secchi depth [m], not defined in Simstrat
       !call self%fabm_model%link_interior_data(fabm_standard_variables%secchi_depth)
       ! Net rate of SWR energy absorption at each layer [W m-2], not defined in Simstrat
-      !call fabm_model%link_interior_data(fabm_standard_variables%net_rate_of_absorption_of_shortwave_energy_in_layer)
+      !call self%fabm_model%link_interior_data(fabm_standard_variables%net_rate_of_absorption_of_shortwave_energy_in_layer)
+      ! Projection factor for benthic flux into horizontal layer volume [m-1]
+      call self%fabm_model%link_interior_data(self%bot_pel_conv, grid%dAz_norm)
       ! Vertical tracer diffusity [m2 s-1]: defined in GOTM, not defined in Simstrat
-      !link_interior_data(type_interior_standard_variable(name='vertical_tracer_diffusivity', units='m2 s-1'))
+      ! Declaration would be in Simstrat_FABM type
+      !type(type_interior_standard_variable) :: vertical_tracer_diffusivity = type_interior_standard_variable(name='vertical_tracer_diffusivity', units='m2 s-1')
+      !call self%fabm_model%link_interior_data(self%vertical_tracer_diffusivity)
 
       ! Horizontal variables (scalars in a 1D model)
       ! Absolute depth [m]
@@ -369,8 +378,8 @@ contains
 
          ! 2a. Simstrat check for negative FABM interior state variables
          do ivar = 1, state%n_fabm_interior_state  
-            if (any(state%fabm_interior_state(1: grid%nz_occupied, ivar) < 0.0_RK)) then
-               do k = 1, size(state%fabm_interior_state(1:grid%nz_occupied, ivar))
+            if (any(state%fabm_interior_state(:, ivar) < 0.0_RK)) then
+               do k = 1, size(state%fabm_interior_state(:, ivar))
                   if (state%fabm_interior_state(k, ivar) < 0.0_RK) then
                      print *, 'FABM Interior Variable value is ', state%fabm_interior_state(k, ivar)
                      print *, 'at grid point ', k
@@ -642,13 +651,14 @@ contains
       ! Source at each layer
       sources = self%sms_int(1:grid%nz_occupied, ivar)
       ! Add pelagic-benthic and air-water flux [var_unit m s-1] as source [var_unit s-1]
-      ! Convert to source by division by height of current bottom / uppermost layer [m]
+      ! Convert bottom flux to source by division by effective height of current layer [m]
+      ! The effective height is the vertically projected sediment area over layer volume
+      sources(1) = sources(1) + (self%flux_bt(1, ivar) * grid%Az(1) / (grid%h(1) * grid%Az_vol(1))) ! pelagic-benthic flux at bottommost layer
       if (fabm_cfg%bottom_everywhere) then
-         sources(:) = sources(:) + (self%flux_bt(1:grid%nz_occupied, ivar) / grid%h(1:grid%nz_occupied)) ! pelagic-benthic flux at every layer
-      else
-         sources(1) = sources(1) + (self%flux_bt(1, ivar) / grid%h(1)) ! pelagic-benthic flux only at bottommost layer
+         sources(2:grid%nz_occupied) = sources(2:grid%nz_occupied) + (self%flux_bt(2:grid%nz_occupied, ivar) * grid%dAz_norm(2:grid%nz_occupied)) ! pelagic-benthic flux at every layer
       end if
-      sources(grid%nz_occupied) = sources(grid%nz_occupied) + (self%flux_sf(ivar) / grid%h(grid%nz_occupied))
+      ! Convert surface flux to source by division by surface area over volume of uppermost layer [m]
+      sources(grid%nz_occupied) = sources(grid%nz_occupied) + (self%flux_sf(ivar) * grid%Az(grid%nz_occupied) / (grid%h(grid%nz_occupied) * grid%Az_vol(grid%nz_occupied)))
 
       ! Calculate RHS (phi^{n}+dt*S^{n})
       rhs(:) = state%fabm_interior_state(1:grid%nz_occupied, ivar) + state%dt*sources(:)
