@@ -131,13 +131,13 @@ contains
                else if ((dh + top_z) >= grid%max_depth) then ! If surface level reached
                   call grid%modify_top_box(grid%max_depth - top_z)
                   return
-               else if (((dh_i(t_i) + top_h) > h_div_2) .and. &
+               else if (((dh_i(t_i) + top_h) > h_div_2) .and. &  ! If top box>0.5*lower box 
                         ((dh_i(t_i) + top_h) < (h_mult_2))) then ! and top box<2*lower box
                   call grid%modify_top_box(dh_i(t_i))
                   return
-               else if (t_i == 1 .and. (dh + top_h) <= h_div_2) then ! If top box<=0.5*lower box, merge 2 boxes
+               else if ((dh + top_h) <= h_div_2) then ! If top box<=0.5*lower box, merge 2 boxes
                   call self%merge_box(state, dh_i(t_i))
-               else if (t_i == 1 .and. (dh + top_h) >= h_mult_2) then ! If top box>=2*lower box, add one box
+               else if ((dh + top_h) >= h_mult_2) then ! If top box>=2*lower box, add one box
                   call self%add_box(state, dh_i(t_i))
                end if ! dh==0
             end if

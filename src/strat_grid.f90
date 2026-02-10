@@ -377,17 +377,26 @@ contains
                   Az_vol=>self%Az_vol, &
                   dAz=>self%dAz)
 
-      if ((h(ubnd_vol) > self%h_old) .and. (size(dAz) >= (ubnd_vol + 1))) then
+      ! Update Az from dh and dAz
+      if (h(ubnd_vol) > self%h_old) then
          Az(ubnd_fce) = Az(ubnd_fce) + dAz(ubnd_vol + 1)*dh
       else
          Az(ubnd_fce) = Az(ubnd_fce) + dAz(ubnd_vol)*dh
       end if
 
+      ! Update Az_vol from Az
       Az_vol(ubnd_vol) = Az_vol(ubnd_vol) + dAz(ubnd_vol)*dh
 
-      h(ubnd_vol) = h(ubnd_vol) + dh
-      z_volume(ubnd_vol) = z_volume(ubnd_vol) + 0.5_RK*dh
+      ! Update z_face from dh
       z_face(ubnd_fce) = z_face(ubnd_fce) + dh
+
+      ! Update z_volume from updated z_face
+      z_volume(ubnd_vol) = 0.5_RK*(z_face(ubnd_fce) + z_face(ubnd_fce - 1))
+
+      ! Update h from updated z_face
+      h(ubnd_vol) = z_face(ubnd_fce) - z_face(ubnd_fce - 1)
+
+      ! Update layer_depth from updated z_face
       layer_depth(1:ubnd_vol) = z_face(ubnd_fce) - z_volume(1:ubnd_vol)
 
       end associate
@@ -409,20 +418,28 @@ contains
                   Az=>self%Az, &
                   Az_vol=>self%Az_vol)
 
-         ! Update grid
-         z_face(ubnd_fce - 1) = z_face(ubnd_fce) + dh
-         z_volume(ubnd_vol - 1) = 0.5_RK*(z_face(ubnd_fce - 1) + z_face(ubnd_fce - 2))
-
+         ! Update Az
          Az(ubnd_fce - 1) = Az(ubnd_fce)
+
+         ! Update Az_vol
          Az_vol(ubnd_vol - 1) = Az_vol(ubnd_vol)
 
-         self%h_old = h(ubnd_vol - 1)
-         h(ubnd_vol - 1) = (z_face(ubnd_fce - 1) - z_face(ubnd_fce - 2))
+         ! Update z_face from dh
+         z_face(ubnd_fce - 1) = z_face(ubnd_fce) + dh
+         
+         ! Update z_volume from updated z_face
+         z_volume(ubnd_vol - 1) = 0.5_RK*(z_face(ubnd_fce - 1) + z_face(ubnd_fce - 2))
 
+         ! Update h from updated z_face
+         h(ubnd_vol - 1) = (z_face(ubnd_fce - 1) - z_face(ubnd_fce - 2))
+         self%h_old = h(ubnd_vol - 1)
+
+         ! Update layer_depth from updated z_face
          layer_depth(ubnd_vol - 1) = z_face(ubnd_fce - 1) - z_volume(ubnd_vol - 1)
 
          ! Update number of occupied cells
          nz_occupied = nz_occupied - 1
+
          ! Update boundaries (ubnd_fce and ubnd_vol)
          call self%update_nz()
 
@@ -445,28 +462,36 @@ contains
                  Az_vol=>self%Az_vol, &
                  dAz=>self%dAz, &
                  nz_occupied=>self%nz_occupied)
+         
+         ! Update Az from dh and dAz
+         Az(ubnd_fce + 1) = Az(ubnd_fce) + dh*dAz(ubnd_vol + 1)
+         Az(ubnd_fce) = Az(ubnd_fce) + (dh - h(ubnd_vol))/2*dAz(ubnd_vol + 1)
 
-         h(ubnd_vol + 1) = (h(ubnd_vol) + dh)/2
-         h(ubnd_vol) = (h(ubnd_vol) + dh)/2
+         ! Update Az_vol from updated Az
+         Az_vol(ubnd_vol) = (Az(ubnd_fce) + Az(ubnd_fce - 1))/2
+         Az_vol(ubnd_vol - 1) = (Az(ubnd_fce - 1) + Az(ubnd_fce - 2))/2
+
+         ! Update z_face from dh and h
+         z_face(ubnd_fce + 1) = z_face(ubnd_fce) + dh
+         z_face(ubnd_fce) = z_face(ubnd_fce) + (dh - h(ubnd_vol))/2
+
+         ! Update z_volume from updated z_face
+         z_volume(ubnd_vol + 1) = 0.5_RK*(z_face(ubnd_fce + 1) + z_face(ubnd_fce))
+         z_volume(ubnd_vol) = 0.5_RK*(z_face(ubnd_fce) + z_face(ubnd_fce - 1))
+
+         ! Update h from updated z_face
+         h(ubnd_vol + 1) = z_face(ubnd_fce + 1) - z_face(ubnd_fce)
+         h(ubnd_vol) = z_face(ubnd_fce) - z_face(ubnd_fce - 1)
          self%h_old = h(ubnd_vol + 1)
 
-         z_face(ubnd_fce + 1) = z_face(ubnd_fce) + dh
-         z_face(ubnd_fce) = z_face(ubnd_fce) + dh - h(ubnd_vol)
-
-         z_volume(ubnd_vol + 1) = z_volume(ubnd_vol) + (h(ubnd_vol + 1) + dh)/2
-         z_volume(ubnd_vol) = z_volume(ubnd_vol) - (h(ubnd_vol) - dh)/2
-
-         Az(ubnd_fce) = Az(ubnd_fce - 1) + h(ubnd_vol)*dAz(ubnd_vol)
-         Az(ubnd_fce + 1) = Az(ubnd_fce) + h(ubnd_vol + 1)*dAz(ubnd_vol + 1)
-
-         Az_vol(ubnd_vol - 1) = (Az(ubnd_fce - 1) + Az(ubnd_fce - 2))/2
-         Az_vol(ubnd_vol) = (Az(ubnd_fce) + Az(ubnd_fce - 1))/2
-
+         ! Update layer_depth from updated z_face
          layer_depth(ubnd_vol + 1) = z_face(ubnd_fce + 1) - z_volume(ubnd_vol + 1)
          layer_depth(ubnd_vol) = z_face(ubnd_fce) - z_volume(ubnd_vol)
 
+         ! Update number of occupied cells
          nz_occupied = nz_occupied + 1
 
+         ! Update boundaries (ubnd_fce and ubnd_vol)
          call self%update_nz()
 
       end associate
