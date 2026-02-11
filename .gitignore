@@ -245,6 +245,7 @@ doc/developer/ford/**/*
 #Sublime files
 *.sublime*
 
-#notebook files
+#tools files
+tools/ConvertOutput/__pycache__/
 tools/ModifyInput/__pycache__/
 tools/ModifyInput/.ipynb_checkpoints/
