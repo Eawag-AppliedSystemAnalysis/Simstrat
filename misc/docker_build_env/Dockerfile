@@ -27,6 +27,12 @@ RUN pip3 install wheel
 RUN pip3 install future
 RUN pip3 install FoBiS.py ford pygooglechart
 
+# some more python modules for tools
+RUN pip3 install notebook
+RUN pip3 install pandas
+RUN pip3 install numpy
+RUN pip3 install netCDF4
+
 # set alternatives for the compiler
 RUN update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/x86_64-linux-gnu-gfortran 100
 RUN update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/x86_64-w64-mingw32-gfortran 50
