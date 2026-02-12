@@ -325,11 +325,8 @@ contains
          ! Compute area derivative over layer thickness
          dAz(1:nz_grid) = (Az(2:nz_grid + 1) - Az(1:nz_grid))/(z_face(2:nz_grid + 1) - z_face(1:nz_grid))
 
-         ! Compute projected sediment area over layer volume
-         ! At the bottommost layer this is just the face area over volume
-         ! At the other layers this is the area derivative divided by layer area
-         A_sed(1) = Az(1) / ((z_face(2) - z_face(1)) * Az_vol(1))
-         A_sed(2:nz_grid) = dAz(2:nz_grid) / Az_vol(2:nz_grid)
+         ! Compute projected sediment area over layer volume (area derivative divided by layer area)
+         A_sed(1:nz_grid) = dAz(1:nz_grid) / Az_vol(1:nz_grid)
 
       end associate
    end subroutine
