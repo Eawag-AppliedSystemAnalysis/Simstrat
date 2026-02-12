@@ -9,7 +9,7 @@ from netCDF4 import Dataset
 
 # Main function
 
-def csv_to_netcdf(csv_file, netcdf_file, var_units=''):
+def csv_to_netcdf(csv_file, netcdf_file, var_unit=''):
     """
     Convert Output file from CSV to NetCDF
     
@@ -21,7 +21,7 @@ def csv_to_netcdf(csv_file, netcdf_file, var_units=''):
     netcdf_file : str
         Path to output file in netcdf format
         Creates a new file or overwrites the existing one
-    var_units : str, optional
+    var_unit : str, optional
         The unit of the variable (e.g., 'degree_Celsius', 'kg m-3'), default is an empty string
     """
     
@@ -59,7 +59,7 @@ def csv_to_netcdf(csv_file, netcdf_file, var_units=''):
 
         # Create the data variable (Datetime, Depth)
         data_var = ncfile.createVariable('Data', 'f8', ('Datetime', 'Depth'))
-        data_var.units = var_units
+        data_var.units = var_unit
 
         # Fill the data variable (the DataFrame values corresponding to Datetime and Depth)
         # The DataFrame starts with 'Datetime' and the rest are the depth columns

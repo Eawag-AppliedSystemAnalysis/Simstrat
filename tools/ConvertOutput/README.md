@@ -8,7 +8,7 @@ Here you can convert the output files to another format than CSV.
 
 ## Use the scripts:
 
-First set the output file parameters and choose the conversion function in `Simstrat/tools/ConvertOutput/convert_output.py`.
+First set the variables, their units (optionally) and the path to the output files, as well as the conversion function in `Simstrat/tools/ConvertOutput/convert_output.py`.
 
 To execute the conversion inside the Simstrat build environment make sure you are in `Simstrat/tools/ConvertOutput` and run:
 
