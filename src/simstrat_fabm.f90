@@ -70,6 +70,7 @@ module simstrat_fabm
       ! Define additional FABM standard variables, used by specific biogeochemical models
       ! Projection factor for benthic flux into horizontal layer volume
       type(type_interior_standard_variable) :: bot_pel_conv = type_interior_standard_variable(name="bot_pel_conv", units="-")
+      type (type_fabm_interior_variable_id) :: id_bot_pel_conv
    contains
       procedure, pass(self), public :: init
       procedure, pass(self), public :: list_diagnostic
@@ -223,7 +224,8 @@ contains
       ! Net rate of SWR energy absorption at each layer [W m-2], not defined in Simstrat
       !call self%fabm_model%link_interior_data(fabm_standard_variables%net_rate_of_absorption_of_shortwave_energy_in_layer)
       ! Projection factor for benthic flux into horizontal layer volume [m-1]
-      call self%fabm_model%link_interior_data(self%bot_pel_conv, grid%A_sed)
+      self%id_bot_pel_conv = self%fabm_model%get_interior_variable_id(self%bot_pel_conv)
+      call self%fabm_model%link_interior_data(self%id_bot_pel_conv, grid%dAz_norm(1:))
       ! Vertical tracer diffusity [m2 s-1]: defined in GOTM, not defined in Simstrat
       ! Declaration would be in Simstrat_FABM type
       !type(type_interior_standard_variable) :: vertical_tracer_diffusivity = type_interior_standard_variable(name='vertical_tracer_diffusivity', units='m2 s-1')
@@ -462,7 +464,7 @@ contains
          call self%fabm_model%get_interior_sources(1, grid%nz_grid, self%sms_int)
          ! Set NaNs to 0
          if (any(ieee_is_nan(self%sms_int))) then
-            call warn("FABM Interior Source contains NaNs, set to 0")
+            call error("FABM Interior Source contains NaNs, set to 0")
             where (ieee_is_nan(self%sms_int))
                self%sms_int = 0.0
             end where
@@ -479,19 +481,22 @@ contains
             ! If bottom_everywhere is set, at every depth:
             ! FABM is pointed to location that holds state data for the current depth
             ! The bottom (the location of the pelagic-benthic interface) is moved to the current depth
+            ! Environmental data (dAz_norm) is updated
             ! The fluxes and sources at the current depth are calculated
             do k = 2, self%kmax_bot
                do ivar = 1, state%n_fabm_bottom_state
                   call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k, ivar))
                end do
                self%bottom_index = k
+               call self%fabm_model%prepare_inputs()
                call self%fabm_model%get_bottom_sources(self%flux_bt(k, :), self%sms_bt(k, :))
             end do
-            ! Reset Botom to 1
+            ! Reset Bottom to 1
             do ivar = 1, state%n_fabm_bottom_state
                call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
             end do
             self%bottom_index = 1
+            call self%fabm_model%prepare_inputs()
          end if
          ! Set NaNs to 0
          if (state%n_fabm_interior_state > 0) then
@@ -651,12 +656,11 @@ contains
       ! Source at each layer
       sources = self%sms_int(1:grid%nz_occupied, ivar)
       ! Add pelagic-benthic and air-water flux [var_unit m s-1] as source [var_unit s-1]
-      ! Convert bottom flux to source by division by effective height of current layer [m]
-      ! The effective height is the vertically projected sediment area over layer volume
+      ! Convert bottom flux to source by multiplication by sediment area over layer volume (dAz_norm, [m])
       if (fabm_cfg%bottom_everywhere) then
-         sources(1:grid%nz_occupied) = sources(1:grid%nz_occupied) + (self%flux_bt(1:grid%nz_occupied, ivar) * grid%A_sed(1:grid%nz_occupied)) ! pelagic-benthic flux at every layer
+         sources(1:grid%nz_occupied) = sources(1:grid%nz_occupied) + (self%flux_bt(1:grid%nz_occupied, ivar) * grid%dAz_norm(1:grid%nz_occupied)) ! pelagic-benthic flux at every layer
       else
-         sources(1) = sources(1) + (self%flux_bt(1, ivar) * grid%A_sed(1)) ! pelagic-benthic flux at bottommost layer
+         sources(1) = sources(1) + (self%flux_bt(1, ivar) * grid%dAz_norm(1)) ! pelagic-benthic flux at bottommost layer
       end if
       ! Convert surface flux to source by division by surface area over volume of uppermost layer [m]
       sources(grid%nz_occupied) = sources(grid%nz_occupied) + (self%flux_sf(ivar) * grid%Az(grid%nz_occupied) / (grid%h(grid%nz_occupied) * grid%Az_vol(grid%nz_occupied)))

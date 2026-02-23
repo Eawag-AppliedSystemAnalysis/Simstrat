@@ -52,8 +52,8 @@ module strat_grid
       real(RK), dimension(:), pointer     :: layer_depth    ! Depth of each layer, used by FABM (needs pointer attribute)
       real(RK), dimension(:), allocatable :: Az             ! Areas
       real(RK), dimension(:), pointer     :: Az_vol         ! Areas on volume grid, needed for FABM
-      real(RK), dimension(:), allocatable :: dAz            ! Area derivative over layer thickness
-      real(RK), dimension(:), pointer     :: A_sed          ! Projected sediment area over layer volume, used by FABM (needs pointer attribute)
+      real(RK), dimension(:), allocatable :: dAz            ! Area derivative with respect to height
+      real(RK), dimension(:), pointer     :: dAz_norm          ! Normalized area derivative, used by FABM (needs pointer attribute)
       real(RK), dimension(:), allocatable :: meanint        ! ?
       real(RK), pointer :: max_depth                        ! Relative to lake surface depth of lowest layer, FABM needs pointer attribute
       real(RK), pointer :: z_zero                           ! Absolute depth of lowest layer, FABM needs pointer attribute
@@ -118,7 +118,7 @@ contains
       call save_array(80, self%Az)
       call save_array_pointer(80, self%Az_vol)
       call save_array(80, self%dAz)
-      call save_array_pointer(80, self%A_sed)
+      call save_array_pointer(80, self%dAz_norm)
       call save_array(80, self%meanint)
       write(80) self%volume, self%h_old, self%max_depth
       call save_array(80, self%AreaFactor_1)
@@ -141,7 +141,7 @@ contains
       call read_array(81, self%Az)
       call read_array_pointer(81, self%Az_vol)
       call read_array(81, self%dAz)
-      call read_array_pointer(81, self%A_sed)
+      call read_array_pointer(81, self%dAz_norm)
       call read_array(81, self%meanint)
       read(81) self%volume, self%h_old, self%max_depth
       call read_array(81, self%AreaFactor_1)
@@ -191,12 +191,12 @@ contains
          ! h is already allocated by grid point init
          allocate (self%z_volume(0:nz_grid)) ! Depth axis with center of boxes
          self%z_volume(0) = 0 ! trick for array access - index not in use
-         allocate (self%layer_depth(nz_grid)) ! Depth of each box  -Max: why from 0? would need from 1 for FABM
+         allocate (self%layer_depth(nz_grid)) ! Depth of each box
          allocate (self%z_face(nz_grid + 1)) ! Depth axis with faceer border of boxes
          allocate (self%Az(nz_grid + 1)) ! Az is defined on the faces
          allocate (self%Az_vol(nz_grid)) ! Az_vol is defined on volume grid
          allocate (self%dAz(nz_grid)) ! dAz is the difference between Az and thus defined on the volume
-         allocate (self%A_sed(nz_grid)) ! A_sed is defined on the volume
+         allocate (self%dAz_norm(nz_grid)) ! dAz_norm is defined on the volume
 
          ! Area factors used in calculations
          allocate (self%AreaFactor_1(nz_grid)) ! defined on faces
@@ -310,7 +310,7 @@ contains
       integer :: n_read
       associate (nz_grid=>self%nz_grid, &
                  dAz=>self%dAz, &
-                 A_sed=>self%A_sed, &
+                 dAz_norm=>self%dAz_norm, &
                  z_face=>self%z_face, &
                  Az=>self%Az, &
                  Az_vol=>self%Az_vol)
@@ -322,11 +322,11 @@ contains
          ! Interpolate area on volume grid (needed for FABM)
          call Interp(config%z_A_read, config%A_read, n_read, self%z_volume(1:nz_grid), Az_vol, nz_grid)
 
-         ! Compute area derivative over layer thickness
+         ! Compute area derivative (as a function of height)
          dAz(1:nz_grid) = (Az(2:nz_grid + 1) - Az(1:nz_grid))/(z_face(2:nz_grid + 1) - z_face(1:nz_grid))
 
-         ! Compute projected sediment area over layer volume (area derivative divided by layer area)
-         A_sed(1:nz_grid) = dAz(1:nz_grid) / Az_vol(1:nz_grid)
+         ! Compute normalized area derivative (area derivative divided by layer area)
+         dAz_norm(1:nz_grid) = dAz(1:nz_grid) / Az_vol(1:nz_grid)
 
       end associate
    end subroutine
