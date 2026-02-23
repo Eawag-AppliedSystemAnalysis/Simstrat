@@ -74,8 +74,7 @@ def csv_to_netcdf(var_names, filename, path_to_output, var_units=[]):
             if not os.path.exists(csv_file):
                 raise FileNotFoundError(f'File {csv_file} does not exist.')
             if os.stat(csv_file).st_size == 0:
-                print(f'File {csv_file} is empty.')
-                continue
+                raise ValueError(f'File {csv_file} is empty.')
 
             # Create the data variable (Depth, Datetime)
             data_var = ncfile.createVariable(var_names[i], 'f8', ('Depth', 'Datetime'))
@@ -91,4 +90,7 @@ def csv_to_netcdf(var_names, filename, path_to_output, var_units=[]):
             # Transpose to match the data variable dimensions (Depth, Datetime)
             df = pd.read_csv(csv_file)
             data_matrix = df.iloc[:, 1:].values
-            data_var[:, :] = np.transpose(data_matrix)
+            if np.shape(data_var[:, :]) == np.shape(np.transpose(data_matrix)):
+                data_var[:, :] = np.transpose(data_matrix)
+            else:
+                raise ValueError(f'{var_names[i]}_out.dat is of different format than {var_names[0]}_out.dat.')
