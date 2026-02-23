@@ -9,7 +9,7 @@ from netCDF4 import Dataset
 
 # Main function
 
-def csv_to_netcdf(var_names, filename, path_to_output, var_units=[], dt_freq='h'):
+def csv_to_netcdf(var_names, filename, path_to_output, var_units=[]):
     """
     Convert Output file from CSV to NetCDF
     
@@ -23,11 +23,8 @@ def csv_to_netcdf(var_names, filename, path_to_output, var_units=[], dt_freq='h'
         Creates a new file or overwrites the existing one
     path_to_output : str
         Path to folder with output files
-    var_unit : str, optional
+    var_units : str, optional
         The units of the variables (e.g., 'degree_Celsius', '1e-3'), default is an empty list
-    dt_freq : str, optional
-        The frequency the datetime dimension is round to, must be 's', 'min', 'h' or 'd'
-        Default is 'h': round to hours
     """
 
     # Get Depth and Datetime dimensions from first files with values
@@ -42,24 +39,9 @@ def csv_to_netcdf(var_names, filename, path_to_output, var_units=[], dt_freq='h'
             continue
 
         # Extract the Depth and Datetime columns
-        # Convert Time column (days since reference data) to Datetime
-        # Assuming reference Date is 1981-01-01 (common for Simstrat)
         df = pd.read_csv(csv_file)
         depth_vals = df.columns[1:].astype(np.float64)
-        time_vals = df['Datetime']
-        datetime_vals = (pd.Timestamp('1981-01-01') + pd.to_timedelta(time_vals, unit='D').astype('timedelta64[s]'))
-        datetime_vals = datetime_vals.dt.round(freq=dt_freq)
-        datetime_vals = datetime_vals.astype(str)
-        if dt_freq == 'd':
-            datetime_vals = datetime_vals.astype('|S%d' % 10)
-        elif dt_freq == 'h':
-            datetime_vals = datetime_vals.astype('|S%d' % 13)
-        elif dt_freq == 'min':
-            datetime_vals = datetime_vals.astype('|S%d' % 16)
-        elif dt_freq == 's':
-            datetime_vals = datetime_vals.astype('|S%d' % 19)
-        else:
-            raise ValueError(f'Datetime frequency must be s, min, h or d')
+        datetime_vals = df['Datetime'].values.astype(np.float64)
 
         # Once is enough
         break
@@ -73,14 +55,16 @@ def csv_to_netcdf(var_names, filename, path_to_output, var_units=[], dt_freq='h'
         ncfile.createDimension('Datetime', len(datetime_vals))
 
         # Create variables for 'Depth' and 'Datetime'
+        # Assuming reference date is 1981-01-01 (common for Simstrat)
         depth_var = ncfile.createVariable('Depth', 'f8', ('Depth',))
         depth_var.units = 'm'
-        datetime_var = ncfile.createVariable('Datetime', str, ('Datetime',))
+        datetime_var = ncfile.createVariable('Datetime', 'f8', ('Datetime',))
+        datetime_var.units = 'days since 1981-01-01 00:00:00'
+        datetime_var.calendar = 'standard'
 
         # Assign the Depth and Datetime values to the corresponding variables
         depth_var[:] = depth_vals
-        for i, dt in enumerate(datetime_vals):
-            datetime_var[i] = dt
+        datetime_var[:] = datetime_vals
 
         # Add data variables (Depth, Datetime)
         for i, variable in enumerate(var_names):
