@@ -13,7 +13,7 @@ conversion_function = 'csv_to_netcdf' # Currently available: csv_to_netcdf
 # Optional parameters
 
 var_units = ['degree_Celsius', '1e-3'] # Variable units, assigned to var_names in order
-var_exclude = [] # If empty list is passed for var_names, exclude files that are empty or of different format
+var_exclude = ['HA', 'HK', 'HV', 'HW'] # If empty list is passed for var_names, exclude files that are empty or of different format
 
 # Execute conversion
 
