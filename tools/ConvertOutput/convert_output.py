@@ -5,15 +5,15 @@ from functions import csv_to_netcdf
 
 # Required parameters
 
-var_names = [] # Variable names; Pass an empty list to convert all variables in the output folder
+var_names = ['T', 'S'] # Variable names; Pass an empty list to convert all variables in the output folder
 filename = 'output_converted' # Name of new file
-path_to_output = '../../tests/LakeConstance/Results' # Path to output folder
+path_to_output = '../../tests/TestCases_Results/' # Path to output folder
 conversion_function = 'csv_to_netcdf' # Currently available: csv_to_netcdf
 
 # Optional parameters
 
-var_units = [] # Variable units, assigned to var_names in order
-var_exclude = ['TotalIceH'] # If empty list is passed for var_names, exclude files that are empty or of different format
+var_units = ['degree_Celsius', '1e-3'] # Variable units, assigned to var_names in order
+var_exclude = [] # If empty list is passed for var_names, exclude files that are empty or of different format
 
 # Execute conversion
 
