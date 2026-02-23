@@ -36,7 +36,7 @@
     "SnowModel"               : 1
   },
   "FABMConfig" : {
-    "FABMConfigFile"          : "../lib/fabm/testcases/fabm-selma.yaml",
+    "FABMConfigFile"          : "../lib/fabm/testcases/fabm-gotm-npzd.yaml",
     "PathFABMinflow"          : "TestCase_LakeZurich/FABM_inflow/",
     "SetDiagnosticVars"       : "TestCase_LakeZurich/SetFABMDiagnosticVars.dat",
     "OutputDiagnosticVars"    : true,
