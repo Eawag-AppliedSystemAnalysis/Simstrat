@@ -593,7 +593,7 @@ contains
       integer, intent(in) :: ivar
 
       ! Local variables
-      real(RK), dimension(grid%nz_occupied) :: velocity_up, velocity_down, sources, lower_diag_diff, main_diag_diff, upper_diag_diff, lower_diag, main_diag, upper_diag, rhs, AreaFactor_ext_1, AreaFactor_ext_2
+      real(RK), dimension(grid%nz_grid) :: velocity_up, velocity_down, sources, lower_diag_diff, main_diag_diff, upper_diag_diff, lower_diag, main_diag, upper_diag, rhs, AreaFactor_ext_1, AreaFactor_ext_2
       integer :: k
 
       ! Create linear system of equations with transport and source terms
@@ -601,28 +601,28 @@ contains
 
       ! Build diagonals of A with Simstrat transport terms (code from discretization module)
       ! With diffusivity for temperature (nuh)
-      ! Upward flux from (1:grid%nz_occupied - 1) to (2:grid%nz_occupied): upper_diag_diff(z) describes the upward flux into cell z
-      upper_diag_diff(2:grid%nz_occupied) = state%dt*state%nuh(2:grid%nz_occupied)*grid%AreaFactor_1(2:grid%nz_occupied)
+      ! Upward flux from (1:grid%nz_grid - 1) to (2:grid%nz_grid): upper_diag_diff(z) describes the upward flux into cell z
+      upper_diag_diff(2:grid%nz_grid) = state%dt*state%nuh(2:grid%nz_grid)*grid%AreaFactor_1(2:grid%nz_grid)
       upper_diag_diff(1) = 0.0_RK ! No upward flux into bottommost cell
-      ! Downward flux from (2:grid%nz_occupied) to (1:grid%nz_occupied - 1): lower_diag_diff(z) describes the downward flux into cell z
-      lower_diag_diff(1:grid%nz_occupied-1) = state%dt*state%nuh(2:grid%nz_occupied)*grid%AreaFactor_2(1:grid%nz_occupied - 1)
-      lower_diag_diff(grid%nz_occupied) = 0.0_RK ! No downward flux into uppermost cell
+      ! Downward flux from (2:grid%nz_grid) to (1:grid%nz_grid - 1): lower_diag_diff(z) describes the downward flux into cell z
+      lower_diag_diff(1:grid%nz_grid-1) = state%dt*state%nuh(2:grid%nz_grid)*grid%AreaFactor_2(1:grid%nz_grid - 1)
+      lower_diag_diff(grid%nz_grid) = 0.0_RK ! No downward flux into uppermost cell
       ! 1 - downward flux out - upward flux out
-      main_diag_diff(1:grid%nz_occupied) = 1.0_RK - upper_diag_diff(1:grid%nz_occupied) - lower_diag_diff(1:grid%nz_occupied)
+      main_diag_diff(1:grid%nz_grid) = 1.0_RK - upper_diag_diff(1:grid%nz_grid) - lower_diag_diff(1:grid%nz_grid)
 
       ! Add FABM fluxes to A as residual verical advection terms
       ! Benthic-pelagic and air-water fluxes are added as source terms below
       ! Area factors for external fluxes, minus sign to be closer to the AreaFactors from grid
       ! AreaFactor_ext_1 is for upward fluxes:
       ! Multiply by the layer through which the flux passes (z = i) and divide by the volume of the receiving cell (z = i)
-      AreaFactor_ext_1(1:grid%nz_occupied) = -grid%Az(1:grid%nz_occupied) / (grid%h(1:grid%nz_occupied) * grid%Az_vol(1:grid%nz_occupied))
+      AreaFactor_ext_1(1:grid%nz_grid) = -grid%Az(1:grid%nz_grid) / (grid%h(1:grid%nz_grid) * grid%Az_vol(1:grid%nz_grid))
       ! AreaFactor_ext_2 is for downward fluxes: 
       ! Multiply by the layer through which the flux passes (z = i+1) and divide by the volume of the receiving cell (z = i)
-      AreaFactor_ext_2(1:grid%nz_occupied) = -grid%Az(2:grid%nz_occupied+1) / (grid%h(1:grid%nz_occupied) * grid%Az_vol(1:grid%nz_occupied))
+      AreaFactor_ext_2(1:grid%nz_grid) = -grid%Az(2:grid%nz_grid+1) / (grid%h(1:grid%nz_grid) * grid%Az_vol(1:grid%nz_grid))
       ! Upward and downward movement rates for each layer
       ! if the variable moves upward velocity_up is positive and velocity_down zero
       ! vice versa if the variable moves downward
-      do k = 1, grid%nz_occupied
+      do k = 1, grid%nz_grid
          if (self%velocity(k, ivar) >= 0) then
             velocity_up(k) = self%velocity(k, ivar)
             velocity_down(k) = 0
@@ -631,45 +631,45 @@ contains
             velocity_down(k) = -self%velocity(k, ivar)
          end if
       end do
-      ! Add upward flux from (1:grid%nz_occupied-1) to (2:grid%nz_occupied): upper_diag(z) describes the upward flux into cell z
+      ! Add upward flux from (1:grid%nz_grid-1) to (2:grid%nz_grid): upper_diag(z) describes the upward flux into cell z
       ! upper_diag should be <= 0
       ! Benthic-pelagic flux is treated as source term below
-      upper_diag(2:grid%nz_occupied) = upper_diag_diff(2:grid%nz_occupied) + state%dt*velocity_up(1:grid%nz_occupied-1)*AreaFactor_ext_1(2:grid%nz_occupied)
+      upper_diag(2:grid%nz_grid) = upper_diag_diff(2:grid%nz_grid) + state%dt*velocity_up(1:grid%nz_grid-1)*AreaFactor_ext_1(2:grid%nz_grid)
       upper_diag(1) = upper_diag_diff(1)
       ! Subtract upward flux from cell z to cell z+1
       ! main_diag should be >= 0
       ! Water-air flux is treated as sink term below
-      main_diag(1:grid%nz_occupied-1) = main_diag_diff(1:grid%nz_occupied-1) - state%dt*velocity_up(1:grid%nz_occupied-1)*AreaFactor_ext_2(1:grid%nz_occupied-1)
-      main_diag(grid%nz_occupied) = main_diag_diff(grid%nz_occupied)
-      ! Add downward flux from (2:grid%nz_occupied) to (1:grid%nz_occupied - 1): lower_diag(z) describes the downward flux into cell z
+      main_diag(1:grid%nz_grid-1) = main_diag_diff(1:grid%nz_grid-1) - state%dt*velocity_up(1:grid%nz_grid-1)*AreaFactor_ext_2(1:grid%nz_grid-1)
+      main_diag(grid%nz_grid) = main_diag_diff(grid%nz_grid)
+      ! Add downward flux from (2:grid%nz_grid) to (1:grid%nz_grid - 1): lower_diag(z) describes the downward flux into cell z
       ! lower_diag should be <= 0
       ! Air-water flux is treated as source term below
-      lower_diag(1:grid%nz_occupied-1) = lower_diag_diff(1:grid%nz_occupied-1) + state%dt*velocity_down(2:grid%nz_occupied)*AreaFactor_ext_2(1:grid%nz_occupied-1)
-      lower_diag(grid%nz_occupied) = lower_diag_diff(grid%nz_occupied)
+      lower_diag(1:grid%nz_grid-1) = lower_diag_diff(1:grid%nz_grid-1) + state%dt*velocity_down(2:grid%nz_grid)*AreaFactor_ext_2(1:grid%nz_grid-1)
+      lower_diag(grid%nz_grid) = lower_diag_diff(grid%nz_grid)
       ! Subtract downward flux from cell z to cell z-1
       ! main_diag should be >= 0
       ! Pelagic-benthic flux is treated as sink term below
-      main_diag(2:grid%nz_occupied) = main_diag(2:grid%nz_occupied) - state%dt*velocity_down(2:grid%nz_occupied)*AreaFactor_ext_1(2:grid%nz_occupied)
+      main_diag(2:grid%nz_grid) = main_diag(2:grid%nz_grid) - state%dt*velocity_down(2:grid%nz_grid)*AreaFactor_ext_1(2:grid%nz_grid)
       main_diag(1) = main_diag(1)
 
       ! Get source S^{n}
       ! Source at each layer
-      sources = self%sms_int(1:grid%nz_occupied, ivar)
+      sources = self%sms_int(1:grid%nz_grid, ivar)
       ! Add pelagic-benthic and air-water flux [var_unit m s-1] as source [var_unit s-1]
       ! Convert bottom flux to source by multiplication by sediment area over layer volume (dAz_norm, [m])
       if (fabm_cfg%bottom_everywhere) then
-         sources(1:grid%nz_occupied) = sources(1:grid%nz_occupied) + (self%flux_bt(1:grid%nz_occupied, ivar) * grid%dAz_norm(1:grid%nz_occupied)) ! pelagic-benthic flux at every layer
+         sources(1:grid%nz_grid) = sources(1:grid%nz_grid) + (self%flux_bt(1:grid%nz_grid, ivar) * grid%dAz_norm(1:grid%nz_grid)) ! pelagic-benthic flux at every layer
       else
          sources(1) = sources(1) + (self%flux_bt(1, ivar) * grid%dAz_norm(1)) ! pelagic-benthic flux at bottommost layer
       end if
       ! Convert surface flux to source by division by surface area over volume of uppermost layer [m]
-      sources(grid%nz_occupied) = sources(grid%nz_occupied) + (self%flux_sf(ivar) * grid%Az(grid%nz_occupied) / (grid%h(grid%nz_occupied) * grid%Az_vol(grid%nz_occupied)))
+      sources(grid%nz_grid) = sources(grid%nz_grid) + (self%flux_sf(ivar) * grid%Az(grid%nz_grid) / (grid%h(grid%nz_grid) * grid%Az_vol(grid%nz_grid)))
 
       ! Calculate RHS (phi^{n}+dt*S^{n})
-      rhs(:) = state%fabm_interior_state(1:grid%nz_occupied, ivar) + state%dt*sources(:)
+      rhs(:) = state%fabm_interior_state(1:grid%nz_grid, ivar) + state%dt*sources(:)
 
       ! Solve LES to get phi^{n+1}
-      call solve_tridiag_thomas(lower_diag, main_diag, upper_diag, rhs, state%fabm_interior_state(1:grid%nz_occupied, ivar), grid%nz_occupied)
+      call solve_tridiag_thomas(lower_diag, main_diag, upper_diag, rhs, state%fabm_interior_state(1:grid%nz_grid, ivar), grid%nz_grid)
    end subroutine diffusion_fabm_interior_state
 
    ! Read names of diagnostic Vars in SetDiagnosticVars file
@@ -822,10 +822,10 @@ contains
 
       ! Retrieve attenuation_coefficient_of_photosynthetic_radiative_flux and set as absorb_vol
       attenuation_coefficient_of_photosynthetic_radiative_flux = self%fabm_model%get_interior_diagnostic_data(self%att_index)
-      state%absorb_vol(1 : grid%nz_occupied) = attenuation_coefficient_of_photosynthetic_radiative_flux(1 : grid%nz_occupied)
+      state%absorb_vol(1 : grid%nz_grid) = attenuation_coefficient_of_photosynthetic_radiative_flux(1 : grid%nz_grid)
 
       ! Interpolate to faces to be compatible with Simstrat temperature module
-      call grid%interpolate_to_face(grid%z_volume, state%absorb_vol, grid%nz_occupied, state%absorb)
+      call grid%interpolate_to_face(grid%z_volume, state%absorb_vol, grid%nz_grid, state%absorb)
    end subroutine absorption_update_fabm
 
    ! Deallocate memory
