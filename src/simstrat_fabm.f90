@@ -106,7 +106,9 @@ contains
 
       ! Provide extents of the spatial domain (number of layers nz for a 1D column)
       ! Used to allocate memory for FABM-managed spatially explicit fields
-      call self%fabm_model%set_domain(grid%nz_grid)
+      ! Provide seconds_per_time_unit when time filtering functionality is used
+      ! The product of seconds_per_time_unit and the t argument provided to prepare_inputs must have units of seconds
+      call self%fabm_model%set_domain(grid%nz_grid, 1.0_RK)
 
       ! Allocate bottom index with one value and link FABM to it
       ! Set bottom location (pelagic-benthic interface) to 1 (default)
@@ -225,7 +227,7 @@ contains
       !call self%fabm_model%link_interior_data(fabm_standard_variables%net_rate_of_absorption_of_shortwave_energy_in_layer)
       ! Projection factor for benthic flux into horizontal layer volume [m-1]
       self%id_bot_pel_conv = self%fabm_model%get_interior_variable_id(self%bot_pel_conv)
-      call self%fabm_model%link_interior_data(self%id_bot_pel_conv, grid%dAz_norm(1:))
+      call self%fabm_model%link_interior_data(self%id_bot_pel_conv, grid%dAz_norm)
       ! Vertical tracer diffusity [m2 s-1]: defined in GOTM, not defined in Simstrat
       ! Declaration would be in Simstrat_FABM type
       !type(type_interior_standard_variable) :: vertical_tracer_diffusivity = type_interior_standard_variable(name='vertical_tracer_diffusivity', units='m2 s-1')
@@ -451,7 +453,8 @@ contains
 
       ! 1. Prepare all fields (e.g. light attenuation) FABM needs to compute fluxes and source terms
       ! Operates on entire active spatial domain
-      call self%fabm_model%prepare_inputs()
+      ! To enable FABM's built-in time filters provide argument t that describes the model time
+      call self%fabm_model%prepare_inputs(real(state%simulation_time(2), kind=RK))
 
       ! 2. Retrieve sources, fluxes and vertical velocities
       ! >0: flux into water
@@ -488,7 +491,7 @@ contains
                   call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k, ivar))
                end do
                self%bottom_index = k
-               call self%fabm_model%prepare_inputs()
+               call self%fabm_model%prepare_inputs(real(state%simulation_time(2), kind=RK))
                call self%fabm_model%get_bottom_sources(self%flux_bt(k, :), self%sms_bt(k, :))
             end do
             ! Reset Bottom to 1
@@ -496,7 +499,7 @@ contains
                call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
             end do
             self%bottom_index = 1
-            call self%fabm_model%prepare_inputs()
+            call self%fabm_model%prepare_inputs(real(state%simulation_time(2), kind=RK))
          end if
          ! Set NaNs to 0
          if (state%n_fabm_interior_state > 0) then
@@ -654,11 +657,11 @@ contains
 
       ! Get source S^{n}
       ! Source at each layer
-      sources = self%sms_int(1:grid%nz_grid, ivar)
+      sources = self%sms_int(:, ivar)
       ! Add pelagic-benthic and air-water flux [var_unit m s-1] as source [var_unit s-1]
       ! Convert bottom flux to source by multiplication by sediment area over layer volume (dAz_norm, [m])
       if (fabm_cfg%bottom_everywhere) then
-         sources(1:grid%nz_grid) = sources(1:grid%nz_grid) + (self%flux_bt(1:grid%nz_grid, ivar) * grid%dAz_norm(1:grid%nz_grid)) ! pelagic-benthic flux at every layer
+         sources(:) = sources(:) + (self%flux_bt(:, ivar) * grid%dAz_norm(:)) ! pelagic-benthic flux at every layer
       else
          sources(1) = sources(1) + (self%flux_bt(1, ivar) * grid%dAz_norm(1)) ! pelagic-benthic flux at bottommost layer
       end if
@@ -666,10 +669,10 @@ contains
       sources(grid%nz_grid) = sources(grid%nz_grid) + (self%flux_sf(ivar) * grid%Az(grid%nz_grid) / (grid%h(grid%nz_grid) * grid%Az_vol(grid%nz_grid)))
 
       ! Calculate RHS (phi^{n}+dt*S^{n})
-      rhs(:) = state%fabm_interior_state(1:grid%nz_grid, ivar) + state%dt*sources(:)
+      rhs(:) = state%fabm_interior_state(:, ivar) + state%dt*sources(:)
 
       ! Solve LES to get phi^{n+1}
-      call solve_tridiag_thomas(lower_diag, main_diag, upper_diag, rhs, state%fabm_interior_state(1:grid%nz_grid, ivar), grid%nz_grid)
+      call solve_tridiag_thomas(lower_diag, main_diag, upper_diag, rhs, state%fabm_interior_state(:, ivar), grid%nz_grid)
    end subroutine diffusion_fabm_interior_state
 
    ! Read names of diagnostic Vars in SetDiagnosticVars file
