@@ -54,6 +54,9 @@ module simstrat_fabm
       ! Arrays for fluxes and tracer source terms at surface
       real(RK), dimension(:), allocatable :: flux_sf, sms_sf
 
+      ! Minimum and maximum values
+      real(RK), dimension(:), allocatable :: min_int, max_int, min_bt, max_bt, min_sf, max_sf
+
       ! Variables for validity of state
       logical :: valid_int, valid_sf, valid_bt
 
@@ -127,16 +130,22 @@ contains
       state%n_fabm_interior_state = size(self%fabm_model%interior_state_variables)
       if (state%n_fabm_interior_state > 0) then
          allocate(state%fabm_interior_state(grid%nz_grid, state%n_fabm_interior_state))
+         allocate(self%min_int(state%n_fabm_interior_state))
+         allocate(self%max_int(state%n_fabm_interior_state))
       end if
       ! Bottom state variables
       state%n_fabm_bottom_state = size(self%fabm_model%bottom_state_variables)
       if (state%n_fabm_bottom_state > 0) then
          allocate(state%fabm_bottom_state(self%kmax_bot, state%n_fabm_bottom_state))
+         allocate(self%min_bt(state%n_fabm_bottom_state))
+         allocate(self%max_bt(state%n_fabm_bottom_state))
       end if
       ! Surface state variables
       state%n_fabm_surface_state = size(self%fabm_model%surface_state_variables)
       if (state%n_fabm_surface_state > 0) then
          allocate(state%fabm_surface_state(state%n_fabm_surface_state))
+         allocate(self%min_sf(state%n_fabm_surface_state))
+         allocate(self%max_sf(state%n_fabm_surface_state))
       end if
 
       ! Total amount of states
@@ -152,6 +161,8 @@ contains
          do ivar = 1, state%n_fabm_interior_state
             call self%fabm_model%link_interior_state_data(ivar, state%fabm_interior_state(:,ivar))
             state%fabm_state_names(ivar) = self%fabm_model%interior_state_variables(ivar)%name
+            self%min_int(ivar) = self%fabm_model%interior_state_variables(ivar)%minimum
+            self%max_int(ivar) = self%fabm_model%interior_state_variables(ivar)%maximum
          end do
       end if
       ! Bottom state variables: link for bottom-most layer to fulfill FABM requirements, link for other layers later
@@ -159,6 +170,8 @@ contains
          do ivar = 1, state%n_fabm_bottom_state
             call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1,ivar))
             state%fabm_state_names(state%n_fabm_interior_state + ivar) = self%fabm_model%bottom_state_variables(ivar)%name
+            self%min_bt(ivar) = self%fabm_model%bottom_state_variables(ivar)%minimum
+            self%max_bt(ivar) = self%fabm_model%bottom_state_variables(ivar)%maximum
          end do
       end if
       ! Surface state variables
@@ -166,6 +179,8 @@ contains
          do ivar = 1, state%n_fabm_surface_state
             call self%fabm_model%link_surface_state_data(ivar, state%fabm_surface_state(ivar))
             state%fabm_state_names(state%n_fabm_interior_state + state%n_fabm_bottom_state + ivar) = self%fabm_model%surface_state_variables(ivar)%name
+            self%min_sf(ivar) = self%fabm_model%surface_state_variables(ivar)%minimum
+            self%max_sf(ivar) = self%fabm_model%surface_state_variables(ivar)%maximum
          end do
       end if
       
@@ -377,6 +392,15 @@ contains
             state%fabm_surface_state(ivar) = state%fabm_surface_state(ivar) + state%dt * self%sms_sf(ivar)
          end do
 
+         ! 2a. Simstrat check interior FABM bounds
+         do ivar = 1, state%n_fabm_interior_state  
+            if (any(state%fabm_interior_state(:, ivar) < self%min_int(ivar))) then
+               call warn('FABM Interior Variable '//self%fabm_model%interior_state_variables(ivar)%name//' below minimum.')
+            else if (any(state%fabm_interior_state(:, ivar) > self%max_int(ivar))) then
+               call warn('FABM Interior Variable '//self%fabm_model%interior_state_variables(ivar)%name//' above maximum.')
+            end if
+         end do
+
          ! 2a. FABM check (and repair) interior state variables
          call self%fabm_model%check_interior_state(1, grid%nz_grid, fabm_cfg%repair_fabm, self%valid_int)
 
@@ -391,6 +415,15 @@ contains
                   end if
                end do
                call error('FABM Variable '//self%fabm_model%interior_state_variables(ivar)%name//' below zero.')
+            end if
+         end do
+
+         ! 2b. Simstrat check bottom FABM bounds
+         do ivar = 1, state%n_fabm_bottom_state  
+            if (any(state%fabm_bottom_state(:, ivar) < self%min_bt(ivar))) then
+               call warn('FABM Bottom Variable '//self%fabm_model%bottom_state_variables(ivar)%name//' below minimum.') 
+            else if (any(state%fabm_bottom_state(:, ivar) > self%max_bt(ivar))) then
+               call warn('FABM Bottom Variable '//self%fabm_model%bottom_state_variables(ivar)%name//' above maximum.')
             end if
          end do
          
@@ -429,6 +462,16 @@ contains
             end if
          end do
 
+         ! 2c. Simstrat check surface FABM bounds
+         do ivar = 1, state%n_fabm_surface_state  
+            if (state%fabm_surface_state(ivar) < self%min_sf(ivar)) then
+               call warn('FABM Surface Variable '//self%fabm_model%surface_state_variables(ivar)%name//' below minimum.')
+            end if
+            if (state%fabm_surface_state(ivar) > self%max_sf(ivar)) then
+               call warn('FABM Surface Variable '//self%fabm_model%surface_state_variables(ivar)%name//' above maximum.')
+            end if
+         end do
+
          ! 2c. FABM check (and repair) surface state variables
          call self%fabm_model%check_surface_state(fabm_cfg%repair_fabm, self%valid_sf)
 
@@ -444,9 +487,9 @@ contains
          ! 2. Error if FABM out of bounds and not repaired
          if (.not. (self%valid_int .and. self%valid_bt .and. self%valid_sf)) then
             if (fabm_cfg%repair_fabm) then
-               call warn("FABM Variable repaired")
+               call warn("FABM Variables repaired")
             else
-               call error("FABM Variable out of bounds")
+               call error("FABM Variables out of bounds")
             end if
          end if
       end if
@@ -845,6 +888,12 @@ contains
       if (allocated(self%flux_sf)) deallocate(self%flux_sf)
       if (allocated(self%sms_sf)) deallocate(self%sms_sf)
       if (allocated(self%velocity)) deallocate(self%velocity)
+      if (allocated(self%min_int)) deallocate(self%min_int)
+      if (allocated(self%max_int)) deallocate(self%max_int)
+      if (allocated(self%min_bt)) deallocate(self%min_bt)
+      if (allocated(self%max_bt)) deallocate(self%max_bt)
+      if (allocated(self%min_sf)) deallocate(self%min_sf)
+      if (allocated(self%max_sf)) deallocate(self%max_sf)
       if (associated(self%bottom_index)) deallocate(self%bottom_index)
       if (allocated(self%diagnostic_index)) deallocate(self%diagnostic_index)
    end subroutine deallocate_fabm
