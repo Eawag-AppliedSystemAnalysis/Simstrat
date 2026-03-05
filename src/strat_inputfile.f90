@@ -113,7 +113,7 @@ contains
             call f%read (output_cfg%zoutName, header_row=1, status_ok=status_ok)
             if (.not. status_ok) then
                call f%destroy()
-               call error('Unable to read output depths: '//output_cfg%zoutName)
+               call error('Unable to read output depths: '//trim(output_cfg%zoutName))
             end if
             ! Values are read into array zout_read instead of zout to keep zout for the final output depths. For example,
             ! zout_read will contain only one value here if the output frequency is given, but zout will contain the output
@@ -151,7 +151,7 @@ contains
             call f%read (output_cfg%toutName, header_row=1, status_ok=status_ok)
             if (.not. status_ok) then
                call f%destroy()
-               call error('Unable to read output depths: '//output_cfg%toutName)
+               call error('Unable to read output depths: '//trim(output_cfg%toutName))
             end if
             call f%get(1, output_cfg%tout, status_ok)
             call f%destroy()
@@ -537,7 +537,7 @@ contains
          ! Load file or stop if fail
          call par_file%load_file(filename=ParName)
          if (par_file%failed()) then
-            call error('Could not read inputfile '//ParName)
+            call error('Could not read inputfile '//trim(ParName))
          end if
 
          ! Names of Inputfile
@@ -662,6 +662,7 @@ contains
             call par_file%get("FABMConfig.SetDiagnosticVars", fabm_cfg%set_diag_vars,found); call check_field(found, 'FABMConfig.SetDiagnosticVars',ParName)
             call par_file%get("FABMConfig.OutputDiagnosticVars", fabm_cfg%output_diagnostic_variables,found); call check_field(found, 'FABMConfig.OutputDiagnosticVars', ParName)
             call par_file%get("FABMConfig.RepairFABMStates", fabm_cfg%repair_fabm,found); call check_field(found, 'FABMConfig.RepairFABMStates',ParName)
+            call par_file%get("FABMConfig.OutputRepairedVars", fabm_cfg%output_repaired_vars,found); call check_field(found, 'FABMConfig.OutputRepairedVars',ParName)
             call par_file%get("FABMConfig.BottomEverywhere", fabm_cfg%bottom_everywhere,found); call check_field(found, 'FABMConfig.BottomEverywhere',ParName)
             call par_file%get("FABMConfig.BioshadeFeedback", fabm_cfg%bioshade_feedback,found); call check_field(found, 'FABMConfig.BioshadeFeedback', ParName)
          end if
@@ -839,7 +840,7 @@ contains
       character(len=*), intent(in) :: field_name, file_name
 
       if (.not. found) then
-         call error('Field '//field_name//' not found in '//file_name)
+         call error('Field '//trim(field_name)//' not found in '//trim(file_name))
       end if
    end subroutine check_field
 

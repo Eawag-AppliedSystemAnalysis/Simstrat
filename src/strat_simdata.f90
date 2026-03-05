@@ -88,6 +88,9 @@ module strat_simdata
       class(LogVariableFABM_bound), allocatable :: output_vars_fabm_surface_state ! Output structure for FABM surface state variables
       class(LogVariableFABM), allocatable :: output_vars_fabm_diagnostic_interior ! Output structure for FABM interior diagnostic variables
       class(LogVariableFABM_bound), allocatable :: output_vars_fabm_diagnostic_horizontal ! Output structure for FABM horizontal diagnostic variables
+      class(LogVariableFABM), allocatable :: output_vars_fabm_repaired_interior ! Output structure for FABM interior repaired variables
+      class(LogVariableFABM), allocatable :: output_vars_fabm_repaired_bottom ! Output structure for FABM bottom repaired variables
+      class(LogVariableFABM_bound), allocatable :: output_vars_fabm_repaired_surface ! Output structure for FABM surface repaired variables
 
       integer :: output_time_type, output_depth_type, thinning_interval
       real(RK) :: depth_interval, thinning_interval_read ! thinning_interval_read is a real to make sure that also values
@@ -136,6 +139,8 @@ module strat_simdata
       character(len=:), allocatable :: set_diag_vars
       ! Whether to output diagnostic variables
       logical :: output_diagnostic_variables
+      ! Whether to output repaired variables
+      logical :: output_repaired_vars
       ! Whether to clip all state variables to valid range from bgc models when update is called
       logical :: repair_fabm
       ! Whether there is a pelagic-benthic interface at every depth
@@ -197,11 +202,16 @@ module strat_simdata
       ! In Simstrat_FABM allocated with shape (grid%nz_grid, size(n_fabm_*_state))
       real(RK), dimension(:,:), pointer :: fabm_interior_state, fabm_bottom_state
       real(RK), dimension(:), pointer :: fabm_surface_state
-      integer :: n_fabm_state, n_fabm_interior_state, n_fabm_bottom_state, n_fabm_surface_state, n_fabm_diagnostic, n_fabm_diagnostic_interior, n_fabm_diagnostic_horizontal
+      real(RK), dimension(:,:), pointer :: fabm_repaired_interior, fabm_repaired_bottom
+      real(RK), dimension(:), pointer :: fabm_repaired_surface
+      integer :: n_fabm_state, n_fabm_interior_state, n_fabm_bottom_state, n_fabm_surface_state
+      integer :: n_fabm_diagnostic, n_fabm_diagnostic_interior, n_fabm_diagnostic_horizontal
+      integer :: n_fabm_repaired, n_fabm_repaired_interior_min, n_fabm_repaired_interior_max, n_fabm_repaired_bottom_min,n_fabm_repaired_bottom_max, n_fabm_repaired_surface_min, n_fabm_repaired_surface_max
       character(len=100), dimension(:), pointer :: fabm_state_names ! Names of FABM state variables used in the simulation
       real(RK), dimension(:,:), pointer :: fabm_diagnostic_interior ! State matrix of FABM diagnostic variables
       real(RK), dimension(:), pointer :: fabm_diagnostic_horizontal ! State matrix of FABM diagnostic variables
       character(len=100), dimension(:), pointer :: fabm_diagnostic_names ! Names of FABM diagnostic variables in output
+      character(len=100), dimension(:), pointer :: fabm_repaired_names ! Names of FABM repaired variables in output
    
       ! Variables located on z_upp grid
       real(RK), dimension(:), allocatable :: k, ko ! Turbulent kinetic energy (TKE) [J/kg]

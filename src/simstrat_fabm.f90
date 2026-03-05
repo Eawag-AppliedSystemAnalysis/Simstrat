@@ -84,16 +84,17 @@ contains
 
    ! Initialize: called once within the initialization of Simstrat
    ! Sets up memory, reads FABM configuration from fabm_cfg_file, links the external Simstrat variables and sets the initial conditions of FABM variables
-   subroutine init(self, state, fabm_cfg, sim_cfg, grid)
+   subroutine init(self, state, output_cfg, fabm_cfg, sim_cfg, grid)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       class(ModelState) :: state
+      class(OutputConfig) :: output_cfg
       class(FABMConfig) :: fabm_cfg
       class(SimConfig) :: sim_cfg
       class(StaggeredGrid) :: grid
 
       ! Local variables
-      integer :: ivar, k
+      integer :: ivar, k, index
 
       ! make sure everything is deallocated
       call deallocate_fabm(self)
@@ -310,6 +311,59 @@ contains
             allocate(state%fabm_diagnostic_horizontal(state%n_fabm_diagnostic_horizontal))
          end if
       end if
+
+      ! Allocate arrays for repaired variables in fabm_list_repaired.dat and initialize them with the boundary value
+      if (fabm_cfg%output_repaired_vars) then
+         call set_fabm_repaired_vars(self, state, output_cfg)
+         if (state%n_fabm_repaired_interior_min + state%n_fabm_repaired_interior_max > 0) then
+            allocate(state%fabm_repaired_interior(grid%nz_grid, state%n_fabm_repaired_interior_min + state%n_fabm_repaired_interior_max))
+            state%fabm_repaired_interior = ieee_value(state%fabm_repaired_interior, ieee_quiet_nan)
+            do ivar = 1, state%n_fabm_interior_state 
+               index = findloc(state%fabm_repaired_names, trim(self%fabm_model%interior_state_variables(ivar)%name)//'_minimum', dim = 1)
+               if (index > 0) then
+                  state%fabm_repaired_interior(:, index) = self%min_int(ivar)
+                  continue
+               end if
+               index = findloc(state%fabm_repaired_names, trim(self%fabm_model%interior_state_variables(ivar)%name)//'_maximum', dim = 1)
+               if (index > 0) then
+                  state%fabm_repaired_interior(:, index) = self%max_int(ivar)
+               end if
+            end do
+            if (any(ieee_is_nan(state%fabm_repaired_interior))) call error('Subroutine set_fabm_repaired_vars failed')
+         end if
+         if (state%n_fabm_repaired_bottom_min + state%n_fabm_repaired_bottom_max > 0) then
+            allocate(state%fabm_repaired_bottom(grid%nz_grid, state%n_fabm_repaired_bottom_min + state%n_fabm_repaired_bottom_max))
+            state%fabm_repaired_bottom = ieee_value(state%fabm_repaired_bottom, ieee_quiet_nan)
+            do ivar = 1, state%n_fabm_bottom_state 
+               index = findloc(state%fabm_repaired_names, trim(self%fabm_model%bottom_state_variables(ivar)%name)//'_minimum', dim = 1)
+               if (index > 0) then
+                  state%fabm_repaired_bottom(:, index - state%n_fabm_repaired_interior_max - state%n_fabm_repaired_interior_min) = self%min_bt(ivar)
+                  continue
+               end if 
+               index = findloc(state%fabm_repaired_names, trim(self%fabm_model%bottom_state_variables(ivar)%name)//'_maximum', dim = 1)
+               if (index > 0) then
+                  state%fabm_repaired_bottom(:, index - state%n_fabm_repaired_interior_max - state%n_fabm_repaired_interior_min) = self%max_bt(ivar)
+               end if
+            end do
+            if (any(ieee_is_nan(state%fabm_repaired_interior))) call error('Subroutine set_fabm_repaired_vars failed')
+         end if
+         if (state%n_fabm_repaired_surface_min + state%n_fabm_repaired_surface_max > 0) then
+            allocate(state%fabm_repaired_surface(state%n_fabm_repaired_surface_min + state%n_fabm_repaired_surface_max))
+            state%fabm_repaired_surface = ieee_value(state%fabm_repaired_surface, ieee_quiet_nan)
+            do ivar = 1, state%n_fabm_surface_state 
+               index = findloc(state%fabm_repaired_names, trim(self%fabm_model%surface_state_variables(ivar)%name)//'_minimum', dim = 1)
+               if (index > 0) then
+                  state%fabm_repaired_surface(index - state%n_fabm_repaired_interior_max - state%n_fabm_repaired_interior_min - state%n_fabm_repaired_bottom_max - state%n_fabm_repaired_bottom_min) = self%min_sf(ivar)
+                  continue
+               end if 
+               index = findloc(state%fabm_repaired_names, trim(self%fabm_model%surface_state_variables(ivar)%name)//'_maximum', dim = 1)
+               if (index > 0) then
+                  state%fabm_repaired_surface(index - state%n_fabm_repaired_interior_max - state%n_fabm_repaired_interior_min - state%n_fabm_repaired_bottom_max - state%n_fabm_repaired_bottom_min) = self%max_sf(ivar)
+               end if
+            end do
+            if (any(ieee_is_nan(state%fabm_repaired_interior))) call error('Subroutine set_fabm_repaired_vars failed')
+         end if
+      end if
       
       ! Complete initialization and check whether FABM has all dependencies fulfilled
       ! (i.e., whether all required calls to fabm_model%link_*_data have been made and all required data have been provided)
@@ -349,15 +403,16 @@ contains
       end if
 
       ! Call the update function once as a first call to initialize fluxes, sources and vertical velocities
-      call self%update(state, fabm_cfg, grid, .true.)
+      call self%update(state, output_cfg, fabm_cfg, grid, .true.)
    end subroutine init
 
    ! The update function is called in the main loop of simstrat (in simstrat.f90) at every time step
    ! Particle atmospheric, pelagic and benthic fluxes and diffusion are computed to update bgc state variable values
-   subroutine update(self, state, fabm_cfg, grid, first_call)
+   subroutine update(self, state, output_cfg, fabm_cfg, grid, first_call)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       class(ModelState), intent(inout) :: state
+      class(OutputConfig), intent(in) :: output_cfg
       class(FABMConfig), intent(in) :: fabm_cfg
       class(StaggeredGrid) :: grid  
       logical, intent(in), optional :: first_call
@@ -393,11 +448,48 @@ contains
          end do
 
          ! 2a. Simstrat check interior FABM bounds
-         do ivar = 1, state%n_fabm_interior_state  
+         index = 1
+         do ivar = 1, state%n_fabm_interior_state 
             if (any(state%fabm_interior_state(:, ivar) < self%min_int(ivar))) then
-               call warn('FABM Interior Variable '//self%fabm_model%interior_state_variables(ivar)%name//' below minimum.')
-            else if (any(state%fabm_interior_state(:, ivar) > self%max_int(ivar))) then
-               call warn('FABM Interior Variable '//self%fabm_model%interior_state_variables(ivar)%name//' above maximum.')
+               if (fabm_cfg%output_repaired_vars) then
+                  ! Register repaired variable and store out-of-bound value
+                  call list_repaired(self, output_cfg, self%fabm_model%interior_state_variables(ivar)%name, 'minimum', self%min_int(ivar))
+                  index = findloc(state%fabm_repaired_names, trim(self%fabm_model%interior_state_variables(ivar)%name)//'_minimum', dim = 1)
+                  if (index > 0) then
+                     do k = 1, grid%nz_grid
+                        if (state%fabm_interior_state(k, ivar) < self%min_int(ivar)) then
+                           state%fabm_repaired_interior(k, index) = state%fabm_interior_state(k, ivar)
+                        else
+                           state%fabm_repaired_interior(k, index) = self%min_int(ivar)
+                        end if
+                     end do
+                  else
+                     call list_repaired(self, output_cfg, self%fabm_model%interior_state_variables(ivar)%name, 'minimum', self%min_int(ivar))
+                  end if
+               else
+                 ! Display repair message if repaired variable not registered
+                  call warn('FABM Interior Variable '//trim(self%fabm_model%interior_state_variables(ivar)%name)//' below minimum.')
+               end if
+            end if  
+            if (any(state%fabm_interior_state(:, ivar) > self%max_int(ivar))) then
+               if (fabm_cfg%output_repaired_vars) then
+                  ! Register repaired variable and store out-of-bound value
+                  index = findloc(state%fabm_repaired_names, trim(self%fabm_model%interior_state_variables(ivar)%name)//'_maximum', dim = 1)
+                  if (index > 0) then
+                     do k = 1, grid%nz_grid
+                        if (state%fabm_interior_state(k, ivar) > self%max_int(ivar)) then
+                           state%fabm_repaired_interior(k, index) = state%fabm_interior_state(k, ivar)
+                        else
+                           state%fabm_repaired_interior(k, index) = self%min_int(ivar)
+                        end if
+                     end do
+                  else
+                     call list_repaired(self, output_cfg, self%fabm_model%interior_state_variables(ivar)%name, 'maximum', self%max_int(ivar))
+                  end if
+               else
+                  ! Display repair message if repaired variable not registered
+                  call warn('FABM Interior Variable '//trim(self%fabm_model%interior_state_variables(ivar)%name)//' above maximum.')
+               end if
             end if
          end do
 
@@ -407,23 +499,60 @@ contains
          ! 2a. Simstrat check for negative FABM interior state variables
          do ivar = 1, state%n_fabm_interior_state  
             if (any(state%fabm_interior_state(:, ivar) < 0.0_RK)) then
-               do k = 1, size(state%fabm_interior_state(:, ivar))
+               do k = 1, grid%nz_grid
                   if (state%fabm_interior_state(k, ivar) < 0.0_RK) then
                      print *, 'FABM Interior Variable value is ', state%fabm_interior_state(k, ivar)
                      print *, 'at grid point ', k
                      print *, 'at time (days, seconds) = ', state%simulation_time
                   end if
                end do
-               call error('FABM Variable '//self%fabm_model%interior_state_variables(ivar)%name//' below zero.')
+               call error('FABM Variable '//trim(self%fabm_model%interior_state_variables(ivar)%name)//' below zero.')
             end if
          end do
 
          ! 2b. Simstrat check bottom FABM bounds
          do ivar = 1, state%n_fabm_bottom_state  
             if (any(state%fabm_bottom_state(:, ivar) < self%min_bt(ivar))) then
-               call warn('FABM Bottom Variable '//self%fabm_model%bottom_state_variables(ivar)%name//' below minimum.') 
-            else if (any(state%fabm_bottom_state(:, ivar) > self%max_bt(ivar))) then
-               call warn('FABM Bottom Variable '//self%fabm_model%bottom_state_variables(ivar)%name//' above maximum.')
+               if (fabm_cfg%output_repaired_vars) then
+                  ! Register repaired variable and store out-of-bound value
+                  index = findloc(state%fabm_repaired_names, trim(self%fabm_model%bottom_state_variables(ivar)%name)//'_minimum', dim = 1)
+                  if (index > 0) then
+                     index = index - state%n_fabm_repaired_interior_max - state%n_fabm_repaired_interior_min
+                     do k = 1, self%kmax_bot
+                        if (state%fabm_bottom_state(k, ivar) < self%min_bt(ivar)) then
+                           state%fabm_repaired_bottom(k, index) = state%fabm_bottom_state(k, ivar)
+                        else
+                           state%fabm_repaired_bottom(k, index) = self%min_bt(ivar)
+                        end if
+                     end do
+                  else
+                     call list_repaired(self, output_cfg, self%fabm_model%bottom_state_variables(ivar)%name, 'minimum', self%min_bt(ivar))
+                  end if
+               else
+                  ! Display repair message if repaired variable not registered
+                  call warn('FABM Bottom Variable '//trim(self%fabm_model%bottom_state_variables(ivar)%name)//' below minimum.')
+               end if
+            end if  
+            if (any(state%fabm_bottom_state(:, ivar) > self%max_bt(ivar))) then
+               if (fabm_cfg%output_repaired_vars) then
+                  ! Register repaired variable and store out-of-bound value
+                  index = findloc(state%fabm_repaired_names, trim(self%fabm_model%bottom_state_variables(ivar)%name)//'_maximum', dim = 1)
+                  if (index > 0) then
+                     index = index - state%n_fabm_repaired_interior_max - state%n_fabm_repaired_interior_min
+                     do k = 1, self%kmax_bot
+                        if (state%fabm_bottom_state(k, ivar) > self%max_bt(ivar)) then
+                           state%fabm_repaired_bottom(k, index) = state%fabm_bottom_state(k, ivar)
+                        else
+                           state%fabm_repaired_bottom(k, index) = self%max_bt(ivar)
+                        end if
+                     end do
+                  else
+                     call list_repaired(self, output_cfg, self%fabm_model%bottom_state_variables(ivar)%name, 'maximum', self%max_bt(ivar))
+                  end if
+               else
+                  ! Display repair message if repaired variable not registered
+                  call warn('FABM Bottom Variable '//trim(self%fabm_model%bottom_state_variables(ivar)%name)//' above maximum.')
+               end if
             end if
          end do
          
@@ -457,7 +586,7 @@ contains
                      print *, 'at grid point ', k
                      print *, 'at time (days, seconds) = ', state%simulation_time
                   end if
-                  call error('FABM Bottom Variable '//self%fabm_model%bottom_state_variables(ivar)%name//' below zero.')
+                  call error('FABM Bottom Variable '//trim(self%fabm_model%bottom_state_variables(ivar)%name)//' below zero.')
                end do
             end if
          end do
@@ -465,10 +594,34 @@ contains
          ! 2c. Simstrat check surface FABM bounds
          do ivar = 1, state%n_fabm_surface_state  
             if (state%fabm_surface_state(ivar) < self%min_sf(ivar)) then
-               call warn('FABM Surface Variable '//self%fabm_model%surface_state_variables(ivar)%name//' below minimum.')
-            end if
+               if (fabm_cfg%output_repaired_vars) then
+                  ! Register repaired variable and store out-of-bound value
+                  index = findloc(state%fabm_repaired_names, trim(self%fabm_model%surface_state_variables(ivar)%name)//'_minimum', dim = 1)
+                  if (index > 0) then
+                     index = index - state%n_fabm_repaired_bottom_max - state%n_fabm_repaired_bottom_min - state%n_fabm_repaired_interior_max - state%n_fabm_repaired_interior_min
+                     state%fabm_repaired_surface(index) = self%min_sf(ivar)
+                  else
+                     call list_repaired(self, output_cfg, self%fabm_model%surface_state_variables(ivar)%name, 'minimum', self%min_sf(ivar))
+                  end if
+               else
+                  ! Display repair message if repaired variable not registered
+                  call warn('FABM Surface Variable '//trim(self%fabm_model%surface_state_variables(ivar)%name)//' below minimum.') 
+               end if
+            end if  
             if (state%fabm_surface_state(ivar) > self%max_sf(ivar)) then
-               call warn('FABM Surface Variable '//self%fabm_model%surface_state_variables(ivar)%name//' above maximum.')
+               if (fabm_cfg%output_repaired_vars) then
+                  ! Register repaired variable and store out-of-bound value
+                  index = findloc(state%fabm_repaired_names, trim(self%fabm_model%surface_state_variables(ivar)%name)//'_maximum', dim = 1)
+                  if (index > 0) then
+                     index = index - state%n_fabm_repaired_bottom_max - state%n_fabm_repaired_bottom_min - state%n_fabm_repaired_interior_max - state%n_fabm_repaired_interior_min
+                     state%fabm_repaired_surface(index) = self%max_sf(ivar)
+                  else
+                     call list_repaired(self, output_cfg, self%fabm_model%surface_state_variables(ivar)%name, 'maximum', self%max_sf(ivar))
+                  end if
+               else
+                  ! Display repair message if repaired variable not registered
+                  call warn('FABM Surface Variable '//trim(self%fabm_model%surface_state_variables(ivar)%name)//' above maximum.')
+               end if
             end if
          end do
 
@@ -480,14 +633,15 @@ contains
             if (state%fabm_surface_state(ivar) < 0.0_RK) then
                print *, 'FABM Surface Variable value is ', state%fabm_surface_state(ivar)
                print *, 'at time (days, seconds) = ', state%simulation_time
-               call error('FABM Surface Variable '//self%fabm_model%surface_state_variables(ivar)%name//' below zero.')
+               call error('FABM Surface Variable '//trim(self%fabm_model%surface_state_variables(ivar)%name)//' below zero.')
             end if
          end do
 
          ! 2. Error if FABM out of bounds and not repaired
          if (.not. (self%valid_int .and. self%valid_bt .and. self%valid_sf)) then
             if (fabm_cfg%repair_fabm) then
-               call warn("FABM Variables repaired")
+               ! Display repair message if repaired variable not registered
+               if (.not. fabm_cfg%output_repaired_vars) call warn("FABM Variables repaired")
             else
                call error("FABM Variables out of bounds")
             end if
@@ -737,6 +891,8 @@ contains
       open(newunit=unit, action='read', status='old', file=fabm_cfg%set_diag_vars, iostat = status)
       if (status .ne. 0) then
          call warn("No Output of FABM Diagnostic Variables")
+         state%n_fabm_diagnostic = 0
+         return
       else
          write(6,*) 'Reading ', fabm_cfg%set_diag_vars
       end if
@@ -750,12 +906,13 @@ contains
       do
          read(unit, '(A)', iostat=status) line
          if (status .ne. 0) exit
+         if (len_trim(line) == 0) cycle
          n = n + 1
          if (n > max_lines) then
-            call error('Too many lines in '//fabm_cfg%set_diag_vars//', increase max_lines in set_fabm_diagnostic_vars')
+            call error('Too many lines in '//trim(fabm_cfg%set_diag_vars)//', increase max_lines in set_fabm_diagnostic_vars')
          end if
-         if (len_trim(temp_names(n)) > 100) then
-            call warn('FABM diagnostic variable '//line//' name will be truncated to 100 characters')
+         if (len_trim(line) > 100) then
+            call warn('FABM diagnostic variable '//trim(line)//' name will be truncated to 100 characters')
          end if
          temp_names(n) = adjustl(trim(line))
          temp_index(n) = 0
@@ -779,9 +936,11 @@ contains
          end do
          ! If not found in fabm_model
          if (temp_index(n) == 0) then
-            call error('FABM diagnostic variable '//temp_names(n)//' not found.')
+            call error('FABM diagnostic variable '//trim(temp_names(n))//' not found.')
          end if
       end do
+      ! Close the file
+      close(unit)
 
       ! Allocate array of proper size
       state%n_fabm_diagnostic = n
@@ -814,15 +973,18 @@ contains
       class(OutputConfig), intent(in) :: output_cfg
 
       ! Local variables
-      integer :: i, unit
+      integer :: i, unit, status
       character(len=256) :: file_path
 
       ! Write the names of all interior diagnostic variables
       if (size(self%fabm_model%interior_diagnostic_variables) > 0) then
          ! Construct the file path
          file_path = trim(output_cfg%PathOut)//'/fabm_list_diagnostic_interior.dat'
-         ! Creat new file or replace already existing one
-         open(newunit=unit, file=file_path, status='replace', action='write')
+         ! Create new file or replace already existing one
+         open(newunit=unit, file=file_path, status='replace', action='write', iostat = status)
+         if (status .ne. 0) then
+            call error('Failed to open or create file: ' // trim(file_path))
+         end if
          ! Write the header
          write(unit, '(A)', advance = 'no') 'Short Name, '
          write(unit, '(A)', advance = 'no') 'Long Name, '
@@ -841,7 +1003,7 @@ contains
          ! Construct the file path for Horizontal Diagnostic Variable List
          file_path = trim(output_cfg%PathOut)//'/fabm_list_diagnostic_horizontal.dat'
          ! Creat new file or replace already existing one
-         open(newunit=unit, file=file_path, status='replace', action='write')
+         open(newunit=unit, file=file_path, status='replace', action='write', iostat = status)
          ! Write the header
          write(unit, '(A)', advance = 'no') 'Short Name, '
          write(unit, '(A)', advance = 'no') 'Long Name, '
@@ -855,6 +1017,255 @@ contains
          close(unit)
       end if
    end subroutine list_diagnostic
+
+   ! Register repaired variables in RepairedVars file
+   subroutine set_fabm_repaired_vars(self, state, output_cfg)
+      ! Arguments
+      class(SimstratFABM), intent(inout) :: self
+      class(ModelState), intent(inout) :: state
+      class(OutputConfig), intent(in) :: output_cfg
+
+      ! Local variables
+      integer :: i, j, n, n_int_min, n_int_max, n_bt_min, n_bt_max, n_sf_min, n_sf_max, unit, status
+      character(len=256) :: file_path
+      character(len=256) :: name
+      character(len=16) :: bound
+      integer, parameter :: max_lines = 100 ! Maximum amount of repaired variables in RepairedVars file
+      character(len=256), dimension(max_lines) :: temp_names
+      character(len=16), dimension(max_lines) :: temp_bounds
+      character(len=16), dimension(max_lines) :: temp_types
+      integer, dimension(max_lines) :: temp_index
+
+      ! Construct the file path
+      file_path = trim(output_cfg%PathOut)//'/fabm_list_repaired.dat'
+
+      ! Read from RepairedVars
+      open(newunit=unit, action='read', status='old', file=file_path, iostat = status)
+      if (status .ne. 0) then
+         call warn("No FABM Repaired Variables provided")
+         state%n_fabm_repaired = 0
+         return
+      else
+         write(6,*) 'Reading ', file_path
+      end if
+
+      ! Skip header
+      read(unit, *, iostat=status)
+
+      ! Initialize counts to 0
+      n = 0
+      n_int_min = 0
+      n_int_max = 0
+      n_bt_min = 0
+      n_bt_max = 0
+      n_sf_min = 0
+      n_sf_max = 0
+
+      ! Read every repaired variable and find in fabm_model
+      do
+         read(unit, *, iostat=status) name, bound
+         if (status .ne. 0) exit
+         if (len_trim(name) == 0) cycle  ! Skip empty lines, if any
+         n = n + 1
+         if (n > max_lines) then
+            call error('Too many lines in '//trim(file_path)//', increase max_lines in set_fabm_repaired_vars')
+         end if
+         if (len_trim(name) > 256) then
+            call warn('FABM repaired variable '//trim(name)//' name too long')
+         end if
+         temp_names(n) = adjustl(trim(name))
+         temp_bounds(n) = adjustl(trim(bound))
+         temp_types(n) = 'undefined'
+         ! Register as interior variable
+         do j = 1, state%n_fabm_interior_state
+            if (state%fabm_state_names(j) == temp_names(n)) then
+               temp_types(n) = 'interior'
+               if (temp_bounds(n) == 'minimum') then
+                  n_int_min = n_int_min + 1
+               else if  (temp_bounds(n) == 'maximum') then
+                  n_int_max = n_int_max + 1
+               else
+                  call error('FABM repaired variable '//trim(temp_names(n))//' has invalid bound')
+               end if
+            end if
+         end do
+         ! Register as bottom variable
+         do j = 1, state%n_fabm_bottom_state
+            if (state%fabm_state_names(state%n_fabm_interior_state + j) == temp_names(n)) then
+               if (temp_types(n) /= 'undefined') then
+                  call error('Variable '//trim(temp_names(n))//' defined multiple times.')
+               else
+                  temp_types(n) = 'bottom'
+               end if
+               if (temp_bounds(n) == 'minimum') then
+                  n_bt_min = n_bt_min + 1
+               else if  (temp_bounds(n) == 'maximum') then
+                  n_bt_max = n_bt_max + 1
+               else
+                  call error('FABM repaired variable '//trim(temp_names(n))//' has invalid bound')
+               end if
+            end if
+         end do
+         ! Register as surface variable
+         do j = 1, state%n_fabm_surface_state
+            if (state%fabm_state_names(state%n_fabm_interior_state + state%n_fabm_bottom_state + j) == temp_names(n)) then
+               if (temp_types(n) /= 'undefined') then
+                  call error('Variable '//trim(temp_names(n))//' defined multiple times.')
+               else
+                  temp_types(n) = 'surface'
+               end if
+               if (temp_bounds(n) == 'minimum') then
+                  n_sf_min = n_sf_min + 1
+               else if  (temp_bounds(n) == 'maximum') then
+                  n_sf_max = n_sf_max + 1
+               else
+                  call error('FABM repaired variable '//trim(temp_names(n))//' has invalid bound')
+               end if
+            end if
+         end do
+         ! If not found in fabm_model
+         if (temp_types(n) == 'undefined') then
+            call error('FABM repaired variable '//trim(temp_names(n))//' not found. Control '//trim(file_path)//'.')
+         end if
+      end do
+      ! Close the file
+      close(unit)
+
+      ! Add type and boundary to name
+      do i = 1, n
+         temp_names(i) = trim(temp_names(i))//'_'//trim(temp_bounds(i))
+      end do
+
+      ! Write to state and allocate array of proper size
+      state%n_fabm_repaired = n
+      state%n_fabm_repaired_interior_min = n_int_min
+      state%n_fabm_repaired_interior_max = n_int_max
+      state%n_fabm_repaired_bottom_min = n_bt_min
+      state%n_fabm_repaired_bottom_max = n_bt_max
+      state%n_fabm_repaired_surface_min = n_sf_min
+      state%n_fabm_repaired_surface_max = n_sf_max
+      allocate(state%fabm_repaired_names(n))
+
+      ! Copy names to array for interior below minimum repaired variables
+      j = 1
+      do i = 1, n
+         if (temp_types(i) == 'interior' .AND. temp_bounds(i) == 'minimum') then
+            state%fabm_repaired_names(j) = temp_names(i)
+            j = j + 1
+         end if
+      end do
+      ! Copy names to array for interior above maximum repaired variables
+      j = n_int_min + 1
+      do i = 1, n
+         if (temp_types(i) == 'interior' .AND. temp_bounds(i) == 'maximum') then
+            state%fabm_repaired_names(j) = temp_names(i)
+            j = j + 1
+         end if
+      end do
+      ! Copy names to array for bottom below minimum repaired variables 
+      j = n_int_min + n_int_max + 1
+      do i = 1, n
+         if (temp_types(i) == 'bottom' .AND. temp_bounds(i) == 'minimum') then
+            state%fabm_repaired_names(j) = temp_names(i)
+            j = j + 1
+         end if
+      end do
+      ! Copy names to array for bottom above maximum repaired variables
+      j = n_int_min + n_int_max + n_bt_min + 1
+      do i = 1, n
+         if (temp_types(i) == 'bottom' .AND. temp_bounds(i) == 'maximum') then
+            state%fabm_repaired_names(j) = temp_names(i)
+            j = j + 1
+         end if
+      end do
+      ! Copy names to array for surface below minimum repaired variables
+      j = n_int_min + n_int_max + n_bt_min + n_bt_max + 1
+      do i = 1, n
+         if (temp_types(i) == 'surface' .AND. temp_bounds(i) == 'minimum') then
+            state%fabm_repaired_names(j) = temp_names(i)
+            j = j + 1
+         end if
+      end do
+      ! Copy names to array for surface above maximum repaired variables
+      j = n_int_min + n_int_max + n_bt_min + n_bt_max + n_sf_min + 1
+      do i = 1, n
+         if (temp_types(i) == 'surface' .AND. temp_bounds(i) == 'maximum') then
+            state%fabm_repaired_names(j) = temp_names(i)
+            j = j + 1
+         end if
+      end do
+   end subroutine set_fabm_repaired_vars
+
+   ! Add to list of repaired variables
+   subroutine list_repaired(self, output_cfg, variable, boundary, boundary_value)
+      ! Arguments
+      class(SimstratFABM), intent(inout) :: self
+      class(OutputConfig), intent(in) :: output_cfg
+      character(len=*), intent(in) :: variable
+      character(len=*), intent(in) :: boundary
+      real(RK), intent(in) :: boundary_value
+
+      ! Local variables
+      integer :: unit, status
+      logical :: exists
+      character(len=256) :: file_path, boundary_value_str
+      character(len=256) :: line, new_line
+
+      ! Construct the file path
+      file_path = trim(output_cfg%PathOut)//'/fabm_list_repaired.dat'
+
+      ! Convert boundary_value to string
+      write(boundary_value_str, '(ES15.6)') boundary_value
+      new_line = trim(variable)//', '//trim(boundary)//', '//trim(adjustl(boundary_value_str))
+      
+      ! Check if file exists
+      inquire(file=file_path, exist=exists)
+
+      ! Read from RepairedVars if it exists
+      if (exists) then
+         open(newunit=unit, action='read', status='old', file=file_path, iostat = status)
+         if (status .ne. 0) then
+            call error('Failed to open or create file: ' // trim(file_path))
+         end if
+         ! Read the file line by line and check if the exact line exists
+         rewind(unit)
+         do
+            read(unit, '(A)', iostat=status) line
+            if (status .ne. 0) exit
+            ! Check if the line already exists and exit subroutine if it does
+            if (trim(line) == trim(new_line)) then
+               close(unit)
+               return
+            end if
+         end do
+         close(unit)
+         ! Reopen for appending
+         open(newunit=unit, action='write', position='append', status='old', file=file_path, iostat=status)
+         if (status .ne. 0) then
+            call error('Failed to open or create file: ' // trim(file_path))
+         else
+            call warn('FABM variable '//trim(variable)//' added to  '// trim(file_path)//'. Restart simulation to output '//trim(boundary)//' values.')
+         end if
+      ! Create new file if RepairedVars does not exist
+      else
+         open(newunit=unit, action='write', status='new', file=file_path, iostat = status)
+         if (status .ne. 0) then
+            call error('Failed to open or create file: ' // trim(file_path))
+         else
+            call warn('FABM variable '//trim(variable)//' added to '// trim(file_path)//'. Restart simulation to output '//trim(boundary)//' values.')
+         end if
+         ! Write the header
+         write(unit, '(A)', advance = 'no') 'Variable, '
+         write(unit, '(A)', advance = 'no') 'Boundary reached, '
+         write(unit, '(A)') 'Boundary value'
+      end if
+
+      ! Write variable name, its boundary and the boundary vale
+      write(unit, '(A)') trim(new_line)
+
+      ! Close the file after writing
+      close(unit)
+   end subroutine list_repaired
 
    ! Light absorption feedback by FABM variables
    subroutine absorption_update_fabm(self, state, grid)

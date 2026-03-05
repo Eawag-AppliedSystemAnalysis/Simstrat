@@ -314,7 +314,7 @@ contains
                         self%z_Inp(i,:) = self%z_Inp(1,:)
                         goto 9
                      else
-                        call error('File '//fname//' not found.')
+                        call error('File '//trim(fname)//' not found.')
                      end if
                   else
                      write(6,*) 'Reading ', fname
@@ -328,7 +328,7 @@ contains
                   read(self%fnum(i), *, end=9) self%nval_deep(i), self%nval_surface(i)
 
                   ! Check whether both nval_deep and nval_surface are given in the inflow file. If only one number is given, then nval_surface is equal to -1 (the dummy on the line below)
-                  if (self%nval_surface(i) == -1) call error('Define the number of columns for deep and surface inflows of '//fname//'.')
+                  if (self%nval_surface(i) == -1) call error('Define the number of columns for deep and surface inflows of '//trim(fname)//'.')
 
                   ! Check whether the input files have the same number of columns and issue a warning otherwise
                   if (i > 2) then
@@ -397,7 +397,7 @@ contains
                      call Integrate(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Inp_read_end(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i))
                      call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))
                   end if
-                  call ok('Input file successfully read: '//fname)
+                  call ok('Input file successfully read: '//trim(fname))
                else ! if start from snapshot
                   ! Open inflow files
                   if (i > n_simstrat) then
@@ -411,7 +411,7 @@ contains
                      if (i > n_simstrat) then
                         goto 10
                      else
-                        call error('File '//fname//' not found.')
+                        call error('File '//trim(fname)//' not found.')
                      end if
                   else
                      write(6,*) 'Reading ', fname
@@ -419,7 +419,7 @@ contains
                   do l = 1, self%number_of_lines_read(i)
                      read (self%fnum(i), *, end=10) ! Skip already read and processed lines
                   end do
-                  call ok('Input file successfully opened: '//fname)
+                  call ok('Input file successfully opened: '//trim(fname))
                end if
             end if ! if        
 
@@ -678,7 +678,7 @@ contains
                         self%z_Inp(i,:) = self%z_Inp(1,:)
                         goto 9
                      else
-                        call error('File '//fname//' not found.')
+                        call error('File '//trim(fname)//' not found.')
                      end if
                   else
                      write(6,*) 'Reading ', fname
@@ -692,7 +692,7 @@ contains
                   read (self%fnum(i), *, end=9) self%nval_deep(i), self%nval_surface(i)
                   
                   ! Check whether both nval_deep and nval_surface are given in the inflow file. If only one number is given, then nval_surface is equal to -1 (the dummy on the line below)
-                  if (self%nval_surface(i) == -1) call error('Define the number of columns for deep and surface inflows of '//fname//'.')
+                  if (self%nval_surface(i) == -1) call error('Define the number of columns for deep and surface inflows of '//trim(fname)//'.')
 
                   ! Check whether the input files have the same number of columns and issue a warning otherwise
                   if (i > 2) then
@@ -763,7 +763,7 @@ contains
                      call grid%interpolate_to_face_from_second(self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)), self%Qs_read_end(i, :), self%nval_surface(i), self%Qs_end(i, :))
                   end if
 
-                  call ok('Input file successfully read: '//fname)
+                  call ok('Input file successfully read: '//trim(fname))
                else ! if start from snapshot
                   ! Open inflow files
                   if (i > n_simstrat) then
@@ -777,7 +777,7 @@ contains
                      if (i > n_simstrat) then
                         goto 10
                      else
-                        call error('File '//fname//' not found.')
+                        call error('File '//trim(fname)//' not found.')
                      end if
                   else
                      write(6,*) 'Reading ', fname
@@ -786,7 +786,7 @@ contains
                   do l = 1, self%number_of_lines_read(i)
                      read (self%fnum(i), *, end=10) ! Skip already read and processed lines
                   end do
-                  call ok('Input file successfully opened: '//fname)
+                  call ok('Input file successfully opened: '//trim(fname))
                end if
             end if ! idx = 1
 
@@ -915,7 +915,7 @@ contains
                      if (i > state%n_fabm_bottom_state) then
                         write(6,*) 'Reading ', fname
                      else
-                        call warn('Bottom Inflow File '//fname//' ignored')
+                        call warn('Bottom Inflow File '//trim(fname)//' ignored')
                         cycle
                      end if
                   end if
@@ -939,7 +939,7 @@ contains
                   read (self%fnum_bound(i), *, end=7) self%tb_end_bound(i), self%Q_end_bound(i), self%Q_end_bound_con(i)
                   call count_read_bound(self, i)
 
-                  call ok('FABM bound input file successfully read: '//fname)
+                  call ok('FABM bound input file successfully read: '//trim(fname))
                else ! if start from snapshot
                   ! Open inflow files
                   fname = trim(self%fabm_path)//trim(state%fabm_state_names(state%n_fabm_interior_state + i))//'_inflow.dat'
@@ -949,7 +949,7 @@ contains
                   do l = 1, self%number_of_lines_read(i)
                      read (self%fnum_bound(i), *, end=9) ! Skip already read and processed lines
                   end do
-                  call ok('FABM bound input file successfully opened: '//fname)
+                  call ok('FABM bound input file successfully opened: '//trim(fname))
                end if
             end if ! idx = 1
             
