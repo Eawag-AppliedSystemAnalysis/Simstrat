@@ -418,18 +418,10 @@ contains
                file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_fabm_bottom_state%names(i - self%n_vars_Simstrat - self%n_vars_fabm_interior_state))//'_out.dat'
                inquire (file=file_path, exist=append)
                append = append .and. snapshot_file_exists
-               if (self%fabm_config%bottom_everywhere) then
-                  call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
-               else
-                  call self%output_files(i)%open(file_path, n_cols=2, append=append, status_ok=status_ok)
-               end if
+               call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
                if (.not. append) then
                   call self%output_files(i)%add('Datetime')
-                  if (self%fabm_config%bottom_everywhere) then
-                     call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
-                  else
-                     call self%output_files(i)%add('Concentration')
-                  end if
+                  call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
                   call self%output_files(i)%next_row()
                else
                   call error('Cannot write to output directory. Make sure you have writing access.')
@@ -491,18 +483,10 @@ contains
                file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_fabm_repaired_bottom%names(i - self%n_vars_Simstrat - self%n_vars_fabm_state - self%n_vars_fabm_diagnostic - self%n_vars_fabm_repaired_interior))//'_out.dat'
                inquire (file=file_path, exist=append)
                append = append .and. snapshot_file_exists
-               if (self%fabm_config%bottom_everywhere) then
-                  call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
-               else
-                  call self%output_files(i)%open(file_path, n_cols=2, append=append, status_ok=status_ok)
-               end if
+               call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
                if (.not. append) then
                   call self%output_files(i)%add('Datetime')
-                  if (self%fabm_config%bottom_everywhere) then
-                     call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
-                  else
-                     call self%output_files(i)%add('Concentration')
-                  end if
+                  call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
                   call self%output_files(i)%next_row()
                else
                   call error('Cannot write to output directory. Make sure you have writing access.')
