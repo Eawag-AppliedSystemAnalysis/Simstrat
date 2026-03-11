@@ -93,4 +93,5 @@ def csv_to_netcdf(var_names, filename, path_to_output, var_units=[]):
             if np.shape(data_var[:, :]) == np.shape(np.transpose(data_matrix)):
                 data_var[:, :] = np.transpose(data_matrix)
             else:
-                raise ValueError(f'{var_names[i]}_out.dat is of different format than {var_names[0]}_out.dat.')
+                data_var[:, :] = 0
+                print(f'{var_names[i]}_out.dat is of different format than {var_names[0]}_out.dat: {var_names[i]} values set to zero.')
