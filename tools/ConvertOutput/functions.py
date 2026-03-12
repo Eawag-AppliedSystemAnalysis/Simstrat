@@ -15,7 +15,7 @@ def csv_to_netcdf(var_names, filename, path_to_output, var_units=[]):
     
     Parameters:
     -----------
-    var_names : str
+    var_names : str list
         The names of the variables to convert the output from (e.g. 'T', 'S')
         Output file has to exist
     filename : str
@@ -23,28 +23,22 @@ def csv_to_netcdf(var_names, filename, path_to_output, var_units=[]):
         Creates a new file or overwrites the existing one
     path_to_output : str
         Path to folder with output files
-    var_units : str, optional
+    var_units : str list, optional
         The units of the variables (e.g., 'degree_Celsius', '1e-3'), default is an empty list
     """
 
-    # Get Depth and Datetime dimensions from first files with values
-    for variable in var_names:
+    # Get Depth and Datetime dimensions from first variable in var_names
+    # Create path and check if CSV file exists and if it is not empty
+    csv_file = os.path.join(path_to_output, f'{var_names[0]}_out.dat')
+    if not os.path.exists(csv_file):
+        raise FileNotFoundError(f'File {csv_file} does not exist.')
+    if os.stat(csv_file).st_size == 0:
+        raise ValueError(f'File {csv_file} is empty. Pass other variable to define output format to var_format.')
 
-        # Create path and check if CSV file exists and if it is not empty
-        csv_file = os.path.join(path_to_output, f'{variable}_out.dat')
-        if not os.path.exists(csv_file):
-            raise FileNotFoundError(f'File {csv_file} does not exist.')
-        if os.stat(csv_file).st_size == 0:
-            print(f'File {csv_file} is empty.')
-            continue
-
-        # Extract the Depth and Datetime columns
-        df = pd.read_csv(csv_file)
-        depth_vals = df.columns[1:].astype(np.float64)
-        datetime_vals = df['Datetime'].values.astype(np.float64)
-
-        # Once is enough
-        break
+    # Extract the Depth and Datetime columns
+    df = pd.read_csv(csv_file)
+    depth_vals = df.columns[1:].astype(np.float64)
+    datetime_vals = df['Datetime'].values.astype(np.float64)
 
     # Create NetCDF file
     netcdf_file = os.path.join(path_to_output, f'{filename}.nc')
@@ -73,8 +67,17 @@ def csv_to_netcdf(var_names, filename, path_to_output, var_units=[]):
             csv_file = os.path.join(path_to_output, f'{variable}_out.dat')
             if not os.path.exists(csv_file):
                 raise FileNotFoundError(f'File {csv_file} does not exist.')
-            if os.stat(csv_file).st_size == 0:
-                raise ValueError(f'File {csv_file} is empty.')
+            elif os.stat(csv_file).st_size == 0:
+                print(f'Empty file {csv_file} ignored.')
+                continue
+
+            # Read values from the CSV file
+            # The DataFrame starts with 'Datetime' and the rest are the depth columns
+            df = pd.read_csv(csv_file)
+            data_matrix = df.iloc[:, 1:].values
+            if np.shape(data_matrix)[1] != len(depth_vals):
+                print(f'{var_names[i]}_out.dat has different depths than {var_names[0]}_out.dat. Variable ignored.')
+                continue
 
             # Create the data variable (Depth, Datetime)
             data_var = ncfile.createVariable(var_names[i], 'f8', ('Depth', 'Datetime'))
@@ -86,11 +89,13 @@ def csv_to_netcdf(var_names, filename, path_to_output, var_units=[]):
                 data_var.units = ''
 
             # Fill the data variable (the DataFrame values corresponding to Datetime and Depth)
-            # The DataFrame starts with 'Datetime' and the rest are the depth columns
             # Transpose to match the data variable dimensions (Depth, Datetime)
-            df = pd.read_csv(csv_file)
-            data_matrix = df.iloc[:, 1:].values
-            if np.shape(data_var[:, :]) == np.shape(np.transpose(data_matrix)):
-                data_var[:, :] = np.transpose(data_matrix)
+            if np.shape(data_var)[1] < np.shape(data_matrix)[0]:
+                data_var[:, :] = np.transpose(data_matrix)[:, :np.shape(data_var)[1]]
+                print(f'{var_names[i]}_out.dat is longer than {var_names[0]}_out.dat: {var_names[i]} values cut to match format.')
+            elif np.shape(data_var)[1] > np.shape(data_matrix)[0]:
+                data_var[:, :np.shape(data_matrix)[0]] = np.transpose(data_matrix)
+                data_var[:, np.shape(data_matrix)[0]:] = np.nan
+                print(f'{var_names[i]}_out.dat is shorter than {var_names[0]}_out.dat: {var_names[i]} values filled with NaN to match format.')
             else:
-                raise ValueError(f'{var_names[i]}_out.dat is of different format than {var_names[0]}_out.dat.')
+                data_var[:, :] = np.transpose(data_matrix)
