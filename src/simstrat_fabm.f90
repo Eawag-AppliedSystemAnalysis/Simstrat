@@ -61,7 +61,7 @@ module simstrat_fabm
       logical :: valid_int, valid_sf, valid_bt
 
       ! Index of current bottom location (pelagic-benthic interface)
-      integer, pointer :: bottom_index => null()
+      integer, pointer :: bottom_index
       ! Variable to enumerate over all layers if bottom_everywhere is true
       ! 1 if bottom_everywhere is false, nz_grid if bottom_everywhere is true
       ! All associated code copied and adapted from https://gitlab.com/wateritech-public/waterecosystemstool/gotm
@@ -95,8 +95,8 @@ contains
 
       ! Local variables
       integer :: ivar, k, index
-
-      ! make sure everything is deallocated
+      
+      ! Make sure everything is deallocated
       call deallocate_fabm(self)
 
       ! Initialize the model: Reads run-time FABM model configuration from fabm_cfg%fabm_cfg_file (YAML format)
@@ -1299,8 +1299,6 @@ contains
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
 
-      ! Deallocate model
-      if (associated(self%fabm_model)) deallocate(self%fabm_model)
       ! Deallocate internal arrays
       if (allocated(self%sms_int)) deallocate(self%sms_int)
       if (allocated(self%flux_bt)) deallocate(self%flux_bt)
@@ -1314,8 +1312,17 @@ contains
       if (allocated(self%max_bt)) deallocate(self%max_bt)
       if (allocated(self%min_sf)) deallocate(self%min_sf)
       if (allocated(self%max_sf)) deallocate(self%max_sf)
-      if (associated(self%bottom_index)) deallocate(self%bottom_index)
+      if (associated(self%bottom_index)) then
+         allocate(self%bottom_index) ! Fixes problem with invalid allocation but should be removed eventually
+         deallocate(self%bottom_index)
+      end if
       if (allocated(self%diagnostic_index)) deallocate(self%diagnostic_index)
+
+      ! Deallocate the model
+      if (associated(self%fabm_model)) then
+         allocate(self%fabm_model) ! Fixes problem with invalid allocation but should be removed eventually
+         deallocate(self%fabm_model)
+      end if
    end subroutine deallocate_fabm
 
 end module simstrat_fabm
