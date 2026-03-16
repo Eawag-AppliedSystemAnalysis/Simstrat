@@ -239,8 +239,11 @@ contains
             state%S(1:ubnd_vol) = state%S(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dS(1:ubnd_vol)
             if (self%cfg%couple_fabm) then
                do ivar = 1, state%n_fabm_interior_state
-                  state%fabm_interior_state(1:ubnd_vol, ivar) = state%fabm_interior_state(1:ubnd_vol, ivar) + &
-                     AreaFactor_adv(1:ubnd_vol) * dfabm_interior(1:ubnd_vol, ivar)
+                  ! Special clause for WET pelagic mirror variables (leave unaffected)
+                  if (state%fabm_state_names(ivar)(len_trim(state%fabm_state_names(ivar))-2:) /= '_PV') then
+                     state%fabm_interior_state(1:ubnd_vol, ivar) = state%fabm_interior_state(1:ubnd_vol, ivar) + &
+                        AreaFactor_adv(1:ubnd_vol) * dfabm_interior(1:ubnd_vol, ivar)
+                  end if
                end do
                if (state%n_fabm_surface_state > 0) state%fabm_surface_state(:) = state%fabm_surface_state(:) + state%dt/self%grid%Az(ubnd_vol+1)*dfabm_surface(:)
             end if
@@ -250,7 +253,14 @@ contains
             state%V(ubnd_vol) = state%V(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
             state%T(ubnd_vol) = state%T(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
             state%S(ubnd_vol) = state%S(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
-            if (self%cfg%couple_fabm) state%fabm_interior_state(ubnd_vol, :) = state%fabm_interior_state(ubnd_vol, :)*h(ubnd_vol)/(h(ubnd_vol) + dh)
+            if (self%cfg%couple_fabm) then
+               do ivar = 1, state%n_fabm_interior_state
+                  ! Special clause for WET pelagic mirror variables (leave unaffected)
+                  if (state%fabm_state_names(ivar)(len_trim(state%fabm_state_names(ivar))-2:) /= '_PV') then
+                     state%fabm_interior_state(ubnd_vol, ivar) = state%fabm_interior_state(ubnd_vol, ivar)*h(ubnd_vol)/(h(ubnd_vol) + dh)
+                  end if
+               end do
+            end if
       end associate
    end subroutine
 
@@ -263,6 +273,7 @@ contains
       class(ModelState) :: state
       real(RK) :: dh
       real(RK) :: w_a, w_b
+      integer :: ivar
       associate (ubnd_fce=>self%grid%ubnd_fce, ubnd_vol=>self%grid%ubnd_vol, fabm_interior_state=>state%fabm_interior_state)
 
          ! New values of the state variables are weighted averages
@@ -284,7 +295,14 @@ contains
          state%Q_vert(ubnd_fce) = (w_a*state%Q_vert(ubnd_fce + 1) + w_b*state%Q_vert(ubnd_fce))/(w_a + w_b)
 
          ! FABM
-         if (self%cfg%couple_fabm) fabm_interior_state(ubnd_vol,:) = (w_a*fabm_interior_state(ubnd_vol + 1,:) + w_b*fabm_interior_state(ubnd_vol,:))/(w_a + w_b)
+         if (self%cfg%couple_fabm) then
+            do ivar = 1, state%n_fabm_interior_state
+               ! Special clause for WET pelagic mirror variables (leave unaffected)
+               if (state%fabm_state_names(ivar)(len_trim(state%fabm_state_names(ivar))-2:) /= '_PV') then
+                  fabm_interior_state(ubnd_vol,ivar) = (w_a*fabm_interior_state(ubnd_vol + 1,ivar) + w_b*fabm_interior_state(ubnd_vol,ivar))/(w_a + w_b)
+               end if
+            end do
+         end if
 
          ! update area factors
          call self%grid%update_area_factors()
@@ -300,6 +318,7 @@ contains
       class(AdvectionModule) :: self
       class(ModelState) :: state
       real(RK) :: dh
+      integer :: ivar
       associate (ubnd_fce=>self%grid%ubnd_fce, ubnd_vol=>self%grid%ubnd_vol, fabm_interior_state=>state%fabm_interior_state)
 
          ! extend grid by one (also updates ubnd_vol etc)
@@ -316,7 +335,14 @@ contains
          state%eps(ubnd_fce) = state%eps(ubnd_fce - 1)
 
          ! FABM
-         if (self%cfg%couple_fabm) fabm_interior_state(ubnd_vol,:) = fabm_interior_state(ubnd_vol - 1,:)
+         if (self%cfg%couple_fabm) then
+            do ivar = 1, state%n_fabm_interior_state
+               ! Special clause for WET pelagic mirror variables (leave unaffected)
+               if (state%fabm_state_names(ivar)(len_trim(state%fabm_state_names(ivar))-2:) /= '_PV') then
+                  fabm_interior_state(ubnd_vol,ivar) = fabm_interior_state(ubnd_vol - 1,ivar)
+               end if
+            end do
+         end if
 
          call self%grid%update_area_factors()
 
