@@ -61,7 +61,7 @@ module simstrat_fabm
       logical :: valid_int, valid_sf, valid_bt
 
       ! Index of current bottom location (pelagic-benthic interface)
-      integer, pointer :: bottom_index
+      integer, pointer :: bottom_index => null()
       ! Variable to enumerate over all layers if bottom_everywhere is true
       ! 1 if bottom_everywhere is false, nz_grid if bottom_everywhere is true
       ! All associated code copied and adapted from https://gitlab.com/wateritech-public/waterecosystemstool/gotm
