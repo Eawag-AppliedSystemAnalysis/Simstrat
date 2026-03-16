@@ -434,7 +434,7 @@ contains
          ! of all tracers, combining the Simstrat transport terms with the FABM biogeochemical source
          ! terms and fluxes (sms, flux) and vertical velocities (velocity). This results in an updated interior_state.
          do ivar = 1, state%n_fabm_interior_state
-            ! Special clause for WET pelagic mirror variables (no diffusion)
+            ! Special case for WET pelagic mirror variables (no diffusion)
             if (state%fabm_state_names(ivar)(len_trim(state%fabm_state_names(ivar))-2:) == '_PV') then
                if (fabm_cfg%bottom_everywhere) then
                   state%fabm_interior_state(:, ivar) = state%fabm_interior_state(:, ivar) + state%dt * self%flux_bt(:, ivar) * grid%dAz_norm(:)

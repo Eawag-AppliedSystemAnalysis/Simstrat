@@ -239,7 +239,7 @@ contains
             state%S(1:ubnd_vol) = state%S(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dS(1:ubnd_vol)
             if (self%cfg%couple_fabm) then
                do ivar = 1, state%n_fabm_interior_state
-                  ! Special clause for WET pelagic mirror variables (leave unaffected)
+                  ! Special case for WET pelagic mirror variables (leave unaffected)
                   if (state%fabm_state_names(ivar)(len_trim(state%fabm_state_names(ivar))-2:) /= '_PV') then
                      state%fabm_interior_state(1:ubnd_vol, ivar) = state%fabm_interior_state(1:ubnd_vol, ivar) + &
                         AreaFactor_adv(1:ubnd_vol) * dfabm_interior(1:ubnd_vol, ivar)
@@ -255,7 +255,7 @@ contains
             state%S(ubnd_vol) = state%S(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
             if (self%cfg%couple_fabm) then
                do ivar = 1, state%n_fabm_interior_state
-                  ! Special clause for WET pelagic mirror variables (leave unaffected)
+                  ! Special case for WET pelagic mirror variables (leave unaffected)
                   if (state%fabm_state_names(ivar)(len_trim(state%fabm_state_names(ivar))-2:) /= '_PV') then
                      state%fabm_interior_state(ubnd_vol, ivar) = state%fabm_interior_state(ubnd_vol, ivar)*h(ubnd_vol)/(h(ubnd_vol) + dh)
                   end if
@@ -297,7 +297,7 @@ contains
          ! FABM
          if (self%cfg%couple_fabm) then
             do ivar = 1, state%n_fabm_interior_state
-               ! Special clause for WET pelagic mirror variables (leave unaffected)
+               ! Special case for WET pelagic mirror variables (leave unaffected)
                if (state%fabm_state_names(ivar)(len_trim(state%fabm_state_names(ivar))-2:) /= '_PV') then
                   fabm_interior_state(ubnd_vol,ivar) = (w_a*fabm_interior_state(ubnd_vol + 1,ivar) + w_b*fabm_interior_state(ubnd_vol,ivar))/(w_a + w_b)
                end if
@@ -337,7 +337,7 @@ contains
          ! FABM
          if (self%cfg%couple_fabm) then
             do ivar = 1, state%n_fabm_interior_state
-               ! Special clause for WET pelagic mirror variables (leave unaffected)
+               ! Special case for WET pelagic mirror variables (leave unaffected)
                if (state%fabm_state_names(ivar)(len_trim(state%fabm_state_names(ivar))-2:) /= '_PV') then
                   fabm_interior_state(ubnd_vol,ivar) = fabm_interior_state(ubnd_vol - 1,ivar)
                end if
