@@ -204,12 +204,14 @@ module strat_simdata
       real(RK), dimension(:), pointer :: fabm_surface_state
       real(RK), dimension(:,:), pointer :: fabm_repaired_interior, fabm_repaired_bottom
       real(RK), dimension(:), pointer :: fabm_repaired_surface
+      real(RK), dimension(:), allocatable :: min_int, max_int, min_bt, max_bt, min_sf, max_sf ! Minimum and maximum values of FABM state variables
       integer :: n_fabm_state, n_fabm_interior_state, n_fabm_bottom_state, n_fabm_surface_state
       integer :: n_fabm_diagnostic, n_fabm_diagnostic_interior, n_fabm_diagnostic_horizontal
       integer :: n_fabm_repaired, n_fabm_repaired_interior_min, n_fabm_repaired_interior_max, n_fabm_repaired_bottom_min,n_fabm_repaired_bottom_max, n_fabm_repaired_surface_min, n_fabm_repaired_surface_max
       character(len=100), dimension(:), pointer :: fabm_state_names ! Names of FABM state variables used in the simulation
       real(RK), dimension(:,:), pointer :: fabm_diagnostic_interior ! State matrix of FABM diagnostic variables
       real(RK), dimension(:), pointer :: fabm_diagnostic_horizontal ! State matrix of FABM diagnostic variables
+      integer, dimension(:), allocatable :: diagnostic_index ! Indices of FABM diagnostic variables
       character(len=100), dimension(:), pointer :: fabm_diagnostic_names ! Names of FABM diagnostic variables in output
       character(len=100), dimension(:), pointer :: fabm_repaired_names ! Names of FABM repaired variables in output
    
