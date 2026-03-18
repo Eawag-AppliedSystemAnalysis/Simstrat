@@ -5,8 +5,6 @@ modes = release-gnu release-gnu-dynamic release-intel debug-gnu debug-gnu-dynami
 [release-gnu]
 compiler = Gnu
 cflags = -c -O2 -std=f2008 -ffree-line-length-none
-# comment above and uncomment below for debugging:
-# cflags = -c -g -O0 -std=f2008 -ffree-line-length-none -fbacktrace -fcheck=all
 lflags = -static-libgcc -static-libgfortran -static
 build_dir = .
 src = ../src/
@@ -16,7 +14,7 @@ colors = False
 quiet = False
 target = ../src/simstrat.f90
 output = simstrat
-dependon=../lib/csv_fortran/fobos:release-gnu((direct))
+dependon = ../lib/csv_fortran/fobos:release-gnu((direct))
          ../lib/json_fortran/fobos:release-gnu((direct))
          ../lib/forbear/fobos:static-gnu((direct))
 log = True
@@ -33,53 +31,71 @@ include = ../lib/fabm/build/modules/
 colors = False
 quiet = False
 target = ../src/simstrat.f90
-dependon=../lib/csv_fortran/fobos:release-gnu((direct))
+output = simstrat
+dependon = ../lib/csv_fortran/fobos:release-gnu((direct))
          ../lib/json_fortran/fobos:release-gnu((direct))
          ../lib/forbear/fobos:static-gnu((direct))
 log = True
 
 [release-intel]
-compiler=intel
-cflags=-c -O3
-modsw=-module=
-build_dir=.
-src=../src/
+compiler = intel
+cflags = -c -O3 -stand f08
+modsw = -module =
+build_dir = .
+src = ../src/
+libs = -L ../lib/fabm/build -lfabm
+include = ../lib/fabm/build/modules/
 colors=False
 quiet=False
-target=simstrat.f90
-output=simstrat
-dependon=../lib/csv_fortran/fobos:release-intel((direct))
+target = ../src/simstrat.f90
+output = simstrat
+dependon = ../lib/csv_fortran/fobos:release-intel((direct))
          ../lib/json_fortran/fobos:release-intel((direct))
-log=True
+log = True
 
 [debug-gnu]
 compiler=Gnu
-cflags=-c -O2 -std=f2008 -ffree-line-length-none -g -ffpe-trap=overflow,zero -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans
-lflags=-static-libgcc -static-libgfortran -static
-build_dir=.
-src=../src/
-colors=False
-quiet=False
-target=simstrat.f90
-output=simstrat
-dependon=../lib/csv_fortran/fobos:release-gnu((direct))
+cflags = -c -g -Og -std=f2008 -ffree-line-length-none \
+    -fcheck=all -fbacktrace \
+    -ffpe-trap=invalid,zero,overflow \
+    -finit-real=snan -finit-integer=-999999 \
+    -fno-omit-frame-pointer -fno-unsafe-math-optimizations \
+    -frounding-math
+lflags = -static-libgcc -static-libgfortran -static
+build_dir = .
+src = ../src/
+libs = -L ../lib/fabm/build -lfabm
+include = ../lib/fabm/build/modules/
+colors = False
+quiet = False
+target = ../src/simstrat.f90
+output = simstrat
+dependon = ../lib/csv_fortran/fobos:release-gnu((direct))
          ../lib/json_fortran/fobos:release-gnu((direct))
          ../lib/forbear/fobos:static-gnu((direct))
-log=True
+log = True
 
 [debug-gnu-dynamic]
-compiler=Gnu
-cflags=-c -O2 -std=f2008 -ffree-line-length-none -g -ffpe-trap=overflow,zero -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans
-lflags=-dynamic-libgcc -dynamic-libgfortran -dynamic
-build_dir=.
-src=../src/
-colors=False
-quiet=False
-target=simstrat.f90
-dependon=../lib/csv_fortran/fobos:release-gnu((direct))
+compiler = Gnu
+cflags = -c -g -Og -std=f2008 -ffree-line-length-none \
+    -fcheck=all -fbacktrace \
+    -ffpe-trap=invalid,zero,overflow \
+    -finit-real=snan -finit-integer=-999999 \
+    -fno-omit-frame-pointer -fno-unsafe-math-optimizations \
+    -frounding-math
+lflags = -dynamic-libgcc -dynamic-libgfortran -dynamic
+build_dir = .
+src = ../src/
+libs = -L ../lib/fabm/build -lfabm
+include = ../lib/fabm/build/modules/
+colors = False
+quiet = False
+target = ../src/simstrat.f90
+output = simstrat
+dependon = ../lib/csv_fortran/fobos:release-gnu((direct))
          ../lib/json_fortran/fobos:release-gnu((direct))
          ../lib/forbear/fobos:static-gnu((direct))
-log=True
+log = True
 
 [rule-makedoc]
 help = Generate FORD documentation (see /doc/developer folder)

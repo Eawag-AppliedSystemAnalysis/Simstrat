@@ -204,7 +204,7 @@ contains
       if (state%n_fabm_interior_state > 0) then
          allocate(self%velocity(grid%nz_grid, state%n_fabm_interior_state))
       end if
-      
+
       ! Point FABM to fields that contain values for environmental data, all variables are assumed to be allocated
       ! Do this for all variables on FABM's standard variable list that the model can provide
       ! For this list, visit https://github.com/fabm-model/fabm/wiki/List-of-standard-variables
@@ -1321,7 +1321,12 @@ contains
          call fabm_finalize_library()
       end if
 
+      ! Deallocate memory
       call deallocate_fabm(self)
+      if (associated(self%bottom_index)) then
+         deallocate(self%bottom_index)
+         nullify(self%bottom_index)
+      end if
    end subroutine finalize_fabm
 
 end module simstrat_fabm

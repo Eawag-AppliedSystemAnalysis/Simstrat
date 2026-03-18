@@ -124,7 +124,7 @@ contains
 
          ! Update distrib on inner faces
          do i = 2, ubnd_fce - 1
-            distrib(i) = max(state%NN(i)**param%q_NN, minNN)/grid%Az(i)*grid%dAz(i - 1)
+            distrib(i) = max(max(state%NN(i), 0.0_RK)**param%q_NN, minNN)/grid%Az(i)*grid%dAz(i - 1)
          end do
 
          ! Determine a_seiche
