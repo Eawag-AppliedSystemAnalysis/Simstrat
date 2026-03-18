@@ -51,7 +51,7 @@ module simstrat_fabm
    ! Type for use of FABM
    ! Contains arrays accessed or set by FABM
    type, public :: SimstratFABM
-      class(type_fabm_model), pointer :: fabm_model ! holds metadata on all bgc models active within FABM
+      class(type_fabm_model), pointer :: fabm_model => null() ! holds metadata on all bgc models active within FABM
 
       ! Array for interior tracer source terms and vertical velocities
       real(RK), dimension(:,:), allocatable :: sms_int, velocity
@@ -65,7 +65,7 @@ module simstrat_fabm
       logical :: valid_int, valid_sf, valid_bt
 
       ! Index of current bottom location (pelagic-benthic interface)
-      integer, pointer :: bottom_index
+      integer, pointer :: bottom_index => null()
       
       ! Define additional FABM standard variables, used by specific biogeochemical models
       ! Projection factor for benthic flux into horizontal layer volume
@@ -92,7 +92,7 @@ contains
 
       ! Local variables
       integer :: ivar, index
-      
+
       ! Make sure everything is deallocated
       call deallocate_fabm(self)
 
@@ -204,7 +204,7 @@ contains
       if (state%n_fabm_interior_state > 0) then
          allocate(self%velocity(grid%nz_grid, state%n_fabm_interior_state))
       end if
-
+      
       ! Point FABM to fields that contain values for environmental data, all variables are assumed to be allocated
       ! Do this for all variables on FABM's standard variable list that the model can provide
       ! For this list, visit https://github.com/fabm-model/fabm/wiki/List-of-standard-variables
@@ -1298,14 +1298,6 @@ contains
    subroutine deallocate_fabm(self)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
-      
-      ! Finalize and deallocate the model
-      if (associated(self%fabm_model)) then
-         call self%fabm_model%finalize()
-         deallocate(self%fabm_model)
-         nullify(self%fabm_model)
-         call fabm_finalize_library()
-      end if
 
       ! Deallocate internal arrays
       if (allocated(self%sms_int)) deallocate(self%sms_int)
@@ -1315,5 +1307,21 @@ contains
       if (allocated(self%sms_sf)) deallocate(self%sms_sf)
       if (allocated(self%velocity)) deallocate(self%velocity)
    end subroutine deallocate_fabm
+
+   ! Finalize the coupling
+   subroutine finalize_fabm(self)
+      ! Arguments
+      class(SimstratFABM), intent(inout) :: self
+      
+      ! Finalize and deallocate the model
+      if (associated(self%fabm_model)) then
+         call self%fabm_model%finalize()
+         deallocate(self%fabm_model)
+         nullify(self%fabm_model)
+         call fabm_finalize_library()
+      end if
+
+      call deallocate_fabm(self)
+   end subroutine finalize_fabm
 
 end module simstrat_fabm
