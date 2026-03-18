@@ -311,7 +311,7 @@ contains
 
       ! Allocate arrays for repaired variables in fabm_list_repaired.dat and initialize them with the boundary value
       if (fabm_cfg%output_repaired_vars) then
-         call set_fabm_repaired_vars(self, state, output_cfg)
+         call set_fabm_repaired_vars(state, output_cfg)
          if (state%n_fabm_repaired_interior_min + state%n_fabm_repaired_interior_max > 0) then
             allocate(state%fabm_repaired_interior(grid%nz_grid, state%n_fabm_repaired_interior_min + state%n_fabm_repaired_interior_max))
             state%fabm_repaired_interior = ieee_value(state%fabm_repaired_interior, ieee_quiet_nan)
@@ -468,7 +468,7 @@ contains
                         end if
                      end do
                   else
-                     call list_repaired(self, output_cfg, self%fabm_model%interior_state_variables(ivar)%name, 'minimum', state%min_int(ivar))
+                     call list_repaired(output_cfg, self%fabm_model%interior_state_variables(ivar)%name, 'minimum', state%min_int(ivar))
                   end if
                else
                  ! Display repair message if repaired variable not registered
@@ -488,7 +488,7 @@ contains
                         end if
                      end do
                   else
-                     call list_repaired(self, output_cfg, self%fabm_model%interior_state_variables(ivar)%name, 'maximum', state%max_int(ivar))
+                     call list_repaired(output_cfg, self%fabm_model%interior_state_variables(ivar)%name, 'maximum', state%max_int(ivar))
                   end if
                else
                   ! Display repair message if repaired variable not registered
@@ -530,7 +530,7 @@ contains
                         end if
                      end do
                   else
-                     call list_repaired(self, output_cfg, self%fabm_model%bottom_state_variables(ivar)%name, 'minimum', state%min_bt(ivar))
+                     call list_repaired(output_cfg, self%fabm_model%bottom_state_variables(ivar)%name, 'minimum', state%min_bt(ivar))
                   end if
                else
                   ! Display repair message if repaired variable not registered
@@ -551,7 +551,7 @@ contains
                         end if
                      end do
                   else
-                     call list_repaired(self, output_cfg, self%fabm_model%bottom_state_variables(ivar)%name, 'maximum', state%max_bt(ivar))
+                     call list_repaired(output_cfg, self%fabm_model%bottom_state_variables(ivar)%name, 'maximum', state%max_bt(ivar))
                   end if
                else
                   ! Display repair message if repaired variable not registered
@@ -604,7 +604,7 @@ contains
                      index = index - state%n_fabm_repaired_bottom_max - state%n_fabm_repaired_bottom_min - state%n_fabm_repaired_interior_max - state%n_fabm_repaired_interior_min
                      state%fabm_repaired_surface(index) = state%min_sf(ivar)
                   else
-                     call list_repaired(self, output_cfg, self%fabm_model%surface_state_variables(ivar)%name, 'minimum', state%min_sf(ivar))
+                     call list_repaired(output_cfg, self%fabm_model%surface_state_variables(ivar)%name, 'minimum', state%min_sf(ivar))
                   end if
                else
                   ! Display repair message if repaired variable not registered
@@ -619,7 +619,7 @@ contains
                      index = index - state%n_fabm_repaired_bottom_max - state%n_fabm_repaired_bottom_min - state%n_fabm_repaired_interior_max - state%n_fabm_repaired_interior_min
                      state%fabm_repaired_surface(index) = state%max_sf(ivar)
                   else
-                     call list_repaired(self, output_cfg, self%fabm_model%surface_state_variables(ivar)%name, 'maximum', state%max_sf(ivar))
+                     call list_repaired(output_cfg, self%fabm_model%surface_state_variables(ivar)%name, 'maximum', state%max_sf(ivar))
                   end if
                else
                   ! Display repair message if repaired variable not registered
@@ -1021,9 +1021,8 @@ contains
    end subroutine list_diagnostic
 
    ! Register repaired variables in RepairedVars file
-   subroutine set_fabm_repaired_vars(self, state, output_cfg)
+   subroutine set_fabm_repaired_vars(state, output_cfg)
       ! Arguments
-      class(SimstratFABM), intent(inout) :: self
       class(ModelState), intent(inout) :: state
       class(OutputConfig), intent(in) :: output_cfg
 
@@ -1036,7 +1035,6 @@ contains
       character(len=256), dimension(max_lines) :: temp_names
       character(len=16), dimension(max_lines) :: temp_bounds
       character(len=16), dimension(max_lines) :: temp_types
-      integer, dimension(max_lines) :: temp_index
 
       ! Initialize counts to zero
       n = 0
@@ -1205,9 +1203,8 @@ contains
    end subroutine set_fabm_repaired_vars
 
    ! Add to list of repaired variables
-   subroutine list_repaired(self, output_cfg, variable, boundary, boundary_value)
+   subroutine list_repaired(output_cfg, variable, boundary, boundary_value)
       ! Arguments
-      class(SimstratFABM), intent(inout) :: self
       class(OutputConfig), intent(in) :: output_cfg
       character(len=*), intent(in) :: variable
       character(len=*), intent(in) :: boundary
@@ -1219,43 +1216,34 @@ contains
       character(len=256) :: file_path, boundary_value_str
       character(len=256) :: line, new_line
 
-      print *, 'a'
-
       ! Construct the file path
       file_path = trim(output_cfg%PathOut)//'/fabm_list_repaired.dat'
-      print *, 'b'
+
       ! Convert boundary_value to string
       write(boundary_value_str, '(ES15.6)') boundary_value
-      new_line = trim(variable)//', '//trim(boundary)//', '//trim(adjustl(boundary_value_str))
-      print *, 'c'      
+      new_line = trim(variable)//', '//trim(boundary)//', '//trim(adjustl(boundary_value_str))  
+
       ! Check if file exists
       inquire(file=file_path, exist=exists)
-      print *, 'd'
+
       ! Read from RepairedVars if it exists
       if (exists) then
          open(newunit=unit, action='read', status='old', file=file_path, iostat = status)
          if (status .ne. 0) then
             call error('Failed to open or create file: ' // trim(file_path))
          end if
-         print *, 'e'
          ! Read the file line by line and check if the exact line exists
          rewind(unit)
-         print *, 'f'
          do
-            print *, 'g'
             read(unit, '(A)', iostat=status) line
-            print *, 'h'
             if (status .ne. 0) exit
             ! Check if the line already exists and exit subroutine if it does
             if (trim(line) == trim(new_line)) then
                close(unit)
-               print *, 'h'
                return
             end if
          end do
-         print *, 'i'
          close(unit)
-         print *, 'j'
          ! Reopen for appending
          open(newunit=unit, action='write', position='append', status='old', file=file_path, iostat=status)
          if (status .ne. 0) then
@@ -1263,7 +1251,6 @@ contains
          else
             call warn('FABM variable '//trim(variable)//' added to  '// trim(file_path)//'. Restart simulation to output '//trim(boundary)//' values.')
          end if
-         print *, 'k'
       ! Create new file if RepairedVars does not exist
       else
          open(newunit=unit, action='write', status='new', file=file_path, iostat = status)
@@ -1272,21 +1259,17 @@ contains
          else
             call warn('FABM variable '//trim(variable)//' added to '// trim(file_path)//'. Restart simulation to output '//trim(boundary)//' values.')
          end if
-         print *, 'l'
          ! Write the header
          write(unit, '(A)', advance = 'no') 'Variable, '
          write(unit, '(A)', advance = 'no') 'Boundary reached, '
          write(unit, '(A)') 'Boundary value'
-         print *, 'm'
       end if
 
       ! Write variable name, its boundary and the boundary vale
       write(unit, '(A)') trim(new_line)
-      print *, 'n'
 
       ! Close the file after writing
       close(unit)
-      print *, 'o'
    end subroutine list_repaired
 
    ! Light absorption feedback by FABM variables
