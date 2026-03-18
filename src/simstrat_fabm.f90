@@ -897,7 +897,7 @@ contains
          state%n_fabm_diagnostic = 0
          return
       else
-         write(6,*) 'Reading ', fabm_cfg%set_diag_vars
+         write(6,*) 'Reading ', trim(fabm_cfg%set_diag_vars)
       end if
       ! Skip header
       read(unit, '(A)', iostat=status)
@@ -1064,7 +1064,7 @@ contains
          call warn("No FABM Repaired Variables provided")
          return
       else
-         write(6,*) 'Reading ', file_path
+         write(6,*) 'Reading ', trim(file_path)
       end if
 
       ! Skip header
@@ -1299,7 +1299,7 @@ contains
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       
-      ! Deallocate the model
+      ! Finalize and deallocate the model
       if (associated(self%fabm_model)) then
          call self%fabm_model%finalize()
          deallocate(self%fabm_model)
