@@ -458,7 +458,6 @@ contains
             if (any(state%fabm_interior_state(:, ivar) < state%min_int(ivar))) then
                if (fabm_cfg%output_repaired_vars) then
                   ! Register repaired variable and store out-of-bound value
-                  call list_repaired(self, output_cfg, self%fabm_model%interior_state_variables(ivar)%name, 'minimum', state%min_int(ivar))
                   index = findloc(state%fabm_repaired_names, trim(self%fabm_model%interior_state_variables(ivar)%name)//'_minimum', dim = 1)
                   if (index > 0) then
                      do k = 1, grid%nz_grid
@@ -1220,34 +1219,43 @@ contains
       character(len=256) :: file_path, boundary_value_str
       character(len=256) :: line, new_line
 
+      print *, 'a'
+
       ! Construct the file path
       file_path = trim(output_cfg%PathOut)//'/fabm_list_repaired.dat'
-
+      print *, 'b'
       ! Convert boundary_value to string
       write(boundary_value_str, '(ES15.6)') boundary_value
       new_line = trim(variable)//', '//trim(boundary)//', '//trim(adjustl(boundary_value_str))
-      
+      print *, 'c'      
       ! Check if file exists
       inquire(file=file_path, exist=exists)
-
+      print *, 'd'
       ! Read from RepairedVars if it exists
       if (exists) then
          open(newunit=unit, action='read', status='old', file=file_path, iostat = status)
          if (status .ne. 0) then
             call error('Failed to open or create file: ' // trim(file_path))
          end if
+         print *, 'e'
          ! Read the file line by line and check if the exact line exists
          rewind(unit)
+         print *, 'f'
          do
+            print *, 'g'
             read(unit, '(A)', iostat=status) line
+            print *, 'h'
             if (status .ne. 0) exit
             ! Check if the line already exists and exit subroutine if it does
             if (trim(line) == trim(new_line)) then
                close(unit)
+               print *, 'h'
                return
             end if
          end do
+         print *, 'i'
          close(unit)
+         print *, 'j'
          ! Reopen for appending
          open(newunit=unit, action='write', position='append', status='old', file=file_path, iostat=status)
          if (status .ne. 0) then
@@ -1255,6 +1263,7 @@ contains
          else
             call warn('FABM variable '//trim(variable)//' added to  '// trim(file_path)//'. Restart simulation to output '//trim(boundary)//' values.')
          end if
+         print *, 'k'
       ! Create new file if RepairedVars does not exist
       else
          open(newunit=unit, action='write', status='new', file=file_path, iostat = status)
@@ -1263,17 +1272,21 @@ contains
          else
             call warn('FABM variable '//trim(variable)//' added to '// trim(file_path)//'. Restart simulation to output '//trim(boundary)//' values.')
          end if
+         print *, 'l'
          ! Write the header
          write(unit, '(A)', advance = 'no') 'Variable, '
          write(unit, '(A)', advance = 'no') 'Boundary reached, '
          write(unit, '(A)') 'Boundary value'
+         print *, 'm'
       end if
 
       ! Write variable name, its boundary and the boundary vale
       write(unit, '(A)') trim(new_line)
+      print *, 'n'
 
       ! Close the file after writing
       close(unit)
+      print *, 'o'
    end subroutine list_repaired
 
    ! Light absorption feedback by FABM variables
