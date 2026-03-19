@@ -1058,7 +1058,16 @@ contains
       ! Read from RepairedVars
       open(newunit=unit, action='read', status='old', file=file_path, iostat = status)
       if (status .ne. 0) then
-         call warn("No FABM Repaired Variables provided")
+         call warn('No FABM Repaired Variables provided. Empty repaired variables file '// trim(file_path) //' created.')
+         open(newunit=unit, action='write', status='new', file=file_path, iostat = status)
+         if (status .ne. 0) then
+            call error('Failed to open or create file: ' // trim(file_path))
+         end if
+         ! Write the header
+         write(unit, '(A)', advance = 'no') 'Variable, '
+         write(unit, '(A)', advance = 'no') 'Boundary reached, '
+         write(unit, '(A)') 'Boundary value'
+         close(unit)
          return
       else
          write(6,*) 'Reading ', trim(file_path)
@@ -1221,48 +1230,31 @@ contains
 
       ! Convert boundary_value to string
       write(boundary_value_str, '(ES15.6)') boundary_value
-      new_line = trim(variable)//', '//trim(boundary)//', '//trim(adjustl(boundary_value_str))  
+      new_line = trim(variable)//', '//trim(boundary)//', '//trim(adjustl(boundary_value_str))
 
-      ! Check if file exists
-      inquire(file=file_path, exist=exists)
-
-      ! Read from RepairedVars if it exists
-      if (exists) then
-         open(newunit=unit, action='read', status='old', file=file_path, iostat = status)
-         if (status .ne. 0) then
-            call error('Failed to open or create file: ' // trim(file_path))
+      ! Check if repaired variable case already present in RepairedVars
+      open(newunit=unit, action='read', status='old', file=file_path, iostat = status)
+      if (status .ne. 0) then
+         call error('Failed to open or create file: ' // trim(file_path))
+      end if
+      ! Read the file line by line and check if the exact line exists
+      rewind(unit)
+      do
+         read(unit, '(A)', iostat=status) line
+         if (status .ne. 0) exit
+         ! Check if the line already exists and exit subroutine if it does
+         if (trim(line) == trim(new_line)) then
+            close(unit)
+            return
          end if
-         ! Read the file line by line and check if the exact line exists
-         rewind(unit)
-         do
-            read(unit, '(A)', iostat=status) line
-            if (status .ne. 0) exit
-            ! Check if the line already exists and exit subroutine if it does
-            if (trim(line) == trim(new_line)) then
-               close(unit)
-               return
-            end if
-         end do
-         close(unit)
-         ! Reopen for appending
-         open(newunit=unit, action='write', position='append', status='old', file=file_path, iostat=status)
-         if (status .ne. 0) then
-            call error('Failed to open or create file: ' // trim(file_path))
-         else
-            call warn('FABM variable '//trim(variable)//' added to  '// trim(file_path)//'. Restart simulation to output '//trim(boundary)//' values.')
-         end if
-      ! Create new file if RepairedVars does not exist
+      end do
+      close(unit)
+      ! Reopen for appending
+      open(newunit=unit, action='write', position='append', status='old', file=file_path, iostat=status)
+      if (status .ne. 0) then
+         call error('Failed to open or create file: ' // trim(file_path))
       else
-         open(newunit=unit, action='write', status='new', file=file_path, iostat = status)
-         if (status .ne. 0) then
-            call error('Failed to open or create file: ' // trim(file_path))
-         else
-            call warn('FABM variable '//trim(variable)//' added to '// trim(file_path)//'. Restart simulation to output '//trim(boundary)//' values.')
-         end if
-         ! Write the header
-         write(unit, '(A)', advance = 'no') 'Variable, '
-         write(unit, '(A)', advance = 'no') 'Boundary reached, '
-         write(unit, '(A)') 'Boundary value'
+         call warn('FABM variable '//trim(variable)//' added to '// trim(file_path)//'. Restart simulation to output '//trim(boundary)//' values.')
       end if
 
       ! Write variable name, its boundary and the boundary vale

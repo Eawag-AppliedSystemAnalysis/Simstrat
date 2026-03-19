@@ -54,7 +54,7 @@ dependon = ../lib/csv_fortran/fobos:release-intel((direct))
 log = True
 
 [debug-gnu]
-compiler=Gnu
+compiler = Gnu
 cflags = -c -g -Og -std=f2008 -ffree-line-length-none \
     -fcheck=all -fbacktrace \
     -ffpe-trap=invalid,zero,overflow \
