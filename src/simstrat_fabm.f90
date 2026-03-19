@@ -982,8 +982,8 @@ contains
       if (size(self%fabm_model%interior_diagnostic_variables) > 0) then
          ! Construct the file path
          file_path = trim(output_cfg%PathOut)//'/fabm_list_diagnostic_interior.dat'
-         ! Create new file or replace already existing one
-         open(newunit=unit, file=file_path, status='replace', action='write', iostat = status)
+         ! Create new file or overwrite already existing one
+         open(newunit=unit, file=file_path, action='write', iostat = status)
          if (status .ne. 0) then
             call error('Failed to open or create file: ' // trim(file_path))
          end if
@@ -1004,8 +1004,8 @@ contains
       if (size(self%fabm_model%horizontal_diagnostic_variables) > 0) then
          ! Construct the file path for Horizontal Diagnostic Variable List
          file_path = trim(output_cfg%PathOut)//'/fabm_list_diagnostic_horizontal.dat'
-         ! Creat new file or replace already existing one
-         open(newunit=unit, file=file_path, status='replace', action='write', iostat = status)
+         ! Creat new file or overwrite already existing one
+         open(newunit=unit, file=file_path, action='write', iostat = status)
          ! Write the header
          write(unit, '(A)', advance = 'no') 'Short Name, '
          write(unit, '(A)', advance = 'no') 'Long Name, '
@@ -1044,13 +1044,6 @@ contains
       n_bt_max = 0
       n_sf_min = 0
       n_sf_max = 0
-      state%n_fabm_repaired = n
-      state%n_fabm_repaired_interior_min = n_int_min
-      state%n_fabm_repaired_interior_max = n_int_max
-      state%n_fabm_repaired_bottom_min = n_bt_min
-      state%n_fabm_repaired_bottom_max = n_bt_max
-      state%n_fabm_repaired_surface_min = n_sf_min
-      state%n_fabm_repaired_surface_max = n_sf_max
 
       ! Construct the file path
       file_path = trim(output_cfg%PathOut)//'/fabm_list_repaired.dat'
@@ -1068,6 +1061,15 @@ contains
          write(unit, '(A)', advance = 'no') 'Boundary reached, '
          write(unit, '(A)') 'Boundary value'
          close(unit)
+         ! Write to state and allocate array of proper size
+         state%n_fabm_repaired = n
+         state%n_fabm_repaired_interior_min = n_int_min
+         state%n_fabm_repaired_interior_max = n_int_max
+         state%n_fabm_repaired_bottom_min = n_bt_min
+         state%n_fabm_repaired_bottom_max = n_bt_max
+         state%n_fabm_repaired_surface_min = n_sf_min
+         state%n_fabm_repaired_surface_max = n_sf_max
+         allocate(state%fabm_repaired_names(n))
          return
       else
          write(6,*) 'Reading ', trim(file_path)
