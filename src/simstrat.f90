@@ -288,13 +288,13 @@ contains
          ! Update forcing
          call mod_forcing%update(simdata%model)
 
-         ! Update absorption (except if FABM is off or if FABM is on but bioshade feedback is off)
+         ! Update absorption
+         call mod_absorption%update(simdata%model)
+         ! Add attenuation coefficient from biogeochemistry after state variables have been calculated once
          if (simdata%model_cfg%couple_fabm) then
-            if (.not. simdata%fabm_cfg%bioshade_feedback) then
-               call mod_absorption%update(simdata%model)
+            if (simdata%fabm_cfg%bioshade_feedback .and. (.not. simdata%model%first_timestep)) then
+               call mod_fabm%absorption_update_fabm(simdata%model, simdata%grid)
             end if
-         else
-            call mod_absorption%update(simdata%model)
          end if
 
          ! Update physics

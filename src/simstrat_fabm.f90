@@ -75,6 +75,7 @@ module simstrat_fabm
       procedure, pass(self), public :: init
       procedure, pass(self), public :: list_diagnostic
       procedure, pass(self), public :: update
+      procedure, pass(self), public :: absorption_update_fabm
    end type SimstratFABM
 
 contains
@@ -290,12 +291,16 @@ contains
       
       ! Get index of attenuation coefficient FABM diagnostic variable
       if (fabm_cfg%bioshade_feedback) then
+         att_index = 0
          do ivar = 1, size(self%fabm_model%interior_diagnostic_variables)
             if (self%fabm_model%interior_diagnostic_variables(ivar)%name == 'attenuation_coefficient_of_photosynthetic_radiative_flux') then
                self%fabm_model%interior_diagnostic_variables(ivar)%save = .true.
                att_index = ivar
             end if
          end do
+         if (att_index == 0) then
+            call error('Attenuation Coefficient not found in FABM Diagnostic Variables')
+         end if
       end if
 
       ! Allocate arrays for diagnostic variables in SetDiagnosticVars and retrieve their index in the list of all interior and horizontal diagnostic variables
@@ -773,11 +778,6 @@ contains
             index = state%diagnostic_index(state%n_fabm_diagnostic_interior + ivar)
             state%fabm_diagnostic_horizontal(ivar) = self%fabm_model%get_horizontal_diagnostic_data(index)
          end do
-      end if      
-      
-      ! 6. Retrieve attenuation coefficient after state variables have been calculated once
-      if (fabm_cfg%bioshade_feedback .and. (.not. first_call_local)) then
-         call absorption_update_fabm(self, state, grid)
       end if
 
       ! This is the ideal moment for the output: 
@@ -1278,7 +1278,7 @@ contains
 
       ! Retrieve attenuation_coefficient_of_photosynthetic_radiative_flux and set as absorb_vol
       attenuation_coefficient_of_photosynthetic_radiative_flux = self%fabm_model%get_interior_diagnostic_data(att_index)
-      state%absorb_vol(1 : grid%nz_grid) = attenuation_coefficient_of_photosynthetic_radiative_flux(1 : grid%nz_grid)
+      state%absorb_vol(:) = state%absorb_vol(:) + attenuation_coefficient_of_photosynthetic_radiative_flux(:)
 
       ! Interpolate to faces to be compatible with Simstrat temperature module
       call grid%interpolate_to_face(grid%z_volume, state%absorb_vol, grid%nz_grid, state%absorb)
