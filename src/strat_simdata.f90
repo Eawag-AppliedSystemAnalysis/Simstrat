@@ -59,13 +59,13 @@ module strat_simdata
 
    ! Definition of a FABM variable to log
    type, public :: LogVariableFABM
-      character(len=100), pointer, dimension(:) :: names
+      character(len=256), pointer, dimension(:) :: names
       real(RK), dimension(:,:), pointer :: values
    end type
 
    ! Definition of a FABM variable to log
    type, public :: LogVariableFABM_bound
-      character(len=100), pointer, dimension(:) :: names
+      character(len=256), pointer, dimension(:) :: names
       real(RK), dimension(:), pointer :: values
    end type
 
@@ -87,7 +87,7 @@ module strat_simdata
       class(LogVariableFABM), allocatable :: output_vars_fabm_bottom_state ! Output structure for FABM bottom state variables
       class(LogVariableFABM_bound), allocatable :: output_vars_fabm_surface_state ! Output structure for FABM surface state variables
       class(LogVariableFABM), allocatable :: output_vars_fabm_diagnostic_interior ! Output structure for FABM interior diagnostic variables
-      class(LogVariableFABM_bound), allocatable :: output_vars_fabm_diagnostic_horizontal ! Output structure for FABM horizontal diagnostic variables
+      class(LogVariableFABM), allocatable :: output_vars_fabm_diagnostic_horizontal ! Output structure for FABM horizontal diagnostic variables
       class(LogVariableFABM), allocatable :: output_vars_fabm_repaired_interior ! Output structure for FABM interior repaired variables
       class(LogVariableFABM), allocatable :: output_vars_fabm_repaired_bottom ! Output structure for FABM bottom repaired variables
       class(LogVariableFABM_bound), allocatable :: output_vars_fabm_repaired_surface ! Output structure for FABM surface repaired variables
@@ -210,12 +210,11 @@ module strat_simdata
       integer :: n_fabm_state, n_fabm_interior_state, n_fabm_bottom_state, n_fabm_surface_state
       integer :: n_fabm_diagnostic, n_fabm_diagnostic_interior, n_fabm_diagnostic_horizontal
       integer :: n_fabm_repaired, n_fabm_repaired_interior_min, n_fabm_repaired_interior_max, n_fabm_repaired_bottom_min,n_fabm_repaired_bottom_max, n_fabm_repaired_surface_min, n_fabm_repaired_surface_max
-      character(len=100), dimension(:), pointer :: fabm_state_names ! Names of FABM state variables used in the simulation
-      real(RK), dimension(:,:), pointer :: fabm_diagnostic_interior ! State matrix of FABM diagnostic variables
-      real(RK), dimension(:), pointer :: fabm_diagnostic_horizontal ! State matrix of FABM diagnostic variables
+      character(len=256), dimension(:), pointer :: fabm_state_names ! Names of FABM state variables used in the simulation
+      real(RK), dimension(:,:), pointer :: fabm_diagnostic_interior, fabm_diagnostic_horizontal ! State matrix of FABM diagnostic variables
       integer, dimension(:), allocatable :: diagnostic_index ! Indices of FABM diagnostic variables
-      character(len=100), dimension(:), pointer :: fabm_diagnostic_names ! Names of FABM diagnostic variables in output
-      character(len=100), dimension(:), pointer :: fabm_repaired_names ! Names of FABM repaired variables in output
+      character(len=256), dimension(:), pointer :: fabm_diagnostic_names ! Names of FABM diagnostic variables in output
+      character(len=256), dimension(:), pointer :: fabm_repaired_names ! Names of FABM repaired variables in output
    
       ! Variables located on z_upp grid
       real(RK), dimension(:), allocatable :: k, ko ! Turbulent kinetic energy (TKE) [J/kg]
@@ -496,7 +495,7 @@ contains
          call save_matrix_pointer(80, self%fabm_bottom_state)
          call save_array_pointer(80, self%fabm_surface_state)
          call save_matrix_pointer(80, self%fabm_diagnostic_interior)
-         call save_array_pointer(80, self%fabm_diagnostic_horizontal)
+         call save_matrix_pointer(80, self%fabm_diagnostic_horizontal)
       end if
       if (inflow_mode > 0) then
          call save_matrix(80, self%Q_inp)
@@ -574,7 +573,7 @@ contains
          call read_matrix_pointer(81, self%fabm_bottom_state)
          call read_array_pointer(81, self%fabm_surface_state)
          call read_matrix_pointer(80, self%fabm_diagnostic_interior)
-         call read_array_pointer(80, self%fabm_diagnostic_horizontal)
+         call read_matrix_pointer(80, self%fabm_diagnostic_horizontal)
       end if
       if (inflow_mode > 0) then
          call read_matrix(81, self%Q_inp)

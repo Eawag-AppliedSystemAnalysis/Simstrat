@@ -48,6 +48,10 @@ module simstrat_fabm
    ! Index of attenuation_coefficient_of_photosynthetic_radiative_flux in FABM diagnostic variables
    integer :: att_index
 
+   ! Necessary bools for evaluation of bottom everywhere
+   logical :: interior_or_bottom_exist = .false.
+   logical :: diagnostic_horizontal_exist =.false.
+
    ! Type for use of FABM
    ! Contains arrays accessed or set by FABM
    type, public :: SimstratFABM
@@ -127,6 +131,7 @@ contains
       ! Interior state variables
       state%n_fabm_interior_state = size(self%fabm_model%interior_state_variables)
       if (state%n_fabm_interior_state > 0) then
+         interior_or_bottom_exist = .true.
          allocate(state%fabm_interior_state(grid%nz_grid, state%n_fabm_interior_state))
          allocate(state%min_int(state%n_fabm_interior_state))
          allocate(state%max_int(state%n_fabm_interior_state))
@@ -134,6 +139,7 @@ contains
       ! Bottom state variables
       state%n_fabm_bottom_state = size(self%fabm_model%bottom_state_variables)
       if (state%n_fabm_bottom_state > 0) then
+         interior_or_bottom_exist = .true.
          allocate(state%fabm_bottom_state(kmax_bot, state%n_fabm_bottom_state))
          allocate(state%min_bt(state%n_fabm_bottom_state))
          allocate(state%max_bt(state%n_fabm_bottom_state))
@@ -311,7 +317,8 @@ contains
             allocate(state%fabm_diagnostic_interior(grid%nz_grid, state%n_fabm_diagnostic_interior))
          end if
          if (state%n_fabm_diagnostic_horizontal > 0) then
-            allocate(state%fabm_diagnostic_horizontal(state%n_fabm_diagnostic_horizontal))
+            diagnostic_horizontal_exist = .true.
+            allocate(state%fabm_diagnostic_horizontal(kmax_bot, state%n_fabm_diagnostic_horizontal))
          end if
       end if
 
@@ -335,7 +342,7 @@ contains
             if (any(ieee_is_nan(state%fabm_repaired_interior))) call error('Subroutine set_fabm_repaired_vars failed')
          end if
          if (state%n_fabm_repaired_bottom_min + state%n_fabm_repaired_bottom_max > 0) then
-            allocate(state%fabm_repaired_bottom(grid%nz_grid, state%n_fabm_repaired_bottom_min + state%n_fabm_repaired_bottom_max))
+            allocate(state%fabm_repaired_bottom(kmax_bot, state%n_fabm_repaired_bottom_min + state%n_fabm_repaired_bottom_max))
             state%fabm_repaired_bottom = ieee_value(state%fabm_repaired_bottom, ieee_quiet_nan)
             do ivar = 1, state%n_fabm_bottom_state 
                index = findloc(state%fabm_repaired_names, trim(self%fabm_model%bottom_state_variables(ivar)%name)//'_minimum', dim = 1)
@@ -420,7 +427,7 @@ contains
       logical, intent(in), optional :: first_call
 
       ! Local variables
-      integer :: ivar, index, k
+      integer :: ivar, ivar_diag, index, k
       logical :: first_call_local
 
       ! Default not first call
@@ -686,26 +693,6 @@ contains
          if (state%n_fabm_interior_state > 0) self%flux_bt = 0.0
          if (state%n_fabm_bottom_state > 0) self%sms_bt = 0.0
          call self%fabm_model%get_bottom_sources(self%flux_bt(1, :), self%sms_bt(1, :))
-         if (fabm_cfg%bottom_everywhere) then
-            ! If bottom_everywhere is set, at every depth:
-            ! FABM is pointed to location that holds state data for the current depth
-            ! The bottom (the location of the pelagic-benthic interface) is moved to the current depth
-            ! Environmental data (dAz_norm) is updated
-            ! The fluxes and sources at the current depth are calculated
-            do k_bot = 2, kmax_bot
-               do ivar = 1, state%n_fabm_bottom_state
-                  call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k_bot, ivar))
-               end do
-               call self%fabm_model%prepare_inputs(real(state%simulation_time(2), kind=RK))
-               call self%fabm_model%get_bottom_sources(self%flux_bt(k_bot, :), self%sms_bt(k_bot, :))
-            end do
-            ! Reset Bottom to 1
-            do ivar = 1, state%n_fabm_bottom_state
-               call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
-            end do
-            k_bot = 1
-            call self%fabm_model%prepare_inputs(real(state%simulation_time(2), kind=RK))
-         end if
          ! Set NaNs to 0
          if (state%n_fabm_interior_state > 0) then
             if (any(ieee_is_nan(self%flux_bt))) then
@@ -771,14 +758,68 @@ contains
 
       ! 5. Retrieve values of diagnostic variables
       if (fabm_cfg%output_diagnostic_variables) then
-         do ivar = 1, state%n_fabm_diagnostic_interior
-            index = state%diagnostic_index(ivar)
-            state%fabm_diagnostic_interior(:, ivar) = self%fabm_model%get_interior_diagnostic_data(index)
+         if (state%n_fabm_diagnostic_interior > 0) then
+            do ivar_diag = 1, state%n_fabm_diagnostic_interior
+               index = state%diagnostic_index(ivar_diag)
+               state%fabm_diagnostic_interior(:, ivar_diag) = self%fabm_model%get_interior_diagnostic_data(index)
+            end do
+         end if
+         if (state%n_fabm_diagnostic_horizontal > 0) then
+            do ivar_diag = 1, state%n_fabm_diagnostic_horizontal
+               index = state%diagnostic_index(state%n_fabm_diagnostic_interior + ivar_diag)
+               state%fabm_diagnostic_horizontal(1, ivar_diag) = self%fabm_model%get_horizontal_diagnostic_data(index)
+            end do
+         end if
+      end if
+
+      ! If bottom_everywhere is set, repeat relevant steps from 1. to 5. at every depth
+      if (fabm_cfg%bottom_everywhere .and. (interior_or_bottom_exist .or. diagnostic_horizontal_exist)) then
+         ! FABM is pointed to location that holds state data for the current depth
+         ! The bottom (the location of the pelagic-benthic interface) is moved to the current depth
+         ! Environmental data (dAz_norm) is updated
+         ! The bottom fluxes and sources at the current depth are calculated
+         ! Remaining diagnostics are calculated at the current depth
+         ! The horizontal diagnostic variables at the current depth are retrieved
+         ! Note: Since FABM does not distinguish between bottom and surface diagnostic variables, 
+         !       surface diagnostic variables are also retrieved for every depth, with constant value
+         do k_bot = 2, kmax_bot
+            do ivar = 1, state%n_fabm_bottom_state
+               call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k_bot, ivar))
+            end do
+            call self%fabm_model%prepare_inputs(real(state%simulation_time(2), kind=RK))
+            call self%fabm_model%get_bottom_sources(self%flux_bt(k_bot, :), self%sms_bt(k_bot, :))
+            call self%fabm_model%finalize_outputs()
+            if (fabm_cfg%output_diagnostic_variables) then
+               do ivar_diag = 1, state%n_fabm_diagnostic_horizontal
+                  index = state%diagnostic_index(state%n_fabm_diagnostic_interior + ivar_diag)
+                  state%fabm_diagnostic_horizontal(k_bot, ivar_diag) = self%fabm_model%get_horizontal_diagnostic_data(index)
+               end do
+            end if
          end do
-         do ivar = 1, state%n_fabm_diagnostic_horizontal
-            index = state%diagnostic_index(state%n_fabm_diagnostic_interior + ivar)
-            state%fabm_diagnostic_horizontal(ivar) = self%fabm_model%get_horizontal_diagnostic_data(index)
+         ! Set NaNs in bottom fluxes and sources to 0
+         if (state%n_fabm_interior_state > 0) then
+            if (any(ieee_is_nan(self%flux_bt))) then
+               call warn("FABM Bottom Flux contains NaN, set to 0")
+               where (ieee_is_nan(self%flux_bt))
+                  self%flux_bt = 0.0
+               end where
+            end if
+         end if
+         if (state%n_fabm_bottom_state > 0) then
+            if (any(ieee_is_nan(self%sms_bt))) then
+               call warn("FABM Bottom Source contains NaN, set to 0")
+               where (ieee_is_nan(self%sms_bt))
+                  self%sms_bt = 0.0
+               end where
+            end if
+         end if
+         ! Reset Bottom to 1
+         do ivar = 1, state%n_fabm_bottom_state
+            call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
          end do
+         k_bot = 1
+         call self%fabm_model%prepare_inputs(real(state%simulation_time(2), kind=RK))
+         call self%fabm_model%finalize_outputs()
       end if
 
       ! This is the ideal moment for the output: 
@@ -964,14 +1005,12 @@ contains
       class(OutputConfig), intent(in) :: output_cfg
 
       ! Local variables
-      integer :: i, j, n, n_int, n_hor, unit, status
-      character(len=256) :: line, line_trim, file_path
+      integer :: i, j, n, n_int, n_hor, unit, status, unit_list, status_list
+      character(len=256) :: line, line_trim, short_name, short_name_trim, long_name, units, file_path
       integer, parameter :: max_lines = 10000 ! Maximum amount of diagnostic variables in SetDiagnosticVars file
       character(len=256), dimension(max_lines) :: temp_names ! Same len as fabm_diagnostic_names
       integer, dimension(max_lines) :: temp_index
       logical, dimension(max_lines) :: is_int
-
-      file_path = trim(output_cfg%PathOut)//'/fabm_list_diagnostic_interior.dat'
 
       ! Read from SetDiagVars
       open(newunit=unit, action='read', status='old', file=fabm_cfg%set_diag_vars, iostat = status)
@@ -988,44 +1027,99 @@ contains
       n = 0
       n_int = 0
       n_hor = 0
-      ! Read every diagnostic variable and find in fabm_model
+      ! Read every diagnostic variable
       do
          read(unit, '(A)', iostat=status) line
          if (status .ne. 0) exit
+         if (len_trim(line) == 0) cycle
+         if (any(temp_names == trim(line))) cycle
          line_trim = trim(line)
-         if (len(line_trim) == 0) cycle
-         if (any(temp_names == line_trim)) cycle
-         n = n + 1
-         if (n > max_lines) then
-            call error('Too many lines in '//trim(fabm_cfg%set_diag_vars)//', increase max_lines in set_fabm_diagnostic_vars.')
+         if (line_trim(:10) == 'selectall_') then
+            ! Read from fabm_list_diagnostic_interior.dat
+            file_path = trim(output_cfg%PathOut)//'/fabm_list_diagnostic_interior.dat'
+            open(newunit=unit_list, action='read', status='old', file=file_path, iostat = status_list)
+            read(unit_list, *, iostat=status_list)
+            if (status_list .ne. 0) then
+               call error("FABM Interior Diagnostic Variables have not been listed.")
+            end if
+            do
+               read(unit_list, *, iostat=status_list) short_name, long_name, units
+               if (status_list .ne. 0) exit
+               if (len_trim(short_name) == 0) cycle
+               short_name_trim = trim(short_name)
+               if (line_trim(11:) == short_name_trim(:(len_trim(line)-10))) then
+                  if (any(temp_names == trim(short_name))) cycle
+                  n = n + 1
+                  if (n > max_lines) then
+                     call error('Too many lines in '//trim(fabm_cfg%set_diag_vars)//', increase max_lines in set_fabm_diagnostic_vars.')
+                  end if
+                  temp_names(n) = trim(short_name)
+                  temp_index(n) = 0
+               end if
+            end do
+            ! Close fabm_list_diagnostic_interior.dat
+            close(unit_list)
+            ! Read from fabm_list_diagnostic_horizontal.dat
+            file_path = trim(output_cfg%PathOut)//'/fabm_list_diagnostic_horizontal.dat'
+            open(newunit=unit_list, action='read', status='old', file=file_path, iostat = status_list)
+            read(unit_list, *, iostat=status_list)
+            if (status_list .ne. 0) then
+               call error("FABM Horizontal Diagnostic Variables have not been listed.")
+            end if
+            do
+               read(unit_list, *, iostat=status_list) short_name, long_name, units
+               if (status_list .ne. 0) exit
+               if (len_trim(short_name) == 0) cycle
+               short_name_trim = trim(short_name)
+               if (line_trim(11:) == short_name_trim(:(len_trim(line)-10))) then
+                  if (any(temp_names == trim(short_name))) cycle
+                  n = n + 1
+                  if (n > max_lines) then
+                     call error('Too many lines in '//trim(fabm_cfg%set_diag_vars)//', increase max_lines in set_fabm_diagnostic_vars.')
+                  end if
+                  temp_names(n) = trim(short_name)
+                  temp_index(n) = 0
+               end if
+            end do
+            ! Close fabm_list_diagnostic_horizontal.dat
+            close(unit_list)
+         else
+            n = n + 1
+            if (n > max_lines) then
+               call error('Too many lines in '//trim(fabm_cfg%set_diag_vars)//', increase max_lines in set_fabm_diagnostic_vars.')
+            end if
+            temp_names(n) = trim(line)
+            temp_index(n) = 0
          end if
-         temp_names(n) = line_trim
-         temp_index(n) = 0
+      end do
+      ! Close the file
+      close(unit)
+
+      ! Find diagnostic variable in FABM model
+      do i = 1, n
          ! Set index at location in fabm_model%interior_diagnostic_variables
          do j = 1, size(self%fabm_model%interior_diagnostic_variables)
-            if (self%fabm_model%interior_diagnostic_variables(j)%name == temp_names(n)) then
+            if (self%fabm_model%interior_diagnostic_variables(j)%name == temp_names(i)) then
                self%fabm_model%interior_diagnostic_variables(j)%save = .true.
-               temp_index(n) = j
-               is_int(n) = .true.
+               temp_index(i) = j
+               is_int(i) = .true.
                n_int = n_int + 1
             end if
          end do
          ! Set index at location in fabm_model%horizontal_diagnostic_variables
          do j = 1, size(self%fabm_model%horizontal_diagnostic_variables)
-            if (self%fabm_model%horizontal_diagnostic_variables(j)%name == temp_names(n)) then
+            if (self%fabm_model%horizontal_diagnostic_variables(j)%name == temp_names(i)) then
                self%fabm_model%horizontal_diagnostic_variables(j)%save = .true.
-               temp_index(n) = j
-               is_int(n) = .false.
+               temp_index(i) = j
+               is_int(i) = .false.
                n_hor = n_hor + 1
             end if
          end do
          ! If not found in fabm_model
-         if (temp_index(n) == 0) then
-            call error('FABM diagnostic variable '//trim(temp_names(n))//' not found.')
+         if (temp_index(i) == 0) then
+            call error('FABM diagnostic variable '//trim(temp_names(i))//' not found.')
          end if
       end do
-      ! Close the file
-      close(unit)
 
       ! Allocate array of proper size
       state%n_fabm_diagnostic = n
@@ -1047,6 +1141,7 @@ contains
          if (.not. is_int(i)) then
             state%fabm_diagnostic_names(j) = temp_names(i)
             state%diagnostic_index(j) = temp_index(i)
+            j = j + 1
          end if
       end do
    end subroutine set_fabm_diagnostic_vars
@@ -1171,11 +1266,8 @@ contains
          if (n > max_lines) then
             call error('Too many lines in '//trim(file_path)//', increase max_lines in set_fabm_repaired_vars')
          end if
-         if (len_trim(name) > 256) then
-            call warn('FABM repaired variable '//trim(name)//' name too long')
-         end if
-         temp_names(n) = adjustl(trim(name))
-         temp_bounds(n) = adjustl(trim(bound))
+         temp_names(n) = trim(name)
+         temp_bounds(n) = trim(bound)
          temp_types(n) = 'undefined'
          ! Register as interior variable
          do j = 1, state%n_fabm_interior_state
