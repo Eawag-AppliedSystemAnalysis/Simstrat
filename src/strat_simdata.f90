@@ -147,6 +147,8 @@ module strat_simdata
       logical :: bottom_everywhere
       ! Whether to calculate the attenuation coefficient with FABM
       logical :: bioshade_feedback
+      ! Background extinction if the attenuation coefficient is calculated with FABM
+      real(RK) :: background_extinction
    end type
 
    ! Model params (read from file)

@@ -43,7 +43,8 @@
     "OutputRepairedVars"      : true,
     "RepairFABMStates"        : true,
     "BottomEverywhere"        : true,
-    "BioshadeFeedback"        : true
+    "BioshadeFeedback"        : true,
+    "BackgroundExtinction"    : 0.2
   },
   "Simulation" : {
     "Timestep s"                  : 300,

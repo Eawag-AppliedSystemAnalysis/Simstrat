@@ -73,7 +73,6 @@ module simstrat_fabm
       type (type_fabm_interior_variable_id) :: id_bot_pel_conv
    contains
       procedure, pass(self), public :: init
-      procedure, pass(self), public :: list_diagnostic
       procedure, pass(self), public :: update
       procedure, pass(self), public :: absorption_update_fabm
    end type SimstratFABM
@@ -85,11 +84,11 @@ contains
    subroutine init(self, state, output_cfg, fabm_cfg, sim_cfg, grid)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
-      class(ModelState) :: state
-      class(OutputConfig) :: output_cfg
-      class(FABMConfig) :: fabm_cfg
-      class(SimConfig) :: sim_cfg
-      class(StaggeredGrid) :: grid
+      class(ModelState), intent(inout) :: state
+      class(OutputConfig), intent(in) :: output_cfg
+      class(FABMConfig), intent(in) :: fabm_cfg
+      class(SimConfig), intent(in) :: sim_cfg
+      class(StaggeredGrid), intent(in) :: grid
 
       ! Local variables
       integer :: ivar, index
@@ -303,9 +302,11 @@ contains
          end if
       end if
 
+      ! Write all diagnostic and aggregate variables to fabm_list_diagnostic
       ! Allocate arrays for diagnostic variables in SetDiagnosticVars and retrieve their index in the list of all interior and horizontal diagnostic variables
       if (fabm_cfg%output_diagnostic_variables) then
-         call set_fabm_diagnostic_vars(self, state, fabm_cfg)
+         call list_diagnostic(self, output_cfg)
+         call set_fabm_diagnostic_vars(self, state, fabm_cfg, output_cfg)
          if (state%n_fabm_diagnostic_interior > 0) then
             allocate(state%fabm_diagnostic_interior(grid%nz_grid, state%n_fabm_diagnostic_interior))
          end if
@@ -415,7 +416,7 @@ contains
       class(ModelState), intent(inout) :: state
       class(OutputConfig), intent(in) :: output_cfg
       class(FABMConfig), intent(in) :: fabm_cfg
-      class(StaggeredGrid) :: grid  
+      class(StaggeredGrid), intent(in) :: grid
       logical, intent(in), optional :: first_call
 
       ! Local variables
@@ -786,12 +787,13 @@ contains
 
    ! Diffusion algorithm for interior state variables: Simstrat transport terms and FABM biogeochemical terms integrated simultaneously
    ! Assuming small enough dt such that only fluxes between neighbouring layers are relevant
+   ! Also assuming that sides of the lake slope inward
    subroutine diffusion_fabm_interior_state(self, state, fabm_cfg, grid, ivar)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       class(ModelState), intent(inout) :: state
       class(FABMConfig), intent(in) :: fabm_cfg
-      class(StaggeredGrid) :: grid
+      class(StaggeredGrid), intent(in) :: grid
       integer, intent(in) :: ivar
 
       ! Local variables
@@ -874,99 +876,32 @@ contains
       call solve_tridiag_thomas(lower_diag, main_diag, upper_diag, rhs, state%fabm_interior_state(:, ivar), grid%nz_grid)
    end subroutine diffusion_fabm_interior_state
 
-   ! Read names of diagnostic Vars in SetDiagnosticVars file
-   subroutine set_fabm_diagnostic_vars(self, state, fabm_cfg)
+   ! Light absorption feedback by FABM variables
+   subroutine absorption_update_fabm(self, state, fabm_cfg, grid)
       ! Arguments
-      class(SimstratFABM), intent(inout) :: self
+      class(SimstratFABM), intent(in) :: self
       class(ModelState), intent(inout) :: state
       class(FABMConfig), intent(in) :: fabm_cfg
+      class(StaggeredGrid), intent(in) :: grid
 
       ! Local variables
-      integer :: i, j, n, n_int, n_hor, unit, status
-      character(len=256) :: line
-      integer, parameter :: max_lines = 100 ! Maximum amount of diagnostic variables in SetDiagnosticVars file
-      character(len=100), dimension(max_lines) :: temp_names ! Same len as fabm_diagnostic_names
-      integer, dimension(max_lines) :: temp_index
-      logical, dimension(max_lines) :: is_int
+      real(RK), dimension(grid%nz_grid) :: attenuation_coefficient_of_photosynthetic_radiative_flux
+      
+      ! First set absorb_vol as background extinction
+      state%absorb_vol(:) = fabm_cfg%background_extinction
 
-      ! Read from SetDiagVars
-      open(newunit=unit, action='read', status='old', file=fabm_cfg%set_diag_vars, iostat = status)
-      if (status .ne. 0) then
-         call warn("No Output of FABM Diagnostic Variables")
-         state%n_fabm_diagnostic = 0
-         return
+      ! Retrieve attenuation_coefficient_of_photosynthetic_radiative_flux and add to absorb_vol
+      if (state%first_timestep) then
+         ! At the first timestep FABM variables have not yet been calculated
+         attenuation_coefficient_of_photosynthetic_radiative_flux = 0.0_RK
       else
-         write(6,*) 'Reading ', trim(fabm_cfg%set_diag_vars)
+         attenuation_coefficient_of_photosynthetic_radiative_flux = self%fabm_model%get_interior_diagnostic_data(att_index)
       end if
-      ! Skip header
-      read(unit, '(A)', iostat=status)
-      ! Initialize counts to 0
-      n = 0
-      n_int = 0
-      n_hor = 0
-      ! Read every diagnostic variable and find in fabm_model
-      do
-         read(unit, '(A)', iostat=status) line
-         if (status .ne. 0) exit
-         if (len_trim(line) == 0) cycle
-         n = n + 1
-         if (n > max_lines) then
-            call error('Too many lines in '//trim(fabm_cfg%set_diag_vars)//', increase max_lines in set_fabm_diagnostic_vars')
-         end if
-         if (len_trim(line) > 100) then
-            call warn('FABM diagnostic variable '//trim(line)//' name will be truncated to 100 characters')
-         end if
-         temp_names(n) = adjustl(trim(line))
-         temp_index(n) = 0
-         ! Set index at location in fabm_model%interior_diagnostic_variables
-         do j = 1, size(self%fabm_model%interior_diagnostic_variables)
-            if (self%fabm_model%interior_diagnostic_variables(j)%name == temp_names(n)) then
-               self%fabm_model%interior_diagnostic_variables(j)%save = .true.
-               temp_index(n) = j
-               is_int(n) = .true.
-               n_int = n_int + 1
-            end if
-         end do
-         ! Set index at location in fabm_model%horizontal_diagnostic_variables
-         do j = 1, size(self%fabm_model%horizontal_diagnostic_variables)
-            if (self%fabm_model%horizontal_diagnostic_variables(j)%name == temp_names(n)) then
-               self%fabm_model%horizontal_diagnostic_variables(j)%save = .true.
-               temp_index(n) = j
-               is_int(n) = .false.
-               n_hor = n_hor + 1
-            end if
-         end do
-         ! If not found in fabm_model
-         if (temp_index(n) == 0) then
-            call error('FABM diagnostic variable '//trim(temp_names(n))//' not found.')
-         end if
-      end do
-      ! Close the file
-      close(unit)
+      state%absorb_vol(:) = state%absorb_vol(:) + attenuation_coefficient_of_photosynthetic_radiative_flux(:)
 
-      ! Allocate array of proper size
-      state%n_fabm_diagnostic = n
-      state%n_fabm_diagnostic_interior = n_int
-      state%n_fabm_diagnostic_horizontal = n_hor
-      allocate(state%fabm_diagnostic_names(n))
-      allocate(state%diagnostic_index(n))
-
-      ! Copy names and indices to array
-      j = 1
-      do i = 1, n
-         if (is_int(i)) then
-            state%fabm_diagnostic_names(j) = temp_names(i)
-            state%diagnostic_index(j) = temp_index(i)
-            j = j + 1
-         end if
-      end do
-      do i = 1, n
-         if (.not. is_int(i)) then
-            state%fabm_diagnostic_names(j) = temp_names(i)
-            state%diagnostic_index(j) = temp_index(i)
-         end if
-      end do
-   end subroutine set_fabm_diagnostic_vars
+      ! Interpolate to faces to be compatible with Simstrat temperature module
+      call grid%interpolate_to_face(grid%z_volume, state%absorb_vol, grid%nz_grid, state%absorb)
+   end subroutine absorption_update_fabm
 
    ! Output list of diagnostic variables
    subroutine list_diagnostic(self, output_cfg)
@@ -1019,6 +954,155 @@ contains
          close(unit)
       end if
    end subroutine list_diagnostic
+
+   ! Read names of diagnostic Vars in SetDiagnosticVars file
+   subroutine set_fabm_diagnostic_vars(self, state, fabm_cfg, output_cfg)
+      ! Arguments
+      class(SimstratFABM), intent(inout) :: self
+      class(ModelState), intent(inout) :: state
+      class(FABMConfig), intent(in) :: fabm_cfg
+      class(OutputConfig), intent(in) :: output_cfg
+
+      ! Local variables
+      integer :: i, j, n, n_int, n_hor, unit, status
+      character(len=256) :: line, line_trim, file_path
+      integer, parameter :: max_lines = 10000 ! Maximum amount of diagnostic variables in SetDiagnosticVars file
+      character(len=256), dimension(max_lines) :: temp_names ! Same len as fabm_diagnostic_names
+      integer, dimension(max_lines) :: temp_index
+      logical, dimension(max_lines) :: is_int
+
+      file_path = trim(output_cfg%PathOut)//'/fabm_list_diagnostic_interior.dat'
+
+      ! Read from SetDiagVars
+      open(newunit=unit, action='read', status='old', file=fabm_cfg%set_diag_vars, iostat = status)
+      if (status .ne. 0) then
+         call warn("No Output of FABM Diagnostic Variables")
+         state%n_fabm_diagnostic = 0
+         return
+      else
+         write(6,*) 'Reading ', trim(fabm_cfg%set_diag_vars)
+      end if
+      ! Skip header
+      read(unit, '(A)', iostat=status)
+      ! Initialize counts to 0
+      n = 0
+      n_int = 0
+      n_hor = 0
+      ! Read every diagnostic variable and find in fabm_model
+      do
+         read(unit, '(A)', iostat=status) line
+         if (status .ne. 0) exit
+         line_trim = trim(line)
+         if (len(line_trim) == 0) cycle
+         if (any(temp_names == line_trim)) cycle
+         n = n + 1
+         if (n > max_lines) then
+            call error('Too many lines in '//trim(fabm_cfg%set_diag_vars)//', increase max_lines in set_fabm_diagnostic_vars.')
+         end if
+         temp_names(n) = line_trim
+         temp_index(n) = 0
+         ! Set index at location in fabm_model%interior_diagnostic_variables
+         do j = 1, size(self%fabm_model%interior_diagnostic_variables)
+            if (self%fabm_model%interior_diagnostic_variables(j)%name == temp_names(n)) then
+               self%fabm_model%interior_diagnostic_variables(j)%save = .true.
+               temp_index(n) = j
+               is_int(n) = .true.
+               n_int = n_int + 1
+            end if
+         end do
+         ! Set index at location in fabm_model%horizontal_diagnostic_variables
+         do j = 1, size(self%fabm_model%horizontal_diagnostic_variables)
+            if (self%fabm_model%horizontal_diagnostic_variables(j)%name == temp_names(n)) then
+               self%fabm_model%horizontal_diagnostic_variables(j)%save = .true.
+               temp_index(n) = j
+               is_int(n) = .false.
+               n_hor = n_hor + 1
+            end if
+         end do
+         ! If not found in fabm_model
+         if (temp_index(n) == 0) then
+            call error('FABM diagnostic variable '//trim(temp_names(n))//' not found.')
+         end if
+      end do
+      ! Close the file
+      close(unit)
+
+      ! Allocate array of proper size
+      state%n_fabm_diagnostic = n
+      state%n_fabm_diagnostic_interior = n_int
+      state%n_fabm_diagnostic_horizontal = n_hor
+      allocate(state%fabm_diagnostic_names(n))
+      allocate(state%diagnostic_index(n))
+
+      ! Copy names and indices to array
+      j = 1
+      do i = 1, n
+         if (is_int(i)) then
+            state%fabm_diagnostic_names(j) = temp_names(i)
+            state%diagnostic_index(j) = temp_index(i)
+            j = j + 1
+         end if
+      end do
+      do i = 1, n
+         if (.not. is_int(i)) then
+            state%fabm_diagnostic_names(j) = temp_names(i)
+            state%diagnostic_index(j) = temp_index(i)
+         end if
+      end do
+   end subroutine set_fabm_diagnostic_vars
+
+   ! Add to list of repaired variables
+   subroutine list_repaired(output_cfg, variable, boundary, boundary_value)
+      ! Arguments
+      class(OutputConfig), intent(in) :: output_cfg
+      character(len=*), intent(in) :: variable
+      character(len=*), intent(in) :: boundary
+      real(RK), intent(in) :: boundary_value
+
+      ! Local variables
+      integer :: unit, status
+      logical :: exists
+      character(len=256) :: file_path, boundary_value_str
+      character(len=256) :: line, new_line
+
+      ! Construct the file path
+      file_path = trim(output_cfg%PathOut)//'/fabm_list_repaired.dat'
+
+      ! Convert boundary_value to string
+      write(boundary_value_str, '(ES15.6)') boundary_value
+      new_line = trim(variable)//', '//trim(boundary)//', '//trim(adjustl(boundary_value_str))
+
+      ! Check if repaired variable case already present in RepairedVars
+      open(newunit=unit, action='read', status='old', file=file_path, iostat = status)
+      if (status .ne. 0) then
+         call error('Failed to open or create file: ' // trim(file_path))
+      end if
+      ! Read the file line by line and check if the exact line exists
+      rewind(unit)
+      do
+         read(unit, '(A)', iostat=status) line
+         if (status .ne. 0) exit
+         ! Check if the line already exists and exit subroutine if it does
+         if (trim(line) == trim(new_line)) then
+            close(unit)
+            return
+         end if
+      end do
+      close(unit)
+      ! Reopen for appending
+      open(newunit=unit, action='write', position='append', status='old', file=file_path, iostat=status)
+      if (status .ne. 0) then
+         call error('Failed to open or create file: ' // trim(file_path))
+      else
+         call warn('FABM variable '//trim(variable)//' added to '// trim(file_path)//'. Restart simulation to output '//trim(boundary)//' values.')
+      end if
+
+      ! Write variable name, its boundary and the boundary vale
+      write(unit, '(A)') trim(new_line)
+
+      ! Close the file after writing
+      close(unit)
+   end subroutine list_repaired
 
    ! Register repaired variables in RepairedVars file
    subroutine set_fabm_repaired_vars(state, output_cfg)
@@ -1212,77 +1296,6 @@ contains
          end if
       end do
    end subroutine set_fabm_repaired_vars
-
-   ! Add to list of repaired variables
-   subroutine list_repaired(output_cfg, variable, boundary, boundary_value)
-      ! Arguments
-      class(OutputConfig), intent(in) :: output_cfg
-      character(len=*), intent(in) :: variable
-      character(len=*), intent(in) :: boundary
-      real(RK), intent(in) :: boundary_value
-
-      ! Local variables
-      integer :: unit, status
-      logical :: exists
-      character(len=256) :: file_path, boundary_value_str
-      character(len=256) :: line, new_line
-
-      ! Construct the file path
-      file_path = trim(output_cfg%PathOut)//'/fabm_list_repaired.dat'
-
-      ! Convert boundary_value to string
-      write(boundary_value_str, '(ES15.6)') boundary_value
-      new_line = trim(variable)//', '//trim(boundary)//', '//trim(adjustl(boundary_value_str))
-
-      ! Check if repaired variable case already present in RepairedVars
-      open(newunit=unit, action='read', status='old', file=file_path, iostat = status)
-      if (status .ne. 0) then
-         call error('Failed to open or create file: ' // trim(file_path))
-      end if
-      ! Read the file line by line and check if the exact line exists
-      rewind(unit)
-      do
-         read(unit, '(A)', iostat=status) line
-         if (status .ne. 0) exit
-         ! Check if the line already exists and exit subroutine if it does
-         if (trim(line) == trim(new_line)) then
-            close(unit)
-            return
-         end if
-      end do
-      close(unit)
-      ! Reopen for appending
-      open(newunit=unit, action='write', position='append', status='old', file=file_path, iostat=status)
-      if (status .ne. 0) then
-         call error('Failed to open or create file: ' // trim(file_path))
-      else
-         call warn('FABM variable '//trim(variable)//' added to '// trim(file_path)//'. Restart simulation to output '//trim(boundary)//' values.')
-      end if
-
-      ! Write variable name, its boundary and the boundary vale
-      write(unit, '(A)') trim(new_line)
-
-      ! Close the file after writing
-      close(unit)
-   end subroutine list_repaired
-
-   ! Light absorption feedback by FABM variables
-   subroutine absorption_update_fabm(self, state, grid)
-      ! Arguments
-      class(SimstratFABM) :: self
-      class(ModelState) :: state
-      class(StaggeredGrid) :: grid
-
-      ! Local variables
-      real(RK), dimension(grid%nz_grid) :: attenuation_coefficient_of_photosynthetic_radiative_flux
-
-      ! Retrieve attenuation_coefficient_of_photosynthetic_radiative_flux and set as absorb_vol
-      attenuation_coefficient_of_photosynthetic_radiative_flux = self%fabm_model%get_interior_diagnostic_data(att_index)
-      state%absorb_vol(:) = state%absorb_vol(:) + attenuation_coefficient_of_photosynthetic_radiative_flux(:)
-
-      ! Interpolate to faces to be compatible with Simstrat temperature module
-      call grid%interpolate_to_face(grid%z_volume, state%absorb_vol, grid%nz_grid, state%absorb)
-   end subroutine absorption_update_fabm
 
    ! Deallocate memory
    subroutine deallocate_fabm(self)

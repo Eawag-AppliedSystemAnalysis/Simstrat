@@ -169,11 +169,6 @@ program simstrat_main
    ! Setup logger
    call logger%initialize(simdata%model, simdata%sim_cfg, simdata%model_cfg, simdata%fabm_cfg, simdata%output_cfg, simdata%grid, continue_from_snapshot)
 
-   ! Write list of all FABM diagnostic variables
-   if (simdata%fabm_cfg%output_diagnostic_variables) then
-      call mod_fabm%list_diagnostic(simdata%output_cfg)
-   end if
-
    ! Calculate simulation_end_time, which is a tuple of integers (days, seconds)
 
    ! If output times are at regular intervals
@@ -288,13 +283,15 @@ contains
          ! Update forcing
          call mod_forcing%update(simdata%model)
 
-         ! Update absorption
-         call mod_absorption%update(simdata%model)
-         ! Add attenuation coefficient from biogeochemistry after state variables have been calculated once
+         ! Update absorption with Simstrat, or with FABM (if the coupling is enabled and bioshade feedback is on)
          if (simdata%model_cfg%couple_fabm) then
-            if (simdata%fabm_cfg%bioshade_feedback .and. (.not. simdata%model%first_timestep)) then
-               call mod_fabm%absorption_update_fabm(simdata%model, simdata%grid)
+            if (simdata%fabm_cfg%bioshade_feedback) then
+               call mod_fabm%absorption_update_fabm(simdata%model, simdata%fabm_cfg, simdata%grid)
+            else
+               call mod_absorption%update(simdata%model)
             end if
+         else
+            call mod_absorption%update(simdata%model)
          end if
 
          ! Update physics
@@ -350,7 +347,7 @@ contains
          ! Call logger to write files
          call logger%log(simdata)
 
-         ! This logical is used to do some allocation in the forcing, absorption and lateral subroutines during the first timestep
+         ! This logical is used to do some allocation and initialization in the forcing, absorption and lateral subroutines during the first timestep
          simdata%model%first_timestep = .false.
 
          !update the progress bar
