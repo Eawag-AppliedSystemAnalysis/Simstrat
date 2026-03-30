@@ -40,8 +40,8 @@
     "PathFABMinflow"          : "TestCase_LakeZurich/FABM_inflow/",
     "SetDiagnosticVars"       : "TestCase_LakeZurich/SetFABMDiagnosticVars.dat",
     "OutputDiagnosticVars"    : true,
-    "OutputRepairedVars"      : true,
     "RepairFABMStates"        : true,
+    "OutputRepairedVars"      : false,
     "BottomEverywhere"        : true,
     "BioshadeFeedback"        : true,
     "BackgroundExtinction"    : 0.2

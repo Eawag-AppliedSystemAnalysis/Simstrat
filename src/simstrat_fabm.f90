@@ -352,6 +352,8 @@ contains
             diagnostic_horizontal_exist = .true.
             allocate(state%fabm_diagnostic_horizontal(kmax_bot, state%n_fabm_diagnostic_horizontal))
          end if
+      else
+         call warn('Set OutputDiagnosticVars in FABMConfig to true to output FABM diagnostic variables.')
       end if
 
       ! Allocate arrays for repaired variables in fabm_list_repaired.dat and initialize them with the boundary value
@@ -405,6 +407,8 @@ contains
             end do
             if (any(ieee_is_nan(state%fabm_repaired_interior))) call error('Subroutine set_fabm_repaired_vars failed')
          end if
+      else
+         call warn('FABM repaired variables not registered. Set OutputRepairedVars in FABMConfig to true to do so.')
       end if
       
       ! Complete initialization and check whether FABM has all dependencies fulfilled
@@ -503,9 +507,6 @@ contains
                   else
                      call list_repaired(output_cfg, self%fabm_model%interior_state_variables(ivar)%name, 'minimum', state%min_int(ivar))
                   end if
-               else
-                 ! Display repair message if repaired variable not registered
-                  call warn('FABM Interior Variable '//trim(self%fabm_model%interior_state_variables(ivar)%name)//' below minimum.')
                end if
             end if  
             if (any(state%fabm_interior_state(:, ivar) > state%max_int(ivar))) then
@@ -523,9 +524,6 @@ contains
                   else
                      call list_repaired(output_cfg, self%fabm_model%interior_state_variables(ivar)%name, 'maximum', state%max_int(ivar))
                   end if
-               else
-                  ! Display repair message if repaired variable not registered
-                  call warn('FABM Interior Variable '//trim(self%fabm_model%interior_state_variables(ivar)%name)//' above maximum.')
                end if
             end if
          end do
@@ -565,9 +563,6 @@ contains
                   else
                      call list_repaired(output_cfg, self%fabm_model%bottom_state_variables(ivar)%name, 'minimum', state%min_bt(ivar))
                   end if
-               else
-                  ! Display repair message if repaired variable not registered
-                  call warn('FABM Bottom Variable '//trim(self%fabm_model%bottom_state_variables(ivar)%name)//' below minimum.')
                end if
             end if  
             if (any(state%fabm_bottom_state(:, ivar) > state%max_bt(ivar))) then
@@ -586,9 +581,6 @@ contains
                   else
                      call list_repaired(output_cfg, self%fabm_model%bottom_state_variables(ivar)%name, 'maximum', state%max_bt(ivar))
                   end if
-               else
-                  ! Display repair message if repaired variable not registered
-                  call warn('FABM Bottom Variable '//trim(self%fabm_model%bottom_state_variables(ivar)%name)//' above maximum.')
                end if
             end if
          end do
@@ -639,9 +631,6 @@ contains
                   else
                      call list_repaired(output_cfg, self%fabm_model%surface_state_variables(ivar)%name, 'minimum', state%min_sf(ivar))
                   end if
-               else
-                  ! Display repair message if repaired variable not registered
-                  call warn('FABM Surface Variable '//trim(self%fabm_model%surface_state_variables(ivar)%name)//' below minimum.') 
                end if
             end if  
             if (state%fabm_surface_state(ivar) > state%max_sf(ivar)) then
@@ -654,9 +643,6 @@ contains
                   else
                      call list_repaired(output_cfg, self%fabm_model%surface_state_variables(ivar)%name, 'maximum', state%max_sf(ivar))
                   end if
-               else
-                  ! Display repair message if repaired variable not registered
-                  call warn('FABM Surface Variable '//trim(self%fabm_model%surface_state_variables(ivar)%name)//' above maximum.')
                end if
             end if
          end do
@@ -675,10 +661,7 @@ contains
 
          ! 2. Error if FABM out of bounds and not repaired
          if (.not. (self%valid_int .and. self%valid_bt .and. self%valid_sf)) then
-            if (fabm_cfg%repair_fabm) then
-               ! Display repair message if repaired variable not registered
-               if (.not. fabm_cfg%output_repaired_vars) call warn('FABM Variables repaired')
-            else
+            if (.not. fabm_cfg%repair_fabm) then
                call error('FABM Variables out of bounds')
             end if
          end if
