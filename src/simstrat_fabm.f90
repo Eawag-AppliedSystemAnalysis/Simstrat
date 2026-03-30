@@ -113,7 +113,7 @@ contains
       ! The models interact with FABM and describe properties of all bgc variables and parameters
       self%fabm_model => fabm_create_model(fabm_cfg%fabm_config_file, initialize = .false.)
       if (.not. associated(self%fabm_model)) then
-         call error("FABM model creation failed")
+         call error('FABM model creation failed')
       end if
 
       ! Register bgc variables from Simstrat (<ID>, <NAME>, <UNITS>, <LONG_NAME>)
@@ -442,35 +442,23 @@ contains
          ! Surface state variables
          call self%fabm_model%initialize_surface_state()
       end if
-
-      ! Call the update function once as a first call to initialize fluxes, sources and vertical velocities
-      call self%update(state, output_cfg, fabm_cfg, grid, .true.)
    end subroutine init
 
    ! The update function is called in the main loop of simstrat (in simstrat.f90) at every time step
    ! Particle atmospheric, pelagic and benthic fluxes and diffusion are computed to update bgc state variable values
-   subroutine update(self, state, output_cfg, fabm_cfg, grid, first_call)
+   subroutine update(self, state, output_cfg, fabm_cfg, grid)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       class(ModelState), intent(inout) :: state
       class(OutputConfig), intent(in) :: output_cfg
       class(FABMConfig), intent(in) :: fabm_cfg
       class(StaggeredGrid), intent(in) :: grid
-      logical, intent(in), optional :: first_call
 
       ! Local variables
       integer :: ivar, ivar_diag, index, k
-      logical :: first_call_local
-
-      ! Default not first call
-      if (present(first_call)) then
-         first_call_local = first_call
-      else
-         first_call_local = .false.
-      end if
 
       ! If it is not the first call: 1. calculate and 2. validate the new model state, stop if variables are not valid
-      if (.not. first_call_local) then
+      if (.not. state%first_timestep) then
          ! 1a. Time-integrate the advection-diffusion-reaction equations
          ! of all tracers, combining the Simstrat transport terms with the FABM biogeochemical source
          ! terms and fluxes (sms, flux) and vertical velocities (velocity). This results in an updated interior_state.
@@ -550,9 +538,9 @@ contains
             if (any(state%fabm_interior_state(:, ivar) < 0.0_RK)) then
                do k = 1, grid%nz_grid
                   if (state%fabm_interior_state(k, ivar) < 0.0_RK) then
-                     print *, 'FABM Interior Variable value is ', state%fabm_interior_state(k, ivar)
-                     print *, 'at grid point ', k
-                     print *, 'at time (days, seconds) = ', state%simulation_time
+                     write (6, *) 'FABM Interior Variable value is ', state%fabm_interior_state(k, ivar)
+                     write (6, *) 'at grid point ', k
+                     write (6, *) 'at time (days, seconds) = ', state%simulation_time
                   end if
                end do
                call error('FABM Variable '//trim(self%fabm_model%interior_state_variables(ivar)%name)//' below zero.')
@@ -630,9 +618,9 @@ contains
             if (any(state%fabm_bottom_state(:, ivar) < 0.0_RK)) then
                do k = 1, kmax_bot
                   if (state%fabm_bottom_state(k, ivar) < 0.0_RK) then
-                     print *, 'FABM Bottom Variable value is ', state%fabm_bottom_state(k, ivar)
-                     print *, 'at grid point ', k
-                     print *, 'at time (days, seconds) = ', state%simulation_time
+                     write (6, *) 'FABM Bottom Variable value is ', state%fabm_bottom_state(k, ivar)
+                     write (6, *) 'at grid point ', k
+                     write (6, *) 'at time (days, seconds) = ', state%simulation_time
                   end if
                   call error('FABM Bottom Variable '//trim(self%fabm_model%bottom_state_variables(ivar)%name)//' below zero.')
                end do
@@ -679,8 +667,8 @@ contains
          ! 2c. Simstrat check for negative FABM surface state variables
          do ivar = 1, state%n_fabm_surface_state
             if (state%fabm_surface_state(ivar) < 0.0_RK) then
-               print *, 'FABM Surface Variable value is ', state%fabm_surface_state(ivar)
-               print *, 'at time (days, seconds) = ', state%simulation_time
+               write (6, *) 'FABM Surface Variable value is ', state%fabm_surface_state(ivar)
+               write (6, *) 'at time (days, seconds) = ', state%simulation_time
                call error('FABM Surface Variable '//trim(self%fabm_model%surface_state_variables(ivar)%name)//' below zero.')
             end if
          end do
@@ -689,11 +677,17 @@ contains
          if (.not. (self%valid_int .and. self%valid_bt .and. self%valid_sf)) then
             if (fabm_cfg%repair_fabm) then
                ! Display repair message if repaired variable not registered
-               if (.not. fabm_cfg%output_repaired_vars) call warn("FABM Variables repaired")
+               if (.not. fabm_cfg%output_repaired_vars) call warn('FABM Variables repaired')
             else
-               call error("FABM Variables out of bounds")
+               call error('FABM Variables out of bounds')
             end if
          end if
+      end if
+
+      ! Initialize (at first call) or update fluxes, sources and vertical movement
+      if (state%first_timestep) then
+         ivar = 2
+         write (6, *) 'Initializing FABM calculations...'
       end if
 
       ! 1. Prepare all fields (e.g. light attenuation) FABM needs to compute fluxes and source terms
@@ -712,7 +706,7 @@ contains
          call self%fabm_model%get_interior_sources(1, grid%nz_grid, self%sms_int)
          ! Set NaNs to 0
          if (any(ieee_is_nan(self%sms_int))) then
-            call error("FABM Interior Source contains NaNs, set to 0")
+            call error('FABM Interior Source contains NaNs, set to 0')
             where (ieee_is_nan(self%sms_int))
                self%sms_int = 0.0
             end where
@@ -728,7 +722,7 @@ contains
          ! Set NaNs to 0
          if (state%n_fabm_interior_state > 0) then
             if (any(ieee_is_nan(self%flux_bt(1, :)))) then
-               call warn("FABM Bottom Flux contains NaN, set to 0")
+               call warn('FABM Bottom Flux contains NaN, set to 0')
                where (ieee_is_nan(self%flux_bt(1, :)))
                   self%flux_bt(1, :) = 0.0
                end where
@@ -736,7 +730,7 @@ contains
          end if
          if (state%n_fabm_bottom_state > 0) then
             if (any(ieee_is_nan(self%sms_bt(1, :)))) then
-               call warn("FABM Bottom Source contains NaN, set to 0")
+               call warn('FABM Bottom Source contains NaN, set to 0')
                where (ieee_is_nan(self%sms_bt(1, :)))
                   self%sms_bt(1, :) = 0.0
                end where
@@ -753,7 +747,7 @@ contains
          ! Set NaNs to 0
          if (state%n_fabm_interior_state > 0) then
             if (any(ieee_is_nan(self%flux_sf))) then
-               call warn("FABM Surface Flux contains NaN, set to 0")
+               call warn('FABM Surface Flux contains NaN, set to 0')
                where (ieee_is_nan(self%flux_sf))
                   self%flux_sf = 0.0
                end where
@@ -761,7 +755,7 @@ contains
          end if
          if (state%n_fabm_surface_state > 0) then
             if (any(ieee_is_nan(self%sms_sf))) then
-               call warn("FABM Surface Source contains NaN, set to 0")
+               call warn('FABM Surface Source contains NaN, set to 0')
                where (ieee_is_nan(self%sms_sf))
                   self%sms_sf = 0.0
                end where
@@ -773,11 +767,11 @@ contains
       ! >0: upward movement (floating, active movement)
       ! <0: downward movement (sinking, sedimentation, active movement)
       if (state%n_fabm_interior_state > 0) then
-         if (first_call_local) self%velocity = 0.0
+         if (.not. state%first_timestep) self%velocity = 0.0
          call self%fabm_model%get_vertical_movement(1, grid%nz_grid, self%velocity)
          ! Set NaNs to 0
          if (any(ieee_is_nan(self%velocity))) then
-            call warn("FABM Interior Velocity contains NaN, set to 0")
+            call warn('FABM Interior Velocity contains NaN, set to 0')
             where (ieee_is_nan(self%velocity))
                self%velocity = 0.0
             end where
@@ -831,7 +825,7 @@ contains
          ! Set NaNs in bottom fluxes and sources to 0
          if (state%n_fabm_interior_state > 0) then
             if (any(ieee_is_nan(self%flux_bt))) then
-               call warn("FABM Bottom Flux contains NaN, set to 0")
+               call warn('FABM Bottom Flux contains NaN, set to 0')
                where (ieee_is_nan(self%flux_bt))
                   self%flux_bt = 0.0
                end where
@@ -839,7 +833,7 @@ contains
          end if
          if (state%n_fabm_bottom_state > 0) then
             if (any(ieee_is_nan(self%sms_bt))) then
-               call warn("FABM Bottom Source contains NaN, set to 0")
+               call warn('FABM Bottom Source contains NaN, set to 0')
                where (ieee_is_nan(self%sms_bt))
                   self%sms_bt = 0.0
                end where
@@ -1044,7 +1038,7 @@ contains
       ! Read from SetDiagVars
       open(newunit=unit, action='read', status='old', file=fabm_cfg%set_diag_vars, iostat = status)
       if (status .ne. 0) then
-         call warn("No Output of FABM Diagnostic Variables")
+         call warn('No Output of FABM Diagnostic Variables')
          state%n_fabm_diagnostic = 0
          return
       else
@@ -1069,7 +1063,7 @@ contains
             open(newunit=unit_list, action='read', status='old', file=file_path, iostat = status_list)
             read(unit_list, *, iostat=status_list)
             if (status_list .ne. 0) then
-               call error("FABM Interior Diagnostic Variables have not been listed.")
+               call error('FABM Interior Diagnostic Variables have not been listed.')
             end if
             do
                read(unit_list, *, iostat=status_list) short_name, long_name, units
@@ -1093,7 +1087,7 @@ contains
             open(newunit=unit_list, action='read', status='old', file=file_path, iostat = status_list)
             read(unit_list, *, iostat=status_list)
             if (status_list .ne. 0) then
-               call error("FABM Horizontal Diagnostic Variables have not been listed.")
+               call error('FABM Horizontal Diagnostic Variables have not been listed.')
             end if
             do
                read(unit_list, *, iostat=status_list) short_name, long_name, units

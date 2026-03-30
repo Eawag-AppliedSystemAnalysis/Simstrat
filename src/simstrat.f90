@@ -347,7 +347,7 @@ contains
          ! Call logger to write files
          call logger%log(simdata)
 
-         ! This logical is used to do some allocation and initialization in the forcing, absorption and lateral subroutines during the first timestep
+         ! This logical is used to do some allocation and initialization in the forcing, biogeochemical and lateral subroutines during the first timestep
          simdata%model%first_timestep = .false.
 
          !update the progress bar
