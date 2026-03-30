@@ -230,6 +230,7 @@ module strat_simdata
 
       real(RK), dimension(:), allocatable :: absorb ! Absorption coeff [m-1]
       real(RK), dimension(:), pointer :: absorb_vol ! Absorption coeff on vol grid [m-1], FABM needs pointer attribute
+      real(RK), dimension(:), pointer :: background_extinction_vol ! Background extinction for Absorption coeff [m-1], FABM needs pointer attribute      
       real(RK) :: u10, v10, Wf ! Wind speeds, wind factor
       real(RK), pointer :: uv10 ! pointer attribute needed for FABM
       real(RK) :: drag, u_taus ! Drag
@@ -336,6 +337,7 @@ contains
 
       allocate (self%absorb(state_size + 1))
       allocate (self%absorb_vol(state_size))
+      allocate (self%background_extinction_vol(state_size))
       allocate (self%rad(state_size + 1))
       allocate (self%rad_vol(state_size))
       allocate (self%swr_vol(state_size))
@@ -378,6 +380,7 @@ contains
 
       self%absorb = 0.0_RK
       self%absorb_vol = 0.0_RK
+      self%background_extinction_vol = 0.0_RK
       self%rad = 0.0_RK
       self%rad_vol = 0.0_RK
       self%swr_vol = 0.0_RK
@@ -459,6 +462,7 @@ contains
       write(80) self%E_Seiche, self%gamma
       call save_array(80, self%absorb)
       call save_array_pointer(80, self%absorb_vol)
+      call save_array_pointer(80, self%background_extinction_vol)
       write(80) self%u10, self%v10, self%uv10, self%Wf
       write(80) self%u_taub, self%drag, self%u_taus
       write(80) self%tx, self%ty
@@ -537,6 +541,7 @@ contains
       read(81) self%E_Seiche, self%gamma
       call read_array(81, self%absorb)
       call read_array_pointer(81, self%absorb_vol)
+      call read_array_pointer(81, self%background_extinction_vol)
       read(81) self%u10, self%v10, self%uv10, self%Wf
       read(81) self%u_taub, self%drag, self%u_taus
       read(81) self%tx, self%ty

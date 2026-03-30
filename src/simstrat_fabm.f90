@@ -27,13 +27,19 @@
 !<    +---------------------------------------------------------------+
 
 module simstrat_fabm
-   use fabm ! main FABM module
-   use fabm_types, only: type_interior_standard_variable ! For additional standard variables
+   ! Main FABM module
+   use fabm
+   ! Definition of FABM types, add from lib/fabm/src/fabm_types.F90, added:
+   ! type_interior_standard_variable: Interior standard variable symbol
+   ! type_dependency_id: Interior environmental dependency identifier
+   use fabm_types, only: type_interior_standard_variable, type_dependency_id
+   ! Simstrat modules
    use strat_simdata
    use strat_kinds
    use strat_grid
    use strat_solver
    use utilities
+   ! Intrinsic modules
    use, intrinsic :: ieee_arithmetic
 
    implicit none
@@ -55,7 +61,8 @@ module simstrat_fabm
    ! Type for use of FABM
    ! Contains arrays accessed or set by FABM
    type, public :: SimstratFABM
-      class(type_fabm_model), pointer :: fabm_model => null() ! holds metadata on all bgc models active within FABM
+      ! FABM model: holds metadata on all biogeochemical (bgc) models active within FABM
+      class(type_fabm_model), pointer :: fabm_model => null()
 
       ! Array for interior tracer source terms and vertical velocities
       real(RK), dimension(:,:), allocatable :: sms_int, velocity
@@ -71,10 +78,12 @@ module simstrat_fabm
       ! Index of current bottom location (pelagic-benthic interface)
       integer, pointer :: bottom_index => null()
       
-      ! Define additional FABM standard variables, used by specific biogeochemical models
+      ! Define additional FABM variables, used by bgc models
+      ! Simstrat contribution to attenuation_coefficient_of_shortwave_flux and attenuation_coefficient_of_photosynthetic_radiative_flux (background extinction)
+      type(type_dependency_id) :: id_attenuation_coefficient_host
       ! Projection factor for benthic flux into horizontal layer volume
-      type(type_interior_standard_variable) :: bot_pel_conv = type_interior_standard_variable(name="bot_pel_conv", units="-")
-      type (type_fabm_interior_variable_id) :: id_bot_pel_conv
+      type(type_interior_standard_variable) :: bot_pel_conv = type_interior_standard_variable(name='bot_pel_conv', units='-')
+      type(type_fabm_interior_variable_id) :: id_bot_pel_conv
    contains
       procedure, pass(self), public :: init
       procedure, pass(self), public :: update
@@ -100,14 +109,30 @@ contains
       ! Make sure everything is deallocated
       call deallocate_fabm(self)
 
-      ! Initialize the model: Reads run-time FABM model configuration from fabm_cfg%fabm_cfg_file (YAML format)
-      ! and stores it in fabm_model. After this the number of biogeochemical variables is fixed
-      ! (access variable metadata in fabm_model%interior_state_variables, fabm_model%interior_diagnostic_variables)
-      ! The model interacts with FABM and describes properties of all bgc variables and parameters
-      self%fabm_model => fabm_create_model(fabm_cfg%fabm_config_file)
+      ! Create the bgc models according to the configurations in FABMConfigFile
+      ! The models interact with FABM and describe properties of all bgc variables and parameters
+      self%fabm_model => fabm_create_model(fabm_cfg%fabm_config_file, initialize = .false.)
       if (.not. associated(self%fabm_model)) then
          call error("FABM model creation failed")
       end if
+
+      ! Register bgc variables from Simstrat (<ID>, <NAME>, <UNITS>, <LONG_NAME>)
+      ! Register simstrat contribution to attenuation coefficients (background extinction), if bioshade feedback is on
+      if (fabm_cfg%bioshade_feedback) then
+         call self%fabm_model%root%register_dependency(self%id_attenuation_coefficient_host, 'attenuation_coefficient_host', 'm-1', 'host contribution to attenuation coefficients')
+      end if
+      
+      ! Add Simstrat bgc variables to FABM aggregate variables
+      ! Add simstrat contribution to attenuation coefficients (background extinction), if bioshade feedback is on
+      if (fabm_cfg%bioshade_feedback) then
+         call self%fabm_model%root%add_to_aggregate_variable(fabm_standard_variables%attenuation_coefficient_of_shortwave_flux, self%id_attenuation_coefficient_host)
+         call self%fabm_model%root%add_to_aggregate_variable(fabm_standard_variables%attenuation_coefficient_of_photosynthetic_radiative_flux, self%id_attenuation_coefficient_host)
+      end if
+
+      ! Initialize the model: Reads run-time FABM model configuration from fabm_cfg%fabm_cfg_file (YAML format)
+      ! and stores it in fabm_model. After this the number of biogeochemical variables is fixed
+      ! (access variable metadata in fabm_model%interior_state_variables, fabm_model%interior_diagnostic_variables)
+      call self%fabm_model%initialize()
 
       ! Provide extents of the spatial domain (number of layers nz for a 1D column)
       ! Used to allocate memory for FABM-managed spatially explicit fields
@@ -217,29 +242,34 @@ contains
       ! Listed below are all non biogeochemical variables from that list
       
       ! Interior variables (arrays)
-      ! Attenuation coefficient of photosynthetically active radiative (PAR) flux, a fraction of shortwave radiative (SWR) flux [m-1]
-      call self%fabm_model%link_interior_data(fabm_standard_variables%attenuation_coefficient_of_photosynthetic_radiative_flux, state%absorb_vol)
-      ! Attenuation coefficient of SWR flux [m-1]
-      call self%fabm_model%link_interior_data(fabm_standard_variables%attenuation_coefficient_of_shortwave_flux, state%absorb_vol)
-      ! Note: Passing the same absorption coefficient for SWR and PAR is not exactly correct 
-      ! since the absorption coefficient for PAR can be higher than for SWR
-      ! see for example: https://www.sciencedirect.com/science/article/pii/S1001074217317734
       ! Thickness of each layer [m]
       call self%fabm_model%link_interior_data(fabm_standard_variables%cell_thickness, grid%h(1:grid%nz_grid))
       ! Density of each layer [kg m-3]
       call self%fabm_model%link_interior_data(fabm_standard_variables%density, state%rho)
       ! Depth relative to surface [m]
       call self%fabm_model%link_interior_data(fabm_standard_variables%depth, grid%layer_depth)
-      ! PAR flux [W m-2]
-      call self%fabm_model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux, state%par_vol)
-      ! SWR flux [W m-2]
+      ! Shortwave radiative (SWR) flux [W m-2]
       call self%fabm_model%link_interior_data(fabm_standard_variables%downwelling_shortwave_flux, state%swr_vol)
+      ! Photosynthetically active radiative (PAR) flux, a fraction of SWR flux [W m-2]
+      call self%fabm_model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux, state%par_vol)
       ! Salinity at each layer [1e-3]
       call self%fabm_model%link_interior_data(fabm_standard_variables%practical_salinity, state%S)
       ! Pressure at each layer [dbar]: equal to layer depth, assuming one meter in depth is one dbar in pressure
       call self%fabm_model%link_interior_data(fabm_standard_variables%pressure, grid%layer_depth)
       ! Temperature at each layer [°C]
       call self%fabm_model%link_interior_data(fabm_standard_variables%temperature, state%T)
+      ! Attenuation coefficient of SWR flux [m-1] and of PAR flux [m-1]
+      ! If bioshade feedback is on, link the Simstrat contribution (background extinction)
+      ! If bioshade feedback is off, Simstrat calculation of attenuation coefficient overwrites bgc model calculation
+      ! Note: Passing the same attenuation coefficient for SWR and PAR is not exactly correct 
+      ! since the attenuation coefficient for PAR can be higher than for SWR
+      ! see for example: https://www.sciencedirect.com/science/article/pii/S1001074217317734
+      if (fabm_cfg%bioshade_feedback) then
+         call self%fabm_model%link_interior_data('attenuation_coefficient_host', state%background_extinction_vol)
+      else
+         call self%fabm_model%link_interior_data(fabm_standard_variables%attenuation_coefficient_of_shortwave_flux, state%absorb_vol, source=data_source_user)
+         call self%fabm_model%link_interior_data(fabm_standard_variables%attenuation_coefficient_of_photosynthetic_radiative_flux, state%absorb_vol, source=data_source_user)
+      end if
       ! Secchi depth [m], not defined in Simstrat
       !call self%fabm_model%link_interior_data(fabm_standard_variables%secchi_depth)
       ! Net rate of SWR energy absorption at each layer [W m-2], not defined in Simstrat
@@ -263,14 +293,14 @@ contains
       call self%fabm_model%link_horizontal_data(fabm_standard_variables%ice_area_fraction, state%ice_area_fraction)
       ! Surface air pressure [Pa]
       call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_air_pressure, state%p_air)
-      ! Surface albedo [-]
-      call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_albedo, state%wat_albedo)
+      ! Surface albedo [-], aggregate variable overwritten by Simstrat -> remove source=data_source_user to calculate by bgc models
+      call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_albedo, state%wat_albedo, source=data_source_user)
       ! PAR flux at surface [W m-2]
       call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux, state%par0)
       ! SWR flux at surface [W m-2]
       call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_flux, state%rad0)
-      ! Surface drag coefficient [-]
-      call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_drag_coefficient_in_air, state%C10)
+      ! Surface drag coefficient [-], aggregate variable overwritten by Simstrat -> remove source=data_source_user to calculate by bgc models
+      call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_drag_coefficient_in_air, state%C10, source=data_source_user)
       ! Surface specific humidity [-]
       call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_specific_humidity, state%qa)
       ! Surface temperature [°C]
@@ -294,8 +324,10 @@ contains
       ! Number of days since start of the year [days]
       call self%fabm_model%link_scalar(fabm_standard_variables%number_of_days_since_start_of_the_year, state%current_day_of_year)
       
-      ! Get index of attenuation coefficient FABM diagnostic variable
-      if (fabm_cfg%bioshade_feedback) then
+      ! If bioshade feedback is on, set background_extinction_vol from FABMConfig and
+      ! get index of attenuation coefficient FABM diagnostic variable
+      if (fabm_cfg%bioshade_feedback) then        
+         state%background_extinction_vol(:) = fabm_cfg%background_extinction
          att_index = 0
          do ivar = 1, size(self%fabm_model%interior_diagnostic_variables)
             if (self%fabm_model%interior_diagnostic_variables(ivar)%name == 'attenuation_coefficient_of_photosynthetic_radiative_flux') then
@@ -304,7 +336,7 @@ contains
             end if
          end do
          if (att_index == 0) then
-            call error('Attenuation Coefficient not found in FABM Diagnostic Variables')
+            call error('Attenuation Coefficient not found in FABM Diagnostic Variables. Bioshade feedback not possible.')
          end if
       end if
 
@@ -695,18 +727,18 @@ contains
          call self%fabm_model%get_bottom_sources(self%flux_bt(1, :), self%sms_bt(1, :))
          ! Set NaNs to 0
          if (state%n_fabm_interior_state > 0) then
-            if (any(ieee_is_nan(self%flux_bt))) then
+            if (any(ieee_is_nan(self%flux_bt(1, :)))) then
                call warn("FABM Bottom Flux contains NaN, set to 0")
-               where (ieee_is_nan(self%flux_bt))
-                  self%flux_bt = 0.0
+               where (ieee_is_nan(self%flux_bt(1, :)))
+                  self%flux_bt(1, :) = 0.0
                end where
             end if
          end if
          if (state%n_fabm_bottom_state > 0) then
-            if (any(ieee_is_nan(self%sms_bt))) then
+            if (any(ieee_is_nan(self%sms_bt(1, :)))) then
                call warn("FABM Bottom Source contains NaN, set to 0")
-               where (ieee_is_nan(self%sms_bt))
-                  self%sms_bt = 0.0
+               where (ieee_is_nan(self%sms_bt(1, :)))
+                  self%sms_bt(1, :) = 0.0
                end where
             end if
          end if
@@ -927,18 +959,15 @@ contains
 
       ! Local variables
       real(RK), dimension(grid%nz_grid) :: attenuation_coefficient_of_photosynthetic_radiative_flux
-      
-      ! First set absorb_vol as background extinction
-      state%absorb_vol(:) = fabm_cfg%background_extinction
 
-      ! Retrieve attenuation_coefficient_of_photosynthetic_radiative_flux and add to absorb_vol
+      ! Retrieve attenuation_coefficient_of_photosynthetic_radiative_flux and set as absorb_vol
       if (state%first_timestep) then
-         ! At the first timestep FABM variables have not yet been calculated
-         attenuation_coefficient_of_photosynthetic_radiative_flux = 0.0_RK
+         ! At the first timestep FABM variables have not yet been calculated -> set as background extinction from FABMConfig
+         attenuation_coefficient_of_photosynthetic_radiative_flux(:) = fabm_cfg%background_extinction
       else
          attenuation_coefficient_of_photosynthetic_radiative_flux = self%fabm_model%get_interior_diagnostic_data(att_index)
       end if
-      state%absorb_vol(:) = state%absorb_vol(:) + attenuation_coefficient_of_photosynthetic_radiative_flux(:)
+      state%absorb_vol(:) = attenuation_coefficient_of_photosynthetic_radiative_flux(:)
 
       ! Interpolate to faces to be compatible with Simstrat temperature module
       call grid%interpolate_to_face(grid%z_volume, state%absorb_vol, grid%nz_grid, state%absorb)
