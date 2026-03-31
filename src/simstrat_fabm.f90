@@ -972,12 +972,18 @@ contains
          ! Write the header
          write(unit, '(A)', advance = 'no') 'Short Name, '
          write(unit, '(A)', advance = 'no') 'Long Name, '
-         write(unit, '(A)') 'Units'
+         write(unit, '(A)', advance = 'no') 'Units, '
+         write(unit, '(A)') 'Output'
          ! Write the names and units of interior diagnostic variables
          do i = 1, size(self%fabm_model%interior_diagnostic_variables)
-            write(unit, '(A)', advance = 'no') trim(self%fabm_model%interior_diagnostic_variables(i)%name)//', '
-            write(unit, '(A)', advance = 'no') trim(self%fabm_model%interior_diagnostic_variables(i)%long_name)//', '
-            write(unit, '(A)') trim(self%fabm_model%interior_diagnostic_variables(i)%units)
+         write(unit, '(A)', advance='no') '"'//trim(self%fabm_model%interior_diagnostic_variables(i)%name)//'", '
+         write(unit, '(A)', advance='no') '"'//trim(self%fabm_model%interior_diagnostic_variables(i)%long_name)//'", '
+         write(unit, '(A)', advance='no') '"'//trim(self%fabm_model%interior_diagnostic_variables(i)%units)//'", '
+         if (self%fabm_model%interior_diagnostic_variables(i)%output == 1) then
+            write(unit, '(A)') '"Yes"'
+         else
+            write(unit, '(A)') '"No"'
+         end if
          end do
          close(unit)
       end if
@@ -991,12 +997,18 @@ contains
          ! Write the header
          write(unit, '(A)', advance = 'no') 'Short Name, '
          write(unit, '(A)', advance = 'no') 'Long Name, '
-         write(unit, '(A)') 'Units'
+         write(unit, '(A)', advance = 'no') 'Units, '
+         write(unit, '(A)') 'Output'
          ! Write the names and units of horizontal diagnostic variables
          do i = 1, size(self%fabm_model%horizontal_diagnostic_variables)
-            write(unit, '(A)', advance = 'no') trim(self%fabm_model%horizontal_diagnostic_variables(i)%name)//', '
-            write(unit, '(A)', advance = 'no') trim(self%fabm_model%horizontal_diagnostic_variables(i)%long_name)//', '
-            write(unit, '(A)') trim(self%fabm_model%horizontal_diagnostic_variables(i)%units)
+         write(unit, '(A)', advance='no') '"'//trim(self%fabm_model%horizontal_diagnostic_variables(i)%name)//'", '
+         write(unit, '(A)', advance='no') '"'//trim(self%fabm_model%horizontal_diagnostic_variables(i)%long_name)//'", '
+         write(unit, '(A)', advance='no') '"'//trim(self%fabm_model%horizontal_diagnostic_variables(i)%units)//'", '
+         if (self%fabm_model%horizontal_diagnostic_variables(i)%output == 1) then
+            write(unit, '(A)') '"Yes"'
+         else
+            write(unit, '(A)') '"No"'
+         end if
          end do
          close(unit)
       end if
@@ -1012,7 +1024,7 @@ contains
 
       ! Local variables
       integer :: i, j, n, n_int, n_hor, unit, status, unit_list, status_list
-      character(len=256) :: line, line_trim, short_name, short_name_trim, long_name, units, file_path
+      character(len=256) :: line, line_trim, short_name, short_name_trim, long_name, units, output, file_path
       integer, parameter :: max_lines = 10000 ! Maximum amount of diagnostic variables in SetDiagnosticVars file
       character(len=256), dimension(max_lines) :: temp_names ! Same len as fabm_diagnostic_names
       integer, dimension(max_lines) :: temp_index
@@ -1038,9 +1050,11 @@ contains
          read(unit, '(A)', iostat=status) line
          if (status .ne. 0) exit
          if (len_trim(line) == 0) cycle
+         if (line(1:4) == '-Add') cycle
+         if (line(1:4) == '----') cycle
          if (any(temp_names == trim(line))) cycle
          line_trim = trim(line)
-         if (line_trim(:10) == 'selectall_') then
+         if ((line_trim(:11) == 'select_all_') .or. (line_trim(:14) == 'select_output_')) then
             ! Read from fabm_list_diagnostic_interior.dat
             file_path = trim(output_cfg%PathOut)//'/fabm_list_diagnostic_interior.dat'
             open(newunit=unit_list, action='read', status='old', file=file_path, iostat = status_list)
@@ -1049,12 +1063,13 @@ contains
                call error('FABM Interior Diagnostic Variables have not been listed.')
             end if
             do
-               read(unit_list, *, iostat=status_list) short_name, long_name, units
+               read(unit_list, *, iostat=status_list) short_name, long_name, units, output
                if (status_list .ne. 0) exit
                if (len_trim(short_name) == 0) cycle
                short_name_trim = trim(short_name)
-               if (line_trim(11:) == short_name_trim(:(len_trim(line)-10))) then
+               if ((short_name_trim(:(len_trim(line)-11)) == line_trim(12:)) .or. (short_name_trim(:(len_trim(line)-14)) == line_trim(15:))) then
                   if (any(temp_names == trim(short_name))) cycle
+                  if ((line_trim(:14) == 'select_output_') .and. output == 'No') cycle
                   n = n + 1
                   if (n > max_lines) then
                      call error('Too many lines in '//trim(fabm_cfg%set_diag_vars)//', increase max_lines in set_fabm_diagnostic_vars.')
@@ -1073,11 +1088,12 @@ contains
                call error('FABM Horizontal Diagnostic Variables have not been listed.')
             end if
             do
-               read(unit_list, *, iostat=status_list) short_name, long_name, units
+               read(unit_list, *, iostat=status_list) short_name, long_name, units, output
                if (status_list .ne. 0) exit
                if (len_trim(short_name) == 0) cycle
                short_name_trim = trim(short_name)
-               if (line_trim(11:) == short_name_trim(:(len_trim(line)-10))) then
+               if ((short_name_trim(:(len_trim(line)-11)) == line_trim(12:)) .or. (short_name_trim(:(len_trim(line)-14)) == line_trim(15:))) then
+                  if ((line_trim(:14) == 'select_output_') .and. output == 'No') cycle
                   if (any(temp_names == trim(short_name))) cycle
                   n = n + 1
                   if (n > max_lines) then
