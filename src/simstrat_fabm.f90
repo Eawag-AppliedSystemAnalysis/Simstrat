@@ -98,21 +98,57 @@ contains
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       class(ModelState), intent(inout) :: state
-      class(FABMConfig), intent(in) :: fabm_cfg
+      class(FABMConfig), intent(inout) :: fabm_cfg
       class(SimConfig), intent(in) :: sim_cfg
       class(StaggeredGrid), intent(in) :: grid
 
       ! Local variables
-      integer :: ivar, index
+      integer :: ivar, index, exitstat
+      logical :: config_path_exists, inflow_path_exists
+      character(len=256) :: mkdirCmd
 
       ! Make sure everything is deallocated
       call deallocate_fabm(self)
+
+      ! Check if FABM configuration path exists
+      inquire(file=fabm_cfg%config_path,exist=config_path_exists)
+
+      ! Create FABM configuration folder if it does not exist
+      if (.not. config_path_exists) then
+         call warn('FABM Configuration path does not exist, create folder according to config file...')
+         mkdirCmd = 'mkdir '//trim(fabm_cfg%config_path)
+         call execute_command_line(mkdirCmd, exitstat = exitstat)
+
+         ! mkdir does not seem to accept a path to a folder in execute_command_line, thus a default result folder "FABM_configurations" will be generated in this case.
+         if (exitstat==1) then
+            call warn('FABM Configuration path specified in config file could not be generated. Default result folder "FABM_configurations" was generated instead.')
+            call execute_command_line('mkdir FABM_configurations')
+            fabm_cfg%config_path = 'FABM_configurations'
+         end if
+      end if
+
+      ! Check if FABM inflow path exists
+      inquire(file=fabm_cfg%inflow_path,exist=inflow_path_exists)
+
+      ! Create FABM inflow folder if it does not exist
+      if (.not. inflow_path_exists) then
+         call warn('FABM Inflow path does not exist, create folder according to config file...')
+         mkdirCmd = 'mkdir '//trim(fabm_cfg%inflow_path)
+         call execute_command_line(mkdirCmd, exitstat = exitstat)
+
+         ! mkdir does not seem to accept a path to a folder in execute_command_line, thus a default result folder "FABM_inflow" will be generated in this case.
+         if (exitstat==1) then
+            call warn('FABM Inflow path specified in config file could not be generated. Default result folder "FABM_inflow" was generated instead.')
+            call execute_command_line('mkdir FABM_inflow')
+            fabm_cfg%inflow_path = 'FABM_inflow'
+         end if
+      end if
 
       ! Create the bgc models according to the configurations in FABMConfigFile
       ! The models interact with FABM and describe properties of all bgc variables and parameters
       self%fabm_model => fabm_create_model(fabm_cfg%config_file, initialize = .false.)
       if (.not. associated(self%fabm_model)) then
-         call error('FABM model creation failed')
+         call error('FABM model creation failed. Check FABM Config File.')
       end if
 
       ! Register bgc variables from Simstrat (<ID>, <NAME>, <UNITS>, <LONG_NAME>)
@@ -965,7 +1001,7 @@ contains
          ! Create new file or overwrite already existing one
          open(newunit=unit, file=file_path, action='write', iostat = status)
          if (status .ne. 0) then
-            call error('Failed to open or create file: ' // trim(file_path) // '. Please add FABM configurations folder.')
+            call error('Failed to open or create file: ' // trim(file_path) // '. Please check FABM configurations folder.')
          end if
          ! Write the header
          write(unit, '(A)', advance = 'no') 'Short Name, '
@@ -1030,7 +1066,7 @@ contains
       ! Read from SetDiagVars
       open(newunit=unit, action='read', status='old', file=fabm_cfg%diag_vars, iostat = status)
       if (status .ne. 0) then
-         call warn('No Output of FABM Diagnostic Variables')
+         call warn('No Output of FABM Diagnostic Variables. Check FABM Diagnostic Vars File.')
          state%n_fabm_diagnostic = 0
          return
       else
@@ -1189,7 +1225,7 @@ contains
       ! Check if repaired variable case already present in RepairedVars
       open(newunit=unit, action='read', status='old', file=file_path, iostat = status)
       if (status .ne. 0) then
-         call error('Failed to open or create file: ' // trim(file_path) // '. Please add FABM configurations folder.')
+         call error('Failed to open or create file: ' // trim(file_path) // '. Please check FABM configurations folder.')
       end if
       ! Read the file line by line and check if the exact line exists
       rewind(unit)
@@ -1206,7 +1242,7 @@ contains
       ! Reopen for appending
       open(newunit=unit, action='write', position='append', status='old', file=file_path, iostat=status)
       if (status .ne. 0) then
-         call error('Failed to open or create file: ' // trim(file_path) // '. Please add FABM configurations folder.')
+         call error('Failed to open or create file: ' // trim(file_path) // '. Please check FABM configurations folder.')
       else
          call warn('FABM variable '//trim(variable)//' added to '// trim(file_path)//'. Restart simulation to output '//trim(boundary)//' values.')
       end if
@@ -1252,7 +1288,7 @@ contains
          call warn('No FABM Repaired Variables provided. Empty repaired variables file '// trim(file_path) //' created.')
          open(newunit=unit, action='write', status='new', file=file_path, iostat = status)
          if (status .ne. 0) then
-            call error('Failed to open or create file: ' // trim(file_path) // '. Please add FABM configurations folder.')
+            call error('Failed to open or create file: ' // trim(file_path) // '. Please check FABM configurations folder.')
          end if
          ! Write the header
          write(unit, '(A)', advance = 'no') 'Variable, '
