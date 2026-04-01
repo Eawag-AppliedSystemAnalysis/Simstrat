@@ -965,7 +965,7 @@ contains
          ! Create new file or overwrite already existing one
          open(newunit=unit, file=file_path, action='write', iostat = status)
          if (status .ne. 0) then
-            call error('Failed to open or create file: ' // trim(file_path))
+            call error('Failed to open or create file: ' // trim(file_path) // '. Please add FABM configurations folder.')
          end if
          ! Write the header
          write(unit, '(A)', advance = 'no') 'Short Name, '
@@ -1189,7 +1189,7 @@ contains
       ! Check if repaired variable case already present in RepairedVars
       open(newunit=unit, action='read', status='old', file=file_path, iostat = status)
       if (status .ne. 0) then
-         call error('Failed to open or create file: ' // trim(file_path))
+         call error('Failed to open or create file: ' // trim(file_path) // '. Please add FABM configurations folder.')
       end if
       ! Read the file line by line and check if the exact line exists
       rewind(unit)
@@ -1206,7 +1206,7 @@ contains
       ! Reopen for appending
       open(newunit=unit, action='write', position='append', status='old', file=file_path, iostat=status)
       if (status .ne. 0) then
-         call error('Failed to open or create file: ' // trim(file_path))
+         call error('Failed to open or create file: ' // trim(file_path) // '. Please add FABM configurations folder.')
       else
          call warn('FABM variable '//trim(variable)//' added to '// trim(file_path)//'. Restart simulation to output '//trim(boundary)//' values.')
       end if
@@ -1252,7 +1252,7 @@ contains
          call warn('No FABM Repaired Variables provided. Empty repaired variables file '// trim(file_path) //' created.')
          open(newunit=unit, action='write', status='new', file=file_path, iostat = status)
          if (status .ne. 0) then
-            call error('Failed to open or create file: ' // trim(file_path))
+            call error('Failed to open or create file: ' // trim(file_path) // '. Please add FABM configurations folder.')
          end if
          ! Write the header
          write(unit, '(A)', advance = 'no') 'Variable, '
