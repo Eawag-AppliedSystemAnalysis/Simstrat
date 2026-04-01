@@ -112,7 +112,7 @@ contains
       self%couple_fabm = model_config%couple_fabm
       if (self%couple_fabm) then
          self%n_vars = self%n_vars + state%n_fabm_interior_state
-         self%fabm_path = fabm_config%path_fabm_inflow
+         self%fabm_path = fabm_config%inflow_path
       end if
 
       self%max_n_inflows = model_config%max_length_input_data

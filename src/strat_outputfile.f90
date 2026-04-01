@@ -197,7 +197,7 @@ contains
          self%n_vars_fabm_surface_state = state%n_fabm_surface_state
 
          ! Allocate FABM output structure for diagnostic variables if necessary
-         if (fabm_config%output_diagnostic_variables) then
+         if (fabm_config%output_diag_vars) then
             allocate (output_config%output_vars_fabm_diagnostic_interior) ! We don't know yet how many variables
             output_config%output_vars_fabm_diagnostic_interior%names => state%fabm_diagnostic_names(1:state%n_fabm_diagnostic_interior)
             output_config%output_vars_fabm_diagnostic_interior%values => state%fabm_diagnostic_interior

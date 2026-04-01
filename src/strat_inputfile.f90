@@ -657,11 +657,12 @@ contains
 
          ! FABM configuration
          if (model_cfg%couple_fabm) then
-            call par_file%get("FABMConfig.FABMConfigFile", fabm_cfg%fabm_config_file,found); call check_field(found, 'FABMConfig.FABMConfigFile',ParName)
-            call par_file%get("FABMConfig.PathFABMinflow", fabm_cfg%path_fabm_inflow,found); call check_field(found, 'FABMConfig.PathFABMinflow',ParName)
-            call par_file%get("FABMConfig.SetDiagnosticVars", fabm_cfg%set_diag_vars,found); call check_field(found, 'FABMConfig.SetDiagnosticVars',ParName)
-            call par_file%get("FABMConfig.OutputDiagnosticVars", fabm_cfg%output_diagnostic_variables,found); call check_field(found, 'FABMConfig.OutputDiagnosticVars', ParName)
-            call par_file%get("FABMConfig.RepairFABMStates", fabm_cfg%repair_fabm,found); call check_field(found, 'FABMConfig.RepairFABMStates',ParName)
+            call par_file%get("FABMConfig.FABMConfigPath", fabm_cfg%config_path,found); call check_field(found, 'FABMConfig.FABMConfigPath',ParName)
+            call par_file%get("FABMConfig.FABMinflowPath", fabm_cfg%inflow_path,found); call check_field(found, 'FABMConfig.FABMinflowPath',ParName)
+            call par_file%get("FABMConfig.FABMConfigFile", fabm_cfg%config_file,found); call check_field(found, 'FABMConfig.FABMConfigFile',ParName)
+            call par_file%get("FABMConfig.FABMDiagnosticVars", fabm_cfg%diag_vars,found); call check_field(found, 'FABMConfig.FABMDiagnosticVars',ParName)
+            call par_file%get("FABMConfig.OutputDiagnosticVars", fabm_cfg%output_diag_vars,found); call check_field(found, 'FABMConfig.OutputDiagnosticVars', ParName)
+            call par_file%get("FABMConfig.RepairStates", fabm_cfg%repair_states,found); call check_field(found, 'FABMConfig.RepairStates',ParName)
             call par_file%get("FABMConfig.OutputRepairedVars", fabm_cfg%output_repaired_vars,found); call check_field(found, 'FABMConfig.OutputRepairedVars',ParName)
             call par_file%get("FABMConfig.BottomEverywhere", fabm_cfg%bottom_everywhere,found); call check_field(found, 'FABMConfig.BottomEverywhere',ParName)
             call par_file%get("FABMConfig.BioshadeFeedback", fabm_cfg%bioshade_feedback,found); call check_field(found, 'FABMConfig.BioshadeFeedback', ParName)
