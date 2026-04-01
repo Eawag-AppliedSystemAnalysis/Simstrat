@@ -37,7 +37,7 @@
   },
   "FABMConfig" : {
     "FABMConfigPath"          : "TestCase_LakeZurich/FABM_configurations/",
-    "FABMinflowPath"          : "TestCase_LakeZurich/FABM_inflow/",
+    "FABMInflowPath"          : "TestCase_LakeZurich/FABM_inflow/",
     "FABMConfigFile"          : "../lib/fabm/testcases/fabm-gotm-npzd.yaml",
     "FABMDiagnosticVars"      : "TestCase_LakeZurich/FABM_configurations/DiagnosticVars.dat",
     "OutputDiagnosticVars"    : true,

@@ -103,8 +103,8 @@ contains
       class(StaggeredGrid), intent(in) :: grid
 
       ! Local variables
-      integer :: ivar, index, exitstat
-      logical :: config_path_exists, inflow_path_exists
+      integer :: ivar, index, exitstat, index_bs
+      logical :: config_path_exists
       character(len=256) :: mkdirCmd
 
       ! Make sure everything is deallocated
@@ -112,36 +112,28 @@ contains
 
       ! Check if FABM configuration path exists
       inquire(file=fabm_cfg%config_path,exist=config_path_exists)
-
       ! Create FABM configuration folder if it does not exist
       if (.not. config_path_exists) then
          call warn('FABM Configuration path does not exist, create folder according to config file...')
          mkdirCmd = 'mkdir '//trim(fabm_cfg%config_path)
          call execute_command_line(mkdirCmd, exitstat = exitstat)
-
          ! mkdir does not seem to accept a path to a folder in execute_command_line, thus a default result folder "FABM_configurations" will be generated in this case.
          if (exitstat==1) then
             call warn('FABM Configuration path specified in config file could not be generated. Default result folder "FABM_configurations" was generated instead.')
             call execute_command_line('mkdir FABM_configurations')
-            fabm_cfg%config_path = 'FABM_configurations/'
+            fabm_cfg%config_path = 'FABM_configurations'
          end if
       end if
-
-      ! Check if FABM inflow path exists
-      inquire(file=fabm_cfg%inflow_path,exist=inflow_path_exists)
-
-      ! Create FABM inflow folder if it does not exist
-      if (.not. inflow_path_exists) then
-         call warn('FABM Inflow path does not exist, create folder according to config file...')
-         mkdirCmd = 'mkdir '//trim(fabm_cfg%inflow_path)
-         call execute_command_line(mkdirCmd, exitstat = exitstat)
-
-         ! mkdir does not seem to accept a path to a folder in execute_command_line, thus a default result folder "FABM_inflow" will be generated in this case.
-         if (exitstat==1) then
-            call warn('FABM Inflow path specified in config file could not be generated. Default result folder "FABM_inflow" was generated instead.')
-            call execute_command_line('mkdir FABM_inflow')
-            fabm_cfg%inflow_path = 'FABM_inflow/'
-         end if
+      ! Transform backslashes to slash
+      do while(scan(fabm_cfg%config_path,'\\')>0)
+         index_bs = scan(fabm_cfg%config_path,'\\')
+         fabm_cfg%config_path(index_bs:index_bs) = '/'
+      end do
+      ! Remove trailing slashes at the end
+      if (len(fabm_cfg%config_path) == scan(trim(fabm_cfg%config_path),"/", BACK= .true.)) then
+         fabm_cfg%config_path = fabm_cfg%config_path(1:len(fabm_cfg%config_path) - 1)
+      else
+         fabm_cfg%config_path = trim(fabm_cfg%config_path)
       end if
 
       ! Create the bgc models according to the configurations in FABMConfigFile
@@ -997,7 +989,7 @@ contains
       ! Write the names of all interior diagnostic variables
       if (size(self%fabm_model%interior_diagnostic_variables) > 0) then
          ! Construct the file path
-         file_path = trim(fabm_cfg%config_path)//'list_diagnostic_interior.dat'
+         file_path = trim(fabm_cfg%config_path)//'/list_diagnostic_interior.dat'
          ! Create new file or overwrite already existing one
          open(newunit=unit, file=file_path, action='write', iostat = status)
          if (status .ne. 0) then
@@ -1025,7 +1017,7 @@ contains
       ! Write the names of all horizontal diagnostic variables
       if (size(self%fabm_model%horizontal_diagnostic_variables) > 0) then
          ! Construct the file path for Horizontal Diagnostic Variable List
-         file_path = trim(fabm_cfg%config_path)//'list_diagnostic_horizontal.dat'
+         file_path = trim(fabm_cfg%config_path)//'/list_diagnostic_horizontal.dat'
          ! Creat new file or overwrite already existing one
          open(newunit=unit, file=file_path, action='write', iostat = status)
          ! Write the header
@@ -1089,7 +1081,7 @@ contains
          line_trim = trim(line)
          if ((line_trim(:11) == 'select_all_') .or. (line_trim(:14) == 'select_output_')) then
             ! Read from list_diagnostic_interior.dat
-            file_path = trim(fabm_cfg%config_path)//'list_diagnostic_interior.dat'
+            file_path = trim(fabm_cfg%config_path)//'/list_diagnostic_interior.dat'
             open(newunit=unit_list, action='read', status='old', file=file_path, iostat = status_list)
             read(unit_list, *, iostat=status_list)
             if (status_list .ne. 0) then
@@ -1114,7 +1106,7 @@ contains
             ! Close list_diagnostic_interior.dat
             close(unit_list)
             ! Read from list_diagnostic_horizontal.dat
-            file_path = trim(fabm_cfg%config_path)//'list_diagnostic_horizontal.dat'
+            file_path = trim(fabm_cfg%config_path)//'/list_diagnostic_horizontal.dat'
             open(newunit=unit_list, action='read', status='old', file=file_path, iostat = status_list)
             read(unit_list, *, iostat=status_list)
             if (status_list .ne. 0) then
@@ -1216,7 +1208,7 @@ contains
       character(len=256) :: line, new_line
 
       ! Construct the file path
-      file_path = trim(fabm_cfg%config_path)//'list_repaired.dat'
+      file_path = trim(fabm_cfg%config_path)//'/list_repaired.dat'
 
       ! Convert boundary_value to string
       write(boundary_value_str, '(ES15.6)') boundary_value
@@ -1280,7 +1272,7 @@ contains
       n_sf_max = 0
 
       ! Construct the file path
-      file_path = trim(fabm_cfg%config_path)//'list_repaired.dat'
+      file_path = trim(fabm_cfg%config_path)//'/list_repaired.dat'
 
       ! Read from RepairedVars
       open(newunit=unit, action='read', status='old', file=file_path, iostat = status)

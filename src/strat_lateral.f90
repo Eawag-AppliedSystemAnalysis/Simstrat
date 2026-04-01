@@ -97,7 +97,9 @@ contains
       class(ModelParam), target :: model_param
 
       ! Locals
-      integer :: i
+      integer :: i, exitstat, index_bs
+      logical :: inflow_path_exists
+      character(len=256) :: mkdirCmd
 
       self%cfg => model_config
       self%param => model_param
@@ -111,8 +113,34 @@ contains
 
       self%couple_fabm = model_config%couple_fabm
       if (self%couple_fabm) then
-         self%n_vars = self%n_vars + state%n_fabm_interior_state
+         ! Check if FABM inflow path exists
+         inquire(file=fabm_config%inflow_path,exist=inflow_path_exists)
+         ! Create FABM inflow folder if it does not exist
+         if (.not. inflow_path_exists) then
+            call warn('FABM Inflow path does not exist, create folder according to config file...')
+            mkdirCmd = 'mkdir '//trim(fabm_config%inflow_path)
+            call execute_command_line(mkdirCmd, exitstat = exitstat)
+            ! mkdir does not seem to accept a path to a folder in execute_command_line, thus a default result folder "FABM_inflow" will be generated in this case.
+            if (exitstat==1) then
+               call warn('FABM Inflow path specified in config file could not be generated. Default result folder "FABM_inflow" was generated instead.')
+               call execute_command_line('mkdir FABM_inflow')
+               fabm_config%inflow_path = 'FABM_inflow'
+            end if
+         end if
+         ! Transform backslashes to slash
+         do while(scan(fabm_config%inflow_path,'\\')>0)
+            index_bs = scan(fabm_config%inflow_path,'\\')
+            fabm_config%inflow_path(index_bs:index_bs) = '/'
+         end do
+         ! Remove trailing slashes at the end
+         if (len(fabm_config%inflow_path) == scan(trim(fabm_config%inflow_path),"/", BACK= .true.)) then
+            fabm_config%inflow_path = fabm_config%inflow_path(1:len(fabm_config%inflow_path) - 1)
+         else
+            fabm_config%inflow_path = trim(fabm_config%inflow_path)
+         end if
+         ! Update self
          self%fabm_path = fabm_config%inflow_path
+         self%n_vars = self%n_vars + state%n_fabm_interior_state
       end if
 
       self%max_n_inflows = model_config%max_length_input_data
@@ -295,7 +323,7 @@ contains
 
                   ! Read inflow files
                   if (i > n_simstrat) then
-                     fname = trim(self%fabm_path)//trim(state%fabm_state_names(i - n_simstrat))//'_inflow.dat'
+                     fname = trim(self%fabm_path)//'/'//trim(state%fabm_state_names(i - n_simstrat))//'_inflow.dat'
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
@@ -401,7 +429,7 @@ contains
                else ! if start from snapshot
                   ! Open inflow files
                   if (i > n_simstrat) then
-                     fname = trim(self%fabm_path)//trim(state%fabm_state_names(i - n_simstrat))//'_inflow.dat'
+                     fname = trim(self%fabm_path)//'/'//trim(state%fabm_state_names(i - n_simstrat))//'_inflow.dat'
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
@@ -658,7 +686,7 @@ contains
                   ! End of file is not reached
                   self%eof(i) = 0
                   if (i > n_simstrat) then
-                     fname = trim(self%fabm_path)//trim(state%fabm_state_names(i - n_simstrat))//'_inflow.dat'
+                     fname = trim(self%fabm_path)//'/'//trim(state%fabm_state_names(i - n_simstrat))//'_inflow.dat'
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
@@ -767,7 +795,7 @@ contains
                else ! if start from snapshot
                   ! Open inflow files
                   if (i > n_simstrat) then
-                     fname = trim(self%fabm_path)//trim(state%fabm_state_names(i - n_simstrat))//'_inflow.dat'
+                     fname = trim(self%fabm_path)//'/'//trim(state%fabm_state_names(i - n_simstrat))//'_inflow.dat'
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
@@ -898,7 +926,7 @@ contains
             if (idx) then  ! If first timestep
                if (self%number_of_lines_read_bound(i) == 0) then  ! If not started from snapshot
 
-                  fname = trim(self%fabm_path)//trim(state%fabm_state_names(state%n_fabm_interior_state + i))//'_inflow.dat'
+                  fname = trim(self%fabm_path)//'/'//trim(state%fabm_state_names(state%n_fabm_interior_state + i))//'_inflow.dat'
 
                   ! Read inflow files
                   open(newunit=unit, action='read', status='old', file=fname, iostat = status)
@@ -942,7 +970,7 @@ contains
                   call ok('FABM bound input file successfully read: '//trim(fname))
                else ! if start from snapshot
                   ! Open inflow files
-                  fname = trim(self%fabm_path)//trim(state%fabm_state_names(state%n_fabm_interior_state + i))//'_inflow.dat'
+                  fname = trim(self%fabm_path)//'/'//trim(state%fabm_state_names(state%n_fabm_interior_state + i))//'_inflow.dat'
                   
                   open(self%fnum_bound(i), action='read', status='old', file=fname)
 

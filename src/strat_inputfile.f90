@@ -658,7 +658,7 @@ contains
          ! FABM configuration
          if (model_cfg%couple_fabm) then
             call par_file%get("FABMConfig.FABMConfigPath", fabm_cfg%config_path,found); call check_field(found, 'FABMConfig.FABMConfigPath',ParName)
-            call par_file%get("FABMConfig.FABMinflowPath", fabm_cfg%inflow_path,found); call check_field(found, 'FABMConfig.FABMinflowPath',ParName)
+            call par_file%get("FABMConfig.FABMInflowPath", fabm_cfg%inflow_path,found); call check_field(found, 'FABMConfig.FABMInflowPath',ParName)
             call par_file%get("FABMConfig.FABMConfigFile", fabm_cfg%config_file,found); call check_field(found, 'FABMConfig.FABMConfigFile',ParName)
             call par_file%get("FABMConfig.FABMDiagnosticVars", fabm_cfg%diag_vars,found); call check_field(found, 'FABMConfig.FABMDiagnosticVars',ParName)
             call par_file%get("FABMConfig.OutputDiagnosticVars", fabm_cfg%output_diag_vars,found); call check_field(found, 'FABMConfig.OutputDiagnosticVars', ParName)
