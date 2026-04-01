@@ -123,7 +123,7 @@ contains
          if (exitstat==1) then
             call warn('FABM Configuration path specified in config file could not be generated. Default result folder "FABM_configurations" was generated instead.')
             call execute_command_line('mkdir FABM_configurations')
-            fabm_cfg%config_path = 'FABM_configurations'
+            fabm_cfg%config_path = 'FABM_configurations/'
          end if
       end if
 
@@ -140,7 +140,7 @@ contains
          if (exitstat==1) then
             call warn('FABM Inflow path specified in config file could not be generated. Default result folder "FABM_inflow" was generated instead.')
             call execute_command_line('mkdir FABM_inflow')
-            fabm_cfg%inflow_path = 'FABM_inflow'
+            fabm_cfg%inflow_path = 'FABM_inflow/'
          end if
       end if
 
