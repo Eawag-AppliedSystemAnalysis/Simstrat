@@ -1,20 +1,25 @@
 # Load libraries
 
 import os
-from functions import csv_to_netcdf
+from functions_conversion import csv_to_netcdf
 
 # Required parameters
 
-var_names = ['T', 'S'] # Variable names; pass an empty list to convert all variables in the output folder
+var_names = [] # Variable names; pass an empty list to convert all variables in the output folder
 filename = 'output_converted' # Name of new file
-path_to_output = '../../tests/TestCases_Results/' # Path to output folder
+path_to_output = '../../LakeConstance/Results/' # Path to output folder
 conversion_function = 'csv_to_netcdf' # Currently available: csv_to_netcdf
+
+# Parameters for input conversion
+
+path_to_input = ['../../LakeConstance', '../../LakeConstance/FABM_inflow'] # Path to input folder
+start_day = 3287.0
 
 # Optional parameters
 
-var_units = ['degree_Celsius', '1e-3'] # Variable units, assigned to var_names in order
+var_units = [] # Variable units, assigned to var_names in order
 var_exclude = [] # If empty list is passed for var_names, exclude these variables from conversion
-var_format = '' # This variable defines the output format; if left empty it is the first variable in var_names
+var_format = 'T' # This variable defines the output format; if left empty it is the first variable in var_names
 
 # Execute conversion
 
@@ -24,6 +29,6 @@ if conversion_function == 'csv_to_netcdf':
     if var_format in var_names:
         var_names.remove(var_format)
         var_names.insert(0, var_format)
-    csv_to_netcdf(var_names, filename, path_to_output, var_units)
+    csv_to_netcdf(var_names, filename, path_to_output, path_to_input, start_day, var_units)
 else:
     raise ValueError(f'Conversion {conversion_function} not available.')
