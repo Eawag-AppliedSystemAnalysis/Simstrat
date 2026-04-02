@@ -31,6 +31,7 @@ RUN pip3 install FoBiS.py ford pygooglechart
 RUN pip3 install notebook
 RUN pip3 install pandas
 RUN pip3 install numpy
+RUN pip3 install xarray
 RUN pip3 install netCDF4
 
 # set alternatives for the compiler
