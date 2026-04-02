@@ -333,7 +333,7 @@ contains
       ! Surface temperature [°C]
       call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_temperature, state%T_atm)
       ! Total wind speed [m s-1]
-      call self%fabm_model%link_horizontal_data(fabm_standard_variables%wind_speed, state%uv10)
+      call self%fabm_model%link_horizontal_data(fabm_standard_variables%wind_speed, state%uv10_gas)
       ! latitude [degree_north]
       call self%fabm_model%link_horizontal_data(fabm_standard_variables%latitude, state%Lat)
       ! Depth below geoid [m], provided in GOTM but only necessary when coupling with geodetic data, not defined in Simstrat

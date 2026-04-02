@@ -169,6 +169,7 @@ module strat_simdata
       real(RK) :: p_lw
       real(RK) :: p_windf
       real(RK) :: p_absorb
+      real(RK) :: p_wind_gas
       real(RK) :: beta_sol
       real(RK) :: wat_albedo
       real(RK) :: p_sw_ice
@@ -234,7 +235,7 @@ module strat_simdata
       real(RK), dimension(:), pointer :: absorb_vol ! Absorption coeff on vol grid [m-1], FABM needs pointer attribute
       real(RK), dimension(:), pointer :: background_extinction_vol ! Background extinction for Absorption coeff [m-1], FABM needs pointer attribute      
       real(RK) :: u10, v10, Wf ! Wind speeds, wind factor
-      real(RK), pointer :: uv10 ! pointer attribute needed for FABM
+      real(RK), pointer :: uv10, uv10_gas ! pointer attribute needed for FABM
       real(RK) :: drag, u_taus ! Drag
       real(RK), pointer :: u_taub ! Bottom stress, FABM needs pointer attribute
       real(RK) :: tx, ty ! Shear stress
@@ -411,6 +412,8 @@ contains
       self%current_day_of_year = 0.0_RK
       allocate(self%uv10)
       self%uv10 = 0.0_RK
+      allocate(self%uv10_gas)
+      self%uv10_gas = 0.0_RK
       allocate(self%u_taub)
       self%u_taub = 0.0_RK      
       allocate(self%C10)
@@ -465,7 +468,7 @@ contains
       call save_array(80, self%absorb)
       call save_array_pointer(80, self%absorb_vol)
       call save_array_pointer(80, self%background_extinction_vol)
-      write(80) self%u10, self%v10, self%uv10, self%Wf
+      write(80) self%u10, self%v10, self%uv10, self%uv10_gas, self%Wf
       write(80) self%u_taub, self%drag, self%u_taus
       write(80) self%tx, self%ty
       write(80) self%C10
@@ -544,7 +547,7 @@ contains
       call read_array(81, self%absorb)
       call read_array_pointer(81, self%absorb_vol)
       call read_array_pointer(81, self%background_extinction_vol)
-      read(81) self%u10, self%v10, self%uv10, self%Wf
+      read(81) self%u10, self%v10, self%uv10, self%uv10_gas, self%Wf
       read(81) self%u_taub, self%drag, self%u_taus
       read(81) self%tx, self%ty
       read(81) self%C10

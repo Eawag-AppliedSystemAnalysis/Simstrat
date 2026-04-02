@@ -184,6 +184,7 @@ contains
          state%u10 = A_cur(1)*param%f_wind ! MS 2014: added f_wind
          state%v10 = A_cur(2)*param%f_wind ! MS 2014: added f_wind
          state%uv10 = sqrt(state%u10**2 + state%v10**2) ! AG 2014
+         state%uv10_gas = state%uv10 * param%p_wind_gas
          state%SST = A_cur(3) ! Lake surface temperature
          state%rad0 = max(A_cur(4),0.0_RK)*(1 - state%albedo_water)*(1 - param%beta_sol) * param%p_sw_water ! MS: added beta_sol and albedo_water
          state%par0 = state%rad0*swr_par
@@ -308,6 +309,7 @@ contains
             call error('Wrong forcing type (must be 1, 2, 3, 4 or 5).')
          end if
          state%uv10 = sqrt(state%u10**2 + state%v10**2) ! AG 2014
+         state%uv10_gas = state%uv10 * param%p_wind_gas
 
          if (cfg%forcing_mode /= 4) then ! Heat fluxes calculations (forcing 2, 3 and 5)
             if (state%black_ice_h + state%white_ice_h == 0) then !Free water
@@ -438,6 +440,7 @@ contains
                state%u10 = 0
                state%v10 = 0
                state%uv10 = 0
+               state%uv10_gas = state%uv10 * param%p_wind_gas
             end if
             ! save for output, not used in calculations
             state%ha = H_A
