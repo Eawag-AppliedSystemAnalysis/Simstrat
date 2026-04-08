@@ -40,29 +40,50 @@ def read_input_paths(path_to_input):
 
     # Read paths and sort them according to the first lines
     for i, file_path in enumerate(input_paths):
-        title = pd.read_csv(file_path, sep=r'\s+', nrows=2)
-        # skip one-line input and depths
-        if len(title) < 2:
+        # Don't decode header if it's not necessary
+        header = b''
+        first = []
+        second = []
+        # Store header and read first two line
+        with open(file_path, 'rb') as f:
+            i = 0
+            for line in f:
+                if i == 0:
+                    header = line
+                if i == 1:
+                    line = line.decode('ascii')
+                    first = np.fromstring(line, sep=' ')
+                if i == 2:
+                    line = line.decode('ascii')
+                    second = np.fromstring(line, sep=' ')
+                i = i + 1
+        # Skip one-line or one-column input
+        if len(second) < 2:
             continue
-        if sum(title.iloc[1,:].notnull()) < 2:
-            continue
-        # Absorption-type input
-        elif sum(title.iloc[0,:].notnull()) == 1:
+        # Absorption-type input (only one type)
+        elif len(first) == 1:
             absorption_input_paths.append(file_path)
-        elif sum(title.iloc[0,:].notnull()) == 2:
-            # Inflow-type input
-            if title.iloc[1,0] == -1:
+        elif len(first) == len(second):
+            # Inflow-type input (if the above is fulfilled there is only one inflow: deep or surface)
+            if (len(first) == 2) and (((first[0] == 1) and (first[1] == 0)) or ((first[0] == 0) and (first[1] == 1))):
                 inflow_input_paths.append(file_path)
-            # Initial-type input (Bathymetry)
-            else:
+            # Forcing- and Initial-type need header of certain format
+            header = header.decode('ascii', errors='ignore').split()
+            if len(first) * 2 != len(header):
+                continue
+            # Forcing-type input
+            elif (header[1] == '[d]'):
+                forcing_input_paths.append(file_path)
+            # Inital-type input (Bathymetry or InitialConditions)
+            elif (header[1] == '[m]'):
                 initial_input_paths.append(file_path)
-        # Forcing-type input
-        elif title.columns.values[0] == 'Time':
-            forcing_input_paths.append(file_path)
-        # Inital-type input (initial conditions)
-        elif title.columns.values[0] == 'Depth':
-            initial_input_paths.append(file_path)
-        # Skip unknown input
+            # Skip if header is of unknown format
+            else:
+                continue
+        # Inflow-type input (first row sum is total amount of inflows)
+        elif sum(first) == len(second) - 1:
+            inflow_input_paths.append(file_path)
+        # Skip if input is of unknown format
         else:
             continue
 
@@ -70,17 +91,14 @@ def read_input_paths(path_to_input):
 
 # Load data
 
-def load_absorption_data(file_path, start_day=0.0, load_units=True):
+def load_absorption_data(file_path, load_units=True):
     """
     Load absorption data from input path
     
     Parameters:
     -----------
     file_path : str
-        Path to local data file
-    start_day : float, optional
-        Simulation start day
-        (default: 0.0)  
+        Path to local data file  
     load_units : bool, optional
         Whether to load units into a data frame or not
         (default: True -> load units)        
@@ -95,14 +113,17 @@ def load_absorption_data(file_path, start_day=0.0, load_units=True):
     
     # First load inflow units into a dataframe
     if load_units:
-        data_title = pd.read_csv(file_path, nrows=0).columns[0]
-        # Strip surrounding brackets
-        units_columns = np.char.strip(np.asarray([s.split(']') for s in data_title.split('[')][1:])[1:,0])
-        # Strip .x identifiers added by pandas for duplicate units
-        for i in np.arange(1, len(units_columns)+1).astype('str'):
-            units_columns = np.array([s[:-len(f'.{i}')] if s.endswith(f'.{i}') else s for s in units_columns])
-        variable_columns = ['Depth', 'Absorption']
-        units = pd.DataFrame([units_columns], columns = variable_columns, index = ['Unit'])
+        try:
+            data_title = pd.read_csv(file_path, nrows=0).columns[0]
+            # Strip surrounding brackets
+            units_columns = np.char.strip(np.asarray([s.split(']') for s in data_title.split('[')][1:])[1:,0])
+            # Strip .x identifiers added by pandas for duplicate units
+            for i in np.arange(1, len(units_columns)+1).astype('str'):
+                units_columns = np.array([s[:-len(f'.{i}')] if s.endswith(f'.{i}') else s for s in units_columns])
+            variable_columns = ['Depth', 'Absorption']
+            units = pd.DataFrame([units_columns], columns = variable_columns, index = ['Unit'])
+        except (UnicodeDecodeError, ValueError, IndexError):
+            units = pd.DataFrame([])
     else:
         units = pd.DataFrame([])
     
@@ -125,12 +146,9 @@ def load_absorption_data(file_path, start_day=0.0, load_units=True):
     else:
         data = pd.read_csv(file_path, sep=r'\s+', skiprows = 3, usecols =[0], names = ['Datetime']).astype('float')
 
-    # add start day to Datetime
-    data['Datetime'] = data['Datetime'] + start_day
-
     return data, units.iloc[:,1:]
 
-def load_inflow_data(file_path, start_day=0.0, load_units=True):
+def load_inflow_data(file_path, load_units=True):
     """
     Load inflow data from input path
     
@@ -138,9 +156,6 @@ def load_inflow_data(file_path, start_day=0.0, load_units=True):
     -----------
     file_path : str
         Path to local data file
-    start_day : float, optional
-        Simulation start day
-        (default: 0.0)  
     load_units : bool, optional
         Whether to load units into a data frame or not
         (default: True -> load units)   
@@ -157,14 +172,17 @@ def load_inflow_data(file_path, start_day=0.0, load_units=True):
     
     # First load inflow units into a dataframe
     if load_units:
-        data_title = pd.read_csv(file_path, nrows=0).columns[0]
-        # Strip surrounding brackets
-        units_columns = np.char.strip(np.asarray([s.split(']') for s in data_title.split('[')][1:])[1:,0])
-        # Strip .x identifiers added by pandas for duplicate units
-        for i in np.arange(1, len(units_columns)+1).astype('str'):
-            units_columns = np.array([s[:-len(f'.{i}')] if s.endswith(f'.{i}') else s for s in units_columns])
-        variable_columns = np.char.strip(np.asarray([s.split(']') for s in data_title.split('[')][1:])[:-1,1])
-        units = pd.DataFrame([units_columns], columns = variable_columns, index = ['Unit'])
+        try:
+            data_title = pd.read_csv(file_path, nrows=0).columns[0]
+            # Strip surrounding brackets
+            units_columns = np.char.strip(np.asarray([s.split(']') for s in data_title.split('[')][1:])[1:,0])
+            # Strip .x identifiers added by pandas for duplicate units
+            for i in np.arange(1, len(units_columns)+1).astype('str'):
+                units_columns = np.array([s[:-len(f'.{i}')] if s.endswith(f'.{i}') else s for s in units_columns])
+            variable_columns = np.char.strip(np.asarray([s.split(']') for s in data_title.split('[')][1:])[:-1,1])
+            units = pd.DataFrame([units_columns], columns = variable_columns, index = ['Unit'])
+        except (UnicodeDecodeError, ValueError, IndexError):
+            units = pd.DataFrame([])
     else:
         units = pd.DataFrame([])
     
@@ -197,10 +215,6 @@ def load_inflow_data(file_path, start_day=0.0, load_units=True):
     else:
         surf = pd.read_csv(file_path, sep=r'\s+', skiprows = 3, usecols =[0], names = ['Datetime']).astype('float')
 
-    # add start day to Datetime
-    deep['Datetime'] = deep['Datetime'] + start_day
-    surf['Datetime'] = surf['Datetime'] + start_day
-
     return deep, surf, units.iloc[:,1:]
 
 def load_initial_data(file_path, load_units=True):
@@ -231,14 +245,17 @@ def load_initial_data(file_path, load_units=True):
 
     # Get units of all variables (except time) into a dataframe
     if load_units:
-        units_columns = np.asarray(data_title.columns[3::2].tolist())
-        # Strip .x identifiers added by pandas for duplicate units
-        for i in np.arange(1, len(units_columns)+1).astype('str'):
-            units_columns = np.array([s[:-len(f'.{i}')] if s.endswith(f'.{i}') else s for s in units_columns])
-        # Strip surrounding brackets
-        units_columns = np.char.rstrip(units_columns, ']')
-        units_columns = np.char.lstrip(units_columns, '[')
-        units = pd.DataFrame([units_columns], columns = variable_columns, index = ['Unit'])
+        try:
+            units_columns = np.asarray(data_title.columns[3::2].tolist())
+            # Strip .x identifiers added by pandas for duplicate units
+            for i in np.arange(1, len(units_columns)+1).astype('str'):
+                units_columns = np.array([s[:-len(f'.{i}')] if s.endswith(f'.{i}') else s for s in units_columns])
+            # Strip surrounding brackets
+            units_columns = np.char.rstrip(units_columns, ']')
+            units_columns = np.char.lstrip(units_columns, '[')
+            units = pd.DataFrame([units_columns], columns = variable_columns, index = ['Unit'])
+        except (UnicodeDecodeError, ValueError, IndexError):
+            units = pd.DataFrame([])
     else:
         units = pd.DataFrame([])
 
@@ -254,17 +271,14 @@ def load_initial_data(file_path, load_units=True):
     
     return data, units
 
-def load_forcing_data(file_path, start_day=0.0, load_units=True):
+def load_forcing_data(file_path, load_units=True):
     """
     Load forcing data from input path
     
     Parameters:
     -----------
     file_path : str
-        Path to local data file  
-    start_day : float, optional
-        Simulation start day
-        (default: 0.0)  
+        Path to local data file
     load_units : bool, optional
         Whether to load units into a data frame or not
         (default: True -> load units)        
@@ -279,20 +293,24 @@ def load_forcing_data(file_path, start_day=0.0, load_units=True):
 
     # First load variables with units
     data_title = pd.read_csv(file_path, sep=r'\s+', nrows=0)
+    
 
     # Create new header without time and units
     variable_columns = data_title.columns[2::2].tolist()
 
     # Get units of all variables (except time) into a dataframe
     if load_units:
-        units_columns = np.asarray(data_title.columns[3::2].tolist())
-        # Strip .x identifiers added by pandas for duplicate units
-        for i in np.arange(1, len(units_columns)+1).astype('str'):
-            units_columns = np.array([s[:-len(f'.{i}')] if s.endswith(f'.{i}') else s for s in units_columns])
-        # Strip surrounding brackets
-        units_columns = np.char.rstrip(units_columns, ']')
-        units_columns = np.char.lstrip(units_columns, '[')
-        units = pd.DataFrame([units_columns], columns = variable_columns, index = ['Unit'])
+        try:
+            units_columns = np.asarray(data_title.columns[3::2].tolist())
+            # Strip .x identifiers added by pandas for duplicate units
+            for i in np.arange(1, len(units_columns)+1).astype('str'):
+                units_columns = np.array([s[:-len(f'.{i}')] if s.endswith(f'.{i}') else s for s in units_columns])
+            # Strip surrounding brackets
+            units_columns = np.char.rstrip(units_columns, ']')
+            units_columns = np.char.lstrip(units_columns, '[')
+            units = pd.DataFrame([units_columns], columns = variable_columns, index = ['Unit'])
+        except (UnicodeDecodeError, ValueError, IndexError):
+            units = pd.DataFrame([])
     else:
         units = pd.DataFrame([])
 
@@ -301,8 +319,5 @@ def load_forcing_data(file_path, start_day=0.0, load_units=True):
 
     # Load data with new variable header
     data = pd.read_csv(file_path, sep=r'\s+', skiprows=1, names = variable_columns).astype('float')
-
-    # add start day to Datetime
-    data['Datetime'] = data['Datetime'] + start_day
     
     return data, units
