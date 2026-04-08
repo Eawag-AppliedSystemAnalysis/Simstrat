@@ -16,6 +16,6 @@ To execute the conversion inside the Simstrat build environment make sure you ar
 python3 ./convert_output.py
 ~~~
 
-> **N.B.** The input conversion is quite robust but not 100% to all input formats
-> Forcing, Bathymetry and Initial Conditions require header of format: variable [unit]
-> For the units Inflow and Absorption require header of format: variable [unit]
+> **N.B.** The input conversion is quite robust but not 100% to all input formats.
+> Forcing, Bathymetry and Initial Conditions require header of format: variable [unit].
+> For correct units, Inflow and Absorption require header of format: variable [unit].
