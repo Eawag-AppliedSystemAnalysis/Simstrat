@@ -175,61 +175,31 @@ contains
       self%fabm_config => fabm_config
       self%output_config => output_config
       self%grid => grid
+
+      ! Amount of Simstrat variables
       self%n_vars_Simstrat = size(output_config%output_vars)
 
+      ! Amount of FABM variables
       if (self%model_config%couple_fabm) then
-         ! allocate FABM output structure for interior state variables
-         ! allocate (output_config%output_vars_fabm_interior_state) ! We don't know yet how many variables
-         ! output_config%output_vars_fabm_interior_state%names => state%fabm_state_names(1:state%n_fabm_interior_state)
-         ! output_config%output_vars_fabm_interior_state%values => state%fabm_interior_state
+         
+         ! FABM state variables
          self%n_vars_fabm_interior_state = state%n_fabm_interior_state
-         
-         ! allocate FABM output structure for bottom state variables
-         ! allocate (output_config%output_vars_fabm_bottom_state) ! We don't know yet how many variables
-         ! output_config%output_vars_fabm_bottom_state%names => state%fabm_state_names(state%n_fabm_interior_state + 1 : state%n_fabm_interior_state + state%n_fabm_bottom_state)
-         ! output_config%output_vars_fabm_bottom_state%values => state%fabm_bottom_state
          self%n_vars_fabm_bottom_state = state%n_fabm_bottom_state
-         
-         ! allocate FABM output structure for surface state variables
-         ! allocate (output_config%output_vars_fabm_surface_state) ! We don't know yet how many variables
-         ! output_config%output_vars_fabm_surface_state%names => state%fabm_state_names(state%n_fabm_interior_state + state%n_fabm_bottom_state + 1 : state%n_fabm_state)
-         ! output_config%output_vars_fabm_surface_state%values => state%fabm_surface_state
          self%n_vars_fabm_surface_state = state%n_fabm_surface_state
 
-         ! Allocate FABM output structure for diagnostic variables if necessary
+         ! FABM diagnostic variables
          if (fabm_config%output_diag_vars) then
-            ! allocate (output_config%output_vars_fabm_diagnostic_interior) ! We don't know yet how many variables
-            ! output_config%output_vars_fabm_diagnostic_interior%names => state%fabm_diagnostic_names(1:state%n_fabm_diagnostic_interior)
-            ! output_config%output_vars_fabm_diagnostic_interior%values => state%fabm_diagnostic_interior
             self%n_vars_fabm_diagnostic_interior = state%n_fabm_diagnostic_interior
-
-            ! allocate (output_config%output_vars_fabm_diagnostic_horizontal) ! We don't know yet how many variables
-            ! output_config%output_vars_fabm_diagnostic_horizontal%names => state%fabm_diagnostic_names(state%n_fabm_diagnostic_interior + 1:state%n_fabm_diagnostic)
-            ! output_config%output_vars_fabm_diagnostic_horizontal%values => state%fabm_diagnostic_horizontal
             self%n_vars_fabm_diagnostic_horizontal = state%n_fabm_diagnostic_horizontal
          else
             self%n_vars_fabm_diagnostic_interior = 0
             self%n_vars_fabm_diagnostic_horizontal = 0
          end if
 
-         ! Allocate FABM output structure for repaired variables if necessary
+         ! FABM repaired variables
          if (fabm_config%output_repaired_vars) then
-            ! allocate FABM output structure for interior state variables
-            ! allocate (output_config%output_vars_fabm_repaired_interior) ! We don't know yet how many variables
-            ! output_config%output_vars_fabm_repaired_interior%names => state%fabm_repaired_names(1:state%n_fabm_repaired_interior_min + state%n_fabm_repaired_interior_max)
-            ! output_config%output_vars_fabm_repaired_interior%values => state%fabm_repaired_interior
             self%n_vars_fabm_repaired_interior = state%n_fabm_repaired_interior
-            
-            ! allocate FABM output structure for bottom state variables
-            ! allocate (output_config%output_vars_fabm_repaired_bottom) ! We don't know yet how many variables
-            ! output_config%output_vars_fabm_repaired_bottom%names => state%fabm_repaired_names(state%n_fabm_repaired_interior_min + state%n_fabm_repaired_interior_max + 1:state%n_fabm_repaired_interior_min + state%n_fabm_repaired_interior_max + state%n_fabm_repaired_bottom_min + state%n_fabm_repaired_bottom_max)
-            ! output_config%output_vars_fabm_repaired_bottom%values => state%fabm_repaired_bottom
             self%n_vars_fabm_repaired_bottom = state%n_fabm_repaired_bottom
-            
-            ! allocate FABM output structure for surface state variables
-            ! allocate (output_config%output_vars_fabm_repaired_surface) ! We don't know yet how many variables
-            ! output_config%output_vars_fabm_repaired_surface%names => state%fabm_repaired_names(state%n_fabm_repaired_interior_min + state%n_fabm_repaired_interior_max + state%n_fabm_repaired_bottom_min + state%n_fabm_repaired_bottom_max + 1:state%n_fabm_repaired)
-            ! output_config%output_vars_fabm_repaired_surface%values => state%fabm_repaired_surface
             self%n_vars_fabm_repaired_surface = state%n_fabm_repaired_surface
          else
             self%n_vars_fabm_repaired_interior = 0
@@ -247,9 +217,13 @@ contains
          self%n_vars_fabm_repaired_bottom = 0
          self%n_vars_fabm_repaired_surface = 0
       end if
+
+      ! Total amounts of FABM variables
       self%n_vars_fabm_state = self%n_vars_fabm_interior_state + self%n_vars_fabm_bottom_state + self%n_vars_fabm_surface_state
       self%n_vars_fabm_diagnostic = self%n_vars_fabm_diagnostic_interior + self%n_vars_fabm_diagnostic_horizontal
       self%n_vars_fabm_repaired = self%n_vars_fabm_repaired_interior + self%n_vars_fabm_repaired_bottom + self%n_vars_fabm_repaired_surface
+
+      ! Total amount of variables
       self%n_vars = self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic + self%n_vars_fabm_repaired
 
       ! If output times are given in file
