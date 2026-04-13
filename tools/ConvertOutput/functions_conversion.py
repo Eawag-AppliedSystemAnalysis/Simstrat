@@ -32,6 +32,15 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, inflow_mo
 
     # Initialise empty list of DataArray
     data_list = []
+
+    # Get variable attributes from list_variables
+    csv_file = os.path.join(path_to_output, f'list_variables.dat')
+    if not os.path.exists(csv_file):
+        print(f'Variable attribute file {csv_file} does not exist.')
+    elif os.stat(csv_file).st_size == 0:
+        print(f'Empty variable attribute file {csv_file} ignored.')
+    else:
+        attributes = pd.read_csv(csv_file, index_col=0, sep = ', ')
     
     # Add data variables from output folder
     for i, variable in enumerate(var_names):
@@ -66,6 +75,9 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, inflow_mo
         # If the value is constant in depth, drop that dimension (necessary for FABM surface diagnostic variables)
         if np.all(data['Depth'].values == data['Depth'].values[0]):
             data = data.isel(Depth=0, drop=True)
+        # Add attributes
+        data.attrs['long_name'] = attributes['Long Name'][var_names[i]]
+        data.attrs['units'] = attributes['Units'][var_names[i]]
         # Append to data list
         data_list.append(data)
 
