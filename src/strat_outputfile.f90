@@ -310,7 +310,50 @@ contains
          end if
       end if
 
+      call list_variables(self, output_config)
+
       call open_files(self, output_config, grid, snapshot_file_exists)
+
+   end subroutine
+
+   subroutine list_variables(self, output_config)
+      class(InterpolatingLogger), intent(inout) :: self
+      class(OutputConfig), target :: output_config
+
+      ! Local variables
+      integer :: i, unit, status
+      character(len=256) :: file_path
+
+      ! Construct the file path
+      file_path = output_config%PathOut//'/list_variables.dat'
+
+      ! Create new file or overwrite already existing one
+      open(newunit=unit, file=file_path, action='write', iostat = status)
+      if (status .ne. 0) then
+         call error('Failed to open or create file: ' // trim(file_path) // '.')
+      end if
+
+      ! Write the header
+      write(unit, '(A)', advance = 'no') 'Short Name, '
+      write(unit, '(A)', advance = 'no') 'Long Name, '
+      write(unit, '(A)') 'Units'
+
+      ! Write the names and units of all variables
+      do i = 1, self%n_vars
+         if (i < (self%n_vars_Simstrat + 1)) then
+            self%output_config%log_variable => self%output_config%output_vars(i)
+         else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + 1)) then
+            self%output_config%log_variable => self%output_config%output_vars_fabm_state(i - self%n_vars_Simstrat)
+         else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic + 1)) then
+            self%output_config%log_variable => self%output_config%output_vars_fabm_state(i - (self%n_vars_Simstrat + self%n_vars_fabm_state))
+         else
+            self%output_config%log_variable => self%output_config%output_vars_fabm_state(i - (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic))
+         end if
+         write(unit, '(A)', advance='no') '"'//trim(self%output_config%log_variable%name)//'", '
+         write(unit, '(A)', advance='no') '"'//trim(self%output_config%log_variable%long_name)//'", '
+         write(unit, '(A)') '"'//trim(self%output_config%log_variable%units)//'"'
+      end do
+      close(unit)
 
    end subroutine
 
