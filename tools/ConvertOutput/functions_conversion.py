@@ -1,6 +1,7 @@
 # Load libraries
 
 import os
+import warnings
 import pandas as pd
 import numpy as np
 import xarray as xr
@@ -34,13 +35,13 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, inflow_mo
     data_list = []
 
     # Get variable attributes from list_variables
-    csv_file = os.path.join(path_to_output, f'list_variables.dat')
+    csv_file = os.path.join(path_to_output, f'_variables.dat')
     if not os.path.exists(csv_file):
         print(f'Variable attribute file {csv_file} does not exist.')
     elif os.stat(csv_file).st_size == 0:
         print(f'Empty variable attribute file {csv_file} ignored.')
     else:
-        attributes = pd.read_csv(csv_file, index_col=0, sep = ', ')
+        attributes = pd.read_csv(csv_file, skipinitialspace=True, index_col=0)
     
     # Add data variables from output folder
     for i, variable in enumerate(var_names):
@@ -69,15 +70,24 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, inflow_mo
             df = df[:len(df)-1]
             time_values = time_values[:len(time_values)-1]
             data = xr.DataArray(df.values.astype(float), dims=['Datetime', 'Depth'], coords={'Datetime': time_values.astype(float), 'Depth': df.columns.astype(float)}, name=var_names[i])
-        # If the value is constant in time, drop that dimension
-        if np.all(data['Datetime'].values == data['Datetime'].values[0]):
-            data = data.isel(Datetime=0, drop=True)
-        # If the value is constant in depth, drop that dimension (necessary for FABM surface diagnostic variables)
-        if np.all(data['Depth'].values == data['Depth'].values[0]):
-            data = data.isel(Depth=0, drop=True)
+        # Ignore warning appearing for empty results
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', message='Degrees of freedom <= 0 for slice')  
+            # If the value is constant in time, drop that dimension
+            if np.all(data.var(dim='Datetime', skipna=True, ddof=0).fillna(0.0) == 0.0):
+                data = data.mean(dim='Datetime', skipna=True)
+            # If the value is constant in depth, drop that dimension (necessary for FABM surface diagnostic variables)
+            if np.all(data.var(dim='Depth', skipna=True, ddof=0).fillna(0.0) == 0.0):
+                data = data.mean(dim='Depth', skipna=True)
         # Add attributes
         data.attrs['long_name'] = attributes['Long Name'][var_names[i]]
         data.attrs['units'] = attributes['Units'][var_names[i]]
+        if attributes['Minimum'][var_names[i]] != '-':
+            data.attrs['valid_min'] = attributes['Minimum'][var_names[i]]
+        if attributes['Maximum'][var_names[i]] != '-':
+            data.attrs['valid_max'] = attributes['Maximum'][var_names[i]]
+        data.attrs['title'] = attributes['Type'][var_names[i]]
+        data.attrs['grid_position'] = attributes['Grid Position'][var_names[i]]
         # Append to data list
         data_list.append(data)
 
@@ -106,7 +116,8 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, inflow_mo
                 data = df.set_index(['Datetime']).to_xarray()[df.columns[j+1]]
                 if len(units) > 0:
                     data.attrs['units'] = units.iloc[0,j]
-                data.attrs['Reference Depth'] = depths[j]
+                data.attrs['title'] = 'Absorption Input'
+                data.attrs['reference_depth'] = depths[j]
                 data_list.append(data)
                 
         # Add inflow-type input data
@@ -145,7 +156,8 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, inflow_mo
                     data = deep.set_index(['Datetime']).to_xarray()[deep.columns[j+1]]
                     if len(units) > 0:
                         data.attrs['units'] = units.iloc[0,0]
-                    data.attrs['Injection Depth'] = deep_depths[j]
+                    data.attrs['title'] = 'Deep Inflow (Density-driven)'
+                    data.attrs['injection_depth'] = deep_depths[j]
                     data_list.append(data)
             # Deep inflow mode 1
             else:
@@ -154,7 +166,8 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, inflow_mo
                         data = deep.set_index(['Datetime']).to_xarray()[deep.columns[j+1]]
                         if len(units) > 0:
                             data.attrs['units'] = units.iloc[0,1]
-                        data.attrs['Injection Depth'] = str(deep_depths[j]) + ' m to ' + str(deep_depths[j+1]) + ' m'
+                        data.attrs['title'] = 'Deep Inflow (Manual)'
+                        data.attrs['injection_depth'] = str(deep_depths[j]) + ' m to ' + str(deep_depths[j+1]) + ' m'
                         data_list.append(data)
             # Surface inflow (as deep inflow with mode 1)
             for j in range(len(surf.columns)-1):
@@ -162,7 +175,8 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, inflow_mo
                     data = surf.set_index(['Datetime']).to_xarray()[surf.columns[j+1]]
                     if len(units) > 0:
                         data.attrs['units'] = units.iloc[0,1]
-                    data.attrs['Injection Depth'] = str(surf_depths[j]) + ' m to ' + str(surf_depths[j+1]) + ' m'
+                    data.attrs['title'] = 'Surface Inflow'
+                    data.attrs['injection_depth'] = str(surf_depths[j]) + ' m to ' + str(surf_depths[j+1]) + ' m'
                     data_list.append(data)
                 
         # Add inital-type input data
@@ -180,6 +194,7 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, inflow_mo
                 data = df.set_index(['Depth']).to_xarray()[df.columns[j+1]]
                 if len(units) > 0:
                     data.attrs['units'] = units.iloc[0,j]
+                data.attrs['title'] = 'Initial Condition'
                 data_list.append(data)
                 
         # Add forcing-type input data
@@ -197,6 +212,7 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, inflow_mo
                 data = df.set_index(['Datetime']).to_xarray()[df.columns[j+1]]
                 if len(units) > 0:
                     data.attrs['units'] = units.iloc[0,j]
+                data.attrs['title'] = 'Forcing Input'
                 data_list.append(data)
 
     # Assemble all Variables into a Dataset
