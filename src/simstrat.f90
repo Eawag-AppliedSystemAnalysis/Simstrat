@@ -133,7 +133,7 @@ program simstrat_main
 
    ! Initialize biogeochemical model "FABM" if used
    if (simdata%model_cfg%couple_fabm) then
-      call mod_fabm%init(simdata%model, simdata%fabm_cfg, simdata%sim_cfg, simdata%grid)
+      call mod_fabm%init(simdata%model, simdata%fabm_cfg, simdata%output_cfg, simdata%sim_cfg, simdata%grid)
    end if
 
    ! If there is advection (due to inflow)
@@ -300,16 +300,16 @@ contains
          ! If there is inflow/outflow do advection part
          if (simdata%model_cfg%inflow_mode > 0) then
             ! Treat inflow/outflow
-            call mod_lateral%update(simdata%model)
+            call mod_lateral%update(simdata%model, simdata%output_cfg)
             ! Surface-bound in/outflow, no in/outflow for bottom state variables
             if (simdata%model%n_fabm_bottom_state > 0 .or. simdata%model%n_fabm_surface_state > 0) then
-               call mod_lateral%update_bound(simdata%model)
+               call mod_lateral%update_bound(simdata%model, simdata%output_cfg)
             end if
             ! Set old lake level (before it is changed by advection module)
             simdata%grid%lake_level_old = simdata%grid%z_face(simdata%grid%ubnd_fce)
 
             ! Update lake advection using the inflow/outflow data
-            call mod_advection%update(simdata%model)
+            call mod_advection%update(simdata%model, simdata%output_cfg)
             ! Update lake level
             simdata%grid%lake_level = simdata%grid%z_face(simdata%grid%ubnd_fce)
          end if
@@ -341,7 +341,7 @@ contains
 
          ! Update biogeochemistry
          if (simdata%model_cfg%couple_fabm) then
-            call mod_fabm%update(simdata%model, simdata%fabm_cfg, simdata%grid)
+            call mod_fabm%update(simdata%model, simdata%fabm_cfg, simdata%output_cfg, simdata%grid)
          end if
 
          ! Call logger to write files

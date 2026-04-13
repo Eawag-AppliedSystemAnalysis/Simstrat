@@ -77,6 +77,11 @@ module simstrat_fabm
 
       ! Index of current bottom location (pelagic-benthic interface)
       integer, pointer :: bottom_index => null()
+
+      ! Indices of diagnostic variables in FABM
+      integer, dimension(:), allocatable :: diagnostic_interior_index, diagnostic_horizontal_index
+      ! Names of repaired variables
+      character(len=256), allocatable :: repaired_interior_names(:), repaired_bottom_names(:), repaired_surface_names(:)
       
       ! Define additional FABM variables, used by bgc models
       ! Simstrat contribution to attenuation_coefficient_of_shortwave_flux and attenuation_coefficient_of_photosynthetic_radiative_flux (background extinction)
@@ -94,11 +99,12 @@ contains
 
    ! Initialize: called once within the initialization of Simstrat
    ! Sets up memory, reads FABM configuration from fabm_cfg_file, links the external Simstrat variables and sets the initial conditions of FABM variables
-   subroutine init(self, state, fabm_cfg, sim_cfg, grid)
+   subroutine init(self, state, fabm_cfg, output_cfg, sim_cfg, grid)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       class(ModelState), intent(inout) :: state
       class(FABMConfig), intent(inout) :: fabm_cfg
+      class(OutputConfig), intent(inout) :: output_cfg
       class(SimConfig), intent(in) :: sim_cfg
       class(StaggeredGrid), intent(in) :: grid
 
@@ -180,63 +186,87 @@ contains
       ! At this point (after the call to fabm_create_model), memory should be
       ! allocated to hold the values of all size(fabm_model%*_state_variables) state variables
       ! All state variable values are combined in an array *_state with shape grid%nz_grid, state%n_fabm_*_state
+      ! Additionally arrays for minimum and maximum values and the output structure are allocated
       ! Interior state variables
       state%n_fabm_interior_state = size(self%fabm_model%interior_state_variables)
       if (state%n_fabm_interior_state > 0) then
          interior_or_bottom_exist = .true.
          allocate(state%fabm_interior_state(grid%nz_grid, state%n_fabm_interior_state))
-         allocate(state%min_int(state%n_fabm_interior_state))
-         allocate(state%max_int(state%n_fabm_interior_state))
       end if
       ! Bottom state variables
       state%n_fabm_bottom_state = size(self%fabm_model%bottom_state_variables)
       if (state%n_fabm_bottom_state > 0) then
          interior_or_bottom_exist = .true.
          allocate(state%fabm_bottom_state(kmax_bot, state%n_fabm_bottom_state))
-         allocate(state%min_bt(state%n_fabm_bottom_state))
-         allocate(state%max_bt(state%n_fabm_bottom_state))
       end if
       ! Surface state variables
       state%n_fabm_surface_state = size(self%fabm_model%surface_state_variables)
       if (state%n_fabm_surface_state > 0) then
          allocate(state%fabm_surface_state(state%n_fabm_surface_state))
-         allocate(state%min_sf(state%n_fabm_surface_state))
-         allocate(state%max_sf(state%n_fabm_surface_state))
       end if
 
       ! Total amount of states
       state%n_fabm_state = state%n_fabm_interior_state + state%n_fabm_bottom_state + state%n_fabm_surface_state
 
       ! Allocate memory for additional information (name, units, long_name, minimum, maximum, missing_value) on state variables
-      allocate(state%fabm_state_names(state%n_fabm_state))
+      if (state%n_fabm_state > 0) allocate(output_cfg%output_vars_fabm_state(state%n_fabm_state))
 
-      ! Point FABM to fields that hold state variable data and get additional information
+      ! Point FABM to fields that hold state variable data and set additional information
 
       ! Interior state variables
       if (state%n_fabm_interior_state > 0) then
          do ivar = 1, state%n_fabm_interior_state
             call self%fabm_model%link_interior_state_data(ivar, state%fabm_interior_state(:,ivar))
-            state%fabm_state_names(ivar) = self%fabm_model%interior_state_variables(ivar)%name
-            state%min_int(ivar) = self%fabm_model%interior_state_variables(ivar)%minimum
-            state%max_int(ivar) = self%fabm_model%interior_state_variables(ivar)%maximum
+            output_cfg%output_vars_fabm_state(ivar)%name = self%fabm_model%interior_state_variables(ivar)%name
+            output_cfg%output_vars_fabm_state(ivar)%long_name = self%fabm_model%interior_state_variables(ivar)%long_name
+            output_cfg%output_vars_fabm_state(ivar)%units = self%fabm_model%interior_state_variables(ivar)%units
+            output_cfg%output_vars_fabm_state(ivar)%minimum = self%fabm_model%interior_state_variables(ivar)%minimum
+            output_cfg%output_vars_fabm_state(ivar)%maximum = self%fabm_model%interior_state_variables(ivar)%maximum
+            ! Special case for WET pelagic mirror variables (treat as benthic variable)
+            if (self%fabm_model%interior_state_variables(ivar)%name(len_trim(self%fabm_model%interior_state_variables(ivar)%name)-2:) == '_PV') then
+               output_cfg%output_vars_fabm_state(ivar)%benthic = .true.
+               if (fabm_cfg%bottom_everywhere) then 
+                  output_cfg%output_vars_fabm_state(ivar)%values => state%fabm_interior_state(:, ivar)
+                  output_cfg%output_vars_fabm_state(ivar)%volume_grid = .true.
+               else
+                  output_cfg%output_vars_fabm_state(ivar)%global_value => state%fabm_interior_state(1, ivar)
+               end if
+            else
+               output_cfg%output_vars_fabm_state(ivar)%values => state%fabm_interior_state(:, ivar)
+               output_cfg%output_vars_fabm_state(ivar)%volume_grid = .true.
+            end if
          end do
       end if
       ! Bottom state variables: link for bottom-most layer to fulfill FABM requirements, link for other layers later
       if (state%n_fabm_bottom_state > 0) then
          do ivar = 1, state%n_fabm_bottom_state
             call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1,ivar))
-            state%fabm_state_names(state%n_fabm_interior_state + ivar) = self%fabm_model%bottom_state_variables(ivar)%name
-            state%min_bt(ivar) = self%fabm_model%bottom_state_variables(ivar)%minimum
-            state%max_bt(ivar) = self%fabm_model%bottom_state_variables(ivar)%maximum
+            output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + ivar)%name = self%fabm_model%bottom_state_variables(ivar)%name
+            output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + ivar)%long_name = self%fabm_model%bottom_state_variables(ivar)%long_name
+            output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + ivar)%units = self%fabm_model%bottom_state_variables(ivar)%units
+            output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + ivar)%minimum = self%fabm_model%bottom_state_variables(ivar)%minimum
+            output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + ivar)%maximum = self%fabm_model%bottom_state_variables(ivar)%maximum
+            output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + ivar)%benthic = .true.
+            if (fabm_cfg%bottom_everywhere) then 
+               output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + ivar)%values => state%fabm_bottom_state(:, ivar)
+               output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + ivar)%volume_grid = .true.
+            else
+               output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + ivar)%global_value => state%fabm_bottom_state(1, ivar)
+            end if
          end do
       end if
       ! Surface state variables
       if (state%n_fabm_surface_state > 0) then
          do ivar = 1, state%n_fabm_surface_state
             call self%fabm_model%link_surface_state_data(ivar, state%fabm_surface_state(ivar))
-            state%fabm_state_names(state%n_fabm_interior_state + state%n_fabm_bottom_state + ivar) = self%fabm_model%surface_state_variables(ivar)%name
-            state%min_sf(ivar) = self%fabm_model%surface_state_variables(ivar)%minimum
-            state%max_sf(ivar) = self%fabm_model%surface_state_variables(ivar)%maximum
+            output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + state%n_fabm_bottom_state + ivar)%name = self%fabm_model%surface_state_variables(ivar)%name
+            output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + state%n_fabm_bottom_state + ivar)%long_name = self%fabm_model%surface_state_variables(ivar)%long_name
+            output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + state%n_fabm_bottom_state + ivar)%units = self%fabm_model%surface_state_variables(ivar)%units
+            output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + state%n_fabm_bottom_state + ivar)%minimum = self%fabm_model%surface_state_variables(ivar)%minimum
+            output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + state%n_fabm_bottom_state + ivar)%maximum = self%fabm_model%surface_state_variables(ivar)%maximum
+            output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + state%n_fabm_bottom_state + ivar)%global_value => state%fabm_surface_state(ivar)
+            output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + state%n_fabm_bottom_state + ivar)%volume_grid = .false.
+            output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + state%n_fabm_bottom_state + ivar)%face_grid = .false.
          end do
       end if
       
@@ -368,72 +398,17 @@ contains
       end if
 
       ! Write all diagnostic and aggregate variables to list_diagnostic
-      ! Allocate arrays for diagnostic variables in SetDiagnosticVars and retrieve their index in the list of all interior and horizontal diagnostic variables
+      ! Allocate arrays for diagnostic variables in FABMDiagnosticVars
       if (fabm_cfg%output_diag_vars) then
          call list_diagnostic(self, fabm_cfg)
-         call set_fabm_diagnostic_vars(self, state, fabm_cfg)
-         if (state%n_fabm_diagnostic_interior > 0) then
-            allocate(state%fabm_diagnostic_interior(grid%nz_grid, state%n_fabm_diagnostic_interior))
-         end if
-         if (state%n_fabm_diagnostic_horizontal > 0) then
-            diagnostic_horizontal_exist = .true.
-            allocate(state%fabm_diagnostic_horizontal(kmax_bot, state%n_fabm_diagnostic_horizontal))
-         end if
+         call set_fabm_diagnostic_vars(self, state, fabm_cfg, output_cfg, grid)
       else
          call warn('Set OutputDiagnosticVars in FABMConfig to true to output FABM diagnostic variables.')
       end if
 
-      ! Allocate arrays for repaired variables in list_repaired.dat and initialize them with the boundary value
+      ! Allocate arrays for repaired variables in list_repaired and initialize them with the boundary value
       if (fabm_cfg%output_repaired_vars) then
-         call set_fabm_repaired_vars(state, fabm_cfg)
-         if (state%n_fabm_repaired_interior_min + state%n_fabm_repaired_interior_max > 0) then
-            allocate(state%fabm_repaired_interior(grid%nz_grid, state%n_fabm_repaired_interior_min + state%n_fabm_repaired_interior_max))
-            state%fabm_repaired_interior = ieee_value(state%fabm_repaired_interior, ieee_quiet_nan)
-            do ivar = 1, state%n_fabm_interior_state 
-               index = findloc(state%fabm_repaired_names, trim(self%fabm_model%interior_state_variables(ivar)%name)//'_minimum', dim = 1)
-               if (index > 0) then
-                  state%fabm_repaired_interior(:, index) = state%min_int(ivar)
-                  continue
-               end if
-               index = findloc(state%fabm_repaired_names, trim(self%fabm_model%interior_state_variables(ivar)%name)//'_maximum', dim = 1)
-               if (index > 0) then
-                  state%fabm_repaired_interior(:, index) = state%max_int(ivar)
-               end if
-            end do
-            if (any(ieee_is_nan(state%fabm_repaired_interior))) call error('Subroutine set_fabm_repaired_vars failed')
-         end if
-         if (state%n_fabm_repaired_bottom_min + state%n_fabm_repaired_bottom_max > 0) then
-            allocate(state%fabm_repaired_bottom(kmax_bot, state%n_fabm_repaired_bottom_min + state%n_fabm_repaired_bottom_max))
-            state%fabm_repaired_bottom = ieee_value(state%fabm_repaired_bottom, ieee_quiet_nan)
-            do ivar = 1, state%n_fabm_bottom_state 
-               index = findloc(state%fabm_repaired_names, trim(self%fabm_model%bottom_state_variables(ivar)%name)//'_minimum', dim = 1)
-               if (index > 0) then
-                  state%fabm_repaired_bottom(:, index - state%n_fabm_repaired_interior_max - state%n_fabm_repaired_interior_min) = state%min_bt(ivar)
-                  continue
-               end if 
-               index = findloc(state%fabm_repaired_names, trim(self%fabm_model%bottom_state_variables(ivar)%name)//'_maximum', dim = 1)
-               if (index > 0) then
-                  state%fabm_repaired_bottom(:, index - state%n_fabm_repaired_interior_max - state%n_fabm_repaired_interior_min) = state%max_bt(ivar)
-               end if
-            end do
-            if (any(ieee_is_nan(state%fabm_repaired_interior))) call error('Subroutine set_fabm_repaired_vars failed')
-         end if
-         if (state%n_fabm_repaired_surface_min + state%n_fabm_repaired_surface_max > 0) then
-            allocate(state%fabm_repaired_surface(state%n_fabm_repaired_surface_min + state%n_fabm_repaired_surface_max))
-            state%fabm_repaired_surface = ieee_value(state%fabm_repaired_surface, ieee_quiet_nan)
-            do ivar = 1, state%n_fabm_surface_state 
-               index = findloc(state%fabm_repaired_names, trim(self%fabm_model%surface_state_variables(ivar)%name)//'_minimum', dim = 1)
-               if (index > 0) then
-                  state%fabm_repaired_surface(index - state%n_fabm_repaired_interior_max - state%n_fabm_repaired_interior_min - state%n_fabm_repaired_bottom_max - state%n_fabm_repaired_bottom_min) = state%min_sf(ivar)
-                  continue
-               end if 
-               index = findloc(state%fabm_repaired_names, trim(self%fabm_model%surface_state_variables(ivar)%name)//'_maximum', dim = 1)
-               if (index > 0) then
-                  state%fabm_repaired_surface(index - state%n_fabm_repaired_interior_max - state%n_fabm_repaired_interior_min - state%n_fabm_repaired_bottom_max - state%n_fabm_repaired_bottom_min) = state%max_sf(ivar)
-               end if
-            end do
-            if (any(ieee_is_nan(state%fabm_repaired_interior))) call error('Subroutine set_fabm_repaired_vars failed')
-         end if
+         call set_fabm_repaired_vars(self, state, fabm_cfg, output_cfg, grid)
       else
          call warn('FABM repaired variables not registered. Set OutputRepairedVars in FABMConfig to true to do so.')
       end if
@@ -477,11 +452,12 @@ contains
 
    ! The update function is called in the main loop of simstrat (in simstrat.f90) at every time step
    ! Particle atmospheric, pelagic and benthic fluxes and diffusion are computed to update bgc state variable values
-   subroutine update(self, state, fabm_cfg, grid)
+   subroutine update(self, state, fabm_cfg, output_cfg, grid)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       class(ModelState), intent(inout) :: state
       class(FABMConfig), intent(in) :: fabm_cfg
+      class(OutputConfig), intent(in) :: output_cfg
       class(StaggeredGrid), intent(in) :: grid
 
       ! Local variables
@@ -493,8 +469,8 @@ contains
          ! of all tracers, combining the Simstrat transport terms with the FABM biogeochemical source
          ! terms and fluxes (sms, flux) and vertical velocities (velocity). This results in an updated interior_state.
          do ivar = 1, state%n_fabm_interior_state
-            ! Special case for WET pelagic mirror variables (no diffusion)
-            if (state%fabm_state_names(ivar)(len_trim(state%fabm_state_names(ivar))-2:) == '_PV') then
+            ! No diffusion for benthic variables
+            if (output_cfg%output_vars_fabm_state(ivar)%benthic) then
                if (fabm_cfg%bottom_everywhere) then
                   state%fabm_interior_state(:, ivar) = state%fabm_interior_state(:, ivar) + state%dt * self%flux_bt(:, ivar) * grid%dAz_norm(:)
                else
@@ -516,39 +492,38 @@ contains
          end do
 
          ! 2a. Simstrat check interior FABM bounds
-         index = 1
          do ivar = 1, state%n_fabm_interior_state 
-            if (any(state%fabm_interior_state(:, ivar) < state%min_int(ivar))) then
+            if (any(state%fabm_interior_state(:, ivar) < self%fabm_model%interior_state_variables(ivar)%minimum)) then
                if (fabm_cfg%output_repaired_vars) then
                   ! Register repaired variable and store out-of-bound value
-                  index = findloc(state%fabm_repaired_names, trim(self%fabm_model%interior_state_variables(ivar)%name)//'_minimum', dim = 1)
+                  index = findloc(self%repaired_interior_names, trim(self%fabm_model%interior_state_variables(ivar)%name)//'_minimum', dim = 1)
                   if (index > 0) then
                      do k = 1, grid%nz_grid
-                        if (state%fabm_interior_state(k, ivar) < state%min_int(ivar)) then
+                        if (state%fabm_interior_state(k, ivar) < self%fabm_model%interior_state_variables(ivar)%minimum) then
                            state%fabm_repaired_interior(k, index) = state%fabm_interior_state(k, ivar)
                         else
-                           state%fabm_repaired_interior(k, index) = state%min_int(ivar)
+                           state%fabm_repaired_interior(k, index) = self%fabm_model%interior_state_variables(ivar)%minimum
                         end if
                      end do
                   else
-                     call list_repaired(fabm_cfg, self%fabm_model%interior_state_variables(ivar)%name, 'minimum', state%min_int(ivar))
+                     call list_repaired(self, fabm_cfg, self%fabm_model%interior_state_variables(ivar)%name, 'minimum', self%fabm_model%interior_state_variables(ivar)%minimum)
                   end if
                end if
             end if  
-            if (any(state%fabm_interior_state(:, ivar) > state%max_int(ivar))) then
+            if (any(state%fabm_interior_state(:, ivar) > self%fabm_model%interior_state_variables(ivar)%maximum)) then
                if (fabm_cfg%output_repaired_vars) then
                   ! Register repaired variable and store out-of-bound value
-                  index = findloc(state%fabm_repaired_names, trim(self%fabm_model%interior_state_variables(ivar)%name)//'_maximum', dim = 1)
+                  index = findloc(self%repaired_interior_names, trim(self%fabm_model%interior_state_variables(ivar)%name)//'_maximum', dim = 1)
                   if (index > 0) then
                      do k = 1, grid%nz_grid
-                        if (state%fabm_interior_state(k, ivar) > state%max_int(ivar)) then
+                        if (state%fabm_interior_state(k, ivar) > self%fabm_model%interior_state_variables(ivar)%maximum) then
                            state%fabm_repaired_interior(k, index) = state%fabm_interior_state(k, ivar)
                         else
-                           state%fabm_repaired_interior(k, index) = state%min_int(ivar)
+                           state%fabm_repaired_interior(k, index) = self%fabm_model%interior_state_variables(ivar)%maximum
                         end if
                      end do
                   else
-                     call list_repaired(fabm_cfg, self%fabm_model%interior_state_variables(ivar)%name, 'maximum', state%max_int(ivar))
+                     call list_repaired(self, fabm_cfg, self%fabm_model%interior_state_variables(ivar)%name, 'maximum', self%fabm_model%interior_state_variables(ivar)%maximum)
                   end if
                end if
             end if
@@ -573,39 +548,37 @@ contains
 
          ! 2b. Simstrat check bottom FABM bounds
          do ivar = 1, state%n_fabm_bottom_state  
-            if (any(state%fabm_bottom_state(:, ivar) < state%min_bt(ivar))) then
+            if (any(state%fabm_bottom_state(:, ivar) < self%fabm_model%bottom_state_variables(ivar)%minimum)) then
                if (fabm_cfg%output_repaired_vars) then
                   ! Register repaired variable and store out-of-bound value
-                  index = findloc(state%fabm_repaired_names, trim(self%fabm_model%bottom_state_variables(ivar)%name)//'_minimum', dim = 1)
+                  index = findloc(self%repaired_bottom_names, trim(self%fabm_model%bottom_state_variables(ivar)%name)//'_minimum', dim = 1)
                   if (index > 0) then
-                     index = index - state%n_fabm_repaired_interior_max - state%n_fabm_repaired_interior_min
                      do k = 1, kmax_bot
-                        if (state%fabm_bottom_state(k, ivar) < state%min_bt(ivar)) then
+                        if (state%fabm_bottom_state(k, ivar) < self%fabm_model%bottom_state_variables(ivar)%minimum) then
                            state%fabm_repaired_bottom(k, index) = state%fabm_bottom_state(k, ivar)
                         else
-                           state%fabm_repaired_bottom(k, index) = state%min_bt(ivar)
+                           state%fabm_repaired_bottom(k, index) = self%fabm_model%bottom_state_variables(ivar)%minimum
                         end if
                      end do
                   else
-                     call list_repaired(fabm_cfg, self%fabm_model%bottom_state_variables(ivar)%name, 'minimum', state%min_bt(ivar))
+                     call list_repaired(self, fabm_cfg, self%fabm_model%bottom_state_variables(ivar)%name, 'minimum', self%fabm_model%bottom_state_variables(ivar)%minimum)
                   end if
                end if
             end if  
-            if (any(state%fabm_bottom_state(:, ivar) > state%max_bt(ivar))) then
+            if (any(state%fabm_bottom_state(:, ivar) > self%fabm_model%bottom_state_variables(ivar)%maximum)) then
                if (fabm_cfg%output_repaired_vars) then
                   ! Register repaired variable and store out-of-bound value
-                  index = findloc(state%fabm_repaired_names, trim(self%fabm_model%bottom_state_variables(ivar)%name)//'_maximum', dim = 1)
+                  index = findloc(self%repaired_bottom_names, trim(self%fabm_model%bottom_state_variables(ivar)%name)//'_maximum', dim = 1)
                   if (index > 0) then
-                     index = index - state%n_fabm_repaired_interior_max - state%n_fabm_repaired_interior_min
                      do k = 1, kmax_bot
-                        if (state%fabm_bottom_state(k, ivar) > state%max_bt(ivar)) then
+                        if (state%fabm_bottom_state(k, ivar) > self%fabm_model%bottom_state_variables(ivar)%maximum) then
                            state%fabm_repaired_bottom(k, index) = state%fabm_bottom_state(k, ivar)
                         else
-                           state%fabm_repaired_bottom(k, index) = state%max_bt(ivar)
+                           state%fabm_repaired_bottom(k, index) = self%fabm_model%bottom_state_variables(ivar)%maximum
                         end if
                      end do
                   else
-                     call list_repaired(fabm_cfg, self%fabm_model%bottom_state_variables(ivar)%name, 'maximum', state%max_bt(ivar))
+                     call list_repaired(self, fabm_cfg, self%fabm_model%bottom_state_variables(ivar)%name, 'maximum', self%fabm_model%bottom_state_variables(ivar)%maximum)
                   end if
                end if
             end if
@@ -647,27 +620,25 @@ contains
 
          ! 2c. Simstrat check surface FABM bounds
          do ivar = 1, state%n_fabm_surface_state  
-            if (state%fabm_surface_state(ivar) < state%min_sf(ivar)) then
+            if (state%fabm_surface_state(ivar) < self%fabm_model%surface_state_variables(ivar)%minimum) then
                if (fabm_cfg%output_repaired_vars) then
                   ! Register repaired variable and store out-of-bound value
-                  index = findloc(state%fabm_repaired_names, trim(self%fabm_model%surface_state_variables(ivar)%name)//'_minimum', dim = 1)
+                  index = findloc(self%repaired_surface_names, trim(self%fabm_model%surface_state_variables(ivar)%name)//'_minimum', dim = 1)
                   if (index > 0) then
-                     index = index - state%n_fabm_repaired_bottom_max - state%n_fabm_repaired_bottom_min - state%n_fabm_repaired_interior_max - state%n_fabm_repaired_interior_min
-                     state%fabm_repaired_surface(index) = state%min_sf(ivar)
+                     state%fabm_repaired_surface(index) = self%fabm_model%surface_state_variables(ivar)%minimum
                   else
-                     call list_repaired(fabm_cfg, self%fabm_model%surface_state_variables(ivar)%name, 'minimum', state%min_sf(ivar))
+                     call list_repaired(self, fabm_cfg, self%fabm_model%surface_state_variables(ivar)%name, 'minimum', self%fabm_model%surface_state_variables(ivar)%minimum)
                   end if
                end if
             end if  
-            if (state%fabm_surface_state(ivar) > state%max_sf(ivar)) then
+            if (state%fabm_surface_state(ivar) > self%fabm_model%surface_state_variables(ivar)%maximum) then
                if (fabm_cfg%output_repaired_vars) then
                   ! Register repaired variable and store out-of-bound value
-                  index = findloc(state%fabm_repaired_names, trim(self%fabm_model%surface_state_variables(ivar)%name)//'_maximum', dim = 1)
+                  index = findloc(self%repaired_surface_names, trim(self%fabm_model%surface_state_variables(ivar)%name)//'_maximum', dim = 1)
                   if (index > 0) then
-                     index = index - state%n_fabm_repaired_bottom_max - state%n_fabm_repaired_bottom_min - state%n_fabm_repaired_interior_max - state%n_fabm_repaired_interior_min
-                     state%fabm_repaired_surface(index) = state%max_sf(ivar)
+                     state%fabm_repaired_surface(index) = self%fabm_model%surface_state_variables(ivar)%maximum
                   else
-                     call list_repaired(fabm_cfg, self%fabm_model%surface_state_variables(ivar)%name, 'maximum', state%max_sf(ivar))
+                     call list_repaired(self, fabm_cfg, self%fabm_model%surface_state_variables(ivar)%name, 'maximum', self%fabm_model%surface_state_variables(ivar)%maximum)
                   end if
                end if
             end if
@@ -695,7 +666,6 @@ contains
 
       ! Initialize (at first call) or update fluxes, sources and vertical movement
       if (state%first_timestep) then
-         ivar = 2
          write (6, *) 'Initializing FABM calculations...'
       end if
 
@@ -795,13 +765,13 @@ contains
       if (fabm_cfg%output_diag_vars) then
          if (state%n_fabm_diagnostic_interior > 0) then
             do ivar_diag = 1, state%n_fabm_diagnostic_interior
-               index = state%diagnostic_index(ivar_diag)
+               index = self%diagnostic_interior_index(ivar_diag)
                state%fabm_diagnostic_interior(:, ivar_diag) = self%fabm_model%get_interior_diagnostic_data(index)
             end do
          end if
          if (state%n_fabm_diagnostic_horizontal > 0) then
             do ivar_diag = 1, state%n_fabm_diagnostic_horizontal
-               index = state%diagnostic_index(state%n_fabm_diagnostic_interior + ivar_diag)
+               index = self%diagnostic_horizontal_index(ivar_diag)
                state%fabm_diagnostic_horizontal(1, ivar_diag) = self%fabm_model%get_horizontal_diagnostic_data(index)
             end do
          end if
@@ -826,7 +796,7 @@ contains
             call self%fabm_model%finalize_outputs()
             if (fabm_cfg%output_diag_vars) then
                do ivar_diag = 1, state%n_fabm_diagnostic_horizontal
-                  index = state%diagnostic_index(state%n_fabm_diagnostic_interior + ivar_diag)
+                  index = self%diagnostic_horizontal_index(ivar_diag)
                   state%fabm_diagnostic_horizontal(k_bot, ivar_diag) = self%fabm_model%get_horizontal_diagnostic_data(index)
                end do
             end if
@@ -1041,18 +1011,20 @@ contains
    end subroutine list_diagnostic
 
    ! Read names of diagnostic Vars in SetDiagnosticVars file
-   subroutine set_fabm_diagnostic_vars(self, state, fabm_cfg)
+   subroutine set_fabm_diagnostic_vars(self, state, fabm_cfg, output_cfg, grid)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       class(ModelState), intent(inout) :: state
       class(FABMConfig), intent(in) :: fabm_cfg
+      class(OutputConfig), intent(inout) :: output_cfg
+      class(StaggeredGrid), intent(in) :: grid
 
       ! Local variables
       integer :: i, j, n, n_int, n_hor, unit, status, unit_list, status_list
       character(len=256) :: line, line_trim, short_name, short_name_trim, long_name, units, output, file_path
       integer, parameter :: max_lines = 10000 ! Maximum amount of diagnostic variables in SetDiagnosticVars file
       character(len=256), dimension(max_lines) :: temp_names ! Same len as fabm_diagnostic_names
-      integer, dimension(max_lines) :: temp_index
+      integer, dimension(max_lines) :: fabm_index
       logical, dimension(max_lines) :: is_int
 
       ! Read from SetDiagVars
@@ -1100,7 +1072,7 @@ contains
                      call error('Too many lines in '//trim(fabm_cfg%diag_vars)//', increase max_lines in set_fabm_diagnostic_vars.')
                   end if
                   temp_names(n) = trim(short_name)
-                  temp_index(n) = 0
+                  fabm_index(n) = 0
                end if
             end do
             ! Close list_diagnostic_interior.dat
@@ -1125,7 +1097,7 @@ contains
                      call error('Too many lines in '//trim(fabm_cfg%diag_vars)//', increase max_lines in set_fabm_diagnostic_vars.')
                   end if
                   temp_names(n) = trim(short_name)
-                  temp_index(n) = 0
+                  fabm_index(n) = 0
                end if
             end do
             ! Close list_diagnostic_horizontal.dat
@@ -1136,7 +1108,7 @@ contains
                call error('Too many lines in '//trim(fabm_cfg%diag_vars)//', increase max_lines in set_fabm_diagnostic_vars.')
             end if
             temp_names(n) = trim(line)
-            temp_index(n) = 0
+            fabm_index(n) = 0
          end if
       end do
       ! Close the file
@@ -1148,7 +1120,7 @@ contains
          do j = 1, size(self%fabm_model%interior_diagnostic_variables)
             if (self%fabm_model%interior_diagnostic_variables(j)%name == temp_names(i)) then
                self%fabm_model%interior_diagnostic_variables(j)%save = .true.
-               temp_index(i) = j
+               fabm_index(i) = j
                is_int(i) = .true.
                n_int = n_int + 1
             end if
@@ -1157,45 +1129,76 @@ contains
          do j = 1, size(self%fabm_model%horizontal_diagnostic_variables)
             if (self%fabm_model%horizontal_diagnostic_variables(j)%name == temp_names(i)) then
                self%fabm_model%horizontal_diagnostic_variables(j)%save = .true.
-               temp_index(i) = j
+               fabm_index(i) = j
                is_int(i) = .false.
                n_hor = n_hor + 1
             end if
          end do
          ! If not found in fabm_model
-         if (temp_index(i) == 0) then
+         if (fabm_index(i) == 0) then
             call error('FABM diagnostic variable '//trim(temp_names(i))//' not found.')
          end if
       end do
 
-      ! Allocate array of proper size
+      ! Set amount of diagnostic variables and allocate arrays of proper size
       state%n_fabm_diagnostic = n
       state%n_fabm_diagnostic_interior = n_int
       state%n_fabm_diagnostic_horizontal = n_hor
-      allocate(state%fabm_diagnostic_names(n))
-      allocate(state%diagnostic_index(n))
+      if (n_int > 0) then
+         allocate(state%fabm_diagnostic_interior(grid%nz_grid, n_int))
+         allocate(self%diagnostic_interior_index(n_int))
+      end if
+      if (n_hor > 0) then
+         diagnostic_horizontal_exist = .true.
+         allocate(state%fabm_diagnostic_horizontal(kmax_bot, n_hor))
+         allocate(self%diagnostic_horizontal_index(n_hor))
+      end if
 
-      ! Copy names and indices to array
+      ! Allocate array for and set output information (name, units, long_name, minimum, maximum, missing_value) on diagnostic variables
+      ! Also store the index in FABM
+      if (n > 0) allocate(output_cfg%output_vars_fabm_diagnostic(n))
+      ! j is the index in output_vars_fabm_diagnostic
       j = 1
+      ! Interior diagnostic variables are set first
       do i = 1, n
          if (is_int(i)) then
-            state%fabm_diagnostic_names(j) = temp_names(i)
-            state%diagnostic_index(j) = temp_index(i)
+            output_cfg%output_vars_fabm_diagnostic(j)%name = self%fabm_model%interior_diagnostic_variables(fabm_index(i))%name
+            output_cfg%output_vars_fabm_diagnostic(j)%long_name = self%fabm_model%interior_diagnostic_variables(fabm_index(i))%long_name
+            output_cfg%output_vars_fabm_diagnostic(j)%units = self%fabm_model%interior_diagnostic_variables(fabm_index(i))%units
+            output_cfg%output_vars_fabm_diagnostic(j)%minimum = self%fabm_model%interior_diagnostic_variables(fabm_index(i))%minimum
+            output_cfg%output_vars_fabm_diagnostic(j)%maximum = self%fabm_model%interior_diagnostic_variables(fabm_index(i))%maximum
+            output_cfg%output_vars_fabm_diagnostic(j)%values => state%fabm_diagnostic_interior(:, j)
+            output_cfg%output_vars_fabm_diagnostic(j)%volume_grid = .true.
+            self%diagnostic_interior_index(j) = fabm_index(i)
             j = j + 1
          end if
       end do
+      ! Horizontal diagnostic variables are set second
+      ! Note: FABM does not differentiate between bottom and surface diagnostic variables: here all are treated as bottom diagnostic variables
       do i = 1, n
          if (.not. is_int(i)) then
-            state%fabm_diagnostic_names(j) = temp_names(i)
-            state%diagnostic_index(j) = temp_index(i)
+            output_cfg%output_vars_fabm_diagnostic(j)%name = self%fabm_model%horizontal_diagnostic_variables(fabm_index(i))%name
+            output_cfg%output_vars_fabm_diagnostic(j)%long_name = self%fabm_model%horizontal_diagnostic_variables(fabm_index(i))%long_name
+            output_cfg%output_vars_fabm_diagnostic(j)%units = self%fabm_model%horizontal_diagnostic_variables(fabm_index(i))%units
+            output_cfg%output_vars_fabm_diagnostic(j)%minimum = self%fabm_model%horizontal_diagnostic_variables(fabm_index(i))%minimum
+            output_cfg%output_vars_fabm_diagnostic(j)%maximum = self%fabm_model%horizontal_diagnostic_variables(fabm_index(i))%maximum
+            output_cfg%output_vars_fabm_diagnostic(j)%benthic = .true.
+            if (fabm_cfg%bottom_everywhere) then 
+               output_cfg%output_vars_fabm_diagnostic(j)%values => state%fabm_diagnostic_horizontal(:, j - n_int)
+               output_cfg%output_vars_fabm_diagnostic(j)%volume_grid = .true.
+            else
+               output_cfg%output_vars_fabm_diagnostic(j)%global_value => state%fabm_diagnostic_horizontal(1, j - n_int)
+            end if
+            self%diagnostic_horizontal_index(j - n_int) = fabm_index(i)
             j = j + 1
          end if
       end do
    end subroutine set_fabm_diagnostic_vars
 
    ! Add to list of repaired variables
-   subroutine list_repaired(fabm_cfg, variable, boundary, boundary_value)
+   subroutine list_repaired(self, fabm_cfg, variable, boundary, boundary_value)
       ! Arguments
+      class(SimstratFABM), intent(in) :: self
       class(FABMConfig), intent(in) :: fabm_cfg
       character(len=*), intent(in) :: variable
       character(len=*), intent(in) :: boundary
@@ -1247,35 +1250,37 @@ contains
    end subroutine list_repaired
 
    ! Register repaired variables in RepairedVars file
-   subroutine set_fabm_repaired_vars(state, fabm_cfg)
+   subroutine set_fabm_repaired_vars(self, state, fabm_cfg, output_cfg, grid)
       ! Arguments
+      class(SimstratFABM), intent(inout) :: self
       class(ModelState), intent(inout) :: state
       class(FABMConfig), intent(in) :: fabm_cfg
+      class(OutputConfig), intent(inout) :: output_cfg
+      class(StaggeredGrid), intent(in) :: grid
 
       ! Local variables
-      integer :: i, j, n, n_int_min, n_int_max, n_bt_min, n_bt_max, n_sf_min, n_sf_max, unit, status
+      integer :: i, j, n, n_int, n_bt, n_sf, unit, status
       character(len=256) :: file_path
       character(len=256) :: name
       character(len=16) :: bound
       integer, parameter :: max_lines = 100 ! Maximum amount of repaired variables in RepairedVars file
-      character(len=256), dimension(max_lines) :: temp_names
+      character(len=256), dimension(max_lines)  :: temp_names
       character(len=16), dimension(max_lines) :: temp_bounds
       character(len=16), dimension(max_lines) :: temp_types
+      integer, dimension(max_lines) :: fabm_index
 
       ! Initialize counts to zero
       n = 0
-      n_int_min = 0
-      n_int_max = 0
-      n_bt_min = 0
-      n_bt_max = 0
-      n_sf_min = 0
-      n_sf_max = 0
+      n_int = 0
+      n_bt = 0
+      n_sf = 0
 
       ! Construct the file path
       file_path = trim(fabm_cfg%config_path)//'/list_repaired.dat'
 
       ! Read from RepairedVars
       open(newunit=unit, action='read', status='old', file=file_path, iostat = status)
+      ! Create empty file if no file is provided
       if (status .ne. 0) then
          call warn('No FABM Repaired Variables provided. Empty repaired variables file '// trim(file_path) //' created.')
          open(newunit=unit, action='write', status='new', file=file_path, iostat = status)
@@ -1287,15 +1292,11 @@ contains
          write(unit, '(A)', advance = 'no') 'Boundary reached, '
          write(unit, '(A)') 'Boundary value'
          close(unit)
-         ! Write to state and allocate array of proper size
-         state%n_fabm_repaired = n
-         state%n_fabm_repaired_interior_min = n_int_min
-         state%n_fabm_repaired_interior_max = n_int_max
-         state%n_fabm_repaired_bottom_min = n_bt_min
-         state%n_fabm_repaired_bottom_max = n_bt_max
-         state%n_fabm_repaired_surface_min = n_sf_min
-         state%n_fabm_repaired_surface_max = n_sf_max
-         allocate(state%fabm_repaired_names(n))
+         ! Set amount of repaired variables to 0
+         state%n_fabm_repaired = 0
+         state%n_fabm_repaired_interior = 0
+         state%n_fabm_repaired_bottom = 0
+         state%n_fabm_repaired_surface = 0
          return
       else
          write(6,*) 'Reading ', trim(file_path)
@@ -1311,129 +1312,144 @@ contains
          if (len_trim(name) == 0) cycle  ! Skip empty lines, if any
          n = n + 1
          if (n > max_lines) then
-            call error('Too many lines in '//trim(file_path)//', increase max_lines in set_fabm_repaired_vars')
+            call error('Too many lines in '//trim(file_path)//', increase max_lines in set_fabm_repaired_vars.')
          end if
          temp_names(n) = trim(name)
+         if (.not. ((trim(bound) == 'minimum') .or. (trim(bound) == 'maximum'))) then
+            call error('FABM repaired variable '//trim(temp_names(n))//' has invalid bound, set to "minimum" or "maximum".')
+         end if
          temp_bounds(n) = trim(bound)
          temp_types(n) = 'undefined'
-         ! Register as interior variable
+         fabm_index(n) = 0
+         ! Search in interior variables
          do j = 1, state%n_fabm_interior_state
-            if (state%fabm_state_names(j) == temp_names(n)) then
+            if (self%fabm_model%interior_state_variables(j)%name == temp_names(n)) then
                temp_types(n) = 'interior'
-               if (temp_bounds(n) == 'minimum') then
-                  n_int_min = n_int_min + 1
-               else if  (temp_bounds(n) == 'maximum') then
-                  n_int_max = n_int_max + 1
-               else
-                  call error('FABM repaired variable '//trim(temp_names(n))//' has invalid bound')
-               end if
+               fabm_index(n) = j
+               n_int = n_int + 1
             end if
          end do
-         ! Register as bottom variable
+         ! Search in bottom variables
          do j = 1, state%n_fabm_bottom_state
-            if (state%fabm_state_names(state%n_fabm_interior_state + j) == temp_names(n)) then
-               if (temp_types(n) /= 'undefined') then
-                  call error('Variable '//trim(temp_names(n))//' defined multiple times.')
-               else
-                  temp_types(n) = 'bottom'
-               end if
-               if (temp_bounds(n) == 'minimum') then
-                  n_bt_min = n_bt_min + 1
-               else if  (temp_bounds(n) == 'maximum') then
-                  n_bt_max = n_bt_max + 1
-               else
-                  call error('FABM repaired variable '//trim(temp_names(n))//' has invalid bound')
-               end if
+            if (self%fabm_model%bottom_state_variables(j)%name == temp_names(n)) then
+               temp_types(n) = 'bottom'
+               fabm_index(n) = j
+               n_bt = n_bt + 1
             end if
          end do
-         ! Register as surface variable
+         ! Search in surface variables
          do j = 1, state%n_fabm_surface_state
-            if (state%fabm_state_names(state%n_fabm_interior_state + state%n_fabm_bottom_state + j) == temp_names(n)) then
-               if (temp_types(n) /= 'undefined') then
-                  call error('Variable '//trim(temp_names(n))//' defined multiple times.')
-               else
-                  temp_types(n) = 'surface'
-               end if
-               if (temp_bounds(n) == 'minimum') then
-                  n_sf_min = n_sf_min + 1
-               else if  (temp_bounds(n) == 'maximum') then
-                  n_sf_max = n_sf_max + 1
-               else
-                  call error('FABM repaired variable '//trim(temp_names(n))//' has invalid bound')
-               end if
+            if (self%fabm_model%surface_state_variables(j)%name == temp_names(n)) then
+               temp_types(n) = 'surface'
+               fabm_index(n) = j
+               n_sf = n_sf + 1
             end if
          end do
-         ! If not found in fabm_model
-         if (temp_types(n) == 'undefined') then
+         ! Call error if not found in fabm_model
+         if (fabm_index(n) == 0) then
             call error('FABM repaired variable '//trim(temp_names(n))//' not found. Control '//trim(file_path)//'.')
          end if
       end do
       ! Close the file
       close(unit)
 
-      ! Add type and boundary to name
-      do i = 1, n
-         temp_names(i) = trim(temp_names(i))//'_'//trim(temp_bounds(i))
-      end do
-
-      ! Write to state and allocate array of proper size
+      ! Set amount of repaired variables and allocate arrays of proper
       state%n_fabm_repaired = n
-      state%n_fabm_repaired_interior_min = n_int_min
-      state%n_fabm_repaired_interior_max = n_int_max
-      state%n_fabm_repaired_bottom_min = n_bt_min
-      state%n_fabm_repaired_bottom_max = n_bt_max
-      state%n_fabm_repaired_surface_min = n_sf_min
-      state%n_fabm_repaired_surface_max = n_sf_max
-      allocate(state%fabm_repaired_names(n))
+      state%n_fabm_repaired_interior = n_int
+      state%n_fabm_repaired_bottom = n_bt
+      state%n_fabm_repaired_surface = n_sf
+      if (n_int > 0) then
+         allocate(state%fabm_repaired_interior(grid%nz_grid, n_int))
+         allocate(self%repaired_interior_names(n_int))
+      end if
+      if (n_bt > 0) then
+         allocate(state%fabm_repaired_bottom(kmax_bot, n_bt))
+         allocate(self%repaired_interior_names(n_bt))
+      end if
+      if (n_sf > 0) then
+         allocate(state%fabm_repaired_surface(n_sf))
+         allocate(self%repaired_interior_names(n_sf))
+      end if
 
-      ! Copy names to array for interior below minimum repaired variables
+      ! Allocate array for and set output information (name, units, long_name, minimum, maximum, missing_value) on repaired variables
+      ! Also initialize state arrays to minimum / maximum value
+      ! Also add names of repaired variables to arrays in self
+      if (n > 0) allocate(output_cfg%output_vars_fabm_repaired(n))
+      ! j is the index in output_vars_fabm_diagnostic
       j = 1
+      ! Interior repaired variables are set first
       do i = 1, n
-         if (temp_types(i) == 'interior' .AND. temp_bounds(i) == 'minimum') then
-            state%fabm_repaired_names(j) = temp_names(i)
+         if (temp_types(i) == 'interior') then
+            output_cfg%output_vars_fabm_repaired(j)%name = trim(self%fabm_model%interior_state_variables(fabm_index(i))%name)//'_'//trim(temp_bounds(i))
+            output_cfg%output_vars_fabm_repaired(j)%long_name = trim(self%fabm_model%interior_state_variables(fabm_index(i))%long_name)//' '//trim(temp_bounds(i))//' value'
+            output_cfg%output_vars_fabm_repaired(j)%units = self%fabm_model%interior_state_variables(fabm_index(i))%units
+            if (temp_bounds(i) == 'minimum') then
+               state%fabm_repaired_interior(:, j) = self%fabm_model%interior_state_variables(fabm_index(i))%minimum
+               output_cfg%output_vars_fabm_repaired(j)%maximum = self%fabm_model%interior_state_variables(fabm_index(i))%minimum
+            else
+               state%fabm_repaired_interior(:, j) = self%fabm_model%interior_state_variables(fabm_index(i))%maximum
+               output_cfg%output_vars_fabm_repaired(j)%minimum = self%fabm_model%interior_state_variables(fabm_index(i))%maximum
+            end if
+            ! Special case for WET pelagic mirror variables (treat as benthic variable)
+            if (self%fabm_model%interior_state_variables(fabm_index(i))%name(len_trim(self%fabm_model%interior_state_variables(fabm_index(i))%name)-2:) == '_PV') then
+               output_cfg%output_vars_fabm_repaired(j)%benthic = .true.
+               if (fabm_cfg%bottom_everywhere) then 
+                  output_cfg%output_vars_fabm_repaired(j)%values => state%fabm_repaired_interior(:, j)
+                  output_cfg%output_vars_fabm_repaired(j)%volume_grid = .true.
+               else
+                  output_cfg%output_vars_fabm_repaired(j)%global_value => state%fabm_repaired_interior(1, j)
+               end if
+            else
+               output_cfg%output_vars_fabm_repaired(j)%values => state%fabm_repaired_interior(:, j)
+               output_cfg%output_vars_fabm_repaired(j)%volume_grid = .true.
+            end if
+            self%repaired_interior_names(j) = trim(self%fabm_model%interior_state_variables(fabm_index(i))%name)//'_'//trim(temp_bounds(i))
             j = j + 1
          end if
       end do
-      ! Copy names to array for interior above maximum repaired variables
-      j = n_int_min + 1
+      ! Bottom repaired variables are set second
       do i = 1, n
-         if (temp_types(i) == 'interior' .AND. temp_bounds(i) == 'maximum') then
-            state%fabm_repaired_names(j) = temp_names(i)
+         if (temp_types(i) == 'bottom') then
+            output_cfg%output_vars_fabm_repaired(j)%name = trim(self%fabm_model%bottom_state_variables(fabm_index(i))%name)//'_'//trim(temp_bounds(i))
+            output_cfg%output_vars_fabm_repaired(j)%long_name = trim(self%fabm_model%bottom_state_variables(fabm_index(i))%long_name)//' '//trim(temp_bounds(i))//' value'
+            output_cfg%output_vars_fabm_repaired(j)%units = self%fabm_model%bottom_state_variables(fabm_index(i))%units
+            if (temp_bounds(i) == 'minimum') then
+               state%fabm_repaired_bottom(:, j - n_int) = self%fabm_model%bottom_state_variables(fabm_index(i))%minimum
+               output_cfg%output_vars_fabm_repaired(j)%maximum = self%fabm_model%bottom_state_variables(fabm_index(i))%minimum
+            else
+               state%fabm_repaired_bottom(:, j - n_int) = self%fabm_model%bottom_state_variables(fabm_index(i))%maximum
+               output_cfg%output_vars_fabm_repaired(j)%minimum = self%fabm_model%bottom_state_variables(fabm_index(i))%maximum
+            end if
+            output_cfg%output_vars_fabm_repaired(j)%benthic = .true.
+            if (fabm_cfg%bottom_everywhere) then 
+               output_cfg%output_vars_fabm_repaired(j)%values => state%fabm_repaired_bottom(:, j - n_int)
+               output_cfg%output_vars_fabm_repaired(j)%volume_grid = .true.
+            else
+               output_cfg%output_vars_fabm_repaired(j)%global_value => state%fabm_repaired_bottom(1, j - n_int)
+            end if
+            self%repaired_bottom_names(j - n_int) = trim(self%fabm_model%bottom_state_variables(fabm_index(i))%name)//'_'//trim(temp_bounds(i))
             j = j + 1
          end if
       end do
-      ! Copy names to array for bottom below minimum repaired variables 
-      j = n_int_min + n_int_max + 1
+      ! Surface repaired variables are set last
       do i = 1, n
-         if (temp_types(i) == 'bottom' .AND. temp_bounds(i) == 'minimum') then
-            state%fabm_repaired_names(j) = temp_names(i)
+         if (temp_types(i) == 'surface') then
+            output_cfg%output_vars_fabm_repaired(j)%name = trim(self%fabm_model%surface_state_variables(fabm_index(i))%name)//'_'//trim(temp_bounds(i))
+            output_cfg%output_vars_fabm_repaired(j)%long_name = trim(self%fabm_model%surface_state_variables(fabm_index(i))%long_name)//' '//trim(temp_bounds(i))//' value'
+            output_cfg%output_vars_fabm_repaired(j)%units = self%fabm_model%surface_state_variables(fabm_index(i))%units
+            if (temp_bounds(i) == 'minimum') then
+               state%fabm_repaired_surface(j - n_int - n_bt) = self%fabm_model%surface_state_variables(fabm_index(i))%minimum
+               output_cfg%output_vars_fabm_repaired(j)%maximum = self%fabm_model%surface_state_variables(fabm_index(i))%minimum
+            else
+               state%fabm_repaired_surface(j - n_int - n_bt) = self%fabm_model%surface_state_variables(fabm_index(i))%maximum
+               output_cfg%output_vars_fabm_repaired(j)%minimum = self%fabm_model%surface_state_variables(fabm_index(i))%maximum
+            end if
+            output_cfg%output_vars_fabm_repaired(j)%global_value => state%fabm_repaired_surface(j - n_int - n_bt)
+            self%repaired_interior_names(j - n_int - n_bt) = trim(self%fabm_model%surface_state_variables(fabm_index(i))%name)//'_'//trim(temp_bounds(i))
             j = j + 1
          end if
       end do
-      ! Copy names to array for bottom above maximum repaired variables
-      j = n_int_min + n_int_max + n_bt_min + 1
-      do i = 1, n
-         if (temp_types(i) == 'bottom' .AND. temp_bounds(i) == 'maximum') then
-            state%fabm_repaired_names(j) = temp_names(i)
-            j = j + 1
-         end if
-      end do
-      ! Copy names to array for surface below minimum repaired variables
-      j = n_int_min + n_int_max + n_bt_min + n_bt_max + 1
-      do i = 1, n
-         if (temp_types(i) == 'surface' .AND. temp_bounds(i) == 'minimum') then
-            state%fabm_repaired_names(j) = temp_names(i)
-            j = j + 1
-         end if
-      end do
-      ! Copy names to array for surface above maximum repaired variables
-      j = n_int_min + n_int_max + n_bt_min + n_bt_max + n_sf_min + 1
-      do i = 1, n
-         if (temp_types(i) == 'surface' .AND. temp_bounds(i) == 'maximum') then
-            state%fabm_repaired_names(j) = temp_names(i)
-            j = j + 1
-         end if
-      end do
+
    end subroutine set_fabm_repaired_vars
 
    ! Deallocate memory
@@ -1448,6 +1464,11 @@ contains
       if (allocated(self%flux_sf)) deallocate(self%flux_sf)
       if (allocated(self%sms_sf)) deallocate(self%sms_sf)
       if (allocated(self%velocity)) deallocate(self%velocity)
+      if (allocated(self%diagnostic_interior_index)) deallocate(self%diagnostic_interior_index)
+      if (allocated(self%diagnostic_horizontal_index)) deallocate(self%diagnostic_horizontal_index)
+      if (allocated(self%repaired_interior_names)) deallocate(self%repaired_interior_names)
+      if (allocated(self%repaired_bottom_names)) deallocate(self%repaired_bottom_names)
+      if (allocated(self%repaired_surface_names)) deallocate(self%repaired_surface_names)
    end subroutine deallocate_fabm
 
    ! Finalize the coupling

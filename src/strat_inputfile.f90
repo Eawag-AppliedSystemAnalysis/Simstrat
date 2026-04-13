@@ -187,170 +187,183 @@ contains
                case('V')
                   ! Horizontal velocity in y direction [m s-1]
                   self%simdata%output_cfg%output_vars(i)%name = "V"
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Horizontal velocity in y direction"
+                  self%simdata%output_cfg%output_vars(i)%units = "m s-1"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%V
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
-                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
 
                case('U')
                   ! Horizontal velocity in x direction [m s-1]
                   self%simdata%output_cfg%output_vars(i)%name = "U"
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Horizontal velocity in x direction"
+                  self%simdata%output_cfg%output_vars(i)%units = "m s-1"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%U
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
-                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
 
                case('T')
                   ! Temperature [°C]
                   self%simdata%output_cfg%output_vars(i)%name = "T"
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Temperature"
+                  self%simdata%output_cfg%output_vars(i)%units = "m s-1"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%T
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
-                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
 
                case('S')
                   ! Salinity [‰]
                   self%simdata%output_cfg%output_vars(i)%name = "S"
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Salinity"
+                  self%simdata%output_cfg%output_vars(i)%units = "‰"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%S
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
-                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
 
                case('num')
                   ! Turbulent diffusivity for momentum  (viscosity) [m2 s]
                   self%simdata%output_cfg%output_vars(i)%name = "num"
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Turbulent diffusivity for momentum (viscosity)"
+                  self%simdata%output_cfg%output_vars(i)%units = "m2 s"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%num
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
                case('nuh')
                   ! Turbulent diffusivity for temperature [m2 s]
                   self%simdata%output_cfg%output_vars(i)%name = "nuh"
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Turbulent diffusivity for temperature"
+                  self%simdata%output_cfg%output_vars(i)%units = "m2 s"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%nuh
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
                case('NN')
                   ! Brunt-Väisälä frequency [s-1]
                   self%simdata%output_cfg%output_vars(i)%name = "NN"
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Brunt-Väisälä frequency"
+                  self%simdata%output_cfg%output_vars(i)%units = "s-1"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%NN
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
                case('k')
                   ! Turbulent kinetic energy (TKE) [J kg-1]
                   self%simdata%output_cfg%output_vars(i)%name = "k"
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Turbulent kinetic energy (TKE)"
+                  self%simdata%output_cfg%output_vars(i)%units = "J kg-1"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%k
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
                case('eps')
                   ! TKE dissipation rate [W kg-1]
                   self%simdata%output_cfg%output_vars(i)%name = "eps"
+                  self%simdata%output_cfg%output_vars(i)%long_name = "TKE dissipation rate"
+                  self%simdata%output_cfg%output_vars(i)%units = "W kg-1"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%eps
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
                case('P')
                   ! Shear stress production P [W kg-1]
                   self%simdata%output_cfg%output_vars(i)%name = "P"
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Shear stress production"
+                  self%simdata%output_cfg%output_vars(i)%units = "W kg-1"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%P
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
                case('B')
                   ! Buoyancy production [W kg-1]
                   self%simdata%output_cfg%output_vars(i)%name = "B"
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Buoyancy production"
+                  self%simdata%output_cfg%output_vars(i)%units = "W kg-1"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%B
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
                case('Ps')
                   ! Production of TKE due to internal seiching [W kg-1]
                   self%simdata%output_cfg%output_vars(i)%name = "Ps"
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Production of TKE due to internal seiching"
+                  self%simdata%output_cfg%output_vars(i)%units = "W kg-1"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%P_seiche
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
                case('HA')
                   ! Infrared radiation from sky [W m-2]
                   self%simdata%output_cfg%output_vars(i)%name = "HA"
-                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%ha
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
-                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Infrared radiation from sky"
+                  self%simdata%output_cfg%output_vars(i)%units = "W m-2"
+                  self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%ha
 
                case('HW')
-                  ! Infrared ratidation from water [W m-2]
+                  ! Infrared radiation from water [W m-2]
                   self%simdata%output_cfg%output_vars(i)%name = "HW"
-                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%hw
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
-                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Infrared radiation from water"
+                  self%simdata%output_cfg%output_vars(i)%units = "W m-2"
+                  self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%hw
 
                case('HK')
                   ! Sensible heat flux from water [W m-2]
                   self%simdata%output_cfg%output_vars(i)%name = "HK"
-                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%hk
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
-                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Sensible heat flux from water"
+                  self%simdata%output_cfg%output_vars(i)%units = "W m-2"
+                  self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%hk
 
                case('HV')
                   ! Latent heat flux from water [W m-2]
                   self%simdata%output_cfg%output_vars(i)%name = "HV"
-                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%hv
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
-                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Latent heat flux from water"
+                  self%simdata%output_cfg%output_vars(i)%units = "W m-2"
+                  self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%hv
 
                case('Rad0')
                   ! Solar radiation at surface [W m-2]
                   self%simdata%output_cfg%output_vars(i)%name = "Rad0"
-                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%rad0
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
-                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Solar radiation at surface"
+                  self%simdata%output_cfg%output_vars(i)%units = "W m-2"
+                  self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%rad0
 
                case('TotalIceH')
                   ! Total ice thickness [m]
                   self%simdata%output_cfg%output_vars(i)%name = "TotalIceH"
-                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%total_ice_h
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
-                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Total ice thickness"
+                  self%simdata%output_cfg%output_vars(i)%units = "m"
+                  self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%total_ice_h
 
                case('BlackIceH')
                   ! Black ice thickness [m]
                   self%simdata%output_cfg%output_vars(i)%name = "BlackIceH"
-                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%black_ice_h
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
-                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Black ice thickness"
+                  self%simdata%output_cfg%output_vars(i)%units = "m"
+                  self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%black_ice_h
 
                case('WhiteIceH')
                   ! White ice (snow ice) thickness [m]
                   self%simdata%output_cfg%output_vars(i)%name = "WhiteIceH"
-                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%white_ice_h
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
-                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%long_name = "White ice (snow ice) thickness"
+                  self%simdata%output_cfg%output_vars(i)%units = "m"
+                  self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%white_ice_h
 
                case('SnowH')
                   ! Snow layer thickness [m]
                   self%simdata%output_cfg%output_vars(i)%name = "SnowH"
-                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%snow_h
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
-                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Snow layer thickness"
+                  self%simdata%output_cfg%output_vars(i)%units = "m"
+                  self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%snow_h
 
                case('WaterH')
                   ! Water level [m]
                   self%simdata%output_cfg%output_vars(i)%name = "WaterH"
-                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%grid%lake_level
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
-                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Water level"
+                  self%simdata%output_cfg%output_vars(i)%units = "m"
+                  self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%grid%lake_level
 
                case('Qvert')
                   ! Vertical advection [m3 s-1]
                   self%simdata%output_cfg%output_vars(i)%name = "Qvert"
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Vertical advection"
+                  self%simdata%output_cfg%output_vars(i)%units = "m3 s-1"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%Q_vert
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
                case('Eseiche')
                   ! Total seiche energy [J]
                   self%simdata%output_cfg%output_vars(i)%name = "Eseiche"
-                  self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%E_seiche
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
-                  self%simdata%output_cfg%output_vars(i)%face_grid = .false.
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Total seiche energy"
+                  self%simdata%output_cfg%output_vars(i)%units = "J"
+                  self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%E_seiche
 
                case default
                   call error('Output variable specified in config file not found: ' // trim(output_cfg%output_var_names(i)))

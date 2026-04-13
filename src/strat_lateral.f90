@@ -80,10 +80,11 @@ module strat_lateral
    end type
 
 contains
-   subroutine lateral_generic_update(self, state)
+   subroutine lateral_generic_update(self, state, output_cfg)
       implicit none
       class(GenericLateralModule) :: self
       class(ModelState) :: state
+      class(OutputConfig), intent(in) :: output_cfg
    end subroutine
 
    subroutine lateral_generic_init(self, state, model_config, input_config, fabm_config, model_param, grid)
@@ -279,10 +280,11 @@ contains
       
       
    ! Implementation for lateral rho
-   subroutine lateral_rho_update(self, state)
+   subroutine lateral_rho_update(self, state, output_cfg)
       implicit none
       class(LateralRhoModule) :: self
       class(ModelState) :: state
+      class(OutputConfig), intent(in) :: output_cfg
 
       ! Local Declarations
       real(RK) :: Inp(1:self%n_vars,1:self%max_n_inflows)
@@ -323,7 +325,7 @@ contains
 
                   ! Read inflow files
                   if (i > n_simstrat) then
-                     fname = trim(self%fabm_path)//'/'//trim(state%fabm_state_names(i - n_simstrat))//'_inflow.dat'
+                     fname = trim(self%fabm_path)//'/'//trim(output_cfg%output_vars_fabm_state(i - n_simstrat)%name)//'_inflow.dat'
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
@@ -429,7 +431,7 @@ contains
                else ! if start from snapshot
                   ! Open inflow files
                   if (i > n_simstrat) then
-                     fname = trim(self%fabm_path)//'/'//trim(state%fabm_state_names(i - n_simstrat))//'_inflow.dat'
+                     fname = trim(self%fabm_path)//'/'//trim(output_cfg%output_vars_fabm_state(i - n_simstrat)%name)//'_inflow.dat'
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
@@ -651,10 +653,11 @@ contains
    end subroutine
 
    ! "Normal" Implementation
-   subroutine lateral_update(self, state)
+   subroutine lateral_update(self, state, output_cfg)
       implicit none
       class(LateralModule) :: self
       class(ModelState) :: state
+      class(OutputConfig), intent(in) :: output_cfg
 
       ! Local Declarations
       real(RK) :: dummy
@@ -686,7 +689,7 @@ contains
                   ! End of file is not reached
                   self%eof(i) = 0
                   if (i > n_simstrat) then
-                     fname = trim(self%fabm_path)//'/'//trim(state%fabm_state_names(i - n_simstrat))//'_inflow.dat'
+                     fname = trim(self%fabm_path)//'/'//trim(output_cfg%output_vars_fabm_state(i - n_simstrat)%name)//'_inflow.dat'
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
@@ -795,7 +798,7 @@ contains
                else ! if start from snapshot
                   ! Open inflow files
                   if (i > n_simstrat) then
-                     fname = trim(self%fabm_path)//'/'//trim(state%fabm_state_names(i - n_simstrat))//'_inflow.dat'
+                     fname = trim(self%fabm_path)//'/'//trim(output_cfg%output_vars_fabm_state(i - n_simstrat)%name)//'_inflow.dat'
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
@@ -906,10 +909,11 @@ contains
 
    ! FABM: Surface- / Bottom-bound inflows and outflows (absolute and concentration-dependent)
    ! Inflow file consists of one time and two inflow/outflow columns (absolute and concentration-dependent)
-   subroutine lateral_bound_update(self, state)
+   subroutine lateral_bound_update(self, state, output_cfg)
       implicit none
       class(GenericLateralModule) :: self
       class(ModelState) :: state
+      class(OutputConfig), intent(in) :: output_cfg
 
       ! Local Declarations
       integer :: i, l, status, unit, interpolation_factor
@@ -926,7 +930,7 @@ contains
             if (idx) then  ! If first timestep
                if (self%number_of_lines_read_bound(i) == 0) then  ! If not started from snapshot
 
-                  fname = trim(self%fabm_path)//'/'//trim(state%fabm_state_names(state%n_fabm_interior_state + i))//'_inflow.dat'
+                  fname = trim(self%fabm_path)//'/'//trim(output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + i)%name)//'_inflow.dat'
 
                   ! Read inflow files
                   open(newunit=unit, action='read', status='old', file=fname, iostat = status)
@@ -970,7 +974,7 @@ contains
                   call ok('FABM bound input file successfully read: '//trim(fname))
                else ! if start from snapshot
                   ! Open inflow files
-                  fname = trim(self%fabm_path)//'/'//trim(state%fabm_state_names(state%n_fabm_interior_state + i))//'_inflow.dat'
+                  fname = trim(self%fabm_path)//'/'//trim(output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + i)%name)//'_inflow.dat'
                   
                   open(self%fnum_bound(i), action='read', status='old', file=fname)
 

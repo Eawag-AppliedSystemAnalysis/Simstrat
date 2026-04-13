@@ -179,33 +179,33 @@ contains
 
       if (self%model_config%couple_fabm) then
          ! allocate FABM output structure for interior state variables
-         allocate (output_config%output_vars_fabm_interior_state) ! We don't know yet how many variables
-         output_config%output_vars_fabm_interior_state%names => state%fabm_state_names(1:state%n_fabm_interior_state)
-         output_config%output_vars_fabm_interior_state%values => state%fabm_interior_state
+         ! allocate (output_config%output_vars_fabm_interior_state) ! We don't know yet how many variables
+         ! output_config%output_vars_fabm_interior_state%names => state%fabm_state_names(1:state%n_fabm_interior_state)
+         ! output_config%output_vars_fabm_interior_state%values => state%fabm_interior_state
          self%n_vars_fabm_interior_state = state%n_fabm_interior_state
          
          ! allocate FABM output structure for bottom state variables
-         allocate (output_config%output_vars_fabm_bottom_state) ! We don't know yet how many variables
-         output_config%output_vars_fabm_bottom_state%names => state%fabm_state_names(state%n_fabm_interior_state + 1 : state%n_fabm_interior_state + state%n_fabm_bottom_state)
-         output_config%output_vars_fabm_bottom_state%values => state%fabm_bottom_state
+         ! allocate (output_config%output_vars_fabm_bottom_state) ! We don't know yet how many variables
+         ! output_config%output_vars_fabm_bottom_state%names => state%fabm_state_names(state%n_fabm_interior_state + 1 : state%n_fabm_interior_state + state%n_fabm_bottom_state)
+         ! output_config%output_vars_fabm_bottom_state%values => state%fabm_bottom_state
          self%n_vars_fabm_bottom_state = state%n_fabm_bottom_state
          
          ! allocate FABM output structure for surface state variables
-         allocate (output_config%output_vars_fabm_surface_state) ! We don't know yet how many variables
-         output_config%output_vars_fabm_surface_state%names => state%fabm_state_names(state%n_fabm_interior_state + state%n_fabm_bottom_state + 1 : state%n_fabm_state)
-         output_config%output_vars_fabm_surface_state%values => state%fabm_surface_state
+         ! allocate (output_config%output_vars_fabm_surface_state) ! We don't know yet how many variables
+         ! output_config%output_vars_fabm_surface_state%names => state%fabm_state_names(state%n_fabm_interior_state + state%n_fabm_bottom_state + 1 : state%n_fabm_state)
+         ! output_config%output_vars_fabm_surface_state%values => state%fabm_surface_state
          self%n_vars_fabm_surface_state = state%n_fabm_surface_state
 
          ! Allocate FABM output structure for diagnostic variables if necessary
          if (fabm_config%output_diag_vars) then
-            allocate (output_config%output_vars_fabm_diagnostic_interior) ! We don't know yet how many variables
-            output_config%output_vars_fabm_diagnostic_interior%names => state%fabm_diagnostic_names(1:state%n_fabm_diagnostic_interior)
-            output_config%output_vars_fabm_diagnostic_interior%values => state%fabm_diagnostic_interior
+            ! allocate (output_config%output_vars_fabm_diagnostic_interior) ! We don't know yet how many variables
+            ! output_config%output_vars_fabm_diagnostic_interior%names => state%fabm_diagnostic_names(1:state%n_fabm_diagnostic_interior)
+            ! output_config%output_vars_fabm_diagnostic_interior%values => state%fabm_diagnostic_interior
             self%n_vars_fabm_diagnostic_interior = state%n_fabm_diagnostic_interior
 
-            allocate (output_config%output_vars_fabm_diagnostic_horizontal) ! We don't know yet how many variables
-            output_config%output_vars_fabm_diagnostic_horizontal%names => state%fabm_diagnostic_names(state%n_fabm_diagnostic_interior + 1:state%n_fabm_diagnostic)
-            output_config%output_vars_fabm_diagnostic_horizontal%values => state%fabm_diagnostic_horizontal
+            ! allocate (output_config%output_vars_fabm_diagnostic_horizontal) ! We don't know yet how many variables
+            ! output_config%output_vars_fabm_diagnostic_horizontal%names => state%fabm_diagnostic_names(state%n_fabm_diagnostic_interior + 1:state%n_fabm_diagnostic)
+            ! output_config%output_vars_fabm_diagnostic_horizontal%values => state%fabm_diagnostic_horizontal
             self%n_vars_fabm_diagnostic_horizontal = state%n_fabm_diagnostic_horizontal
          else
             self%n_vars_fabm_diagnostic_interior = 0
@@ -215,22 +215,22 @@ contains
          ! Allocate FABM output structure for repaired variables if necessary
          if (fabm_config%output_repaired_vars) then
             ! allocate FABM output structure for interior state variables
-            allocate (output_config%output_vars_fabm_repaired_interior) ! We don't know yet how many variables
-            output_config%output_vars_fabm_repaired_interior%names => state%fabm_repaired_names(1:state%n_fabm_repaired_interior_min + state%n_fabm_repaired_interior_max)
-            output_config%output_vars_fabm_repaired_interior%values => state%fabm_repaired_interior
-            self%n_vars_fabm_repaired_interior = state%n_fabm_repaired_interior_min + state%n_fabm_repaired_interior_max
+            ! allocate (output_config%output_vars_fabm_repaired_interior) ! We don't know yet how many variables
+            ! output_config%output_vars_fabm_repaired_interior%names => state%fabm_repaired_names(1:state%n_fabm_repaired_interior_min + state%n_fabm_repaired_interior_max)
+            ! output_config%output_vars_fabm_repaired_interior%values => state%fabm_repaired_interior
+            self%n_vars_fabm_repaired_interior = state%n_fabm_repaired_interior
             
             ! allocate FABM output structure for bottom state variables
-            allocate (output_config%output_vars_fabm_repaired_bottom) ! We don't know yet how many variables
-            output_config%output_vars_fabm_repaired_bottom%names => state%fabm_repaired_names(state%n_fabm_repaired_interior_min + state%n_fabm_repaired_interior_max + 1:state%n_fabm_repaired_interior_min + state%n_fabm_repaired_interior_max + state%n_fabm_repaired_bottom_min + state%n_fabm_repaired_bottom_max)
-            output_config%output_vars_fabm_repaired_bottom%values => state%fabm_repaired_bottom
-            self%n_vars_fabm_repaired_bottom = state%n_fabm_repaired_bottom_min + state%n_fabm_repaired_bottom_max
+            ! allocate (output_config%output_vars_fabm_repaired_bottom) ! We don't know yet how many variables
+            ! output_config%output_vars_fabm_repaired_bottom%names => state%fabm_repaired_names(state%n_fabm_repaired_interior_min + state%n_fabm_repaired_interior_max + 1:state%n_fabm_repaired_interior_min + state%n_fabm_repaired_interior_max + state%n_fabm_repaired_bottom_min + state%n_fabm_repaired_bottom_max)
+            ! output_config%output_vars_fabm_repaired_bottom%values => state%fabm_repaired_bottom
+            self%n_vars_fabm_repaired_bottom = state%n_fabm_repaired_bottom
             
             ! allocate FABM output structure for surface state variables
-            allocate (output_config%output_vars_fabm_repaired_surface) ! We don't know yet how many variables
-            output_config%output_vars_fabm_repaired_surface%names => state%fabm_repaired_names(state%n_fabm_repaired_interior_min + state%n_fabm_repaired_interior_max + state%n_fabm_repaired_bottom_min + state%n_fabm_repaired_bottom_max + 1:state%n_fabm_repaired)
-            output_config%output_vars_fabm_repaired_surface%values => state%fabm_repaired_surface
-            self%n_vars_fabm_repaired_surface = state%n_fabm_repaired_surface_min + state%n_fabm_repaired_surface_max
+            ! allocate (output_config%output_vars_fabm_repaired_surface) ! We don't know yet how many variables
+            ! output_config%output_vars_fabm_repaired_surface%names => state%fabm_repaired_names(state%n_fabm_repaired_interior_min + state%n_fabm_repaired_interior_max + state%n_fabm_repaired_bottom_min + state%n_fabm_repaired_bottom_max + 1:state%n_fabm_repaired)
+            ! output_config%output_vars_fabm_repaired_surface%values => state%fabm_repaired_surface
+            self%n_vars_fabm_repaired_surface = state%n_fabm_repaired_surface
          else
             self%n_vars_fabm_repaired_interior = 0
             self%n_vars_fabm_repaired_bottom = 0
@@ -323,7 +323,7 @@ contains
       inquire(file=output_config%PathOut,exist=exist_output_folder)
 
       ! Create Simstrat output folder if it does not exist
-      if(.not.exist_output_folder) then
+      if(.not. exist_output_folder) then
          call warn('Result folder does not exist, create folder according to config file...')
          mkdirCmd = 'mkdir '//trim(output_config%PathOut)
          call execute_command_line(mkdirCmd, exitstat = exitstat)
@@ -349,17 +349,25 @@ contains
       integer :: i, exitstat
       character(len=:), allocatable :: file_path
       logical :: status_ok, append, exist_output_folder
-      character(len=256) :: mkdirCmd
 
       if (allocated(self%output_files)) deallocate (self%output_files)
       allocate (self%output_files(1:self%n_vars))
 
-      do i = 1, self%n_vars_Simstrat
-         file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars(i)%name)//'_out.dat'
+      do i = 1, self%n_vars
+         if (i < (self%n_vars_Simstrat + 1)) then
+            self%output_config%log_variable => self%output_config%output_vars(i)
+         else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + 1)) then
+            self%output_config%log_variable => self%output_config%output_vars_fabm_state(i - self%n_vars_Simstrat)
+         else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic + 1)) then
+            self%output_config%log_variable => self%output_config%output_vars_fabm_state(i - (self%n_vars_Simstrat + self%n_vars_fabm_state))
+         else
+            self%output_config%log_variable => self%output_config%output_vars_fabm_state(i - (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic))
+         end if
+         file_path = output_config%PathOut//'/'//trim(self%output_config%log_variable%name)//'_out.dat'
          inquire (file=file_path, exist=append)
          append = append .and. snapshot_file_exists
-         if (self%output_config%output_vars(i)%volume_grid) then
-            !Variable on volume grid
+         if (self%output_config%log_variable%volume_grid) then
+            ! Variable on volume grid
             call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
             if (status_ok) then
                if (.not. append) then
@@ -370,7 +378,7 @@ contains
             else
                call error('Cannot write to output directory. Make sure you have writing access.')
             end if
-         else if (self%output_config%output_vars(i)%face_grid) then
+         else if (self%output_config%log_variable%face_grid) then
             ! Variable on face grid
             call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
             if (status_ok) then
@@ -383,7 +391,7 @@ contains
                call error('Cannot write to output directory. Make sure you have writing access.')
             end if
          else
-            !Variable at surface
+            ! Global variable
             call self%output_files(i)%open(file_path, n_cols=1 + 1, append=append, status_ok=status_ok)
             if (status_ok) then
                if (.not. append) then
@@ -396,141 +404,6 @@ contains
             end if
          end if
       end do
-
-      ! FABM part
-      if (self%model_config%couple_fabm) then
-         do i = self%n_vars_Simstrat + 1, self%n_vars
-            if (i < (self%n_vars_Simstrat + self%n_vars_fabm_interior_state + 1)) then
-               ! Interior FABM variable: Output at every layer
-               file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_fabm_interior_state%names(i - self%n_vars_Simstrat))//'_out.dat'
-               inquire (file=file_path, exist=append)
-               append = append .and. snapshot_file_exists
-               call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
-               if (.not. append) then
-                  call self%output_files(i)%add('Datetime')
-                  call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
-                  call self%output_files(i)%next_row()
-               else
-                  call error('Cannot write to output directory. Make sure you have writing access.')
-               end if
-            else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_interior_state + self%n_vars_fabm_bottom_state + 1)) then
-               ! Bottom FABM variable: one value per datum at bottom layer or output at every layer (if bottom_everywhere)
-               file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_fabm_bottom_state%names(i - self%n_vars_Simstrat - self%n_vars_fabm_interior_state))//'_out.dat'
-               inquire (file=file_path, exist=append)
-               append = append .and. snapshot_file_exists
-               if (self%fabm_config%bottom_everywhere) then
-                  call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
-               else
-                  call self%output_files(i)%open(file_path, n_cols=2, append=append, status_ok=status_ok)
-               end if
-               if (.not. append) then
-                  call self%output_files(i)%add('Datetime')
-                  if (self%fabm_config%bottom_everywhere) then
-                     call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
-                  else
-                     call self%output_files(i)%add('Concentration')
-                  end if
-                  call self%output_files(i)%next_row()
-               else
-                  call error('Cannot write to output directory. Make sure you have writing access.')
-               end if
-            else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + 1)) then
-               ! Surface FABM variable: one value per datum at surface layer
-               file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_fabm_surface_state%names(i - self%n_vars_Simstrat - self%n_vars_fabm_interior_state - self%n_vars_fabm_bottom_state))//'_out.dat'
-               inquire (file=file_path, exist=append)
-               append = append .and. snapshot_file_exists
-               call self%output_files(i)%open(file_path, n_cols=2, append=append, status_ok=status_ok)
-               if (.not. append) then
-                  call self%output_files(i)%add('Datetime')
-                  call self%output_files(i)%add('Concentration')
-                  call self%output_files(i)%next_row()
-               else
-                  call error('Cannot write to output directory. Make sure you have writing access.')
-               end if
-            else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic_interior + 1)) then
-               ! Interior FABM diagnostic variable: Output at every layer
-               file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_fabm_diagnostic_interior%names(i - self%n_vars_Simstrat - self%n_vars_fabm_state))//'_out.dat'
-               inquire (file=file_path, exist=append)
-               append = append .and. snapshot_file_exists
-               call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
-               if (.not. append) then
-                  call self%output_files(i)%add('Datetime')
-                  call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
-                  call self%output_files(i)%next_row()
-               else
-                  call error('Cannot write to output directory. Make sure you have writing access.')
-               end if
-            else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic + 1)) then
-               ! Horizontal FABM diagnostic variable: one value per datum at bottom layer or output at every layer (if bottom_everywhere)
-               file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_fabm_diagnostic_horizontal%names(i - self%n_vars_Simstrat  - self%n_vars_fabm_state - self%n_vars_fabm_diagnostic_interior))//'_out.dat'
-               inquire (file=file_path, exist=append)
-               append = append .and. snapshot_file_exists
-               if (self%fabm_config%bottom_everywhere) then
-                  call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
-               else
-                  call self%output_files(i)%open(file_path, n_cols=2, append=append, status_ok=status_ok)
-               end if
-               if (.not. append) then
-                  call self%output_files(i)%add('Datetime')
-                  if (self%fabm_config%bottom_everywhere) then
-                     call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
-                  else
-                     call self%output_files(i)%add('Concentration')
-                  end if
-                  call self%output_files(i)%next_row()
-               else
-                  call error('Cannot write to output directory. Make sure you have writing access.')
-               end if
-            else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic + self%n_vars_fabm_repaired_interior + 1)) then
-               ! Interior FABM repaired variable: Output at every layer
-               file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_fabm_repaired_interior%names(i - self%n_vars_Simstrat - self%n_vars_fabm_state - self%n_vars_fabm_diagnostic))//'_out.dat'
-               inquire (file=file_path, exist=append)
-               append = append .and. snapshot_file_exists
-               call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
-               if (.not. append) then
-                  call self%output_files(i)%add('Datetime')
-                  call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
-                  call self%output_files(i)%next_row()
-               else
-                  call error('Cannot write to output directory. Make sure you have writing access.')
-               end if
-            else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic + self%n_vars_fabm_repaired_interior + self%n_vars_fabm_repaired_bottom + 1)) then
-               ! Bottom FABM repaired variable: one value per datum at bottom layer or output at every layer (if bottom_everywhere)
-               file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_fabm_repaired_bottom%names(i - self%n_vars_Simstrat - self%n_vars_fabm_state - self%n_vars_fabm_diagnostic - self%n_vars_fabm_repaired_interior))//'_out.dat'
-               inquire (file=file_path, exist=append)
-               append = append .and. snapshot_file_exists
-               if (self%fabm_config%bottom_everywhere) then
-                  call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
-               else
-                  call self%output_files(i)%open(file_path, n_cols=2, append=append, status_ok=status_ok)
-               end if
-               if (.not. append) then
-                  call self%output_files(i)%add('Datetime')
-                  if (self%fabm_config%bottom_everywhere) then
-                     call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
-                  else
-                     call self%output_files(i)%add('Concentration')
-                  end if
-                  call self%output_files(i)%next_row()
-               else
-                  call error('Cannot write to output directory. Make sure you have writing access.')
-               end if
-            else
-               ! Surface FABM repaired variable: one value per datum at surface layer
-               file_path = output_config%PathOut//'/'//trim(self%output_config%output_vars_fabm_repaired_surface%names(i - self%n_vars_Simstrat - self%n_vars_fabm_state - self%n_vars_fabm_diagnostic - self%n_vars_fabm_repaired_interior - self%n_vars_fabm_repaired_bottom))//'_out.dat'
-               inquire (file=file_path, exist=append)
-               append = append .and. snapshot_file_exists
-               call self%output_files(i)%open(file_path, n_cols=2, append=append, status_ok=status_ok)
-               if (.not. append) then
-                  call self%output_files(i)%add('Datetime')
-                  call self%output_files(i)%add('Concentration')
-                  call self%output_files(i)%next_row()
-               else
-                  call error('Cannot write to output directory. Make sure you have writing access.')
-               end if
-            end if
-         end do
-      end if
 
    end subroutine
 
@@ -592,69 +465,31 @@ contains
                                               simdata%model%T(simdata%grid%ubnd_vol), simdata%model%T(1)
       end if
       
-      do i = 1, self%n_vars_Simstrat
+      do i = 1, self%n_vars
          call output_helper%add_datum(self%output_files(i), "(F12.4)")
+         if (i < (self%n_vars_Simstrat + 1)) then
+            self%output_config%log_variable => self%output_config%output_vars(i)
+         else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + 1)) then
+            self%output_config%log_variable => self%output_config%output_vars_fabm_state(i - self%n_vars_Simstrat)
+         else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic + 1)) then
+            self%output_config%log_variable => self%output_config%output_vars_fabm_state(i - (self%n_vars_Simstrat + self%n_vars_fabm_state))
+         else
+            self%output_config%log_variable => self%output_config%output_vars_fabm_state(i - (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic))
+         end if
          ! If on volume or faces grid
-         if (self%output_config%output_vars(i)%volume_grid) then
+         if (self%output_config%log_variable%volume_grid) then
             ! Interpolate state on volume grid
-            call self%grid%interpolate_from_vol(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
+            call self%grid%interpolate_from_vol(self%output_config%log_variable%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
             call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
-         else if (self%output_config%output_vars(i)%face_grid) then
+         else if (self%output_config%log_variable%face_grid) then
             ! Interpolate state on face grid
-            call self%grid%interpolate_from_face(self%output_config%output_vars(i)%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
+            call self%grid%interpolate_from_face(self%output_config%log_variable%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
             call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
          else
-            call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%output_vars(i)%values_surf, "(ES14.4E3)")
+            call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%log_variable%global_value, "(ES14.4E3)")
          end if
          call output_helper%next_row(self%output_files(i))
       end do
-
-      ! FABM part
-      if (self%model_config%couple_fabm) then
-         do i = self%n_vars_Simstrat + 1, self%n_vars
-            ! Write datum
-            call output_helper%add_datum(self%output_files(i), "(F12.4)")
-            ! Interpolate state on volume grid
-            if (i < (self%n_vars_Simstrat + self%n_vars_fabm_interior_state + 1)) then
-               call self%grid%interpolate_from_vol(self%output_config%output_vars_fabm_interior_state%values(:,i - self%n_vars_Simstrat), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-               call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
-            else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_interior_state + self%n_vars_fabm_bottom_state + 1)) then
-               if (self%fabm_config%bottom_everywhere) then
-                  call self%grid%interpolate_from_vol(self%output_config%output_vars_fabm_bottom_state%values(:,i - self%n_vars_Simstrat - self%n_vars_fabm_interior_state), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-                  call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
-               else
-                  call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%output_vars_fabm_bottom_state%values(1, i - self%n_vars_Simstrat - self%n_vars_fabm_interior_state), "(ES14.4E3)")
-               end if
-            else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + 1)) then
-               call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%output_vars_fabm_surface_state%values(i - self%n_vars_Simstrat - self%n_vars_fabm_interior_state - self%n_vars_fabm_bottom_state), "(ES14.4E3)")
-            else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic_interior + 1)) then
-               call self%grid%interpolate_from_vol(self%output_config%output_vars_fabm_diagnostic_interior%values(:,i - self%n_vars_Simstrat - self%n_vars_fabm_state), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-               call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
-            else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic + 1)) then
-               if (self%fabm_config%bottom_everywhere) then
-                  call self%grid%interpolate_from_vol(self%output_config%output_vars_fabm_diagnostic_horizontal%values(:,i - self%n_vars_Simstrat - self%n_vars_fabm_state - self%n_vars_fabm_diagnostic_interior), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-                  call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
-               else
-                  call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%output_vars_fabm_diagnostic_horizontal%values(1, i - self%n_vars_Simstrat - self%n_vars_fabm_state - self%n_vars_fabm_diagnostic_interior), "(ES14.4E3)")
-               end if
-            else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic + self%n_vars_fabm_repaired_interior + 1)) then
-               call self%grid%interpolate_from_vol(self%output_config%output_vars_fabm_repaired_interior%values(:,i - self%n_vars_Simstrat - self%n_vars_fabm_state - self%n_vars_fabm_diagnostic), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-               call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
-            else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic + self%n_vars_fabm_repaired_interior + self%n_vars_fabm_repaired_bottom + 1)) then
-               if (self%fabm_config%bottom_everywhere) then
-                  call self%grid%interpolate_from_vol(self%output_config%output_vars_fabm_repaired_bottom%values(:,i - self%n_vars_Simstrat - self%n_vars_fabm_state - self%n_vars_fabm_diagnostic - self%n_vars_fabm_repaired_interior), self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-                  call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
-               else
-                  call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%output_vars_fabm_repaired_bottom%values(1, i - self%n_vars_Simstrat - self%n_vars_fabm_state - self%n_vars_fabm_diagnostic - self%n_vars_fabm_repaired_interior), "(ES14.4E3)")
-               end if
-            else
-               call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%output_vars_fabm_repaired_surface%values(i - self%n_vars_Simstrat - self%n_vars_fabm_state - self%n_vars_fabm_diagnostic - self%n_vars_fabm_repaired_interior - self%n_vars_fabm_repaired_bottom), "(ES14.4E3)")
-            end if
-
-            ! Advance to next row
-            call output_helper%next_row(self%output_files(i))
-         end do
-      end if
    end subroutine
 
    subroutine output_helper_init(self, simulation_time, simulation_time_old, timestep, simulation_time_for_next_output, start_datum, &

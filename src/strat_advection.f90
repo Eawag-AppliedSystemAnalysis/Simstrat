@@ -69,10 +69,11 @@ contains
    end subroutine
 
    ! A lot of code that is hard to test - might be refactored in the future
-   subroutine advection_update(self, state)
+   subroutine advection_update(self, state, output_cfg)
       implicit none
       class(AdvectionModule) :: self
       class(ModelState) :: state
+      class(OutputConfig), intent(in) :: output_cfg
 
       real(RK) :: top_z, top_h
       real(RK) :: top
@@ -121,8 +122,8 @@ contains
             AreaFactor_adv(1:nz_occupied) = dt_i(t_i)/((grid%Az(1:nz_occupied) + grid%Az(2:nz_occupied+1))/2*grid%h(1:nz_occupied)) ! Area factor for dt(t_i)
             dh_i(t_i) = dh*dt_i(t_i)/dt ! Depth difference for dt(t_i)
 
-            ! Update Simstrat variables U, V, T and S
-            call do_update_statvars(self, state, AreaFactor_adv(1:nz_occupied), dh_i(t_i))
+            ! Update Simstrat variables U, V, T and S as well as FABM variables
+            call do_update_statvars(self, state, output_cfg, AreaFactor_adv(1:nz_occupied), dh_i(t_i))
 
             ! Adjust boxes (Horrible if/else construction - replace!)
             if (t_i == 1) then
@@ -136,9 +137,9 @@ contains
                   call grid%modify_top_box(dh_i(t_i))
                   return
                else if ((dh + top_h) <= h_div_2) then ! If top box<=0.5*lower box, merge 2 boxes
-                  call self%merge_box(state, dh_i(t_i))
+                  call self%merge_box(state, output_cfg, dh_i(t_i))
                else if ((dh + top_h) >= h_mult_2) then ! If top box>=2*lower box, add one box
-                  call self%add_box(state, dh_i(t_i))
+                  call self%add_box(state, output_cfg, dh_i(t_i))
                end if ! dh==0
             end if
 
@@ -146,10 +147,11 @@ contains
       end associate
    end subroutine
 
-   subroutine do_update_statvars(self, state, AreaFactor_adv, dh)
+   subroutine do_update_statvars(self, state, output_cfg, AreaFactor_adv, dh)
       ! Arguments
       class(AdvectionModule) :: self
       class(ModelState) :: state
+      class(OutputConfig), intent(in) :: output_cfg
       real(RK), dimension(:) :: AreaFactor_adv
       real(RK) :: dh
 
@@ -239,8 +241,8 @@ contains
             state%S(1:ubnd_vol) = state%S(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dS(1:ubnd_vol)
             if (self%cfg%couple_fabm) then
                do ivar = 1, state%n_fabm_interior_state
-                  ! Special case for WET pelagic mirror variables (leave unaffected)
-                  if (state%fabm_state_names(ivar)(len_trim(state%fabm_state_names(ivar))-2:) /= '_PV') then
+                  ! Leave benthic variables unaffected
+                  if (.not. output_cfg%output_vars_fabm_state(ivar)%benthic) then
                      state%fabm_interior_state(1:ubnd_vol, ivar) = state%fabm_interior_state(1:ubnd_vol, ivar) + &
                         AreaFactor_adv(1:ubnd_vol) * dfabm_interior(1:ubnd_vol, ivar)
                   end if
@@ -255,8 +257,8 @@ contains
             state%S(ubnd_vol) = state%S(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
             if (self%cfg%couple_fabm) then
                do ivar = 1, state%n_fabm_interior_state
-                  ! Special case for WET pelagic mirror variables (leave unaffected)
-                  if (state%fabm_state_names(ivar)(len_trim(state%fabm_state_names(ivar))-2:) /= '_PV') then
+                  ! Leave benthic variables unaffected
+                  if (.not. output_cfg%output_vars_fabm_state(ivar)%benthic) then
                      state%fabm_interior_state(ubnd_vol, ivar) = state%fabm_interior_state(ubnd_vol, ivar)*h(ubnd_vol)/(h(ubnd_vol) + dh)
                   end if
                end do
@@ -267,10 +269,11 @@ contains
    ! Merges two boxes
    ! - Takes care of calculating the new state variable for this box
    ! - Calls grid methods to modify grid spacing etc
-   subroutine advection_merge_box(self, state, dh)
+   subroutine advection_merge_box(self, state, output_cfg, dh)
       implicit none
       class(AdvectionModule) :: self
       class(ModelState) :: state
+      class(OutputConfig), intent(in) :: output_cfg
       real(RK) :: dh
       real(RK) :: w_a, w_b
       integer :: ivar
@@ -297,8 +300,8 @@ contains
          ! FABM
          if (self%cfg%couple_fabm) then
             do ivar = 1, state%n_fabm_interior_state
-               ! Special case for WET pelagic mirror variables (leave unaffected)
-               if (state%fabm_state_names(ivar)(len_trim(state%fabm_state_names(ivar))-2:) /= '_PV') then
+               ! Leave benthic variables unaffected
+               if (.not. output_cfg%output_vars_fabm_state(ivar)%benthic) then
                   fabm_interior_state(ubnd_vol,ivar) = (w_a*fabm_interior_state(ubnd_vol + 1,ivar) + w_b*fabm_interior_state(ubnd_vol,ivar))/(w_a + w_b)
                end if
             end do
@@ -313,10 +316,11 @@ contains
    ! Adds a new box
    ! - Takes care of calculating the new state variable for this box
    ! - Calls grid methods to modify grid spacing etc
-   subroutine advection_add_box(self, state, dh)
+   subroutine advection_add_box(self, state, output_cfg, dh)
       implicit none
       class(AdvectionModule) :: self
       class(ModelState) :: state
+      class(OutputConfig), intent(in) :: output_cfg
       real(RK) :: dh
       integer :: ivar
       associate (ubnd_fce=>self%grid%ubnd_fce, ubnd_vol=>self%grid%ubnd_vol, fabm_interior_state=>state%fabm_interior_state)
@@ -337,8 +341,8 @@ contains
          ! FABM
          if (self%cfg%couple_fabm) then
             do ivar = 1, state%n_fabm_interior_state
-               ! Special case for WET pelagic mirror variables (leave unaffected)
-               if (state%fabm_state_names(ivar)(len_trim(state%fabm_state_names(ivar))-2:) /= '_PV') then
+               ! Leave benthic variables unaffected
+               if (.not. output_cfg%output_vars_fabm_state(ivar)%benthic) then
                   fabm_interior_state(ubnd_vol,ivar) = fabm_interior_state(ubnd_vol - 1,ivar)
                end if
             end do
