@@ -466,7 +466,7 @@ contains
       end if
       
       do i = 1, self%n_vars
-         call output_helper%add_datum(self%output_files(i), "(F12.4)")
+         call output_helper%add_datum(self%output_files(i), '(F12.4)')
          if (i < (self%n_vars_Simstrat + 1)) then
             self%output_config%log_variable => self%output_config%output_vars(i)
          else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + 1)) then
@@ -480,13 +480,13 @@ contains
          if (self%output_config%log_variable%volume_grid) then
             ! Interpolate state on volume grid
             call self%grid%interpolate_from_vol(self%output_config%log_variable%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-            call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
+            call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, self%output_config%log_variable%format)
          else if (self%output_config%log_variable%face_grid) then
             ! Interpolate state on face grid
             call self%grid%interpolate_from_face(self%output_config%log_variable%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-            call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, "(ES14.4E3)")
+            call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, self%output_config%log_variable%format)
          else
-            call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%log_variable%global_value, "(ES14.4E3)")
+            call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%log_variable%global_value, self%output_config%log_variable%format)
          end if
          call output_helper%next_row(self%output_files(i))
       end do

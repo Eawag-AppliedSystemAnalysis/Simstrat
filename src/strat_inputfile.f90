@@ -207,6 +207,7 @@ contains
                   self%simdata%output_cfg%output_vars(i)%units = "m s-1"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%T
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
+                  self%simdata%output_cfg%output_vars(i)%format = "(F12.4)"
 
                case('S')
                   ! Salinity [‰]
@@ -321,6 +322,7 @@ contains
                   self%simdata%output_cfg%output_vars(i)%long_name = "Total ice thickness"
                   self%simdata%output_cfg%output_vars(i)%units = "m"
                   self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%total_ice_h
+                  self%simdata%output_cfg%output_vars(i)%format = "(F12.4)"
 
                case('BlackIceH')
                   ! Black ice thickness [m]
@@ -328,6 +330,7 @@ contains
                   self%simdata%output_cfg%output_vars(i)%long_name = "Black ice thickness"
                   self%simdata%output_cfg%output_vars(i)%units = "m"
                   self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%black_ice_h
+                  self%simdata%output_cfg%output_vars(i)%format = "(F12.4)"
 
                case('WhiteIceH')
                   ! White ice (snow ice) thickness [m]
@@ -335,6 +338,7 @@ contains
                   self%simdata%output_cfg%output_vars(i)%long_name = "White ice (snow ice) thickness"
                   self%simdata%output_cfg%output_vars(i)%units = "m"
                   self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%white_ice_h
+                  self%simdata%output_cfg%output_vars(i)%format = "(F12.4)"
 
                case('SnowH')
                   ! Snow layer thickness [m]
@@ -342,6 +346,7 @@ contains
                   self%simdata%output_cfg%output_vars(i)%long_name = "Snow layer thickness"
                   self%simdata%output_cfg%output_vars(i)%units = "m"
                   self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%snow_h
+                  self%simdata%output_cfg%output_vars(i)%format = "(F12.4)"
 
                case('WaterH')
                   ! Water level [m]
@@ -349,6 +354,7 @@ contains
                   self%simdata%output_cfg%output_vars(i)%long_name = "Water level"
                   self%simdata%output_cfg%output_vars(i)%units = "m"
                   self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%grid%lake_level
+                  self%simdata%output_cfg%output_vars(i)%format = "(F12.4)"
 
                case('Qvert')
                   ! Vertical advection [m3 s-1]

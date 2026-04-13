@@ -65,6 +65,8 @@ module strat_simdata
       real(RK), dimension(:), pointer :: values => null()
       logical :: volume_grid = .false.
       logical :: face_grid = .false.
+      ! Output format
+      character(len=16) :: format = '(ES14.4E3)'
    end type
 
    ! Logging configuration
