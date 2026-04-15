@@ -54,6 +54,9 @@ module simstrat_fabm
    ! Index of attenuation_coefficient_of_photosynthetic_radiative_flux in FABM diagnostic variables
    integer :: att_index
 
+   ! Timestep counter for FABM prepare_inputs function
+   integer :: timestep_counter
+
    ! Necessary bools for evaluation of bottom everywhere
    logical :: interior_or_bottom_exist = .false.
    logical :: diagnostic_horizontal_exist =.false.
@@ -171,7 +174,7 @@ contains
       ! Used to allocate memory for FABM-managed spatially explicit fields
       ! Provide seconds_per_time_unit when time filtering functionality is used
       ! The product of seconds_per_time_unit and the t argument provided to prepare_inputs must have units of seconds
-      call self%fabm_model%set_domain(grid%nz_grid, 1.0_RK)
+      call self%fabm_model%set_domain(grid%nz_grid, seconds_per_time_unit=real(sim_cfg%timestep, kind=RK))
 
       ! Set bottom location (pelagic-benthic interface) to 1 (default)
       ! Link FABM to bottom location
@@ -465,6 +468,9 @@ contains
 
       ! If it is not the first call: 1. calculate and 2. validate the new model state, stop if variables are not valid
       if (.not. state%first_timestep) then
+         ! Update timestep_counter
+         timestep_counter = timestep_counter + 1
+
          ! 1a. Time-integrate the advection-diffusion-reaction equations
          ! of all tracers, combining the Simstrat transport terms with the FABM biogeochemical source
          ! terms and fluxes (sms, flux) and vertical velocities (velocity). This results in an updated interior_state.
@@ -662,17 +668,18 @@ contains
                call error('FABM Variables out of bounds')
             end if
          end if
-      end if
-
-      ! Initialize (at first call) or update fluxes, sources and vertical movement
-      if (state%first_timestep) then
+      else
+         ! Initialize timestep_counter
+         timestep_counter = 1
          write (6, *) 'Initializing FABM calculations...'
       end if
+      
+      ! Initialize (at first call) or update fluxes, sources and vertical movement
 
       ! 1. Prepare all fields (e.g. light attenuation) FABM needs to compute fluxes and source terms
       ! Operates on entire active spatial domain
-      ! To enable FABM's built-in time filters provide argument t that describes the model time
-      call self%fabm_model%prepare_inputs(real(state%simulation_time(2), kind=RK))
+      ! To enable FABM's built-in time filters provide argument t that describes the model time since start (in timesteps)
+      call self%fabm_model%prepare_inputs(real(timestep_counter, kind=RK))
 
       ! 2. Retrieve sources, fluxes and vertical velocities
       ! >0: flux into water
@@ -791,7 +798,7 @@ contains
             do ivar = 1, state%n_fabm_bottom_state
                call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k_bot, ivar))
             end do
-            call self%fabm_model%prepare_inputs(real(state%simulation_time(2), kind=RK))
+            call self%fabm_model%prepare_inputs(real(timestep_counter, kind=RK))
             call self%fabm_model%get_bottom_sources(self%flux_bt(k_bot, :), self%sms_bt(k_bot, :))
             call self%fabm_model%finalize_outputs()
             if (fabm_cfg%output_diag_vars) then
@@ -823,7 +830,7 @@ contains
             call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
          end do
          k_bot = 1
-         call self%fabm_model%prepare_inputs(real(state%simulation_time(2), kind=RK))
+         call self%fabm_model%prepare_inputs(real(timestep_counter, kind=RK))
          call self%fabm_model%finalize_outputs()
       end if
 
@@ -1364,11 +1371,11 @@ contains
       end if
       if (n_bt > 0) then
          allocate(state%fabm_repaired_bottom(kmax_bot, n_bt))
-         allocate(self%repaired_interior_names(n_bt))
+         allocate(self%repaired_bottom_names(n_bt))
       end if
       if (n_sf > 0) then
          allocate(state%fabm_repaired_surface(n_sf))
-         allocate(self%repaired_interior_names(n_sf))
+         allocate(self%repaired_surface_names(n_sf))
       end if
 
       ! Allocate array for and set output information (name, units, long_name, minimum, maximum, missing_value) on repaired variables
