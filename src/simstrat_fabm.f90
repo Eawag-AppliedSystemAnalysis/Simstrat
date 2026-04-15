@@ -453,13 +453,18 @@ contains
       end if
 
       ! Initialize diagnostic variables
-      if (fabm_cfg%output_diag_vars) then
+      ! If model is not initialized with custom or previously stored state
+      if ((.not. sim_cfg%continue_from_snapshot) .and. fabm_cfg%output_diag_vars) then
+         ! Interior diagnostic variables
          if (state%n_fabm_diagnostic_interior > 0) then
             do ivar_diag = 1, state%n_fabm_diagnostic_interior
                index = self%diagnostic_interior_index(ivar_diag)
                state%fabm_diagnostic_interior(:, ivar_diag) = self%fabm_model%get_interior_diagnostic_data(index)
             end do
          end if
+         ! Horizontal diagnostic variables
+         ! Note: Since FABM does not distinguish between bottom and surface diagnostic variables, 
+         !       surface diagnostic variables are also initialized for every depth, with constant value
          if (state%n_fabm_diagnostic_horizontal > 0) then
             do ivar_diag = 1, state%n_fabm_diagnostic_horizontal
                index = self%diagnostic_horizontal_index(ivar_diag)
