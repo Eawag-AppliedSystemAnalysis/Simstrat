@@ -10,7 +10,7 @@ from functions_input import read_input_paths, load_absorption_data, load_inflow_
 
 # Main function
 
-def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, inflow_mode_not_1=True):
+def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-20, inflow_mode_not_1=True):
     """
     Convert Output file from CSV to NetCDF
     
@@ -26,6 +26,9 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, inflow_mo
         Path to folder with output files
     paths_to_input : str list
         Paths to folders with input files
+    eps : float
+        Tolerance for variation among dimension to drop that dimension
+        (Default: 1e-20)
     inflow_mode_not_1 : bool, optional
         Whether inflow mode in configuration file is not 1 (Manual inflow mode)
         (Default: True)
@@ -70,14 +73,14 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, inflow_mo
             df = df[:len(df)-1]
             time_values = time_values[:len(time_values)-1]
             data = xr.DataArray(df.values.astype(float), dims=['Datetime', 'Depth'], coords={'Datetime': time_values.astype(float), 'Depth': df.columns.astype(float)}, name=var_names[i])
-        # Ignore warning appearing for empty results
         with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', message='Degrees of freedom <= 0 for slice')  
+            # Ignore warning appearing for empty results
+            warnings.filterwarnings('ignore', message='Degrees of freedom <= 0 for slice')
             # If the value is constant in time, drop that dimension
-            if np.all(data.var(dim='Datetime', skipna=True, ddof=0).fillna(0.0) == 0.0):
+            if np.all(data.var(dim='Datetime', skipna=True, ddof=0).fillna(0.0) <= eps*np.absolute(data.mean(dim='Datetime', skipna=True).fillna(0.0))):
                 data = data.mean(dim='Datetime', skipna=True)
             # If the value is constant in depth, drop that dimension (necessary for FABM surface diagnostic variables)
-            if np.all(data.var(dim='Depth', skipna=True, ddof=0).fillna(0.0) == 0.0):
+            if np.all(data.var(dim='Depth', skipna=True, ddof=0).fillna(0.0) <= eps*np.absolute(data.mean(dim='Depth', skipna=True).fillna(0.0))):
                 data = data.mean(dim='Depth', skipna=True)
         # Add attributes
         data.attrs['long_name'] = attributes['Long Name'][var_names[i]]

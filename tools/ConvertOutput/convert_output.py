@@ -9,6 +9,7 @@ var_names = [] # Variable names; pass an empty list to convert all variables in 
 path_to_output = '../../tests/TestCases_Results' # Path to output folder
 paths_to_input = ['../../tests/TestCase_LakeZurich', '../../tests/TestCase_LakeZurich/FABM_inflow'] # Paths to input folder
 inflow_mode = 2 # Inflow mode for deep inflows as set in configuration file
+eps =  1e-20 # Tolerance for variation among dimension to drop that dimension
 conversion_function = 'csv_to_netcdf' # Currently available: csv_to_netcdf
 filename = 'output_converted' # Name of new file
 
@@ -18,8 +19,8 @@ if conversion_function == 'csv_to_netcdf':
     if len(var_names) == 0:
         var_names = [f[:-8] for f in os.listdir(path_to_output) if (f[-8:] == '_out.dat')]
     if inflow_mode == 1:
-        csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, False)
+        csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps, False)
     else:
-        csv_to_netcdf(var_names, filename, path_to_output, paths_to_input)
+        csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps)
 else:
     raise ValueError(f'Conversion {conversion_function} not available.')
