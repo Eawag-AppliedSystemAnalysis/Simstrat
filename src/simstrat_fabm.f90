@@ -1154,11 +1154,13 @@ contains
       if (n_int > 0) then
          allocate(state%fabm_diagnostic_interior(grid%nz_grid, n_int))
          allocate(self%diagnostic_interior_index(n_int))
+         state%fabm_diagnostic_interior = 0.0_RK
       end if
       if (n_hor > 0) then
          diagnostic_horizontal_exist = .true.
          allocate(state%fabm_diagnostic_horizontal(kmax_bot, n_hor))
          allocate(self%diagnostic_horizontal_index(n_hor))
+         state%fabm_diagnostic_horizontal = 0.0_RK
       end if
 
       ! Allocate array for and set output information (name, units, long_name, minimum, maximum, missing_value) on diagnostic variables

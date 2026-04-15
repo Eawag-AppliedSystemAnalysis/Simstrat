@@ -345,7 +345,7 @@ contains
       write(unit, '(A)', advance = 'no') 'Type, '
       write(unit, '(A)') 'Grid Position'
 
-      ! Write the names and units of all variables
+      ! Write the names, units and minima/maxima of all variables
       do i = 1, self%n_vars
          if (i < (self%n_vars_Simstrat + 1)) then
             self%output_config%log_variable => self%output_config%output_vars(i)
@@ -375,15 +375,25 @@ contains
          else
             write(unit, '(A)', advance = 'no') '-, '
          end if
+         ! Write type and grid position
+         ! FABM diagnostic horizontal variables are all treated as benthic because FABM does not differentiate
          if (type(:4) == 'FABM') then
             if (self%output_config%log_variable%volume_grid) then
                if (self%output_config%log_variable%benthic) then
-                  write(unit, '(A)') trim(type)//' Bottom Variable, On Volume'
+                  if (type(:15) == 'FABM Diagnostic') then
+                     write(unit, '(A)') trim(type)//' Horizontal Variable, On Volume'
+                  else
+                     write(unit, '(A)') trim(type)//' Bottom Variable, On Volume'
+                  end if
                else
                   write(unit, '(A)') trim(type)//' Interior Variable, On Volume'
                end if
             else if (self%output_config%log_variable%benthic) then
-               write(unit, '(A)') trim(type)//' Bottom Variable, -'
+               if (type(:15) == 'FABM Diagnostic') then
+                  write(unit, '(A)') trim(type)//' Horizontal Variable, -'
+               else
+                  write(unit, '(A)') trim(type)//' Bottom Variable, -'
+               end if
             else
                write(unit, '(A)') trim(type)//' Surface Variable, -'
             end if
