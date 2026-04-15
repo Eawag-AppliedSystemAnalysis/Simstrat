@@ -112,7 +112,7 @@ contains
       class(StaggeredGrid), intent(in) :: grid
 
       ! Local variables
-      integer :: ivar, index, exitstat, index_bs
+      integer :: ivar, ivar_diag, index, exitstat, index_bs
       logical :: config_path_exists
       character(len=256) :: mkdirCmd
 
@@ -450,6 +450,36 @@ contains
          end if
          ! Surface state variables
          call self%fabm_model%initialize_surface_state()
+      end if
+
+      ! Initialize diagnostic variables
+      if (fabm_cfg%output_diag_vars) then
+         if (state%n_fabm_diagnostic_interior > 0) then
+            do ivar_diag = 1, state%n_fabm_diagnostic_interior
+               index = self%diagnostic_interior_index(ivar_diag)
+               state%fabm_diagnostic_interior(:, ivar_diag) = self%fabm_model%get_interior_diagnostic_data(index)
+            end do
+         end if
+         if (state%n_fabm_diagnostic_horizontal > 0) then
+            do ivar_diag = 1, state%n_fabm_diagnostic_horizontal
+               index = self%diagnostic_horizontal_index(ivar_diag)
+               state%fabm_diagnostic_horizontal(1, ivar_diag) = self%fabm_model%get_horizontal_diagnostic_data(index)
+               if (fabm_cfg%bottom_everywhere) then
+                  ! Initialize at every layer 
+                  do k_bot = 2, kmax_bot
+                     do ivar = 1, state%n_fabm_bottom_state
+                        call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k_bot, ivar))
+                     end do
+                     state%fabm_diagnostic_horizontal(k_bot, ivar_diag) = self%fabm_model%get_horizontal_diagnostic_data(index)
+                  end do
+                  ! Reset Botom to 1
+                  do ivar = 1, state%n_fabm_bottom_state
+                     call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
+                  end do
+                  k_bot = 1
+               end if
+            end do
+         end if
       end if
    end subroutine init
 
@@ -1154,13 +1184,11 @@ contains
       if (n_int > 0) then
          allocate(state%fabm_diagnostic_interior(grid%nz_grid, n_int))
          allocate(self%diagnostic_interior_index(n_int))
-         state%fabm_diagnostic_interior = 0.0_RK
       end if
       if (n_hor > 0) then
          diagnostic_horizontal_exist = .true.
          allocate(state%fabm_diagnostic_horizontal(kmax_bot, n_hor))
          allocate(self%diagnostic_horizontal_index(n_hor))
-         state%fabm_diagnostic_horizontal = 0.0_RK
       end if
 
       ! Allocate array for and set output information (name, units, long_name, minimum, maximum, missing_value) on diagnostic variables
@@ -1192,7 +1220,7 @@ contains
             output_cfg%output_vars_fabm_diagnostic(j)%minimum = self%fabm_model%horizontal_diagnostic_variables(fabm_index(i))%minimum
             output_cfg%output_vars_fabm_diagnostic(j)%maximum = self%fabm_model%horizontal_diagnostic_variables(fabm_index(i))%maximum
             output_cfg%output_vars_fabm_diagnostic(j)%benthic = .true.
-            if (fabm_cfg%bottom_everywhere) then 
+            if (fabm_cfg%bottom_everywhere) then
                output_cfg%output_vars_fabm_diagnostic(j)%values => state%fabm_diagnostic_horizontal(:, j - n_int)
                output_cfg%output_vars_fabm_diagnostic(j)%volume_grid = .true.
             else
