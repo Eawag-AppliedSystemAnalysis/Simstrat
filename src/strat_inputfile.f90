@@ -176,7 +176,7 @@ contains
          ! Define variables that should be written
          if (output_cfg%output_all) then
             output_cfg%number_output_vars = 24
-            output_cfg%output_var_names = [character(len=12) :: 'V','U','T','S','num','nuh','NN','k','eps','P','B','Ps','HA','HW','HK','HV','Rad0','TotalIceH','BlackIceH','WhiteIceH','SnowH','WaterH','Qvert','Eseiche']
+            output_cfg%output_var_names = [character(len=12) :: 'V','U','T','S','num','nuh','NN','k','eps','P','B','Ps','HA','HW','HK','HV','Rad0','SWR','TotalIceH','BlackIceH','WhiteIceH','SnowH','WaterH','Qvert','Eseiche']
          else
             output_cfg%number_output_vars = size(output_cfg%output_var_names)
          end if
@@ -319,6 +319,14 @@ contains
                   self%simdata%output_cfg%output_vars(i)%long_name = "Solar radiation at surface"
                   self%simdata%output_cfg%output_vars(i)%units = "W m-2"
                   self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%rad0
+
+               case('SWR')
+                  ! Shortwave radiative flux [W m-2]
+                  self%simdata%output_cfg%output_vars(i)%name = "SWR"
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Shortwave radiative flux"
+                  self%simdata%output_cfg%output_vars(i)%units = "W m-2"
+                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%swr_vol
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
 
                case('TotalIceH')
                   ! Total ice thickness [m]
