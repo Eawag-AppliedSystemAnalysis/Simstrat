@@ -287,6 +287,7 @@ contains
                   self%simdata%output_cfg%output_vars(i)%long_name = "Infrared radiation from sky"
                   self%simdata%output_cfg%output_vars(i)%units = "W m-2"
                   self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%ha
+                  self%simdata%output_cfg%output_vars(i)%format = "(F12.4)"
 
                case('HW')
                   ! Infrared radiation from water [W m-2]
@@ -294,6 +295,7 @@ contains
                   self%simdata%output_cfg%output_vars(i)%long_name = "Infrared radiation from water"
                   self%simdata%output_cfg%output_vars(i)%units = "W m-2"
                   self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%hw
+                  self%simdata%output_cfg%output_vars(i)%format = "(F12.4)"
 
                case('HK')
                   ! Sensible heat flux from water [W m-2]
@@ -301,6 +303,7 @@ contains
                   self%simdata%output_cfg%output_vars(i)%long_name = "Sensible heat flux from water"
                   self%simdata%output_cfg%output_vars(i)%units = "W m-2"
                   self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%hk
+                  self%simdata%output_cfg%output_vars(i)%format = "(F12.4)"
 
                case('HV')
                   ! Latent heat flux from water [W m-2]
@@ -308,6 +311,7 @@ contains
                   self%simdata%output_cfg%output_vars(i)%long_name = "Latent heat flux from water"
                   self%simdata%output_cfg%output_vars(i)%units = "W m-2"
                   self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%hv
+                  self%simdata%output_cfg%output_vars(i)%format = "(F12.4)"
 
                case('Rad0')
                   ! Solar radiation at surface [W m-2]
