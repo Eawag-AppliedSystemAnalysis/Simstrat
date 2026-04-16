@@ -69,7 +69,7 @@ contains
          ! Absorption is different for swr and par so the last calculation is not exactly correct
          state%rad_vol(1:ubnd_vol) = (state%rad(2:ubnd_fce)*grid%Az(2:ubnd_fce) - state%rad(1:ubnd_fce - 1)*grid%Az(1:ubnd_fce - 1))/(grid%Az(2:ubnd_fce) + grid%Az(1:ubnd_fce - 1))*2
          state%swr_vol(1:ubnd_vol) = state%rad_vol(1:ubnd_vol)*rho_0*cp
-         state%par_vol(1:ubnd_vol) = state%swr_vol(1:ubnd_vol)*rho_0*cp*swr_par
+         state%par_vol(1:ubnd_vol) = state%swr_vol(1:ubnd_vol)*swr_par
 
          !!!!!!!! Define sources !!!!!!!!
          ! Add Hsol Term to sources (Eq 1, Goudsmit(2002))
