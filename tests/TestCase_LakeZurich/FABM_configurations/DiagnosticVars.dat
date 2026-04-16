@@ -1,4 +1,4 @@
-Add the short name of a FABM diagnostic variable to output below the line (e.g. attenuation_coefficient_of_photosynthetic_radiative_flux)
+Add the short name of a FABM diagnostic variable to output below the line (e.g. attenuation_coefficient_of_photosynthetic_radiative_flux); Note: The output of diagnostic variables might have to be set to true in the biogeochemical model itself first
 -Add select_all_* to output all FABM diagnostic variables that start with * (e.g. select_all_npzd) or select_all_ to output all FABM diagnostic variables
 -Add select_output_* to output all FABM diagnostic variables that start with * (e.g. select_output_npzd) and have Output set true by the biogeochemical model or select_output_ to output all FABM diagnostic variables that have Output set true
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
