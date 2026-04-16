@@ -230,7 +230,7 @@ contains
          call logger%calculate_simulation_time_for_next_output(simdata%model%simulation_time)
          new_start_datum = simdata%model%datum
       else
-         call logger%log(simdata)
+         call logger%log(simdata, simdata%output_cfg)
       end if
       call ok("End day: "//real_to_str(simdata%sim_cfg%end_datum, '(F7.1)'))
       call logger%start()
@@ -345,7 +345,7 @@ contains
          end if
 
          ! Call logger to write files
-         call logger%log(simdata)
+         call logger%log(simdata, simdata%output_cfg)
 
          ! This logical is used to do some allocation and initialization in the forcing, biogeochemical and lateral subroutines during the first timestep
          simdata%model%first_timestep = .false.

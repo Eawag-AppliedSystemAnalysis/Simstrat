@@ -82,12 +82,11 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-20
             # If the value is constant in depth, drop that dimension (necessary for FABM surface diagnostic variables)
             if np.all(data.var(dim='Depth', skipna=True, ddof=0).fillna(0.0) <= eps*np.absolute(data.mean(dim='Depth', skipna=True).fillna(0.0))):
                 data = data.mean(dim='Depth', skipna=True)
-        # Add attributes: long name, units, minima/maxima, type, grid position
-        data.attrs['long_name'] = attributes['Long Name'][var_names[i]]
-        # Check if units are nan first
-        units = attributes['Units'][var_names[i]]
-        if not (isinstance(units, (float, np.floating)) and np.isnan(units)):
-            data.attrs['units'] = units
+        # Add attributes
+        if attributes['Long Name'][var_names[i]] != '-':
+            data.attrs['long_name'] = attributes['Long Name'][var_names[i]]
+        if attributes['Units'][var_names[i]] != '-':
+            data.attrs['units'] = attributes['Units'][var_names[i]]
         if attributes['Minimum'][var_names[i]] != '-':
             data.attrs['valid_min'] = attributes['Minimum'][var_names[i]]
         if attributes['Maximum'][var_names[i]] != '-':

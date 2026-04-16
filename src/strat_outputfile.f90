@@ -126,10 +126,11 @@ contains
       integer(8), dimension(2), intent(in) :: simulation_time
    end subroutine
 
-   subroutine generic_log(self, simdata)
+   subroutine generic_log(self, simdata, output_config)
       implicit none
       class(SimstratOutputLogger), intent(inout) :: self
       class(SimulationData) :: simdata
+      class(OutputConfig), target :: output_config
    end subroutine
 
    subroutine generic_log_start(self)
@@ -323,9 +324,10 @@ contains
 
       ! Local variables
       integer :: i, unit, status
-      character(len=16) :: min_str, max_str
-      character(len=32) :: type
+      character(len=32) :: type, min_str, max_str
       character(len=256) :: file_path
+      character(len=:), allocatable :: long_str, units_str
+      type(LogVariable), pointer :: var
 
       ! Construct the file path
       file_path = output_config%PathOut//'/_variables.dat'
@@ -345,41 +347,71 @@ contains
       write(unit, '(A)', advance = 'no') 'Type, '
       write(unit, '(A)') 'Grid Position'
 
-      ! Write the names, units and minima/maxima of all variables
+      ! Write the variable attributes
       do i = 1, self%n_vars
+         ! Get variable type and structure
          if (i < (self%n_vars_Simstrat + 1)) then
-            self%output_config%log_variable => self%output_config%output_vars(i)
+            var => output_config%output_vars(i)
             type = 'Simstrat'
          else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + 1)) then
-            self%output_config%log_variable => self%output_config%output_vars_fabm_state(i - self%n_vars_Simstrat)
+            var => output_config%output_vars_fabm_state(i - self%n_vars_Simstrat)
             type = 'FABM'
          else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic + 1)) then
-            self%output_config%log_variable => self%output_config%output_vars_fabm_diagnostic(i - (self%n_vars_Simstrat + self%n_vars_fabm_state))
+            var => output_config%output_vars_fabm_diagnostic(i - (self%n_vars_Simstrat + self%n_vars_fabm_state))
             type = 'FABM Diagnostic'
          else
-            self%output_config%log_variable => self%output_config%output_vars_fabm_repaired(i - (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic))
+            var => output_config%output_vars_fabm_repaired(i - (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic))
             type = 'FABM Repaired'
          end if
-         write(unit, '(A)', advance='no') trim(self%output_config%log_variable%name)//', '
-         write(unit, '(A)', advance='no') trim(self%output_config%log_variable%long_name)//', '
-         write(unit, '(A)', advance='no') trim(self%output_config%log_variable%units)//', '
-         if (allocated(self%output_config%log_variable%minimum)) then
-            write(min_str, self%output_config%log_variable%format) self%output_config%log_variable%minimum
-            write(unit, '(A)', advance='no') trim(adjustl(min_str))//', '
+         ! Check if name is allocated and not empty, write name or interrupt otherwise
+         if (allocated(var%name)) then
+            if (len_trim(var%name) > 0) then
+               write(unit, '(A)', advance='no') trim(var%name)//', '
+            else
+               call error('Variable of type '//trim(type)//' has undefined name.')
+            end if
          else
-            write(unit, '(A)', advance='no') '-, '
+            call error('Variable of type '//trim(type)//' has undefined name.')
          end if
-         if (allocated(self%output_config%log_variable%maximum)) then
-            write(max_str, self%output_config%log_variable%format) self%output_config%log_variable%maximum
-            write(unit, '(A)', advance = 'no') trim(adjustl(max_str))//', '
+         ! Check if long_name, units, minimum, maximum are allocated and not empty, write them or - otherwise
+         if (allocated(var%long_name)) then
+            if (len_trim(var%long_name) > 0) then
+               long_str = var%long_name
+            else
+               long_str = '-'
+            end if
          else
-            write(unit, '(A)', advance = 'no') '-, '
+            long_str = '-'
          end if
+         if (allocated(var%units)) then
+            if (len_trim(var%units) > 0) then
+               units_str = var%units
+            else
+               units_str = '-'
+            end if
+         else
+            units_str = '-'
+         end if
+         if (allocated(var%minimum)) then
+            write(min_str, var%format) var%minimum
+         else
+            min_str = '-'
+         end if
+         if (allocated(var%maximum)) then
+            write(max_str, var%format) var%maximum
+         else
+            max_str = '-'
+         end if
+         ! Write long_name, units, minimum and maximum
+         write(unit, '(A)', advance='no') trim(adjustl(long_str))//', '
+         write(unit, '(A)', advance='no') trim(adjustl(units_str))//', '
+         write(unit, '(A)', advance='no') trim(adjustl(min_str))//', '
+         write(unit, '(A)', advance = 'no') trim(adjustl(max_str))//', '
          ! Write type and grid position
          ! FABM diagnostic horizontal variables are all treated as benthic because FABM does not differentiate
          if (type(:4) == 'FABM') then
-            if (self%output_config%log_variable%volume_grid) then
-               if (self%output_config%log_variable%benthic) then
+            if (var%volume_grid) then
+               if (var%benthic) then
                   if (type(:15) == 'FABM Diagnostic') then
                      write(unit, '(A)') trim(type)//' Horizontal Variable, On Volume'
                   else
@@ -388,7 +420,7 @@ contains
                else
                   write(unit, '(A)') trim(type)//' Interior Variable, On Volume'
                end if
-            else if (self%output_config%log_variable%benthic) then
+            else if (var%benthic) then
                if (type(:15) == 'FABM Diagnostic') then
                   write(unit, '(A)') trim(type)//' Horizontal Variable, -'
                else
@@ -398,9 +430,9 @@ contains
                write(unit, '(A)') trim(type)//' Surface Variable, -'
             end if
          else
-            if (self%output_config%log_variable%volume_grid) then
+            if (var%volume_grid) then
                write(unit, '(A)') 'Simstrat Interior Variable, On Volume'
-            else if (self%output_config%log_variable%face_grid) then
+            else if (var%face_grid) then
                write(unit, '(A)') 'Simstrat Interior Variable, On Face'
             else
                write(unit, '(A)') 'Simstrat Global Variable, -'
@@ -416,46 +448,48 @@ contains
       class(InterpolatingLogger), intent(inout) :: self
       class(OutputConfig), target :: output_config
       class(StaggeredGrid), target :: grid
+
       logical, intent(in) :: snapshot_file_exists
       integer :: i, exitstat
       character(len=:), allocatable :: file_path
       logical :: status_ok, append, exist_output_folder
+      type(LogVariable), pointer :: var
 
       if (allocated(self%output_files)) deallocate (self%output_files)
       allocate (self%output_files(1:self%n_vars))
 
       do i = 1, self%n_vars
          if (i < (self%n_vars_Simstrat + 1)) then
-            self%output_config%log_variable => self%output_config%output_vars(i)
+            var => output_config%output_vars(i)
          else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + 1)) then
-            self%output_config%log_variable => self%output_config%output_vars_fabm_state(i - self%n_vars_Simstrat)
+            var => output_config%output_vars_fabm_state(i - self%n_vars_Simstrat)
          else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic + 1)) then
-            self%output_config%log_variable => self%output_config%output_vars_fabm_diagnostic(i - (self%n_vars_Simstrat + self%n_vars_fabm_state))
+            var => output_config%output_vars_fabm_diagnostic(i - (self%n_vars_Simstrat + self%n_vars_fabm_state))
          else
-            self%output_config%log_variable => self%output_config%output_vars_fabm_repaired(i - (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic))
+            var => output_config%output_vars_fabm_repaired(i - (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic))
          end if
-         file_path = output_config%PathOut//'/'//trim(self%output_config%log_variable%name)//'_out.dat'
+         file_path = output_config%PathOut//'/'//trim(var%name)//'_out.dat'
          inquire (file=file_path, exist=append)
          append = append .and. snapshot_file_exists
-         if (self%output_config%log_variable%volume_grid) then
+         if (var%volume_grid) then
             ! Variable on volume grid
             call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
             if (status_ok) then
                if (.not. append) then
                   call self%output_files(i)%add('Datetime')
-                  call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
+                  call self%output_files(i)%add(output_config%zout, real_fmt='(F12.3)')
                   call self%output_files(i)%next_row()
                end if
             else
                call error('Cannot write to output directory. Make sure you have writing access.')
             end if
-         else if (self%output_config%log_variable%face_grid) then
+         else if (var%face_grid) then
             ! Variable on face grid
             call self%output_files(i)%open(file_path, n_cols=self%n_depths+1, append=append, status_ok=status_ok)
             if (status_ok) then
                if (.not. append) then
                   call self%output_files(i)%add('Datetime')
-                  call self%output_files(i)%add(self%output_config%zout, real_fmt='(F12.3)')
+                  call self%output_files(i)%add(output_config%zout, real_fmt='(F12.3)')
                   call self%output_files(i)%next_row()
                end if
             else
@@ -513,18 +547,21 @@ contains
    !************************* Log ****************************
 
    ! Log current state on interpolated grid at specific times
-   subroutine log_interpolating(self, simdata)
+   subroutine log_interpolating(self, simdata, output_config)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
       class(SimulationData) :: simdata
+      class(OutputConfig), target :: output_config
+
       !workaround gfortran bug => cannot pass allocatable array to csv file
       real(RK), dimension(self%n_depths) :: values_on_zout
       type(OutputHelper) :: output_helper
       integer :: i, j
+      type(LogVariable), pointer :: var
 
       call output_helper%init(simdata%model%simulation_time, simdata%model%simulation_time_old, self%sim_config%timestep, self%simulation_time_for_next_output, &
-                              self%sim_config%start_datum, self%output_config%thinning_interval, &
-                              self%output_config%simulation_times_for_output, self%counter)
+                              self%sim_config%start_datum, output_config%thinning_interval, &
+                              output_config%simulation_times_for_output, self%counter)
       
       ! Standard display: display when logged: datum, lake surface, T(water surface), T(1)
       if (self%sim_config%disp_simulation == 1 .and. output_helper%write_to_file) then
@@ -539,25 +576,25 @@ contains
       do i = 1, self%n_vars
          call output_helper%add_datum(self%output_files(i), '(F12.4)')
          if (i < (self%n_vars_Simstrat + 1)) then
-            self%output_config%log_variable => self%output_config%output_vars(i)
+            var => output_config%output_vars(i)
          else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + 1)) then
-            self%output_config%log_variable => self%output_config%output_vars_fabm_state(i - self%n_vars_Simstrat)
+            var => output_config%output_vars_fabm_state(i - self%n_vars_Simstrat)
          else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic + 1)) then
-            self%output_config%log_variable => self%output_config%output_vars_fabm_diagnostic(i - (self%n_vars_Simstrat + self%n_vars_fabm_state))
+            var => output_config%output_vars_fabm_diagnostic(i - (self%n_vars_Simstrat + self%n_vars_fabm_state))
          else
-            self%output_config%log_variable => self%output_config%output_vars_fabm_repaired(i - (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic))
+            var => output_config%output_vars_fabm_repaired(i - (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic))
          end if
          ! If on volume or faces grid
-         if (self%output_config%log_variable%volume_grid) then
+         if (var%volume_grid) then
             ! Interpolate state on volume grid
-            call self%grid%interpolate_from_vol(self%output_config%log_variable%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-            call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, self%output_config%log_variable%format)
-         else if (self%output_config%log_variable%face_grid) then
+            call self%grid%interpolate_from_vol(var%values, output_config%zout, values_on_zout, self%n_depths, output_config%output_depth_reference)
+            call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, var%format)
+         else if (var%face_grid) then
             ! Interpolate state on face grid
-            call self%grid%interpolate_from_face(self%output_config%log_variable%values, self%output_config%zout, values_on_zout, self%n_depths, self%output_config%output_depth_reference)
-            call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, self%output_config%log_variable%format)
+            call self%grid%interpolate_from_face(var%values, output_config%zout, values_on_zout, self%n_depths, output_config%output_depth_reference)
+            call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, var%format)
          else
-            call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, self%output_config%log_variable%global_value, self%output_config%log_variable%format)
+            call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, var%global_value, var%format)
          end if
          call output_helper%next_row(self%output_files(i))
       end do
