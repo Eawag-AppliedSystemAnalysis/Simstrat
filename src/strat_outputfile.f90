@@ -366,7 +366,7 @@ contains
          ! Check if name is allocated and not empty, write name or interrupt otherwise
          if (allocated(var%name)) then
             if (len_trim(var%name) > 0) then
-               write(unit, '(A)', advance='no') trim(var%name)//', '
+               write(unit, '(A)', advance='no') '"'//trim(var%name)//'", '
             else
                call error('Variable of type '//trim(type)//' has undefined name.')
             end if
@@ -403,39 +403,39 @@ contains
             max_str = '-'
          end if
          ! Write long_name, units, minimum and maximum
-         write(unit, '(A)', advance='no') trim(adjustl(long_str))//', '
-         write(unit, '(A)', advance='no') trim(adjustl(units_str))//', '
-         write(unit, '(A)', advance='no') trim(adjustl(min_str))//', '
-         write(unit, '(A)', advance = 'no') trim(adjustl(max_str))//', '
+         write(unit, '(A)', advance='no') '"'//trim(adjustl(long_str))//'", '
+         write(unit, '(A)', advance='no') '"'//trim(adjustl(units_str))//'", '
+         write(unit, '(A)', advance='no') '"'//trim(adjustl(min_str))//'", '
+         write(unit, '(A)', advance = 'no') '"'//trim(adjustl(max_str))//'", '
          ! Write type and grid position
          ! FABM diagnostic horizontal variables are all treated as benthic because FABM does not differentiate
          if (type(:4) == 'FABM') then
             if (var%volume_grid) then
                if (var%benthic) then
                   if (type(:15) == 'FABM Diagnostic') then
-                     write(unit, '(A)') trim(type)//' Horizontal Variable, On Volume'
+                     write(unit, '(A)') '"'//trim(type)//' Horizontal Variable", "On Volume"'
                   else
-                     write(unit, '(A)') trim(type)//' Bottom Variable, On Volume'
+                     write(unit, '(A)') '"'//trim(type)//' Bottom Variable", "On Volume"'
                   end if
                else
-                  write(unit, '(A)') trim(type)//' Interior Variable, On Volume'
+                  write(unit, '(A)') '"'//trim(type)//' Interior Variable", "On Volume"'
                end if
             else if (var%benthic) then
                if (type(:15) == 'FABM Diagnostic') then
-                  write(unit, '(A)') trim(type)//' Horizontal Variable, -'
+                  write(unit, '(A)') '"'//trim(type)//' Horizontal Variable", "-"'
                else
-                  write(unit, '(A)') trim(type)//' Bottom Variable, -'
+                  write(unit, '(A)') '"'//trim(type)//' Bottom Variable", "-"'
                end if
             else
-               write(unit, '(A)') trim(type)//' Surface Variable, -'
+               write(unit, '(A)') '"'//trim(type)//' Surface Variable", "-"'
             end if
          else
             if (var%volume_grid) then
-               write(unit, '(A)') 'Simstrat Interior Variable, On Volume'
+               write(unit, '(A)') '"Simstrat Interior Variable", "On Volume"'
             else if (var%face_grid) then
-               write(unit, '(A)') 'Simstrat Interior Variable, On Face'
+               write(unit, '(A)') '"Simstrat Interior Variable", "On Face"'
             else
-               write(unit, '(A)') 'Simstrat Global Variable, -'
+               write(unit, '(A)') '"Simstrat Global Variable", "-"'
             end if
          end if
       end do

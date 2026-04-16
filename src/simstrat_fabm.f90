@@ -1257,7 +1257,7 @@ contains
 
       ! Convert boundary_value to string
       write(boundary_value_str, '(ES15.6)') boundary_value
-      new_line = trim(variable)//', '//trim(boundary)//', '//trim(adjustl(boundary_value_str))
+      new_line = '"'//trim(variable)//'", "'//trim(boundary)//'", "'//trim(adjustl(boundary_value_str))//'"'
 
       ! Check if repaired variable case already present in RepairedVars
       open(newunit=unit, action='read', status='old', file=file_path, iostat = status)
