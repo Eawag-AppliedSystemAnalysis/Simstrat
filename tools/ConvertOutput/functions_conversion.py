@@ -1,6 +1,7 @@
 # Load libraries
 
 import os
+import re
 import warnings
 import pandas as pd
 import numpy as np
@@ -50,11 +51,15 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-20
     for i, variable in enumerate(var_names):
 
         # Create path and check if CSV file exists and if it is not empty
+        # Also check whether it exists in list_variables
         csv_file = os.path.join(path_to_output, f'{variable}_out.dat')
         if not os.path.exists(csv_file):
             raise FileNotFoundError(f'File {csv_file} does not exist.')
         elif os.stat(csv_file).st_size == 0:
             print(f'Empty file {csv_file} ignored.')
+            continue
+        elif not (var_names[i] in attributes.index):
+            print(f'Old file {csv_file} ignored.')
             continue
 
         # Read values from the CSV file
@@ -77,16 +82,18 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-20
             # Ignore warning appearing for empty results
             warnings.filterwarnings('ignore', message='Degrees of freedom <= 0 for slice')
             # If the value is constant in time, drop that dimension
-            if np.all(data.var(dim='Datetime', skipna=True, ddof=0).fillna(0.0) <= eps*np.absolute(data.mean(dim='Datetime', skipna=True).fillna(0.0))):
-                data = data.mean(dim='Datetime', skipna=True)
+            datetime_mean = data.mean(dim='Datetime', skipna=True).fillna(0.0)
+            if np.all(np.absolute(data - datetime_mean) <= eps*np.absolute(datetime_mean)):
+                data = datetime_mean
             # If the value is constant in depth, drop that dimension (necessary for FABM surface diagnostic variables)
-            if np.all(data.var(dim='Depth', skipna=True, ddof=0).fillna(0.0) <= eps*np.absolute(data.mean(dim='Depth', skipna=True).fillna(0.0))):
-                data = data.mean(dim='Depth', skipna=True)
+            depth_mean = data.mean(dim='Depth', skipna=True).fillna(0.0)
+            if np.all(np.absolute(data - depth_mean) <= eps*np.absolute(depth_mean)):
+                data = depth_mean
         # Add attributes
         if attributes['Long Name'][var_names[i]] != '-':
             data.attrs['long_name'] = attributes['Long Name'][var_names[i]]
-        if attributes['Units'][var_names[i]] != '-':
-            data.attrs['units'] = attributes['Units'][var_names[i]]
+        if normalize_units(attributes['Units'][var_names[i]]) != '-':
+            data.attrs['units'] = normalize_units(attributes['Units'][var_names[i]])
         if attributes['Minimum'][var_names[i]] != '-':
             data.attrs['valid_min'] = attributes['Minimum'][var_names[i]]
         if attributes['Maximum'][var_names[i]] != '-':
@@ -119,8 +126,8 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-20
             # Store every column as DataArray
             for j in range(len(df.columns)-1):
                 data = df.set_index(['Datetime']).to_xarray()[df.columns[j+1]]
-                if len(units) > 0:
-                    data.attrs['units'] = units.iloc[0,j]
+                if (len(units) > 0) and (units.iloc[0,j] != '-'):
+                    data.attrs['units'] = normalize_units(units.iloc[0,j])
                 data.attrs['title'] = 'Absorption Input'
                 data.attrs['reference_depth'] = depths[j]
                 data_list.append(data)
@@ -159,8 +166,8 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-20
             if inflow_mode_not_1:
                 for j in range(len(deep.columns)-1):
                     data = deep.set_index(['Datetime']).to_xarray()[deep.columns[j+1]]
-                    if len(units) > 0:
-                        data.attrs['units'] = units.iloc[0,0]
+                    if (len(units) > 0) and (units.iloc[0,0] != '-'):
+                        data.attrs['units'] = normalize_units(units.iloc[0,0])
                     data.attrs['title'] = 'Deep Inflow (Density-driven)'
                     data.attrs['injection_depth'] = deep_depths[j]
                     data_list.append(data)
@@ -169,8 +176,8 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-20
                 for j in range(len(deep.columns)-1):
                     if not (j % 2):
                         data = deep.set_index(['Datetime']).to_xarray()[deep.columns[j+1]]
-                        if len(units) > 0:
-                            data.attrs['units'] = units.iloc[0,1]
+                        if (len(units) > 0) and (units.iloc[0,1] != '-'):
+                            data.attrs['units'] = normalize_units(units.iloc[0,1])
                         data.attrs['title'] = 'Deep Inflow (Manual)'
                         data.attrs['injection_depth'] = str(deep_depths[j]) + ' m to ' + str(deep_depths[j+1]) + ' m'
                         data_list.append(data)
@@ -178,8 +185,8 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-20
             for j in range(len(surf.columns)-1):
                 if not (j % 2):
                     data = surf.set_index(['Datetime']).to_xarray()[surf.columns[j+1]]
-                    if len(units) > 0:
-                        data.attrs['units'] = units.iloc[0,1]
+                    if (len(units) > 0) and (units.iloc[0,1] != '-'):
+                        data.attrs['units'] = normalize_units(units.iloc[0,1])
                     data.attrs['title'] = 'Surface Inflow'
                     data.attrs['injection_depth'] = str(surf_depths[j]) + ' m to ' + str(surf_depths[j+1]) + ' m'
                     data_list.append(data)
@@ -197,8 +204,8 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-20
             # Store every column as DataArray
             for j in range(len(df.columns)-1):
                 data = df.set_index(['Depth']).to_xarray()[df.columns[j+1]]
-                if len(units) > 0:
-                    data.attrs['units'] = units.iloc[0,j]
+                if (len(units) > 0) and (units.iloc[0,j] != '-'):
+                    data.attrs['units'] = normalize_units(units.iloc[0,j])
                 data.attrs['title'] = 'Initial Condition'
                 data_list.append(data)
                 
@@ -215,8 +222,8 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-20
             # Store every column as DataArray
             for j in range(len(df.columns)-1):
                 data = df.set_index(['Datetime']).to_xarray()[df.columns[j+1]]
-                if len(units) > 0:
-                    data.attrs['units'] = units.iloc[0,j]
+                if (len(units) > 0) and (units.iloc[0,j] != '-'):
+                    data.attrs['units'] = normalize_units(units.iloc[0,j])
                 data.attrs['title'] = 'Forcing Input'
                 data_list.append(data)
 
@@ -233,3 +240,57 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-20
     # Create NetCDF file from Dataset
     netcdf_file = os.path.join(path_to_output, f'{filename}.nc')
     full_data.to_netcdf(netcdf_file)
+
+# Helper function
+
+def normalize_units(units):
+    """
+    Convert units to standard format
+    
+    Parameters:
+    -----------
+    units : str
+        Units in format m/s2/kg or m s-2 kg-1
+    
+    Returns:
+    -----------
+    units_normalized : str
+        Units in format m/s2/kg
+    """
+
+    # Return - if no units provided
+    if not units or units.strip() == '':
+        return '-'
+
+    # Split into seperate parts
+    parts = units.split()
+
+    # Empty lists for numerator and denominator
+    num = []
+    den = []
+
+    # Add to numerator or denominator list depending on exponent
+    for part in parts:
+        # match: base + exponent
+        match = re.fullmatch(r"([a-zA-Z]+)([-]?\d+)?", part)
+        if not match:
+            num.append(part)
+        else:
+            base = match.group(1)
+            exp = int(match.group(2)) if match.group(2) else 1
+            if exp > 0:
+                num.append(base + (str(exp) if exp > 1 else ""))
+            elif exp < 0:
+                den.append(base + (str(-exp) if exp < -1 else ""))
+
+    # 1/unit if no numerator
+    if not num:
+        num_str = "1"
+    else:
+        num_str = "".join(num)
+
+    # Return with denominator if existing
+    if not den:
+        return num_str
+    else:
+        return num_str + "/" + "/".join(den)
