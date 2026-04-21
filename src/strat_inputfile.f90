@@ -188,7 +188,7 @@ contains
                   ! Horizontal velocity in y direction [m s-1]
                   self%simdata%output_cfg%output_vars(i)%name = "V"
                   self%simdata%output_cfg%output_vars(i)%long_name = "Horizontal velocity in y direction"
-                  self%simdata%output_cfg%output_vars(i)%units = "m s-1"
+                  self%simdata%output_cfg%output_vars(i)%units = "m/s"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%V
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
 
@@ -196,7 +196,7 @@ contains
                   ! Horizontal velocity in x direction [m s-1]
                   self%simdata%output_cfg%output_vars(i)%name = "U"
                   self%simdata%output_cfg%output_vars(i)%long_name = "Horizontal velocity in x direction"
-                  self%simdata%output_cfg%output_vars(i)%units = "m s-1"
+                  self%simdata%output_cfg%output_vars(i)%units = "m/s"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%U
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
 
@@ -204,7 +204,7 @@ contains
                   ! Temperature [°C]
                   self%simdata%output_cfg%output_vars(i)%name = "T"
                   self%simdata%output_cfg%output_vars(i)%long_name = "Temperature"
-                  self%simdata%output_cfg%output_vars(i)%units = "m s-1"
+                  self%simdata%output_cfg%output_vars(i)%units = "m/s"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%T
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
                   self%simdata%output_cfg%output_vars(i)%format = "(F12.4)"
@@ -237,7 +237,7 @@ contains
                   ! Brunt-Väisälä frequency [s-1]
                   self%simdata%output_cfg%output_vars(i)%name = "NN"
                   self%simdata%output_cfg%output_vars(i)%long_name = "Brunt-Väisälä frequency"
-                  self%simdata%output_cfg%output_vars(i)%units = "s-1"
+                  self%simdata%output_cfg%output_vars(i)%units = "1/s"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%NN
                   self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
@@ -245,7 +245,7 @@ contains
                   ! Turbulent kinetic energy (TKE) [J kg-1]
                   self%simdata%output_cfg%output_vars(i)%name = "k"
                   self%simdata%output_cfg%output_vars(i)%long_name = "Turbulent kinetic energy (TKE)"
-                  self%simdata%output_cfg%output_vars(i)%units = "J kg-1"
+                  self%simdata%output_cfg%output_vars(i)%units = "J/kg"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%k
                   self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
@@ -253,7 +253,7 @@ contains
                   ! TKE dissipation rate [W kg-1]
                   self%simdata%output_cfg%output_vars(i)%name = "eps"
                   self%simdata%output_cfg%output_vars(i)%long_name = "TKE dissipation rate"
-                  self%simdata%output_cfg%output_vars(i)%units = "W kg-1"
+                  self%simdata%output_cfg%output_vars(i)%units = "W/kg"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%eps
                   self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
@@ -261,7 +261,7 @@ contains
                   ! Shear stress production P [W kg-1]
                   self%simdata%output_cfg%output_vars(i)%name = "P"
                   self%simdata%output_cfg%output_vars(i)%long_name = "Shear stress production"
-                  self%simdata%output_cfg%output_vars(i)%units = "W kg-1"
+                  self%simdata%output_cfg%output_vars(i)%units = "W/kg"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%P
                   self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
@@ -269,7 +269,7 @@ contains
                   ! Buoyancy production [W kg-1]
                   self%simdata%output_cfg%output_vars(i)%name = "B"
                   self%simdata%output_cfg%output_vars(i)%long_name = "Buoyancy production"
-                  self%simdata%output_cfg%output_vars(i)%units = "W kg-1"
+                  self%simdata%output_cfg%output_vars(i)%units = "W/kg"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%B
                   self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
@@ -277,7 +277,7 @@ contains
                   ! Production of TKE due to internal seiching [W kg-1]
                   self%simdata%output_cfg%output_vars(i)%name = "Ps"
                   self%simdata%output_cfg%output_vars(i)%long_name = "Production of TKE due to internal seiching"
-                  self%simdata%output_cfg%output_vars(i)%units = "W kg-1"
+                  self%simdata%output_cfg%output_vars(i)%units = "W/kg"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%P_seiche
                   self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
@@ -285,7 +285,7 @@ contains
                   ! Infrared radiation from sky [W m-2]
                   self%simdata%output_cfg%output_vars(i)%name = "HA"
                   self%simdata%output_cfg%output_vars(i)%long_name = "Infrared radiation from sky"
-                  self%simdata%output_cfg%output_vars(i)%units = "W m-2"
+                  self%simdata%output_cfg%output_vars(i)%units = "W/m2"
                   self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%ha
                   self%simdata%output_cfg%output_vars(i)%format = "(F12.4)"
 
@@ -293,7 +293,7 @@ contains
                   ! Infrared radiation from water [W m-2]
                   self%simdata%output_cfg%output_vars(i)%name = "HW"
                   self%simdata%output_cfg%output_vars(i)%long_name = "Infrared radiation from water"
-                  self%simdata%output_cfg%output_vars(i)%units = "W m-2"
+                  self%simdata%output_cfg%output_vars(i)%units = "W/m2"
                   self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%hw
                   self%simdata%output_cfg%output_vars(i)%format = "(F12.4)"
 
@@ -301,7 +301,7 @@ contains
                   ! Sensible heat flux from water [W m-2]
                   self%simdata%output_cfg%output_vars(i)%name = "HK"
                   self%simdata%output_cfg%output_vars(i)%long_name = "Sensible heat flux from water"
-                  self%simdata%output_cfg%output_vars(i)%units = "W m-2"
+                  self%simdata%output_cfg%output_vars(i)%units = "W/m2"
                   self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%hk
                   self%simdata%output_cfg%output_vars(i)%format = "(F12.4)"
 
@@ -309,7 +309,7 @@ contains
                   ! Latent heat flux from water [W m-2]
                   self%simdata%output_cfg%output_vars(i)%name = "HV"
                   self%simdata%output_cfg%output_vars(i)%long_name = "Latent heat flux from water"
-                  self%simdata%output_cfg%output_vars(i)%units = "W m-2"
+                  self%simdata%output_cfg%output_vars(i)%units = "W/m2"
                   self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%hv
                   self%simdata%output_cfg%output_vars(i)%format = "(F12.4)"
 
@@ -317,14 +317,14 @@ contains
                   ! Solar radiation at surface [W m-2]
                   self%simdata%output_cfg%output_vars(i)%name = "Rad0"
                   self%simdata%output_cfg%output_vars(i)%long_name = "Solar radiation at surface"
-                  self%simdata%output_cfg%output_vars(i)%units = "W m-2"
+                  self%simdata%output_cfg%output_vars(i)%units = "W/m2"
                   self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%rad0
 
                case('SWR')
                   ! Shortwave radiative flux [W m-2]
                   self%simdata%output_cfg%output_vars(i)%name = "SWR"
                   self%simdata%output_cfg%output_vars(i)%long_name = "Shortwave radiative flux"
-                  self%simdata%output_cfg%output_vars(i)%units = "W m-2"
+                  self%simdata%output_cfg%output_vars(i)%units = "W/m2"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%swr_vol
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
 
@@ -372,7 +372,7 @@ contains
                   ! Vertical advection [m3 s-1]
                   self%simdata%output_cfg%output_vars(i)%name = "Qvert"
                   self%simdata%output_cfg%output_vars(i)%long_name = "Vertical advection"
-                  self%simdata%output_cfg%output_vars(i)%units = "m3 s-1"
+                  self%simdata%output_cfg%output_vars(i)%units = "m3/s"
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%Q_vert
                   self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 

@@ -79,9 +79,9 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-20
             time_values = time_values[:len(time_values)-1]
             data = xr.DataArray(df.values.astype(float), dims=['Datetime', 'Depth'], coords={'Datetime': time_values.astype(float), 'Depth': df.columns.astype(float)}, name=var_names[i])
         # Drop datetime points that have only nan
-        data = data.dropna(dim="Datetime", how="all")
+        data = data.dropna(dim='Datetime', how='all')
         # Drop depths that have only nan
-        data = data.dropna(dim="Depth", how="all")
+        data = data.dropna(dim='Depth', how='all')
         # Drop constant dimensions
         with warnings.catch_warnings():
             # Ignore warning appearing for empty results
@@ -277,25 +277,25 @@ def normalize_units(units):
     # Add to numerator or denominator list depending on exponent
     for part in parts:
         # match: base + exponent
-        match = re.fullmatch(r"([a-zA-Z]+)([-]?\d+)?", part)
+        match = re.fullmatch(r'([a-zA-Z]+)([-]?\d+)?', part)
         if not match:
             num.append(part)
         else:
             base = match.group(1)
             exp = int(match.group(2)) if match.group(2) else 1
             if exp > 0:
-                num.append(base + (str(exp) if exp > 1 else ""))
+                num.append(base + (str(exp) if exp > 1 else ''))
             elif exp < 0:
-                den.append(base + (str(-exp) if exp < -1 else ""))
+                den.append(base + (str(-exp) if exp < -1 else ''))
 
     # 1/unit if no numerator
     if not num:
-        num_str = "1"
+        num_str = '1'
     else:
-        num_str = "".join(num)
+        num_str = '  '.join(num)
 
     # Return with denominator if existing
     if not den:
         return num_str
     else:
-        return num_str + "/" + "/".join(den)
+        return num_str + '/' + '/'.join(den)
