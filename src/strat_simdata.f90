@@ -495,8 +495,6 @@ contains
          call save_matrix_pointer(80, self%fabm_interior_state)
          call save_matrix_pointer(80, self%fabm_bottom_state)
          call save_array_pointer(80, self%fabm_surface_state)
-         call save_matrix_pointer(80, self%fabm_diagnostic_interior)
-         call save_matrix_pointer(80, self%fabm_diagnostic_horizontal)
       end if
       if (inflow_mode > 0) then
          call save_matrix(80, self%Q_inp)
@@ -574,8 +572,6 @@ contains
          call read_matrix_pointer(81, self%fabm_interior_state)
          call read_matrix_pointer(81, self%fabm_bottom_state)
          call read_array_pointer(81, self%fabm_surface_state)
-         call read_matrix_pointer(80, self%fabm_diagnostic_interior)
-         call read_matrix_pointer(80, self%fabm_diagnostic_horizontal)
       end if
       if (inflow_mode > 0) then
          call read_matrix(81, self%Q_inp)

@@ -51,6 +51,9 @@ module simstrat_fabm
    integer, target :: k_bot
    ! Bottom size: 1 if bottom_everywhere is false, nz_grid if bottom_everywhere is true
    integer :: kmax_bot
+   ! Validity of bottom variables at current bottom location
+   logical :: valid_bot
+
    ! Index of attenuation_coefficient_of_photosynthetic_radiative_flux in FABM diagnostic variables
    integer :: att_index
 
@@ -426,11 +429,14 @@ contains
       ! This sets the values of arrays sent to fabm_model%link_*_state_data,
       ! in this case those contained in *_state
       ! If model is not initialized with custom or previously stored state
+      ! At the same time repair initializations out of bounds
       if (.not. sim_cfg%continue_from_snapshot) then
          ! Interior state variables
          call self%fabm_model%initialize_interior_state(1, grid%nz_grid)
+         call self%fabm_model%check_interior_state(1, grid%nz_grid, fabm_cfg%repair_states, self%valid_int)
          ! Bottom state variables
          call self%fabm_model%initialize_bottom_state()
+         call self%fabm_model%check_bottom_state(fabm_cfg%repair_states, self%valid_bt)
          ! If bottom_everywhere is set, at every depth:
          ! FABM is pointed to location that holds state data for the current depth
          ! The bottom (the location of the pelagic-benthic interface) is moved to the current depth
@@ -441,6 +447,8 @@ contains
                   call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k_bot, ivar))
                end do
                call self%fabm_model%initialize_bottom_state()
+               call self%fabm_model%check_bottom_state(fabm_cfg%repair_states, valid_bot)
+               self%valid_bt = self%valid_bt .and. valid_bot
             end do
             ! Reset Botom to 1
             do ivar = 1, state%n_fabm_bottom_state
@@ -450,59 +458,42 @@ contains
          end if
          ! Surface state variables
          call self%fabm_model%initialize_surface_state()
+         call self%fabm_model%check_surface_state(fabm_cfg%repair_states, self%valid_sf)
       end if
 
-      ! Initialize diagnostic variables
-      ! If model is not initialized with custom or previously stored state
-      if ((.not. sim_cfg%continue_from_snapshot) .and. fabm_cfg%output_diag_vars) then
-         ! Interior diagnostic variables
-         if (state%n_fabm_diagnostic_interior > 0) then
-            do ivar_diag = 1, state%n_fabm_diagnostic_interior
-               index = self%diagnostic_interior_index(ivar_diag)
-               state%fabm_diagnostic_interior(:, ivar_diag) = self%fabm_model%get_interior_diagnostic_data(index)
-            end do
-         end if
-         ! Horizontal diagnostic variables
-         ! Note: Since FABM does not distinguish between bottom and surface diagnostic variables, 
-         !       surface diagnostic variables are also initialized for every depth, with constant value
-         if (state%n_fabm_diagnostic_horizontal > 0) then
-            do ivar_diag = 1, state%n_fabm_diagnostic_horizontal
-               index = self%diagnostic_horizontal_index(ivar_diag)
-               state%fabm_diagnostic_horizontal(1, ivar_diag) = self%fabm_model%get_horizontal_diagnostic_data(index)
-               if (fabm_cfg%bottom_everywhere) then
-                  ! Initialize at every layer 
-                  do k_bot = 2, kmax_bot
-                     do ivar = 1, state%n_fabm_bottom_state
-                        call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k_bot, ivar))
-                     end do
-                     state%fabm_diagnostic_horizontal(k_bot, ivar_diag) = self%fabm_model%get_horizontal_diagnostic_data(index)
-                  end do
-                  ! Reset Botom to 1
-                  do ivar = 1, state%n_fabm_bottom_state
-                     call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
-                  end do
-                  k_bot = 1
-               end if
-            end do
-         end if
+      ! Error if FABM intial values out of bounds
+      if (.not. (self%valid_int .and. self%valid_bt .and. self%valid_sf)) then
+         call error('FABM initial values out of bounds')
       end if
+
+      ! Call the update function once as a first call to initialize fluxes, sources, vertical velocities and other diagnostic variables
+      call update(self, state, fabm_cfg, output_cfg, grid, .true.)
    end subroutine init
 
    ! The update function is called in the main loop of simstrat (in simstrat.f90) at every time step
    ! Particle atmospheric, pelagic and benthic fluxes and diffusion are computed to update bgc state variable values
-   subroutine update(self, state, fabm_cfg, output_cfg, grid)
+   subroutine update(self, state, fabm_cfg, output_cfg, grid, first_call)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       class(ModelState), intent(inout) :: state
       class(FABMConfig), intent(in) :: fabm_cfg
       class(OutputConfig), intent(in) :: output_cfg
       class(StaggeredGrid), intent(in) :: grid
+      logical, intent(in), optional :: first_call
 
       ! Local variables
       integer :: ivar, ivar_diag, index, k
+      logical :: first_call_local
+
+      ! Default not first call
+      if (present(first_call)) then
+         first_call_local = first_call
+      else
+         first_call_local = .false.
+      end if
 
       ! If it is not the first call: 1. calculate and 2. validate the new model state, stop if variables are not valid
-      if (.not. state%first_timestep) then
+      if (.not. first_call_local) then
          ! Update timestep_counter
          timestep_counter = timestep_counter + 1
 
@@ -636,7 +627,8 @@ contains
                do ivar = 1, state%n_fabm_bottom_state
                   call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k_bot, ivar))
                end do
-               call self%fabm_model%check_bottom_state(fabm_cfg%repair_states, self%valid_bt)
+               call self%fabm_model%check_bottom_state(fabm_cfg%repair_states, valid_bot)
+               self%valid_bt = self%valid_bt .and. valid_bot
             end do
             ! Reset Bottom to 1
             do ivar = 1, state%n_fabm_bottom_state
@@ -700,16 +692,16 @@ contains
          ! 2. Error if FABM out of bounds and not repaired
          if (.not. (self%valid_int .and. self%valid_bt .and. self%valid_sf)) then
             if (.not. fabm_cfg%repair_states) then
-               call error('FABM Variables out of bounds')
+               call error('FABM variables out of bounds')
             end if
          end if
       else
          ! Initialize timestep_counter
-         timestep_counter = 1
+         timestep_counter = 0
          write (6, *) 'Initializing FABM calculations...'
       end if
       
-      ! Initialize (at first call) or update fluxes, sources and vertical movement
+      ! Initialize (at first call) or update fluxes, sources, vertical movement and other diagnostic variables
 
       ! 1. Prepare all fields (e.g. light attenuation) FABM needs to compute fluxes and source terms
       ! Operates on entire active spatial domain
