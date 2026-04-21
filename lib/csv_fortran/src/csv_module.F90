@@ -113,6 +113,7 @@
 
         procedure,public :: next_row
         procedure,public :: close => close_csv_file
+        procedure,public :: flush => flush_csv_file
 
         procedure :: tokenize => tokenize_csv_line
         procedure :: read_line_from_file
@@ -383,6 +384,27 @@
     status_ok = istat==0
 
     end subroutine close_csv_file
+!*****************************************************************************************
+
+!*****************************************************************************************
+!>
+!  Flush the buffer of a CSV file
+
+    subroutine flush_csv_file(me,status_ok)
+
+    implicit none
+
+    class(csv_file),intent(inout) :: me
+    logical,intent(out),optional :: status_ok  !! status flag
+
+    integer :: istat  !! close `iostat` flag
+
+    flush(me%iunit,iostat=istat)
+    if (present(status_ok)) then
+        status_ok = (istat == 0)
+    end if
+
+    end subroutine flush_csv_file
 !*****************************************************************************************
 
 !*****************************************************************************************

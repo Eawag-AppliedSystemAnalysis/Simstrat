@@ -507,6 +507,7 @@ contains
             else
                call error('Cannot write to output directory. Make sure you have writing access.')
             end if
+            call self%output_files(i)%flush()
          end if
       end do
 
@@ -595,6 +596,7 @@ contains
             call output_helper%add_data_array(self%output_files(i), i, self%last_iteration_data, values_on_zout, var%format)
          else
             call output_helper%add_data_scalar(self%output_files(i), i, self%last_iteration_data, var%global_value, var%format)
+            call self%output_files(i)%flush()
          end if
          call output_helper%next_row(self%output_files(i))
       end do
