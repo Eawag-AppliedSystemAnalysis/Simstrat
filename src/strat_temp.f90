@@ -65,8 +65,7 @@ contains
             state%rad(i) = state%rad(i + 1)*exp(-grid%h(i)*(state%absorb(ubnd_fce - i)+state%absorb(ubnd_fce + 1 - i))/2) !Attenuated by absorption
             state%swr_vol(i) = (state%rad(i + 1) + state%rad(i))/2*rho_0*cp
          end do
-         ! Radiation staying in a layer (including the heat which goes into the sediment, therefore the weighting using Az)
-         ! Absorption is different for swr and par so the last calculation is not exactly correct
+         ! Absorption is different for swr and par so this calculation is not exactly correct
          state%par_vol(1:ubnd_vol) = state%swr_vol(1:ubnd_vol)*swr_par
 
          !!!!!!!! Define sources !!!!!!!!

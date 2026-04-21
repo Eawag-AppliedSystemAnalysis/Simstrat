@@ -235,7 +235,7 @@ module strat_simdata
 
       real(RK), pointer :: T_atm, qa ! Air temp and specific humidity at surface
       real(RK), pointer :: Cloud ! Cloud area fraction, FABM needs ponter attribute
-      real(RK), dimension(:), allocatable :: rad, rad_vol ! Solar radiation (in water)
+      real(RK), dimension(:), allocatable :: rad ! Solar radiation (in water)
       real(RK), dimension(:), pointer :: swr_vol ! Shortwave radiation [J/s/m2] (used for FABM: needs pointer attribute)
       real(RK), dimension(:), pointer :: par_vol ! Photosynthetically active radiation (fraction of swr, used for FABM: needs pointer attribute)
       real(RK), dimension(:), allocatable :: Q_vert ! Vertical exchange between boxes
@@ -334,7 +334,6 @@ contains
       allocate (self%absorb_vol(state_size))
       allocate (self%background_extinction_vol(state_size))
       allocate (self%rad(state_size + 1))
-      allocate (self%rad_vol(state_size))
       allocate (self%swr_vol(state_size))
       allocate (self%par_vol(state_size))
       allocate (self%Q_vert(state_size + 1))
@@ -377,7 +376,6 @@ contains
       self%absorb_vol = 0.0_RK
       self%background_extinction_vol = 0.0_RK
       self%rad = 0.0_RK
-      self%rad_vol = 0.0_RK
       self%swr_vol = 0.0_RK
       self%par_vol = 0.0_RK
       self%Q_vert = 0.0_RK
@@ -468,7 +466,6 @@ contains
       write(80) self%T_atm
       write(80) self%Cloud, self%qa, self%Lat, self%p_air, self%wat_albedo
       call save_array(80, self%rad)
-      call save_array(80, self%rad_vol)
       call save_array_pointer(80, self%swr_vol)
       call save_array_pointer(80, self%par_vol)
       write(80) self%albedo_data
@@ -545,7 +542,6 @@ contains
       read(81) self%T_atm
       read(81) self%Cloud, self%qa, self%Lat, self%p_air, self%wat_albedo
       call read_array(81, self%rad)
-      call read_array(81, self%rad_vol)
       call read_array_pointer(81, self%swr_vol)
       call read_array_pointer(81, self%par_vol)
       read(81) self%albedo_data
