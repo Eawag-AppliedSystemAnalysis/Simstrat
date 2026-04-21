@@ -11,7 +11,7 @@ from functions_input import read_input_paths, load_absorption_data, load_inflow_
 
 # Main function
 
-def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-20, inflow_mode_not_1=True):
+def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-10, inflow_mode_not_1=True):
     """
     Convert Output file from CSV to NetCDF
     
@@ -200,8 +200,10 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-20
         for i, file_path in enumerate(initial_input_paths):
             # Load data
             df, units = load_initial_data(file_path)
-            # Store name
+            # Store name, adapt for FABM initials
             name = os.path.splitext(os.path.basename(file_path))[0]
+            if name[len(name)-8:] == '_initial':
+                name = 'InitialConditions'
             # Set column names
             df.columns = ['Depth'] + [(name + '_' + df.columns[j+1]) for j in range(len(df.columns)-1)]
             # Aggregate duplicate rows

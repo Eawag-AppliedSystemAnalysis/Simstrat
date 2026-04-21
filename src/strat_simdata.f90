@@ -129,6 +129,8 @@ module strat_simdata
    type, public :: FABMConfig
       ! Path to FABM configurations
       character(len=:), allocatable :: config_path
+      ! Path to Initial condition files
+      character(len=:), allocatable :: initial_path
       ! Path to Inflow files
       character(len=:), allocatable :: inflow_path
       ! Directory of YAML file with all biogeochemical configuration
@@ -147,6 +149,8 @@ module strat_simdata
       logical :: bioshade_feedback
       ! Background extinction if the attenuation coefficient is calculated with FABM
       real(RK) :: background_extinction
+      ! Maximum length of input data. Default is set by ModelConfig max_length_input_data
+      integer :: max_length_input_data
    end type
 
    ! Model params (read from file)

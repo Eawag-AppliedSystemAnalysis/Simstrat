@@ -116,7 +116,7 @@ contains
 
       ! Local variables
       integer :: ivar, ivar_diag, index, exitstat, index_bs
-      logical :: config_path_exists
+      logical :: config_path_exists, initial_path_exists
       character(len=256) :: mkdirCmd
 
       ! Make sure everything is deallocated
@@ -428,15 +428,42 @@ contains
       ! Set FABM-provided initial values for state variables (tracers), typically space-independent.
       ! This sets the values of arrays sent to fabm_model%link_*_state_data,
       ! in this case those contained in *_state
-      ! If model is not initialized with custom or previously stored state
-      ! At the same time repair initializations out of bounds
+      ! Custom initial states from FABM initial conditions path overwrite FABM-provided initial values
+      ! If model is not initialized with previously stored state
       if (.not. sim_cfg%continue_from_snapshot) then
-         ! Interior state variables
+         ! Check if FABM initial conditions path exists
+         inquire(file=fabm_cfg%initial_path,exist=initial_path_exists)
+         ! Create FABM intial conditions folder if it does not exist
+         if (.not. initial_path_exists) then
+            call warn('FABM initial conditions path does not exist, create folder according to config file...')
+            mkdirCmd = 'mkdir '//trim(fabm_cfg%initial_path)
+            call execute_command_line(mkdirCmd, exitstat = exitstat)
+            if (exitstat==1) then
+               call warn('FABM initial conditions specified in config file could not be generated. Default initial conditions folder "FABM_initial" was generated instead.')
+               call execute_command_line('mkdir FABM_initial')
+               fabm_cfg%initial_path = 'FABM_initial'
+            end if
+         end if
+         ! Transform backslashes to slash
+         do while(scan(fabm_cfg%initial_path,'\\')>0)
+            index_bs = scan(fabm_cfg%initial_path,'\\')
+            fabm_cfg%initial_path(index_bs:index_bs) = '/'
+         end do
+         ! Remove trailing slashes at the end
+         if (len(fabm_cfg%initial_path) == scan(trim(fabm_cfg%initial_path),"/", BACK= .true.)) then
+            fabm_cfg%initial_path = fabm_cfg%initial_path(1:len(fabm_cfg%initial_path) - 1)
+         else
+            fabm_cfg%initial_path = trim(fabm_cfg%initial_path)
+         end if
+         ! Set interior state variable initial values
+         ! Overwrite by values from FABM intial conditions folder if present
          call self%fabm_model%initialize_interior_state(1, grid%nz_grid)
-         call self%fabm_model%check_interior_state(1, grid%nz_grid, fabm_cfg%repair_states, self%valid_int)
-         ! Bottom state variables
+         do ivar = 1, state%n_fabm_interior_state
+            call fabm_read_initial_data(self, state, fabm_cfg, output_cfg, grid, ivar)
+         end do
+         ! Set bottom state variable initial values
+         ! Overwrite by values from FABM intial conditions folder if present
          call self%fabm_model%initialize_bottom_state()
-         call self%fabm_model%check_bottom_state(fabm_cfg%repair_states, self%valid_bt)
          ! If bottom_everywhere is set, at every depth:
          ! FABM is pointed to location that holds state data for the current depth
          ! The bottom (the location of the pelagic-benthic interface) is moved to the current depth
@@ -447,8 +474,6 @@ contains
                   call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k_bot, ivar))
                end do
                call self%fabm_model%initialize_bottom_state()
-               call self%fabm_model%check_bottom_state(fabm_cfg%repair_states, valid_bot)
-               self%valid_bt = self%valid_bt .and. valid_bot
             end do
             ! Reset Botom to 1
             do ivar = 1, state%n_fabm_bottom_state
@@ -456,14 +481,49 @@ contains
             end do
             k_bot = 1
          end if
-         ! Surface state variables
+         do ivar = 1, state%n_fabm_bottom_state
+            call fabm_read_initial_data(self, state, fabm_cfg, output_cfg, grid, ivar, state%n_fabm_interior_state)
+         end do
+         ! Set surface state variable initial values
+         ! Overwrite by values from FABM intial conditions folder if present
          call self%fabm_model%initialize_surface_state()
-         call self%fabm_model%check_surface_state(fabm_cfg%repair_states, self%valid_sf)
+         do ivar = 1, state%n_fabm_surface_state
+            call fabm_read_initial_data(self, state, fabm_cfg, output_cfg, grid, ivar, state%n_fabm_interior_state + state%n_fabm_bottom_state)
+         end do
       end if
 
-      ! Error if FABM intial values out of bounds
+      ! Check (and repair) initial state values
+      ! Interior state variables
+      call self%fabm_model%check_interior_state(1, grid%nz_grid, fabm_cfg%repair_states, self%valid_int)
+      ! Bottom state variables
+      call self%fabm_model%check_bottom_state(fabm_cfg%repair_states, self%valid_bt)
+      ! If bottom_everywhere is set, at every depth:
+      ! FABM is pointed to location that holds state data for the current depth
+      ! The bottom (the location of the pelagic-benthic interface) is moved to the current depth
+      ! The bottom state at the current depth is checked
+      if (fabm_cfg%bottom_everywhere) then
+         do k_bot = 2, kmax_bot
+            do ivar = 1, state%n_fabm_bottom_state
+               call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(k_bot, ivar))
+            end do
+            call self%fabm_model%check_bottom_state(fabm_cfg%repair_states, valid_bot)
+            self%valid_bt = self%valid_bt .and. valid_bot
+         end do
+         ! Reset Botom to 1
+         do ivar = 1, state%n_fabm_bottom_state
+            call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
+         end do
+         k_bot = 1
+      end if
+      ! Surface state variables
+      call self%fabm_model%check_surface_state(fabm_cfg%repair_states, self%valid_sf)
+      ! Error if FABM intial values out of bounds and not repaired
       if (.not. (self%valid_int .and. self%valid_bt .and. self%valid_sf)) then
-         call error('FABM initial values out of bounds')
+         if (.not. fabm_cfg%repair_states) then
+            call error('FABM initial values out of bounds')
+         else
+            call warn('FABM initial values out of bounds repaired.')
+         end if
       end if
 
       ! Call the update function once as a first call to initialize fluxes, sources, vertical velocities and other diagnostic variables
@@ -979,6 +1039,130 @@ contains
       ! Interpolate to faces to be compatible with Simstrat temperature module
       call grid%interpolate_to_face(grid%z_volume, state%absorb_vol, grid%nz_grid, state%absorb)
    end subroutine absorption_update_fabm
+
+   ! Read initial data and set in state
+   subroutine fabm_read_initial_data(self, state, fabm_cfg, output_cfg, grid, ivar, ivar_offset)
+      ! Arguments
+      class(SimstratFABM), intent(inout) :: self
+      class(ModelState), intent(inout) :: state
+      class(FABMConfig), intent(in) :: fabm_cfg
+      class(OutputConfig), intent(inout) :: output_cfg
+      class(StaggeredGrid), intent(in) :: grid
+      integer, intent(in) :: ivar
+      integer, intent(in), optional :: ivar_offset
+
+      ! Local variables
+      integer :: n, unit, status, ivar_state
+      character(len=256) :: file_path
+      real(RK) :: depth, initial_val
+      real(RK), dimension(fabm_cfg%max_length_input_data) :: temp_depths, temp_initials
+      real(RK), dimension(:), allocatable :: depths, initials
+      logical :: is_int
+
+      ! Set index including offset
+      ! If there is no offset it is an interior variable
+      if (present(ivar_offset)) then
+         ivar_state = ivar + ivar_offset
+         is_int = .false.
+      else
+         ivar_state = ivar
+         is_int = .true.
+      end if
+
+      ! Check if initial file exists, return if not
+      file_path = trim(fabm_cfg%initial_path)//'/'//trim(output_cfg%output_vars_fabm_state(ivar_state)%name)//'_initial.dat'     
+      open(newunit=unit, action='read', status='old', file=file_path, iostat = status)
+      if (status .ne. 0) then
+         close(unit)
+         return
+      else
+         write(6,*) 'Reading ', trim(file_path)
+      end if
+      ! Skip header
+      read(unit, *, iostat=status)
+      ! Initialize counts to 0
+      n = 0
+      ! Read depth and initial value at every line
+      ! Pass depths as positive values
+      do
+         read(unit, *, iostat=status) depth, initial_val
+         if (status .ne. 0) exit
+         n = n + 1
+         if (n > fabm_cfg%max_length_input_data) then
+            call error('Too many lines in '//trim(file_path)//', increase MaxLengthInputData in FABMConfig or ModelConfig.')
+         end if
+         if (depth > 0) then
+            call error('One or several input depths of initial conditions file '//trim(file_path)//' are positive.')
+         end if
+         temp_depths(n) = abs(depth)
+         temp_initials(n) = initial_val
+      end do
+      ! Return if no initial values provided
+      if (n==0) then
+         call warn('File without initial values '//trim(file_path)//' ignored.')
+         close(unit)
+         return
+      else
+         allocate(depths(n))
+         allocate(initials(n))
+         depths(:) = temp_depths(:n)
+         initials(:) = temp_initials(:n)
+      end if
+      ! Reverse order
+      call reverse_in_place(depths)
+      call reverse_in_place(initials)
+      ! Set depths relative to absolute depth of lowest layer
+      depths = grid%z_zero - depths
+      ! Interior state variable
+      ! Check if variable is on volume grid and interpolate to volume grid if yes
+      ! Variable is not on volume grid for WET PV variables if bottom everywhere is set to false
+      if (is_int) then
+         if (output_cfg%output_vars_fabm_state(ivar_state)%volume_grid) then
+            if (n==1) then
+               state%fabm_interior_state(:, ivar) = initials(1)
+            else
+               call grid%interpolate_to_vol(depths, initials, n, state%fabm_interior_state(:, ivar))
+            end if
+         else
+            if (n==1) then
+               state%fabm_interior_state(1, ivar) = initials(1)
+            else
+               call warn('File '//trim(file_path)//' has depth distributed initial values for global variable: only deepest initial value considered.')
+               state%fabm_interior_state(1, ivar) = initials(1)
+            end if
+         end if
+      ! Bottom state variable
+      ! Check if variable is on volume grid and interpolate to volume grid if yes
+      ! Variable is not on volume grid if bottom everywhere is set to false
+      else if (output_cfg%output_vars_fabm_state(ivar_state)%benthic) then
+         if (output_cfg%output_vars_fabm_state(ivar_state)%volume_grid) then
+            if (n==1) then
+               state%fabm_bottom_state(:, ivar) = initials(1)
+            else
+               call grid%interpolate_to_vol(depths, initials, n, state%fabm_bottom_state(:, ivar))
+            end if
+         else
+            if (n==1) then
+               state%fabm_bottom_state(1, ivar) = initials(1)
+            else
+               call warn('File '//trim(file_path)//' has depth distributed initial values for global variable: only deepest initial value considered.')
+               state%fabm_bottom_state(1, ivar) = initials(1)
+            end if
+         end if
+      ! Surface state variable
+      ! Always a global variable
+      else 
+         if (n==1) then
+            state%fabm_surface_state(ivar) = initials(1)
+         else
+            call warn('File '//trim(file_path)//' has depth distributed initial values for global variable: only highest initial value considered.')
+            state%fabm_surface_state(ivar) = initials(n)
+         end if
+      end if
+      ! Close the file
+      call ok('Initial data file '//trim(file_path)//' successfully read.')
+      close(unit)
+   end subroutine
 
    ! Output list of diagnostic variables
    subroutine list_diagnostic(self, fabm_cfg)

@@ -121,9 +121,9 @@ contains
             call warn('FABM Inflow path does not exist, create folder according to config file...')
             mkdirCmd = 'mkdir '//trim(fabm_config%inflow_path)
             call execute_command_line(mkdirCmd, exitstat = exitstat)
-            ! mkdir does not seem to accept a path to a folder in execute_command_line, thus a default result folder "FABM_inflow" will be generated in this case.
+            ! mkdir does not seem to accept a path to a folder in execute_command_line, thus a default inflow folder "FABM_inflow" will be generated in this case.
             if (exitstat==1) then
-               call warn('FABM Inflow path specified in config file could not be generated. Default result folder "FABM_inflow" was generated instead.')
+               call warn('FABM Inflow path specified in config file could not be generated. Default inflow folder "FABM_inflow" was generated instead.')
                call execute_command_line('mkdir FABM_inflow')
                fabm_config%inflow_path = 'FABM_inflow'
             end if
