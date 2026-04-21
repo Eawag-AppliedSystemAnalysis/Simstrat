@@ -78,16 +78,21 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-20
             df = df[:len(df)-1]
             time_values = time_values[:len(time_values)-1]
             data = xr.DataArray(df.values.astype(float), dims=['Datetime', 'Depth'], coords={'Datetime': time_values.astype(float), 'Depth': df.columns.astype(float)}, name=var_names[i])
+        # Drop datetime points that have only nan
+        data = data.dropna(dim="Datetime", how="all")
+        # Drop depths that have only nan
+        data = data.dropna(dim="Depth", how="all")
+        # Drop constant dimensions
         with warnings.catch_warnings():
             # Ignore warning appearing for empty results
             warnings.filterwarnings('ignore', message='Degrees of freedom <= 0 for slice')
             # If the value is constant in time, drop that dimension
             datetime_mean = data.mean(dim='Datetime', skipna=True).fillna(0.0)
-            if np.all(np.absolute(data - datetime_mean) <= eps*np.absolute(datetime_mean)):
+            if ((np.abs(data - datetime_mean) <= eps * np.abs(datetime_mean)) | data.isnull()).all():
                 data = datetime_mean
             # If the value is constant in depth, drop that dimension (necessary for FABM surface diagnostic variables)
             depth_mean = data.mean(dim='Depth', skipna=True).fillna(0.0)
-            if np.all(np.absolute(data - depth_mean) <= eps*np.absolute(depth_mean)):
+            if ((np.abs(data - depth_mean) <= eps * np.abs(depth_mean)) | data.isnull()).all():
                 data = depth_mean
         # Add attributes
         if attributes['Long Name'][var_names[i]] != '-':
