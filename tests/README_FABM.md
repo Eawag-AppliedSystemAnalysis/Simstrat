@@ -16,11 +16,11 @@ Set as `FABMConfigFile` in `FABMConfig`, in `.yaml` format.
 
 ### Initial Conditions
 
-To add depth-varying initial conditions for a FABM variable, add an initial conditions file of the same format as the Simstrat initial conditions to the folder specified as `FABMInitialPath` in `FABMConfig`.
+To add depth-varying initial conditions for a FABM variable, add an initial conditions file of the same format as the Simstrat initial conditions (`InitialConditions.dat`) to the folder specified as `FABMInitialPath` in `FABMConfig`, with one file per variable. This will overwrite the initial conditions from the YAML file for this variable.
 
 ### Inflow
 
-To add inflow for a FABM variable, add an inflow file of the same format as the Simstrat inflows to the folder specified as `FABMInflowPath` in `FABMConfig`.
+To add inflow for a FABM variable, add an inflow file of the same format as the Simstrat inflows (e.g. `Tinp.dat`) to the folder specified as `FABMInflowPath` in `FABMConfig`, with one file per variable.
 
 ### Manipulations
 
@@ -53,7 +53,7 @@ For example for the variable `npzd phytoplankton`, to double its density at day 
 /
 ~~~
 
-Whereas to add a density of 10<sup>-5</sup> mmol/m<sup>3</sup> during days 12005 to 12010 between 80 and 120 meters depth, whenever the density falls below 10<sup>-4</sup> mmol/m<sup>3</sup>, add the following manipulation:
+Whereas to add a density of 10<sup>-5</sup> mmol/m<sup>3</sup> during days 12005 to 12010 between 80 and 120 meters depth, whenever the density falls below 10<sup>-4</sup> mmol/m<sup>3</sup> somewhere in that depth range, add the following manipulation:
 
 ~~~bash
 &manipulation
