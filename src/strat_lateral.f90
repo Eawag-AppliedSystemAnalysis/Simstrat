@@ -586,8 +586,10 @@ contains
                g_red = g*(rho_in - state%rho(k))/rho_in !Reduced gravity [m/s2]
 
                slope = pi/72 !Slope of inflow
+               slope = self%param%slope
                !hang = pi/3 !Stream half-angle
-               CD_in = self%param%CD*10 !Inflow drag coefficient
+               !CD_in = self%param%CD*10 !Inflow drag coefficient
+               CD_in = self%param%CD_in
                !Ri = CD_in*(1+0.21*CD_in**0.5*sin(hang))/(sin(hang)*tan(slope)) !Richardson number
                !Ri = CD_in/tan(slope)*(1/sin(hang)+0.21*CD_in**0.5) !Richardson number
                Ri = CD_in/tan(slope)*(1.15 + 0.21*CD_in**0.5) !Richardson number (assuming an inflow half-angle of pi/3)

@@ -749,6 +749,35 @@ contains
          end if
 
          call par_file%get("ModelParameters.seiche_ini", model_param%seiche_ini, found); call check_field(found, 'ModelParameters.seiche_ini', ParName)
+         call par_file%get("ModelParameters.slope", model_param%slope, found); call check_field(found, 'ModelParameters.slope', ParName)
+         call par_file%get("ModelParameters.CD_in", model_param%CD_in, found); call check_field(found, 'ModelParameters.CD_in', ParName)
+
+         ! selma
+         call par_file%get("ModelParameters.wdz", model_param%wdz, found); call check_field(found, 'ModelParameters.wdz', ParName)
+         call par_file%get("ModelParameters.dn", model_param%dn, found); call check_field(found, 'ModelParameters.dn', ParName)
+         call par_file%get("ModelParameters.dn_sed", model_param%dn_sed, found); call check_field(found, 'ModelParameters.dn_sed', ParName)
+         call par_file%get("ModelParameters.kc", model_param%kc, found); call check_field(found, 'ModelParameters.kc', ParName)
+         call par_file%get("ModelParameters.q10_rec", model_param%q10_rec, found); call check_field(found, 'ModelParameters.q10_rec', ParName)
+         call par_file%get("ModelParameters.q10_recs", model_param%q10_recs, found); call check_field(found, 'ModelParameters.q10_recs', ParName)
+         call par_file%get("ModelParameters.mbnnrate", model_param%mbnnrate, found); call check_field(found, 'ModelParameters.mbnnrate', ParName)
+         call par_file%get("ModelParameters.sedrate", model_param%sedrate, found); call check_field(found, 'ModelParameters.sedrate', ParName)
+         call par_file%get("ModelParameters.fds", model_param%fds, found); call check_field(found, 'ModelParameters.fds', ParName)
+         call par_file%get("ModelParameters.nitrif_rate", model_param%nitrif_rate, found); call check_field(found, 'ModelParameters.nitrif_rate', ParName)
+         call par_file%get("ModelParameters.pburialrate", model_param%pburialrate, found); call check_field(found, 'ModelParameters.pburialrate', ParName)
+         call par_file%get("ModelParameters.fl_burialrt", model_param%fl_burialrt, found); call check_field(found, 'ModelParameters.fl_burialrt', ParName)
+
+         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "wdz", model_param%wdz)
+         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "dn", model_param%dn)
+         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "dn_sed", model_param%dn_sed)
+         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "kc", model_param%kc)
+         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "q10_rec", model_param%q10_rec)
+         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "q10_recs", model_param%q10_recs)
+         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "mbnnrate", model_param%mbnnrate)
+         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "sedrate", model_param%sedrate)
+         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "fds", model_param%fds)
+         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "nitrif_rate", model_param%nitrif_rate)
+         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "pburialrate", model_param%pburialrate)
+         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "fl_burialrt", model_param%fl_burialrt)
 
          ! Simulation Parameter
          call par_file%get("Simulation.Timestep s", sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep s', ParName)

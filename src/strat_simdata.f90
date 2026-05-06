@@ -179,6 +179,22 @@ module strat_simdata
       real(RK) :: w_ice_ini
       real(RK) :: b_ice_ini
       real(RK) :: snow_ini
+      real(RK) :: slope
+      real(RK) :: CD_in
+
+      ! selma variables
+      real(RK) :: wdz
+      real(RK) :: dn
+      real(RK) :: dn_sed
+      real(RK) :: kc
+      real(RK) :: q10_rec
+      real(RK) :: q10_recs
+      real(RK) :: mbnnrate
+      real(RK) :: sedrate
+      real(RK) :: fds
+      real(RK) :: nitrif_rate
+      real(RK) :: pburialrate
+      real(RK) :: fl_burialrt
       !real(RK) :: k_min
    end type
 

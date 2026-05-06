@@ -557,4 +557,133 @@ contains
       datum = start_datum + real(simulation_time(1), RK) + real(simulation_time(2), RK) / SECONDS_PER_DAY
    end function
 
+subroutine replace_yaml_parameter(filename, module_name, param_name, new_value)
+
+    implicit none
+
+    character(len=*), intent(in) :: filename
+    character(len=*), intent(in) :: module_name
+    character(len=*), intent(in) :: param_name
+    real(RK), intent(in)             :: new_value
+
+    character(len=1024), allocatable :: lines(:)
+    character(len=1024) :: line
+    character(len=1024) :: trimmed
+    character(len=1024) :: newline
+    character(len=64)   :: value_str
+
+    integer :: nlines
+    integer :: ios
+    integer :: i
+    integer :: p1, p2
+    integer :: module_start
+
+    logical :: found_module
+
+    nlines = 0
+    found_module = .false.
+    module_start = -1
+
+    ! --------------------------------------------------
+    ! Count lines
+    ! --------------------------------------------------
+
+    open(10, file=trim(filename), status='old', action='read')
+
+    do
+        read(10,'(A)', iostat=ios) line
+        if (ios /= 0) exit
+        nlines = nlines + 1
+    end do
+
+    close(10)
+
+    ! --------------------------------------------------
+    ! Read file
+    ! --------------------------------------------------
+
+    allocate(lines(nlines))
+
+    open(10, file=trim(filename), status='old', action='read')
+
+    do i = 1, nlines
+        read(10,'(A)') lines(i)
+    end do
+
+    close(10)
+
+    ! --------------------------------------------------
+    ! Find module
+    ! --------------------------------------------------
+
+    do i = 1, nlines
+
+        trimmed = adjustl(lines(i))
+
+        if (index(trimmed, trim(module_name)//":") == 1) then
+            module_start = i
+            found_module = .true.
+            exit
+        end if
+
+    end do
+
+    if (.not. found_module) then
+        print *, "Module not found: ", trim(module_name)
+        return
+    end if
+
+    ! --------------------------------------------------
+    ! Search only next 50 lines
+    ! --------------------------------------------------
+
+    write(value_str,'(G0)') new_value
+
+    do i = module_start, min(module_start + 50, nlines)
+
+        line = lines(i)
+        trimmed = adjustl(line)
+
+        p1 = index(trimmed, trim(param_name)//":")
+
+        if (p1 == 1) then
+
+            p2 = index(line, "#")
+
+            if (p2 > 0) then
+
+                newline = trim(line(1:index(line,":"))) // " " // &
+                          trim(adjustl(value_str)) // " " // &
+                          trim(line(p2:))
+
+            else
+
+                newline = trim(line(1:index(line,":"))) // " " // &
+                          trim(adjustl(value_str))
+
+            end if
+
+            lines(i) = trim(newline)
+
+            exit
+
+        end if
+
+    end do
+
+    ! --------------------------------------------------
+    ! Rewrite file
+    ! --------------------------------------------------
+
+    open(11, file=trim(filename), status='replace', action='write')
+
+    do i = 1, nlines
+        write(11,'(A)') trim(lines(i))
+    end do
+
+    close(11)
+
+    deallocate(lines)
+
+end subroutine replace_yaml_parameter
 end module utilities
