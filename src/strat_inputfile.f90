@@ -695,6 +695,7 @@ contains
             call par_file%get("FABMConfig.OutputDiagnosticVars", fabm_cfg%output_diag_vars,found); call check_field(found, 'FABMConfig.OutputDiagnosticVars', ParName)
             call par_file%get("FABMConfig.RepairStates", fabm_cfg%repair_states,found); call check_field(found, 'FABMConfig.RepairStates',ParName)
             call par_file%get("FABMConfig.OutputRepairedVars", fabm_cfg%output_repaired_vars,found); call check_field(found, 'FABMConfig.OutputRepairedVars',ParName)
+            call par_file%get("FABMConfig.ManipulateStates", fabm_cfg%manipulate_states,found); call check_field(found, 'FABMConfig.ManipulateStates',ParName)
             call par_file%get("FABMConfig.BottomEverywhere", fabm_cfg%bottom_everywhere,found); call check_field(found, 'FABMConfig.BottomEverywhere',ParName)
             call par_file%get("FABMConfig.BioshadeFeedback", fabm_cfg%bioshade_feedback,found); call check_field(found, 'FABMConfig.BioshadeFeedback', ParName)
             call par_file%get("FABMConfig.BackgroundExtinction", fabm_cfg%background_extinction,found); call check_field(found, 'FABMConfig.BackgroundExtinction', ParName)

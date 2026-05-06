@@ -410,18 +410,27 @@ contains
          call list_diagnostic(self, fabm_cfg)
          call set_fabm_diagnostic_vars(self, state, fabm_cfg, output_cfg, grid)
       else
-         call warn('Set OutputDiagnosticVars in FABMConfig to true to output FABM diagnostic variables.')
+         state%n_fabm_diagnostic = 0
+         state%n_fabm_diagnostic_interior = 0
+         state%n_fabm_diagnostic_horizontal = 0
       end if
 
       ! Allocate arrays for repaired variables in list_repaired and initialize them with the boundary value
       if (fabm_cfg%output_repaired_vars) then
          call set_fabm_repaired_vars(self, state, fabm_cfg, output_cfg, grid)
       else
-         call warn('FABM repaired variables not registered. Set OutputRepairedVars in FABMConfig to true to do so.')
+         state%n_fabm_repaired = 0
+         state%n_fabm_repaired_interior = 0
+         state%n_fabm_repaired_bottom = 0
+         state%n_fabm_repaired_surface = 0
       end if
 
-      ! Set manipulations
-      call set_fabm_manipulations(self, state, fabm_cfg, output_cfg, sim_cfg, grid)
+      ! Allocate and set manipulations structure
+      if (fabm_cfg%manipulate_states) then
+         call set_fabm_manipulations(self, state, fabm_cfg, output_cfg, sim_cfg, grid)
+      else
+         state%n_fabm_manipulations = 0
+      end if
       
       ! Complete initialization and check whether FABM has all dependencies fulfilled
       ! (i.e., whether all required calls to fabm_model%link_*_data have been made and all required data have been provided)
@@ -818,7 +827,7 @@ contains
       else
          ! Initialize timestep_counter
          timestep_counter = 0
-         write (6, *) 'Initializing FABM calculations...'
+         write (6, *) 'Initializing FABM diagnostics'
       end if
       
       ! Initialize (at first call) or update fluxes, sources, vertical movement and other diagnostic variables
@@ -916,19 +925,17 @@ contains
       call self%fabm_model%finalize_outputs()
 
       ! 5. Retrieve values of diagnostic variables
-      if (fabm_cfg%output_diag_vars) then
-         if (state%n_fabm_diagnostic_interior > 0) then
-            do ivar_diag = 1, state%n_fabm_diagnostic_interior
-               index = self%diagnostic_interior_index(ivar_diag)
-               state%fabm_diagnostic_interior(:, ivar_diag) = self%fabm_model%get_interior_diagnostic_data(index)
-            end do
-         end if
-         if (state%n_fabm_diagnostic_horizontal > 0) then
-            do ivar_diag = 1, state%n_fabm_diagnostic_horizontal
-               index = self%diagnostic_horizontal_index(ivar_diag)
-               state%fabm_diagnostic_horizontal(1, ivar_diag) = self%fabm_model%get_horizontal_diagnostic_data(index)
-            end do
-         end if
+      if (state%n_fabm_diagnostic_interior > 0) then
+         do ivar_diag = 1, state%n_fabm_diagnostic_interior
+            index = self%diagnostic_interior_index(ivar_diag)
+            state%fabm_diagnostic_interior(:, ivar_diag) = self%fabm_model%get_interior_diagnostic_data(index)
+         end do
+      end if
+      if (state%n_fabm_diagnostic_horizontal > 0) then
+         do ivar_diag = 1, state%n_fabm_diagnostic_horizontal
+            index = self%diagnostic_horizontal_index(ivar_diag)
+            state%fabm_diagnostic_horizontal(1, ivar_diag) = self%fabm_model%get_horizontal_diagnostic_data(index)
+         end do
       end if
 
       ! If bottom_everywhere is set, repeat relevant steps from 1. to 5. at every depth
@@ -948,12 +955,10 @@ contains
             call self%fabm_model%prepare_inputs(real(timestep_counter, kind=RK))
             call self%fabm_model%get_bottom_sources(self%flux_bt(k_bot, :), self%sms_bt(k_bot, :))
             call self%fabm_model%finalize_outputs()
-            if (fabm_cfg%output_diag_vars) then
-               do ivar_diag = 1, state%n_fabm_diagnostic_horizontal
-                  index = self%diagnostic_horizontal_index(ivar_diag)
-                  state%fabm_diagnostic_horizontal(k_bot, ivar_diag) = self%fabm_model%get_horizontal_diagnostic_data(index)
-               end do
-            end if
+            do ivar_diag = 1, state%n_fabm_diagnostic_horizontal
+               index = self%diagnostic_horizontal_index(ivar_diag)
+               state%fabm_diagnostic_horizontal(k_bot, ivar_diag) = self%fabm_model%get_horizontal_diagnostic_data(index)
+            end do
          end do
          ! Set NaNs in bottom fluxes and sources to 0
          if (state%n_fabm_interior_state > 0) then
@@ -1354,7 +1359,7 @@ contains
                   if ((line_trim(:14) == 'select_output_') .and. output == 'No') cycle
                   n = n + 1
                   if (n > max_lines) then
-                     call error('Too many lines in '//trim(fabm_cfg%diag_vars)//', increase max_lines in set_fabm_diagnostic_vars.')
+                     call error('Too many lines in '//trim(file_path)//', increase max_lines in set_fabm_diagnostic_vars.')
                   end if
                   temp_names(n) = trim(short_name)
                   fabm_index(n) = 0
@@ -1379,7 +1384,7 @@ contains
                   if (any(temp_names == trim(short_name))) cycle
                   n = n + 1
                   if (n > max_lines) then
-                     call error('Too many lines in '//trim(fabm_cfg%diag_vars)//', increase max_lines in set_fabm_diagnostic_vars.')
+                     call error('Too many lines in '//trim(file_path)//', increase max_lines in set_fabm_diagnostic_vars.')
                   end if
                   temp_names(n) = trim(short_name)
                   fabm_index(n) = 0
@@ -1390,7 +1395,7 @@ contains
          else
             n = n + 1
             if (n > max_lines) then
-               call error('Too many lines in '//trim(fabm_cfg%diag_vars)//', increase max_lines in set_fabm_diagnostic_vars.')
+               call error('Too many lines in '//trim(file_path)//', increase max_lines in set_fabm_diagnostic_vars.')
             end if
             temp_names(n) = trim(line)
             fabm_index(n) = 0

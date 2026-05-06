@@ -152,22 +152,22 @@ module strat_simdata
 
    ! FABM configuration (read from file)
    type, public :: FABMConfig
-      ! Path to FABM configurations
-      character(len=:), allocatable :: config_path
+      ! Directory of YAML file with all biogeochemical configuration
+      character(len=:), allocatable :: config_file
       ! Path to Initial condition files
       character(len=:), allocatable :: initial_path
       ! Path to Inflow files
       character(len=:), allocatable :: inflow_path
-      ! Directory of YAML file with all biogeochemical configuration
-      character(len=:), allocatable :: config_file
-      ! Directory of file with names of diagnostic variables to output
-      character(len=:), allocatable :: diag_vars
+      ! Path to FABM configurations
+      character(len=:), allocatable :: config_path
       ! Whether to output diagnostic variables
       logical :: output_diag_vars
-      ! Whether to output repaired variables
-      logical :: output_repaired_vars
       ! Whether to clip all state variables to valid range from bgc models when update is called
       logical :: repair_states
+      ! Whether to output repaired variables
+      logical :: output_repaired_vars
+      ! Whether to manipulate state variables according to input file
+      logical :: manipulate_states
       ! Whether there is a pelagic-benthic interface at every depth
       logical :: bottom_everywhere
       ! Whether to calculate the attenuation coefficient with FABM
