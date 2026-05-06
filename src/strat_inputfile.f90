@@ -699,10 +699,6 @@ contains
             call par_file%get("FABMConfig.BottomEverywhere", fabm_cfg%bottom_everywhere,found); call check_field(found, 'FABMConfig.BottomEverywhere',ParName)
             call par_file%get("FABMConfig.BioshadeFeedback", fabm_cfg%bioshade_feedback,found); call check_field(found, 'FABMConfig.BioshadeFeedback', ParName)
             call par_file%get("FABMConfig.BackgroundExtinction", fabm_cfg%background_extinction,found); call check_field(found, 'FABMConfig.BackgroundExtinction', ParName)
-            call par_file%get("FABMConfig.MaxLengthInputData", fabm_cfg%max_length_input_data, found);
-            if (.not. found) then
-               fabm_cfg%max_length_input_data = model_cfg%max_length_input_data
-            end if
          end if
 
          !Model Parameter

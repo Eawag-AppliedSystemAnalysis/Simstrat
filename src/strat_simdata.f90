@@ -93,6 +93,31 @@ module strat_simdata
       ! like 72.0 can be read (which are interpreted as a double)
    end type
 
+   ! Definition of a manipulation action
+   type, public :: Manipulation
+      ! Variable name
+      character(len=:), allocatable :: var_name
+      ! Variable index
+      integer :: var_index
+      ! Start time (days)
+      real(RK) :: start_time
+      ! End time (days)
+      ! Only relevant for action_type 2
+      real(RK) :: end_time
+      ! Action type (1: multiply, 2: add)
+      integer :: action_type
+      ! Action value
+      ! Multiplied by timestep for action_type 2
+      ! Divided by height for action_type 2 for depth varying variables
+      real(RK) :: action_val
+      ! Threshold: action_type 2 is not executed if all values are above
+      real(RK) :: threshold
+      ! Start depth for depth varying variables
+      integer :: start_depth
+      ! End depth for depth varying variables
+      integer :: end_depth
+   end type
+
    ! Simulation configuration
    type, public :: SimConfig
       integer :: timestep
@@ -149,8 +174,6 @@ module strat_simdata
       logical :: bioshade_feedback
       ! Background extinction if the attenuation coefficient is calculated with FABM
       real(RK) :: background_extinction
-      ! Maximum length of input data. Default is set by ModelConfig max_length_input_data
-      integer :: max_length_input_data
    end type
 
    ! Model params (read from file)
@@ -213,6 +236,8 @@ module strat_simdata
       integer :: n_fabm_state, n_fabm_interior_state, n_fabm_bottom_state, n_fabm_surface_state
       integer :: n_fabm_diagnostic, n_fabm_diagnostic_interior, n_fabm_diagnostic_horizontal
       integer :: n_fabm_repaired, n_fabm_repaired_interior, n_fabm_repaired_bottom, n_fabm_repaired_surface
+      class(Manipulation), dimension(:), allocatable :: fabm_manipulations
+      integer :: n_fabm_manipulations
    
       ! Variables located on z_upp grid
       real(RK), dimension(:), allocatable :: k, ko ! Turbulent kinetic energy (TKE) [J/kg]

@@ -105,10 +105,11 @@ contains
 
    ! Initialize: called once within the initialization of Simstrat
    ! Sets up memory, reads FABM configuration from fabm_cfg_file, links the external Simstrat variables and sets the initial conditions of FABM variables
-   subroutine init(self, state, fabm_cfg, output_cfg, sim_cfg, grid)
+   subroutine init(self, state, model_cfg, fabm_cfg, output_cfg, sim_cfg, grid)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       class(ModelState), intent(inout) :: state
+      class(ModelConfig), intent(inout) :: model_cfg
       class(FABMConfig), intent(inout) :: fabm_cfg
       class(OutputConfig), intent(inout) :: output_cfg
       class(SimConfig), intent(in) :: sim_cfg
@@ -418,6 +419,9 @@ contains
       else
          call warn('FABM repaired variables not registered. Set OutputRepairedVars in FABMConfig to true to do so.')
       end if
+
+      ! Set manipulations
+      call set_fabm_manipulations(self, state, fabm_cfg, output_cfg, sim_cfg, grid)
       
       ! Complete initialization and check whether FABM has all dependencies fulfilled
       ! (i.e., whether all required calls to fabm_model%link_*_data have been made and all required data have been provided)
@@ -459,7 +463,7 @@ contains
          ! Overwrite by values from FABM intial conditions folder if present
          call self%fabm_model%initialize_interior_state(1, grid%nz_grid)
          do ivar = 1, state%n_fabm_interior_state
-            call fabm_read_initial_data(self, state, fabm_cfg, output_cfg, grid, ivar)
+            call fabm_read_initial_data(self, state, model_cfg, fabm_cfg, output_cfg, grid, ivar)
          end do
          ! Set bottom state variable initial values
          ! Overwrite by values from FABM intial conditions folder if present
@@ -482,13 +486,13 @@ contains
             k_bot = 1
          end if
          do ivar = 1, state%n_fabm_bottom_state
-            call fabm_read_initial_data(self, state, fabm_cfg, output_cfg, grid, ivar, state%n_fabm_interior_state)
+            call fabm_read_initial_data(self, state, model_cfg, fabm_cfg, output_cfg, grid, ivar, state%n_fabm_interior_state)
          end do
          ! Set surface state variable initial values
          ! Overwrite by values from FABM intial conditions folder if present
          call self%fabm_model%initialize_surface_state()
          do ivar = 1, state%n_fabm_surface_state
-            call fabm_read_initial_data(self, state, fabm_cfg, output_cfg, grid, ivar, state%n_fabm_interior_state + state%n_fabm_bottom_state)
+            call fabm_read_initial_data(self, state, model_cfg, fabm_cfg, output_cfg, grid, ivar, state%n_fabm_interior_state + state%n_fabm_bottom_state)
          end do
       end if
 
@@ -542,6 +546,8 @@ contains
       logical, intent(in), optional :: first_call
 
       ! Local variables
+      type(Manipulation), pointer :: man
+      real(RK) :: add
       integer :: ivar, ivar_diag, index, k
       logical :: first_call_local
 
@@ -581,6 +587,60 @@ contains
          ! 1c. Direct time integration of source terms to update surface_state
          do ivar = 1, state%n_fabm_surface_state
             state%fabm_surface_state(ivar) = state%fabm_surface_state(ivar) + state%dt * self%sms_sf(ivar)
+         end do
+
+         ! Perform manipulations
+         do ivar = 1, state%n_fabm_manipulations
+            associate(man => state%fabm_manipulations(ivar))
+               select case (man%action_type)
+               ! Multiply by action_val from start_depth to end_depth if current datum is between start time and start time plus one timestep
+               case(1)
+                  if ((man%start_time <= state%datum) .and. (man%start_time + state%dt / SECONDS_PER_DAY > state%datum)) then
+                     index = man%var_index
+                     if (index <= state%n_fabm_interior_state) then
+                        state%fabm_interior_state(man%end_depth:man%start_depth,index) = state%fabm_interior_state(man%end_depth:man%start_depth,index) * man%action_val
+                     else if (index <= state%n_fabm_interior_state + state%n_fabm_bottom_state) then
+                        index = index - state%n_fabm_interior_state
+                        if (fabm_cfg%bottom_everywhere) then
+                           state%fabm_bottom_state(man%end_depth:man%start_depth,index) = state%fabm_bottom_state(man%end_depth:man%start_depth,index) * man%action_val
+                        else
+                           state%fabm_bottom_state(1,index) = state%fabm_bottom_state(1,index) * man%action_val
+                        end if
+                     else
+                        index = index - state%n_fabm_interior_state - state%n_fabm_bottom_state
+                        state%fabm_surface_state(index) = state%fabm_surface_state(index) * man%action_val
+                     end if
+                  end if
+               ! Add action_val times timestep from start_depth to end_depth if current datum is between start time and end time
+               ! Only if there is any value lower than threshold between start_depth and end_depth
+               ! For variables on volume grid action_val is additionally divided by the height between start_depth and end_depth
+               case(2)
+                  if ((man%start_time <= state%datum) .and. (man%end_time >= state%datum)) then
+                     index = man%var_index
+                     if (index <= state%n_fabm_interior_state) then
+                        if (any(state%fabm_interior_state(man%end_depth:man%start_depth,index) < man%threshold)) then
+                           add = man%action_val * state%dt / sum(grid%h(man%end_depth:man%start_depth))
+                           state%fabm_interior_state(man%end_depth:man%start_depth,index) = state%fabm_interior_state(man%end_depth:man%start_depth,index) + add
+                        end if
+                     else if (index <= state%n_fabm_interior_state + state%n_fabm_bottom_state) then
+                        index = index - state%n_fabm_interior_state
+                        if (fabm_cfg%bottom_everywhere) then
+                           if (any(state%fabm_bottom_state(man%end_depth:man%start_depth,index) < man%threshold)) then
+                              add = man%action_val * state%dt / sum(grid%h(man%end_depth:man%start_depth))
+                              state%fabm_bottom_state(man%end_depth:man%start_depth,index) = state%fabm_bottom_state(man%end_depth:man%start_depth,index) + add
+                           end if
+                        else if (state%fabm_bottom_state(1,index) < man%threshold) then
+                           state%fabm_bottom_state(1,index) = state%fabm_bottom_state(1,index) + state%dt * man%action_val
+                        end if
+                     else
+                        index = index - state%n_fabm_interior_state - state%n_fabm_bottom_state
+                        if (state%fabm_surface_state(index) < man%threshold) then
+                           state%fabm_surface_state(index) = state%fabm_surface_state(index) + state%dt * man%action_val
+                        end if
+                     end if
+                  end if
+               end select
+            end associate
          end do
 
          ! 2a. Simstrat check interior FABM bounds
@@ -779,7 +839,7 @@ contains
          call self%fabm_model%get_interior_sources(1, grid%nz_grid, self%sms_int)
          ! Set NaNs to 0
          if (any(ieee_is_nan(self%sms_int))) then
-            call error('FABM Interior Source contains NaNs, set to 0')
+            call warn('FABM Interior Source contains NaNs, set to 0')
             where (ieee_is_nan(self%sms_int))
                self%sms_int = 0.0
             end where
@@ -1041,10 +1101,11 @@ contains
    end subroutine absorption_update_fabm
 
    ! Read initial data and set in state
-   subroutine fabm_read_initial_data(self, state, fabm_cfg, output_cfg, grid, ivar, ivar_offset)
+   subroutine fabm_read_initial_data(self, state, model_cfg, fabm_cfg, output_cfg, grid, ivar, ivar_offset)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
       class(ModelState), intent(inout) :: state
+      class(ModelConfig), intent(in) :: model_cfg
       class(FABMConfig), intent(in) :: fabm_cfg
       class(OutputConfig), intent(inout) :: output_cfg
       class(StaggeredGrid), intent(in) :: grid
@@ -1055,7 +1116,7 @@ contains
       integer :: n, unit, status, ivar_state
       character(len=256) :: file_path
       real(RK) :: depth, initial_val
-      real(RK), dimension(fabm_cfg%max_length_input_data) :: temp_depths, temp_initials
+      real(RK), dimension(model_cfg%max_length_input_data) :: temp_depths, temp_initials
       real(RK), dimension(:), allocatable :: depths, initials
       logical :: is_int
 
@@ -1088,8 +1149,8 @@ contains
          read(unit, *, iostat=status) depth, initial_val
          if (status .ne. 0) exit
          n = n + 1
-         if (n > fabm_cfg%max_length_input_data) then
-            call error('Too many lines in '//trim(file_path)//', increase MaxLengthInputData in FABMConfig or ModelConfig.')
+         if (n > model_cfg%max_length_input_data) then
+            call error('Too many lines in '//trim(file_path)//', increase MaxLengthInputData in ModelConfig.')
          end if
          if (depth > 0) then
             call error('One or several input depths of initial conditions file '//trim(file_path)//' are positive.')
@@ -1481,7 +1542,7 @@ contains
       character(len=256) :: file_path
       character(len=256) :: name
       character(len=16) :: bound
-      integer, parameter :: max_lines = 100 ! Maximum amount of repaired variables in RepairedVars file
+      integer, parameter :: max_lines = 1000 ! Maximum amount of repaired variables in RepairedVars file
       character(len=256), dimension(max_lines)  :: temp_names
       character(len=16), dimension(max_lines) :: temp_bounds
       character(len=16), dimension(max_lines) :: temp_types
@@ -1669,6 +1730,161 @@ contains
       end do
 
    end subroutine set_fabm_repaired_vars
+
+   ! Read manipulation namelist
+   subroutine set_fabm_manipulations(self, state, fabm_cfg, output_cfg, sim_cfg, grid)
+      ! Arguments
+      class(SimstratFABM), intent(inout) :: self
+      class(ModelState), intent(inout) :: state
+      class(FABMConfig), intent(in) :: fabm_cfg
+      class(OutputConfig), intent(inout) :: output_cfg
+      class(SimConfig), intent(in) :: sim_cfg
+      class(StaggeredGrid), intent(in) :: grid
+
+      ! Local variables
+      character(len=256) :: file_path
+      character(len=64) :: var_name
+      integer :: i, ivar, n, unit, status, action_type
+      real(RK) :: start_time, end_time, action_val, threshold, start_depth, end_depth, offset_above_level, depth_to_grid
+      integer, parameter :: max_manipulations = 1000 ! Maximum amount of manipulations
+      character(len=64), dimension(max_manipulations)  :: temp_names
+      integer, dimension(max_manipulations) :: temp_indices, temp_types, temp_kstarts, temp_kstops
+      real(RK), dimension(max_manipulations) :: temp_starts, temp_ends, temp_actions, temp_thresholds
+      logical :: found
+      namelist /manipulation/ var_name, start_time, end_time, action_type, action_val, threshold, start_depth, end_depth
+
+      ! Calculate conversion to depth below lake level
+      ! Difference between lowest depth and total amount of depths
+      offset_above_level = grid%z_zero - grid%z_face(grid%nz_grid + 1)
+      ! Calculate conversion from input depth to grid number
+      ! Divide by difference of lowest depth to highest depth
+      ! Multiply by difference of highest grid point to lowest (1)
+      depth_to_grid = (grid%nz_grid - 1) / (grid%z_face(grid%nz_grid + 1) - grid%z_face(1))
+
+      ! Construct the file path
+      file_path = trim(fabm_cfg%config_path)//'/manipulations.nml'
+
+      ! Open and read manipulations file
+      open(newunit=unit, action='read', status='old', file=file_path, iostat = status)
+      if (status .ne. 0) then
+         call warn('No FABM manipulations file provided in '//trim(fabm_cfg%config_path)//'.')
+         return
+      else
+         write (6, *) 'Reading ', trim(file_path)
+      end if
+      ! Initialize count
+      n = 0
+      ! Read until end of file is reached
+      do
+         ! Initialize manipulation
+         var_name = ''
+         start_time = sim_cfg%start_datum
+         end_time = sim_cfg%end_datum
+         action_type = -1
+         action_val = 0.0_RK
+         threshold = huge(0.0_RK)
+         start_depth = 0
+         end_depth = -grid%z_zero
+         ! In fortran the last manipulation is already counted as EOF
+         if (status < 0) exit
+         read (unit, nml=manipulation, iostat=status)
+         if (status > 0) then
+            call error('Invalid format in '//trim(file_path)//'.')
+         end if
+         n = n + 1
+         ! Check if too many manipulations are provided
+         if (n > max_manipulations) then
+            call error('Too many manipulations in '//trim(file_path)//', increase max_manipulations in set_fabm_manipulations.')
+         end if
+         ! Search for var_name in state variables
+         found = .false.
+         do ivar = 1, state%n_fabm_state
+            if (output_cfg%output_vars_fabm_state(ivar)%name == var_name) then
+               temp_names(n) = trim(var_name)
+               temp_indices(n) = ivar
+               found = .true.
+            end if
+         end do
+         if (.not. found) then
+            call warn('Manipulation file '//trim(file_path)//' contains manipulation with variable '//trim(var_name)//' not found in FABM state: ignored.')
+            n = n - 1   
+            cycle
+         end if
+         ! Set start_time if it is before end_datum, skip manipulation otherwise
+         if (start_time <= sim_cfg%end_datum) then
+            temp_starts(n) = start_time
+         else
+            call warn('Manipulation file '//trim(file_path)//' contains manipulation for variable '//trim(var_name)//' with start_time after end datum: ignored.')
+            n = n - 1   
+            cycle
+         end if
+         ! Set end_time if it is after start_datum and start_time, skip manipulation otherwise
+         if ((end_time >= sim_cfg%start_datum) .and. (end_time >= start_time)) then
+            temp_ends(n) = end_time
+         else
+            call warn('Manipulation file '//trim(file_path)//' contains manipulation for variable '//trim(var_name)//' with end_time before start_time or start datum: ignored.')
+            n = n - 1   
+            cycle
+         end if    
+         ! Set action_type if it is 1 or 2, skip manipulation otherwise
+         if ((action_type == 1) .or. (action_type == 2)) then
+            temp_types(n) = action_type
+         else
+            call warn('Manipulation file '//trim(file_path)//' contains manipulation for variable '//trim(var_name)//' with invalid action type (not 1 or 2): ignored.')
+            n = n - 1   
+            cycle
+         end if
+         if (action_val == 0.0_RK) then
+            call warn('Manipulation file '//trim(file_path)//' contains manipulation for variable '//trim(var_name)//' with action_val 0.0 or not provided.')
+         end if
+         ! Set action_val and threshold
+         temp_actions(n) = action_val
+         temp_thresholds(n) = threshold
+         ! Depth input is rounded to nearest integer after conversion to grid number and substracted from amount of grid points
+         ! Set kstart if start_depth is above or equal to lowest depth, skip manipulation otherwise
+         ! Restrict kstart to amount of grid cells
+         if (start_depth >= -grid%z_zero) then
+            temp_kstarts(n) = min(grid%nz_grid, grid%nz_grid + nint((start_depth + offset_above_level) * depth_to_grid))
+         else
+            call warn('Manipulation file '//trim(file_path)//' contains manipulation for variable '//trim(var_name)//' with start_depth below lowest depth: ignored.')
+            n = n - 1   
+            cycle
+         end if
+         ! Set kstop if end_depth is below or equal to 0, skip manipulation otherwise
+         ! Minimum kstop is 1
+         if ((end_depth <= -offset_above_level) .and. (end_depth <= start_depth)) then
+            temp_kstops(n) = max(1, grid%nz_grid + nint((end_depth + offset_above_level) * depth_to_grid))
+         else
+            call warn('Manipulation file '//trim(file_path)//' contains manipulation for variable '//trim(var_name)//' with end_depth above 0 or start_depth: ignored.')
+            n = n - 1   
+            cycle
+         end if
+      end do
+      ! Close the file and return if no valid manipulation has been provided
+      close(unit)
+      if (n == 0) then
+         call warn('Manipulation file '//trim(file_path)//' is empty or has no valid manipulation.')
+         state%n_fabm_manipulations = 0
+         return
+      end if
+
+      ! Allocate type of correct size
+      allocate(state%fabm_manipulations(n))
+      state%n_fabm_manipulations = n
+
+      ! Assign values
+      do i = 1, n
+         state%fabm_manipulations(i)%var_name = trim(temp_names(i))
+         state%fabm_manipulations(i)%var_index = temp_indices(i)
+         state%fabm_manipulations(i)%start_time = temp_starts(i)
+         state%fabm_manipulations(i)%end_time = temp_ends(i)
+         state%fabm_manipulations(i)%action_type = temp_types(i)
+         state%fabm_manipulations(i)%action_val = temp_actions(i)
+         state%fabm_manipulations(i)%threshold = temp_thresholds(i)
+         state%fabm_manipulations(i)%start_depth = temp_kstarts(i)
+         state%fabm_manipulations(i)%end_depth = temp_kstops(i)
+      end do
+   end subroutine set_fabm_manipulations
 
    ! Deallocate memory
    subroutine deallocate_fabm(self)
