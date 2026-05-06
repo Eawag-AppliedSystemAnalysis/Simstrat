@@ -36,13 +36,13 @@
     "SnowModel"               : 1
   },
   "FABMConfig" : {
-    "FABMConfigPath"          : "TestCase_LakeZurich/FABM_configurations/",
+    "FABMConfigFile"          : "../lib/fabm/testcases/fabm-gotm-npzd.yaml",
     "FABMInitialPath"         : "TestCase_LakeZurich/FABM_initialconditions/",
     "FABMInflowPath"          : "TestCase_LakeZurich/FABM_inflow/",
-    "FABMConfigFile"          : "../lib/fabm/testcases/fabm-gotm-npzd.yaml",
+    "FABMConfigPath"          : "TestCase_LakeZurich/FABM_configurations/",
     "OutputDiagnosticVars"    : true,
-    "OutputRepairedVars"      : false,
     "RepairStates"            : true,
+    "OutputRepairedVars"      : false,
     "BottomEverywhere"        : true,
     "BioshadeFeedback"        : true,
     "BackgroundExtinction"    : 0.2
