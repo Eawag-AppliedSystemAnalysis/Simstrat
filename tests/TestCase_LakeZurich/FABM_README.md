@@ -22,28 +22,9 @@ To add depth-varying initial conditions for a FABM variable, add an initial cond
 
 To add inflow for a FABM variable, add an inflow file of the same format as the Simstrat inflows to the folder specified as `FABMInflowPath` in `FABMConfig`.
 
-### Output Diagnostic Variables
-
-To output diagnostic variables, first set `OutputDiagnosticVars` in `FABMConfig` to `true`. Then go to `FABMConfigPath` in `FABMConfig`.
-
-After having started the simulation once, you will find a list of all diagnostic variables under `list_diagnostic_interior.dat` and `list_diagnostic_horizontal.dat` for interior and horizontal (bottom and surface) diagnostic variables, respectively. In the file `output_diagnostics.dat`, you can add the diagnostic variables to output with the following options:
-
-- Add the short name of a FABM diagnostic variable to output (e.g. `attenuation_coefficient_of_photosynthetic_radiative_flux`)
-- Add `select_all_*` to output all FABM diagnostic variables that start with `*` (e.g. `select_all_npzd`) or `select_all_` to output all FABM diagnostic variables
-- Add `select_output_*` to output all FABM diagnostic variables that start with `*` (e.g. `select_output_npzd`) and have `Output` set `Yes` by the biogeochemical model or `select_output_` to output all FABM diagnostic variables that have Output set true
-
-### Output Repaired Variables
-
-FABM repairs variables below minimum or above maximum by restricting them to their extrema, if `RepairStates` is set to `true` in `FABMConfig`. To output repaired variables, first set `OutputRepairedVars` in `FABMConfig` to `true`. Then go to `FABMConfigPath` in `FABMConfig`.
-
-After having run the simulation once, you will find a list of all repaired variables and the boundary they have crossed under `list_repaired.dat`. Upon re-running the simulation, next to the variable output there is an additional output for the variable showing:
-
-- The value of the variable had it not been repaired, if the boundary is crossed by the variable
-- The boundary if the variable stays within bounds
-
 ### Manipulations
 
-The file `manipulations.dat` in `FABMConfigPath` in `FABMConfig` allows for manipulations of FABM variables during the simulation. Set the following options:
+The file `manipulations.nml` in `FABMConfigPath` in `FABMConfig` allows for manipulations of FABM variables during the simulation. Set the following options:
 
 - `var_name` is the variable short name, must be among the FABM state variables (a list can be found in `_variables.dat` in `Path` in `Output`)
 - `start_time` is the time in days at which the manipulation starts, must be smaller than `End d` in `Simulation`
@@ -86,6 +67,25 @@ Whereas to add a density of 10<sup>-5</sup> mmol/m<sup>3</sup> during days 12005
    end_depth = -120
 /
 ~~~
+
+### Output Diagnostic Variables
+
+To output diagnostic variables, first set `OutputDiagnosticVars` in `FABMConfig` to `true`. Then go to `FABMConfigPath` in `FABMConfig`.
+
+After having started the simulation once, you will find a list of all diagnostic variables under `list_diagnostic_interior.dat` and `list_diagnostic_horizontal.dat` for interior and horizontal (bottom and surface) diagnostic variables, respectively. In the file `output_diagnostics.dat`, you can add the diagnostic variables to output with the following options:
+
+- Add the short name of a FABM diagnostic variable to output (e.g. `attenuation_coefficient_of_photosynthetic_radiative_flux`)
+- Add `select_all_*` to output all FABM diagnostic variables that start with `*` (e.g. `select_all_npzd`) or `select_all_` to output all FABM diagnostic variables
+- Add `select_output_*` to output all FABM diagnostic variables that start with `*` (e.g. `select_output_npzd`) and have `Output` set `Yes` by the biogeochemical model or `select_output_` to output all FABM diagnostic variables that have Output set true
+
+### Output Repaired Variables
+
+FABM repairs variables below minimum or above maximum by restricting them to their extrema, if `RepairStates` is set to `true` in `FABMConfig`. To output repaired variables, first set `OutputRepairedVars` in `FABMConfig` to `true`. Then go to `FABMConfigPath` in `FABMConfig`.
+
+After having run the simulation once, you will find a list of all repaired variables and the boundary they have crossed under `list_repaired.dat`. Upon re-running the simulation, next to the variable output there is an additional output for the variable showing:
+
+- The value of the variable had it not been repaired, if the boundary is crossed by the variable
+- The boundary if the variable stays within bounds
 
 ### Further Configurations
 
