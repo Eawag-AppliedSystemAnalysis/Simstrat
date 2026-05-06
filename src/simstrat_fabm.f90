@@ -1299,35 +1299,41 @@ contains
       class(StaggeredGrid), intent(in) :: grid
 
       ! Local variables
-      integer :: i, j, n, n_int, n_hor, unit, status, unit_list, status_list
+      integer :: i, j, n, n_int, n_hor, n_off, unit, status, unit_list, status_list
       character(len=256) :: line, line_trim, short_name, short_name_trim, long_name, units, output, file_path
       integer, parameter :: max_lines = 10000 ! Maximum amount of diagnostic variables in SetDiagnosticVars file
       character(len=256), dimension(max_lines) :: temp_names ! Same len as fabm_diagnostic_names
       integer, dimension(max_lines) :: fabm_index
-      logical, dimension(max_lines) :: is_int
+      logical, dimension(max_lines) :: is_int, is_hor
 
-      ! Read from SetDiagVars
-      open(newunit=unit, action='read', status='old', file=fabm_cfg%diag_vars, iostat = status)
+      ! Construct the file path
+      file_path = trim(fabm_cfg%config_path)//'/output_diagnostics.dat'
+
+      ! Read from output_diagnostics
+      open(newunit=unit, action='read', status='old', file=file_path, iostat = status)
       if (status .ne. 0) then
-         call warn('No Output of FABM Diagnostic Variables. Check FABM Diagnostic Vars File.')
+         ! Create empty file and set amount of diagnostics to zero
+         call warn('No FABM diagnostic variables provided. Empty diagnostic variables file '// trim(file_path) //' created.')
+         open(newunit=unit, action='write', status='new', file=file_path, iostat = status)
+         if (status .ne. 0) then
+            call error('Failed to open or create file: ' // trim(file_path) // '. Please check FABM configurations folder.')
+         end if
+         close(unit)
          state%n_fabm_diagnostic = 0
          return
       else
-         write(6,*) 'Reading ', trim(fabm_cfg%diag_vars)
+         write(6,*) 'Reading ', trim(file_path)
       end if
-      ! Skip header
-      read(unit, '(A)', iostat=status)
       ! Initialize counts to 0
       n = 0
       n_int = 0
       n_hor = 0
+      n_off = 0
       ! Read every diagnostic variable
       do
          read(unit, '(A)', iostat=status) line
          if (status .ne. 0) exit
          if (len_trim(line) == 0) cycle
-         if (line(1:4) == '-Add') cycle
-         if (line(1:4) == '----') cycle
          if (any(temp_names == trim(line))) cycle
          line_trim = trim(line)
          if ((line_trim(:11) == 'select_all_') .or. (line_trim(:14) == 'select_output_')) then
@@ -1391,6 +1397,7 @@ contains
          end if
       end do
       ! Close the file
+      call ok('FABM diagnostic variables file '// trim(file_path) //' successfully read')
       close(unit)
 
       ! Find diagnostic variable in FABM model
@@ -1401,6 +1408,7 @@ contains
                self%fabm_model%interior_diagnostic_variables(j)%save = .true.
                fabm_index(i) = j
                is_int(i) = .true.
+               is_hor(i) = .false.
                n_int = n_int + 1
             end if
          end do
@@ -1410,17 +1418,21 @@ contains
                self%fabm_model%horizontal_diagnostic_variables(j)%save = .true.
                fabm_index(i) = j
                is_int(i) = .false.
+               is_hor(i) = .true.
                n_hor = n_hor + 1
             end if
          end do
          ! If not found in fabm_model
          if (fabm_index(i) == 0) then
-            call error('FABM diagnostic variable '//trim(temp_names(i))//' not found.')
+            call warn('FABM diagnostic variable '//trim(temp_names(i))//' not found.')
+            is_int(i) = .false.
+            is_hor(i) = .false.
+            n_off = n_off + 1
          end if
       end do
 
       ! Set amount of diagnostic variables and allocate arrays of proper size
-      state%n_fabm_diagnostic = n
+      state%n_fabm_diagnostic = n - n_off
       state%n_fabm_diagnostic_interior = n_int
       state%n_fabm_diagnostic_horizontal = n_hor
       if (n_int > 0) then
@@ -1435,7 +1447,7 @@ contains
 
       ! Allocate array for and set output information (name, units, long_name, minimum, maximum, missing_value) on diagnostic variables
       ! Also store the index in FABM
-      if (n > 0) allocate(output_cfg%output_vars_fabm_diagnostic(n))
+      if ((n - n_off) > 0) allocate(output_cfg%output_vars_fabm_diagnostic(n - n_off))
       ! j is the index in output_vars_fabm_diagnostic
       j = 1
       ! Interior diagnostic variables are set first
@@ -1455,7 +1467,7 @@ contains
       ! Horizontal diagnostic variables are set second
       ! Note: FABM does not differentiate between bottom and surface diagnostic variables: here all are treated as bottom diagnostic variables
       do i = 1, n
-         if (.not. is_int(i)) then
+         if (is_hor(i)) then
             output_cfg%output_vars_fabm_diagnostic(j)%name = self%fabm_model%horizontal_diagnostic_variables(fabm_index(i))%name
             output_cfg%output_vars_fabm_diagnostic(j)%long_name = self%fabm_model%horizontal_diagnostic_variables(fabm_index(i))%long_name
             output_cfg%output_vars_fabm_diagnostic(j)%units = self%fabm_model%horizontal_diagnostic_variables(fabm_index(i))%units
@@ -1630,6 +1642,7 @@ contains
          end if
       end do
       ! Close the file
+      call ok('FABM repaired variables file '// trim(file_path) //' successfully read')
       close(unit)
 
       ! Set amount of repaired variables and allocate arrays of proper
@@ -1767,7 +1780,14 @@ contains
       ! Open and read manipulations file
       open(newunit=unit, action='read', status='old', file=file_path, iostat = status)
       if (status .ne. 0) then
-         call warn('No FABM manipulations file provided in '//trim(fabm_cfg%config_path)//'.')
+         ! Create empty file and set amount of manipulations to zero
+         call warn('No FABM manipulations provided. Empty manipulations file '// trim(file_path) //' created.')
+         open(newunit=unit, action='write', status='new', file=file_path, iostat = status)
+         if (status .ne. 0) then
+            call error('Failed to open or create file: ' // trim(file_path) // '. Please check FABM configurations folder.')
+         end if
+         close(unit)
+         state%n_fabm_manipulations = 0
          return
       else
          write (6, *) 'Reading ', trim(file_path)
@@ -1787,10 +1807,13 @@ contains
          end_depth = -grid%z_zero
          ! In fortran the last manipulation is already counted as EOF
          if (status < 0) exit
+         ! Read and check for invalid format or empty manipulation
          read (unit, nml=manipulation, iostat=status)
          if (status > 0) then
             call error('Invalid format in '//trim(file_path)//'.')
          end if
+         if (action_type == -1) cycle
+         ! Increase amount of manipulations
          n = n + 1
          ! Check if too many manipulations are provided
          if (n > max_manipulations) then
@@ -1861,9 +1884,9 @@ contains
          end if
       end do
       ! Close the file and return if no valid manipulation has been provided
+      call ok('FABM manipulations file '// trim(file_path) //' successfully read')
       close(unit)
       if (n == 0) then
-         call warn('Manipulation file '//trim(file_path)//' is empty or has no valid manipulation.')
          state%n_fabm_manipulations = 0
          return
       end if

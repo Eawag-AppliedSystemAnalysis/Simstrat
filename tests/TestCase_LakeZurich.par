@@ -40,10 +40,9 @@
     "FABMInitialPath"         : "TestCase_LakeZurich/FABM_initialconditions/",
     "FABMInflowPath"          : "TestCase_LakeZurich/FABM_inflow/",
     "FABMConfigFile"          : "../lib/fabm/testcases/fabm-gotm-npzd.yaml",
-    "FABMDiagnosticVars"      : "TestCase_LakeZurich/FABM_configurations/DiagnosticVars.dat",
     "OutputDiagnosticVars"    : true,
-    "RepairStates"            : true,
     "OutputRepairedVars"      : false,
+    "RepairStates"            : true,
     "BottomEverywhere"        : true,
     "BioshadeFeedback"        : true,
     "BackgroundExtinction"    : 0.2

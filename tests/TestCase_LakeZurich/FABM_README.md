@@ -26,7 +26,7 @@ To add inflow for a FABM variable, add an inflow file of the same format as the 
 
 To output diagnostic variables, first set `OutputDiagnosticVars` in `FABMConfig` to `true`. Then go to `FABMConfigPath` in `FABMConfig`.
 
-After having started the simulation once, you will find a list of all diagnostic variables under `list_diagnostic_interior.dat` and `list_diagnostic_horizontal.dat` for interior and horizontal (bottom and surface) diagnostic variables, respectively. In the file `DiagnosticVars.dat`, you can edit the diagnostic variables to output with the following options:
+After having started the simulation once, you will find a list of all diagnostic variables under `list_diagnostic_interior.dat` and `list_diagnostic_horizontal.dat` for interior and horizontal (bottom and surface) diagnostic variables, respectively. In the file `output_diagnostics.dat`, you can add the diagnostic variables to output with the following options:
 
 - Add the short name of a FABM diagnostic variable to output (e.g. `attenuation_coefficient_of_photosynthetic_radiative_flux`)
 - Add `select_all_*` to output all FABM diagnostic variables that start with `*` (e.g. `select_all_npzd`) or `select_all_` to output all FABM diagnostic variables
@@ -56,7 +56,7 @@ The file `manipulations.dat` in `FABMConfigPath` in `FABMConfig` allows for mani
 - `start_depth` is the depth below which the action is executed, cannot be lower than the lowest depth 
 - `end_depth` is the depth above which the action is executed, cannot be greater than the highest depth 
 
-> **N.B.** Depth input is rounded to nearest integer after conversion to grid number and substracted from amount of grid points.
+> **N.B.** Depth input is converted to the nearest grid point for the simulation.
 
 
 For example for the variable `npzd phytoplankton`, to double its density at day 12005 between 20 and 60 meters depth, add the following manipulation:
@@ -72,7 +72,7 @@ For example for the variable `npzd phytoplankton`, to double its density at day 
 /
 ~~~
 
-Whereas to add a density of 10^{-5} mmol/m^3 during days 12005 to 12010 between 80 and 120 meters depth, whenever the density falls below 10^{-4} mmol/m^3, add the following manipulation:
+Whereas to add a density of 10<sup>-5</sup> mmol/m<sup>3</sup> during days 12005 to 12010 between 80 and 120 meters depth, whenever the density falls below 10<sup>-4</sup> mmol/m<sup>3</sup>, add the following manipulation:
 
 ~~~bash
 &manipulation
