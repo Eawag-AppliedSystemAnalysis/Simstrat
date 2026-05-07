@@ -20,8 +20,8 @@ if conversion_function == 'csv_to_netcdf':
     if len(var_names) == 0:
         var_names = [f[:-8] for f in os.listdir(path_to_output) if (f[-8:] == '_out.dat')]
     if inflow_mode == 1:
-        csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps, False)
+        csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps, skip_initial, False)
     else:
-        csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps)
+        csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps, skip_initial)
 else:
     raise ValueError(f'Conversion {conversion_function} not available.')
