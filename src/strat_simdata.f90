@@ -172,6 +172,8 @@ module strat_simdata
       logical :: bottom_everywhere
       ! Whether to calculate the attenuation coefficient with FABM
       logical :: bioshade_feedback
+      ! Proportion of absorption from input file to total extinction
+      real(RK) :: input_extinction
       ! Background extinction if the attenuation coefficient is calculated with FABM
       real(RK) :: background_extinction
    end type
@@ -251,9 +253,9 @@ module strat_simdata
       real(RK) :: E_Seiche
       real(RK) :: gamma ! Proportionality constant for loss of seiche energy
 
-      real(RK), dimension(:), allocatable :: absorb ! Absorption coeff [m-1]
-      real(RK), dimension(:), pointer :: absorb_vol ! Absorption coeff on vol grid [m-1], FABM needs pointer attribute
-      real(RK), dimension(:), pointer :: background_extinction_vol ! Background extinction for Absorption coeff [m-1], FABM needs pointer attribute      
+      real(RK), dimension(:), allocatable :: absorb ! Absorption coeff including FABM contribution and background extinction [m-1]
+      real(RK), dimension(:), allocatable :: absorb_from_fabm ! Biogeochemical contribution to Absorption coeff [m-1]
+      real(RK), dimension(:), pointer :: absorb_to_fabm ! Absorption coeff passed to FABM [m-1], FABM needs pointer attribute   
       real(RK) :: u10, v10, Wf ! Wind speeds, wind factor
       real(RK), pointer :: uv10, uv10_gas ! pointer attribute needed for FABM
       real(RK) :: drag, u_taus ! Drag
@@ -360,8 +362,6 @@ contains
       allocate (self%P_Seiche(state_size + 1))
 
       allocate (self%absorb(state_size + 1))
-      allocate (self%absorb_vol(state_size))
-      allocate (self%background_extinction_vol(state_size))
       allocate (self%rad(state_size + 1))
       allocate (self%swr_vol(state_size))
       allocate (self%par_vol(state_size))
@@ -402,8 +402,6 @@ contains
       self%E_Seiche = 0.0_RK
 
       self%absorb = 0.0_RK
-      self%absorb_vol = 0.0_RK
-      self%background_extinction_vol = 0.0_RK
       self%rad = 0.0_RK
       self%swr_vol = 0.0_RK
       self%par_vol = 0.0_RK
@@ -485,8 +483,6 @@ contains
       call save_array(80, self%P_Seiche)
       write(80) self%E_Seiche, self%gamma
       call save_array(80, self%absorb)
-      call save_array_pointer(80, self%absorb_vol)
-      call save_array_pointer(80, self%background_extinction_vol)
       write(80) self%u10, self%v10, self%uv10, self%uv10_gas, self%Wf
       write(80) self%u_taub, self%drag, self%u_taus
       write(80) self%tx, self%ty
@@ -561,8 +557,6 @@ contains
       call read_array(81, self%P_Seiche)
       read(81) self%E_Seiche, self%gamma
       call read_array(81, self%absorb)
-      call read_array_pointer(81, self%absorb_vol)
-      call read_array_pointer(81, self%background_extinction_vol)
       read(81) self%u10, self%v10, self%uv10, self%uv10_gas, self%Wf
       read(81) self%u_taub, self%drag, self%u_taus
       read(81) self%tx, self%ty

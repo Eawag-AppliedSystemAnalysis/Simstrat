@@ -341,8 +341,8 @@ contains
                   self%simdata%output_cfg%output_vars(i)%name = "AbsCoeff"
                   self%simdata%output_cfg%output_vars(i)%long_name = "Absorption coefficient"
                   self%simdata%output_cfg%output_vars(i)%units = "1/m"
-                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%absorb_vol
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
+                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%absorb
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .true.
 
                case('TotalIceH')
                   ! Total ice thickness [m]
@@ -714,6 +714,7 @@ contains
             call par_file%get("FABMConfig.ManipulateStates", fabm_cfg%manipulate_states,found); call check_field(found, 'FABMConfig.ManipulateStates',ParName)
             call par_file%get("FABMConfig.BottomEverywhere", fabm_cfg%bottom_everywhere,found); call check_field(found, 'FABMConfig.BottomEverywhere',ParName)
             call par_file%get("FABMConfig.BioshadeFeedback", fabm_cfg%bioshade_feedback,found); call check_field(found, 'FABMConfig.BioshadeFeedback', ParName)
+            call par_file%get("FABMConfig.InputExtinction", fabm_cfg%input_extinction,found); call check_field(found, 'FABMConfig.InputExtinction', ParName)
             call par_file%get("FABMConfig.BackgroundExtinction", fabm_cfg%background_extinction,found); call check_field(found, 'FABMConfig.BackgroundExtinction', ParName)
          end if
 

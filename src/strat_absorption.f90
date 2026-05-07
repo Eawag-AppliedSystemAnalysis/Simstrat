@@ -37,16 +37,20 @@ module strat_absorption
 
    type, public :: AbsorptionModule
       class(ModelConfig), pointer :: cfg
+      class(FABMConfig), pointer :: fabm_cfg
       class(StaggeredGrid), pointer :: grid
       class(ModelParam), pointer :: param
       character(len=:), allocatable  :: file
 
       ! Variables that are used in between iteration. These used to be "save" variables
       real(RK) :: tb_start, tb_end !Start and end time
+      real(RK) :: inp !Fraction of input absorption added to FABM bioshade feedback
       real(RK), dimension(:), allocatable :: z_absorb !Read depths
       real(RK), dimension(:), allocatable :: absorb_start, absorb_end !Interpolated start and end values
+      real(RK), dimension(:), allocatable :: bg, bg_vol !Background absorption added to FABM bioshade feedback
       integer :: number_of_lines_read = 0
       integer :: eof, nval
+      logical :: fabm_contribution
 
    contains
       procedure, pass :: init => absorption_init
@@ -57,17 +61,19 @@ module strat_absorption
 
 contains
 
-   subroutine absorption_init(self, model_config, model_param, absorption_file, grid)
+   subroutine absorption_init(self, model_config, fabm_config, model_param, absorption_file, grid)
    ! Initialize absorption
 
       implicit none
       class(AbsorptionModule) :: self
       class(StaggeredGrid), target :: grid
       class(ModelConfig), target :: model_config
+      class(FABMConfig), target :: fabm_config
       class(ModelParam), target :: model_param
       character(len=:), allocatable :: absorption_file
 
       self%cfg => model_config
+      self%fabm_cfg => fabm_config
       self%param => model_param
       self%grid => grid
       self%file = absorption_file
@@ -76,6 +82,25 @@ contains
       allocate (self%z_absorb(grid%max_length_input_data))
       allocate (self%absorb_start(grid%nz_grid + 1))
       allocate (self%absorb_end(grid%nz_grid + 1))
+
+      ! Check whether there is FABM contribution (bioshade feedback)
+      if (model_config%couple_fabm) then
+         self%fabm_contribution = fabm_config%bioshade_feedback
+      else
+         self%fabm_contribution = .false.
+      end if
+
+      ! Get input contribution and background extinction in case of FABM contribution
+      if (self%fabm_contribution) then
+         allocate (self%bg(grid%nz_grid + 1))
+         allocate (self%bg_vol(grid%nz_grid))
+         self%inp = fabm_config%input_extinction
+         self%bg(:) = fabm_config%background_extinction
+         self%bg_vol(:) = fabm_config%background_extinction
+         if ((self%inp < 0.0_RK) .or. (self%inp > 1.0_RK)) then
+            call error('FABM Input Extinction factor must be between 0 and 1')
+         end if
+      end if
    end subroutine
 
    subroutine absorption_save(self)
@@ -112,6 +137,18 @@ contains
       real(RK) :: dummy !Read depths
       real(RK) :: absorb_read_start(self%grid%max_length_input_data), absorb_read_end(self%grid%max_length_input_data) !Read start and end values
       integer :: i
+
+      ! In case of FABM contribution
+      if (self%fabm_contribution) then      
+         ! If there is no input contribution, set absorb to the biogeochemical contribution + background extinction
+         ! Absorption passed to FABM is just background extinction
+         ! No further calculation necessary
+         if (self%inp == 0.0_RK) then
+            state%absorb = state%absorb_from_fabm + self%bg
+            state%absorb_to_fabm = self%bg_vol
+            return
+         end if
+      end if
 
       ! Associations for easier readability / comparability to old code
       associate (tb_start=>self%tb_start, &
@@ -179,22 +216,30 @@ contains
             !Linearly interpolate value at correct datum (for all depths)
             state%absorb(1:nz) = absorb_start(1:nz) + (state%datum - tb_start)/(tb_end - tb_start)*(absorb_end(1:nz)  - absorb_start(1:nz))
             state%absorb(1:nz) = self%param%p_absorb*state%absorb(1:nz)
-
-            ! pass whole absorb_vol array, interpolate_to_val handles boundaries
-            call self%grid%interpolate_to_vol(self%grid%z_face,state%absorb(:),nz + 1,state%absorb_vol(:))
-            state%absorb_vol(nz) = state%absorb_vol(nz - 1)
          end if
-         return
 
 7        eof = 1
          if(state%datum>tb_start) call warn('Last light attenuation date before simulation end time.')
 
 8        state%absorb(1:nz) = absorb_start(1:nz)           !Take first value of current interval
+         ! In case of FABM contribution
+         if (self%fabm_contribution) then
+            ! Interpolate to volume for absorption passed to FABM array, interpolate_to_vol handles boundaries
+            call self%grid%interpolate_to_vol(self%grid%z_face, state%absorb, nz + 1, state%absorb_to_fabm)
+            state%absorb_to_fabm(nz) = state%absorb_to_fabm(nz - 1)
+            ! Add biogeochemical contribution (absorb_from_fabm) and background extinction to absorption
+            ! Linear regression between input absorbtion and biogeochemical absorption with factor inp
+            state%absorb = self%inp * state%absorb + (1 - self%inp) * state%absorb_from_fabm + self%bg
+            ! Absorption passed to FABM such that adding bgc contribution once (done by bgc model) results in absorption above
+            ! Assuming that biogeochemical contribution does not change in one timestep
+            state%absorb_to_fabm = self%inp * state%absorb_to_fabm - self%inp * state%absorb_from_fabm + self%bg_vol
+         end if
          return
 
 9        call error('Reading absorption file (no data found).')
 
       end associate
+
    end subroutine
 
    subroutine count_read(self)

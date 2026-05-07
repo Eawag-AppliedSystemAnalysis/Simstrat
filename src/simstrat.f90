@@ -127,6 +127,7 @@ program simstrat_main
 
    ! Initialize absorption module
    call mod_absorption%init(simdata%model_cfg, &
+                            simdata%fabm_cfg, &
                             simdata%model_param, &
                             simdata%input_cfg%AbsorpName, &
                             simdata%grid)
@@ -284,15 +285,7 @@ contains
          call mod_forcing%update(simdata%model)
 
          ! Update absorption with Simstrat, or with FABM (if the coupling is enabled and bioshade feedback is on)
-         if (simdata%model_cfg%couple_fabm) then
-            if (simdata%fabm_cfg%bioshade_feedback) then
-               call mod_fabm%absorption_update_fabm(simdata%model, simdata%fabm_cfg, simdata%grid)
-            else
-               call mod_absorption%update(simdata%model)
-            end if
-         else
-            call mod_absorption%update(simdata%model)
-         end if
+         call mod_absorption%update(simdata%model)
 
          ! Update physics
          call mod_stability%update(simdata%model)

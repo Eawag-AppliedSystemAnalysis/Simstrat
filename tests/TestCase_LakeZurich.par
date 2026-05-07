@@ -46,7 +46,8 @@
     "ManipulateStates"        : false,
     "BottomEverywhere"        : true,
     "BioshadeFeedback"        : true,
-    "BackgroundExtinction"    : 0.2
+    "InputExtinction"         : 0.5,
+    "BackgroundExtinction"    : 0.0
   },
   "Simulation" : {
     "Timestep s"                  : 300,
