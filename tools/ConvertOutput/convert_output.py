@@ -9,6 +9,7 @@ var_names = [] # Variable names; pass an empty list to convert all variables in 
 path_to_output = '../../tests/TestCases_Results' # Path to output folder
 paths_to_input = ['../../tests/TestCase_LakeZurich', '../../tests/TestCase_LakeZurich/FABM_initialconditions', '../../tests/TestCase_LakeZurich/FABM_inflow'] # Paths to input folders
 eps =  1e-10 # Tolerance for variation among dimension to drop that dimension (optional, default: 1e-10)
+skip_initial = False # Whether to skip the first timepoint
 conversion_function = 'csv_to_netcdf' # Currently available: csv_to_netcdf
 inflow_mode = 2 # Inflow mode for deep inflows as set in configuration file
 filename = 'output_converted' # Name of new file
