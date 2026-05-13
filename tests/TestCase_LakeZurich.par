@@ -16,7 +16,7 @@
     "Times"  : 96,
     "OutputDepthReference": "surface",
     "All"   : false,
-    "Variables" : ["T", "S","HA","HW","HK","HV", "AbsCoeff"]
+    "Variables" : ["T", "S","HA","HW","HK","HV"]
   },
   "ModelConfig" : {
     "MaxLengthInputData"      : 1000,
