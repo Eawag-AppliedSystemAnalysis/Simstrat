@@ -170,8 +170,6 @@ module strat_simdata
       logical :: manipulate_states
       ! Whether there is a pelagic-benthic interface at every depth
       logical :: bottom_everywhere
-      ! Whether to calculate the attenuation coefficient with FABM
-      logical :: bioshade_feedback
       ! Proportion of absorption from input file to total extinction
       real(RK) :: input_extinction
       ! Background extinction if the attenuation coefficient is calculated with FABM
@@ -255,6 +253,7 @@ module strat_simdata
 
       real(RK), dimension(:), allocatable :: absorb ! Absorption coeff including FABM contribution and background extinction [m-1]
       real(RK), dimension(:), allocatable :: absorb_from_fabm ! Biogeochemical contribution to Absorption coeff [m-1]
+      real(RK), dimension(:), allocatable :: absorb_from_fabm_vol ! Biogeochemical contribution to Absorption coeff [m-1], on volume grid
       real(RK), dimension(:), pointer :: absorb_to_fabm ! Absorption coeff passed to FABM [m-1], FABM needs pointer attribute   
       real(RK) :: u10, v10, Wf ! Wind speeds, wind factor
       real(RK), pointer :: uv10, uv10_gas ! pointer attribute needed for FABM

@@ -16,7 +16,7 @@
     "Times"  : 96,
     "OutputDepthReference": "surface",
     "All"   : false,
-    "Variables" : ["T", "S","HA","HW","HK","HV"]
+    "Variables" : ["T", "S","HA","HW","HK","HV", "AbsCoeff"]
   },
   "ModelConfig" : {
     "MaxLengthInputData"      : 1000,
@@ -45,9 +45,8 @@
     "OutputRepairedVars"      : false,
     "ManipulateStates"        : false,
     "BottomEverywhere"        : true,
-    "BioshadeFeedback"        : true,
-    "InputExtinction"         : 0.5,
-    "BackgroundExtinction"    : 0.0
+    "InputExtinctionFactor"   : 0.5,
+    "BackgroundExtinction"    : 0.1
   },
   "Simulation" : {
     "Timestep s"                  : 300,

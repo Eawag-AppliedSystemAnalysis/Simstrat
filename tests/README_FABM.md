@@ -92,8 +92,7 @@ Whereas to add a density of 10<sup>-5</sup> mmol/m<sup>3</sup> during days 12005
 The following are additional configurations that can be found in `FABMConfig`:
 
 - `BottomEverywhere` selects whether FABM Bottom State variables should be calculated at every layer (`True`) or only at the lowermost layer (`False`)
-- `BioshadeFeedback` selects whether light extinction should be calculated by the biogeochemical models (`True`) or from input (`False`)
-- `InputExtinction` sets the proportional contribution to the extinction from the input file at `Absorption` in `Input` if `BioshadeFeedback` is set to `True` (the contribution from the biogeochemical models is (1 - `InputExtinction`))
-- `BackgroundExtinction` sets background extinction due to pure water extinction added to the light extinction calculated by the biogeochemical models if `BioshadeFeedback` is set to `True`
+- `InputExtinctionFactor` sets the proportional contribution to the extinction from the input file at `Absorption` in `Input` (the contribution from the biogeochemical models is (1 - `InputExtinctionFactor`), thus 0 if `InputExtinctionFactor` is 1)
+- `BackgroundExtinction` sets background extinction due to pure water extinction added to the light extinction calculated by the biogeochemical models if `InputExtinctionFactor` is smaller than 1
 
 > **N.B.** If `BottomEverywhere` is set to `True`, also all horizontal diagnostic variables have output at every layer, even if for some of them (e.g. surface diagnostic variables) this is not physically meaningful. This does not affect the simulation.

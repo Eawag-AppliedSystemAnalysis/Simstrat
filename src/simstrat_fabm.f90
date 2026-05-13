@@ -77,8 +77,6 @@ module simstrat_fabm
       real(RK), dimension(:,:), allocatable :: flux_bt, sms_bt
       ! Arrays for fluxes and tracer source terms at surface
       real(RK), dimension(:), allocatable :: flux_sf, sms_sf
-      ! Arrays for light extinction
-      real(RK), dimension(:), allocatable :: absorb_from_fabm_vol
 
       ! Variables for validity of state
       logical :: valid_int, valid_sf, valid_bt
@@ -88,6 +86,8 @@ module simstrat_fabm
 
       ! Indices of diagnostic variables in FABM
       integer, dimension(:), allocatable :: diagnostic_interior_index, diagnostic_horizontal_index
+      ! Variables overwritten by Simstrat (relevant for registering diagnostic variables)
+      character(len=64), dimension(10) :: overwritten_vars = ''
       ! Names of repaired variables
       character(len=256), allocatable :: repaired_interior_names(:), repaired_bottom_names(:), repaired_surface_names(:)
       
@@ -158,14 +158,14 @@ contains
       end if
 
       ! Register bgc variables from Simstrat (<ID>, <NAME>, <UNITS>, <LONG_NAME>)
-      ! Register simstrat contribution to attenuation coefficients, if bioshade feedback is on
-      if (fabm_cfg%bioshade_feedback) then
+      ! Register simstrat contribution to attenuation coefficients, if there is FABM contribution to light extinction
+      if (fabm_cfg%input_extinction < 1.0_RK) then
          call self%fabm_model%root%register_dependency(self%id_attenuation_coefficient_host, 'attenuation_coefficient_host', 'm-1', 'host contribution to attenuation coefficients')
       end if
       
       ! Add Simstrat bgc variables to FABM aggregate variables
-      ! Add simstrat contribution to attenuation coefficients, if bioshade feedback is on
-      if (fabm_cfg%bioshade_feedback) then
+      ! Add simstrat contribution to attenuation coefficients, if there is FABM contribution to light extinction
+      if (fabm_cfg%input_extinction < 1.0_RK) then
          call self%fabm_model%root%add_to_aggregate_variable(fabm_standard_variables%attenuation_coefficient_of_shortwave_flux, self%id_attenuation_coefficient_host)
          call self%fabm_model%root%add_to_aggregate_variable(fabm_standard_variables%attenuation_coefficient_of_photosynthetic_radiative_flux, self%id_attenuation_coefficient_host)
       end if
@@ -301,10 +301,10 @@ contains
          allocate(self%velocity(grid%nz_grid, state%n_fabm_interior_state))
       end if
       
-      ! If bioshade feedback is on, get index of attenuation coefficient FABM diagnostic variable and
+      ! If there is FABM contribution to light extinction, get index of attenuation coefficient FABM diagnostic variable and
       ! allocate and initialize FABM contribution to absorption (absorb_from_fabm)
       ! as well as absorption passed to FABM (absorb_to_fabm)
-      if (fabm_cfg%bioshade_feedback) then 
+      if (fabm_cfg%input_extinction < 1.0_RK) then
          att_index = 0
          do ivar = 1, size(self%fabm_model%interior_diagnostic_variables)
             if (self%fabm_model%interior_diagnostic_variables(ivar)%name == 'attenuation_coefficient_of_photosynthetic_radiative_flux') then
@@ -316,10 +316,10 @@ contains
             call error('Attenuation Coefficient not found in FABM Diagnostic Variables. Bioshade feedback not possible.')
          end if
          allocate(state%absorb_from_fabm(grid%nz_grid + 1))
-         allocate(self%absorb_from_fabm_vol(grid%nz_grid + 1))
+         allocate(state%absorb_from_fabm_vol(grid%nz_grid + 1))
          allocate(state%absorb_to_fabm(grid%nz_grid))
          state%absorb_from_fabm(:) = 0.0_RK
-         self%absorb_from_fabm_vol(:) = 0.0_RK
+         state%absorb_from_fabm_vol(:) = 0.0_RK
          state%absorb_to_fabm(:) = 0.0_RK
       end if
 
@@ -346,16 +346,20 @@ contains
       ! Temperature at each layer [°C]
       call self%fabm_model%link_interior_data(fabm_standard_variables%temperature, state%T)
       ! Attenuation coefficient of SWR flux [m-1] and of PAR flux [m-1]
-      ! If bioshade feedback is on, link the Simstrat contribution (background extinction)
-      ! If bioshade feedback is off, Simstrat calculation of attenuation coefficient overwrites bgc model calculation
+      ! If there is FABM contribution to light extinction, link the Simstrat contribution (absorb_to_fabm)
+      ! If there is not, Simstrat calculation of attenuation coefficient overwrites bgc model calculation
       ! Note: Passing the same attenuation coefficient for SWR and PAR is not exactly correct 
       ! since the attenuation coefficient for PAR can be higher than for SWR
       ! see for example: https://www.sciencedirect.com/science/article/pii/S1001074217317734
-      if (fabm_cfg%bioshade_feedback) then
+      if (fabm_cfg%input_extinction < 1.0_RK) then
          call self%fabm_model%link_interior_data('attenuation_coefficient_host', state%absorb_to_fabm)
       else
          call self%fabm_model%link_interior_data(fabm_standard_variables%attenuation_coefficient_of_shortwave_flux, state%absorb_to_fabm, source=data_source_user)
          call self%fabm_model%link_interior_data(fabm_standard_variables%attenuation_coefficient_of_photosynthetic_radiative_flux, state%absorb_to_fabm, source=data_source_user)
+         if (fabm_cfg%output_diag_vars) then
+            self%overwritten_vars(1) = 'attenuation_coefficient_of_shortwave_flux'
+            self%overwritten_vars(2) = 'attenuation_coefficient_of_photosynthetic_radiative_flux'
+         end if
       end if
       ! Secchi depth [m], not defined in Simstrat
       !call self%fabm_model%link_interior_data(fabm_standard_variables%secchi_depth)
@@ -382,12 +386,18 @@ contains
       call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_air_pressure, state%p_air)
       ! Surface albedo [-], aggregate variable overwritten by Simstrat -> remove source=data_source_user to calculate by bgc models
       call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_albedo, state%wat_albedo, source=data_source_user)
+      if (fabm_cfg%output_diag_vars) then
+         self%overwritten_vars(3) = 'surface_albedo'
+      end if
       ! PAR flux at surface [W m-2]
       call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux, state%par0)
       ! SWR flux at surface [W m-2]
       call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_flux, state%rad0)
       ! Surface drag coefficient [-], aggregate variable overwritten by Simstrat -> remove source=data_source_user to calculate by bgc models
       call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_drag_coefficient_in_air, state%C10, source=data_source_user)
+      if (fabm_cfg%output_diag_vars) then
+         self%overwritten_vars(4) = 'surface_drag_coefficient_in_air'
+      end if
       ! Surface specific humidity [-]
       call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_specific_humidity, state%qa)
       ! Surface temperature [°C]
@@ -847,7 +857,7 @@ contains
       ! 2. Retrieve sources, fluxes and vertical velocities
       ! >0: flux into water
       ! <0: flux out of water
-      
+
       ! 2a. Initialize with 0 and then retrieve interior tracer source terms
       ! FABM increments rather than sets argument sms_int: initialize with 0 at every time step
       if (state%n_fabm_interior_state > 0) then
@@ -931,14 +941,14 @@ contains
       ! Operates on entire active spatial domain
       call self%fabm_model%finalize_outputs()
 
-      ! 5. Write FABM absorption to state
-      if (fabm_cfg%bioshade_feedback) then
+      ! 5. Write FABM absorption to state, if there is FABM contribution to light extinction
+      if (fabm_cfg%input_extinction < 1.0_RK) then
          ! Get total absorption
-         self%absorb_from_fabm_vol = self%fabm_model%get_interior_diagnostic_data(att_index)
+         state%absorb_from_fabm_vol = self%fabm_model%get_interior_diagnostic_data(att_index)
          ! Substract absorption passed to FABM to get only biogeochemical contribution to extinction
-         self%absorb_from_fabm_vol = self%absorb_from_fabm_vol - state%absorb_to_fabm
+         state%absorb_from_fabm_vol = state%absorb_from_fabm_vol - state%absorb_to_fabm
          ! Interpolate to faces to be compatible with state absorb
-         call grid%interpolate_to_face(grid%z_volume, self%absorb_from_fabm_vol, grid%nz_grid, state%absorb_from_fabm)
+         call grid%interpolate_to_face(grid%z_volume, state%absorb_from_fabm_vol, grid%nz_grid, state%absorb_from_fabm)
       end if
 
       ! 6. Retrieve values of diagnostic variables
@@ -1400,6 +1410,14 @@ contains
 
       ! Find diagnostic variable in FABM model
       do i = 1, n
+         ! If the diagnostic variable is overwritten by Simstrat it is still registered by FABM but should be skipped
+         if (any(self%overwritten_vars == temp_names(i))) then
+            call warn('FABM diagnostic variable '//trim(temp_names(i))//' overwritten by Simstrat.')
+            is_int(i) = .false.
+            is_hor(i) = .false.
+            n_off = n_off + 1
+            cycle
+         end if
          ! Set index at location in fabm_model%interior_diagnostic_variables
          do j = 1, size(self%fabm_model%interior_diagnostic_variables)
             if (self%fabm_model%interior_diagnostic_variables(j)%name == temp_names(i)) then
@@ -1919,7 +1937,6 @@ contains
       if (allocated(self%flux_sf)) deallocate(self%flux_sf)
       if (allocated(self%sms_sf)) deallocate(self%sms_sf)
       if (allocated(self%velocity)) deallocate(self%velocity)
-      if (allocated(self%absorb_from_fabm_vol)) deallocate(self%absorb_from_fabm_vol)
       if (allocated(self%diagnostic_interior_index)) deallocate(self%diagnostic_interior_index)
       if (allocated(self%diagnostic_horizontal_index)) deallocate(self%diagnostic_horizontal_index)
       if (allocated(self%repaired_interior_names)) deallocate(self%repaired_interior_names)

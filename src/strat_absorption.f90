@@ -84,8 +84,18 @@ contains
       allocate (self%absorb_end(grid%nz_grid + 1))
 
       ! Check whether there is FABM contribution (bioshade feedback)
+      ! No FABM contribution if input contribution is 1
       if (model_config%couple_fabm) then
-         self%fabm_contribution = fabm_config%bioshade_feedback
+         if ((fabm_config%input_extinction < 0.0_RK) .or. (fabm_config%input_extinction > 1.0_RK)) then
+            call error('FABM Input Extinction Factor must be between 0 and 1')
+         else if (fabm_config%input_extinction == 1.0_RK) then
+            self%fabm_contribution = .false.
+         else
+            self%fabm_contribution = .true.
+            if ((fabm_config%background_extinction < 0.0_RK) .or. (fabm_config%background_extinction > 1.0_RK)) then
+               call error('FABM Background Extinction must be between 0 and 1')
+            end if
+         end if
       else
          self%fabm_contribution = .false.
       end if
@@ -97,9 +107,6 @@ contains
          self%inp = fabm_config%input_extinction
          self%bg(:) = fabm_config%background_extinction
          self%bg_vol(:) = fabm_config%background_extinction
-         if ((self%inp < 0.0_RK) .or. (self%inp > 1.0_RK)) then
-            call error('FABM Input Extinction factor must be between 0 and 1')
-         end if
       end if
    end subroutine
 
@@ -138,18 +145,6 @@ contains
       real(RK) :: absorb_read_start(self%grid%max_length_input_data), absorb_read_end(self%grid%max_length_input_data) !Read start and end values
       integer :: i
 
-      ! In case of FABM contribution
-      if (self%fabm_contribution) then      
-         ! If there is no input contribution, set absorb to the biogeochemical contribution + background extinction
-         ! Absorption passed to FABM is just background extinction
-         ! No further calculation necessary
-         if (self%inp == 0.0_RK) then
-            state%absorb = state%absorb_from_fabm + self%bg
-            state%absorb_to_fabm = self%bg_vol
-            return
-         end if
-      end if
-
       ! Associations for easier readability / comparability to old code
       associate (tb_start=>self%tb_start, &
                  tb_end=>self%tb_end, &
@@ -159,6 +154,18 @@ contains
                  eof=>self%eof, &
                  nval=>self%nval, &
                  nz=>self%grid%nz_occupied)
+
+         ! In case of FABM contribution
+         if (self%fabm_contribution) then      
+            ! If there is no input contribution, set absorb to the biogeochemical contribution + background extinction
+            ! Absorption passed to FABM is just background extinction
+            ! No further calculation necessary
+            if (self%inp == 0.0_RK) then
+               state%absorb(1:nz+1) = state%absorb_from_fabm(1:nz+1) + self%bg(1:nz+1)
+               state%absorb_to_fabm(1:nz) = self%bg_vol(1:nz)
+               return
+            end if
+         end if
 
          if (state%first_timestep) then ! First iteration
             open (30, status='old', file=self%file)
@@ -207,32 +214,38 @@ contains
          else
             do while (state%datum > tb_end) !Move to appropriate interval to get correct value
                tb_start = tb_end
-               absorb_start(1:nz) = absorb_end(1:nz)
+               absorb_start(1:nz+1) = absorb_end(1:nz+1)
                !Read next value
                read (30, *, end=7) tb_end, (absorb_read_end(i), i=1, nval)
                call count_read(self)
                call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end)
             end do
             !Linearly interpolate value at correct datum (for all depths)
-            state%absorb(1:nz) = absorb_start(1:nz) + (state%datum - tb_start)/(tb_end - tb_start)*(absorb_end(1:nz)  - absorb_start(1:nz))
-            state%absorb(1:nz) = self%param%p_absorb*state%absorb(1:nz)
+            state%absorb(1:nz+1) = absorb_start(1:nz+1) + (state%datum - tb_start)/(tb_end - tb_start)*(absorb_end(1:nz+1)  - absorb_start(1:nz+1))
+            state%absorb(1:nz+1) = self%param%p_absorb*state%absorb(1:nz+1)
          end if
+         ! In case of FABM contribution add the contribution and calculate absorption passed to FABM
+         if (self%fabm_contribution) then
+            ! Interpolate to volume for absorption passed to FABM array, interpolate_to_vol handles boundaries
+            call self%grid%interpolate_to_vol(self%grid%z_face, state%absorb, nz + 1, state%absorb_to_fabm)
+            ! Add biogeochemical contribution (absorb_from_fabm) and background extinction to absorption
+            ! Linear regression between input absorbtion and biogeochemical absorption with factor inp
+            state%absorb(1:nz+1) = self%inp * state%absorb(1:nz+1) + (1 - self%inp) * state%absorb_from_fabm(1:nz+1) + self%bg(1:nz+1)
+            ! Absorption passed to FABM such that adding bgc contribution once (done by bgc model) results in absorption above
+            ! Assuming that biogeochemical contribution does not change in one timestep
+            state%absorb_to_fabm(1:nz) = self%inp * state%absorb_to_fabm(1:nz) - self%inp * state%absorb_from_fabm_vol(1:nz) + self%bg_vol(1:nz)
+         end if
+         return
 
 7        eof = 1
          if(state%datum>tb_start) call warn('Last light attenuation date before simulation end time.')
 
-8        state%absorb(1:nz) = absorb_start(1:nz)           !Take first value of current interval
-         ! In case of FABM contribution
+8        state%absorb(1:nz+1) = absorb_start(1:nz+1)           !Take first value of current interval
+         ! In case of FABM contribution add the contribution and calculate absorption passed to FABM
          if (self%fabm_contribution) then
-            ! Interpolate to volume for absorption passed to FABM array, interpolate_to_vol handles boundaries
             call self%grid%interpolate_to_vol(self%grid%z_face, state%absorb, nz + 1, state%absorb_to_fabm)
-            state%absorb_to_fabm(nz) = state%absorb_to_fabm(nz - 1)
-            ! Add biogeochemical contribution (absorb_from_fabm) and background extinction to absorption
-            ! Linear regression between input absorbtion and biogeochemical absorption with factor inp
-            state%absorb = self%inp * state%absorb + (1 - self%inp) * state%absorb_from_fabm + self%bg
-            ! Absorption passed to FABM such that adding bgc contribution once (done by bgc model) results in absorption above
-            ! Assuming that biogeochemical contribution does not change in one timestep
-            state%absorb_to_fabm = self%inp * state%absorb_to_fabm - self%inp * state%absorb_from_fabm + self%bg_vol
+            state%absorb(1:nz+1) = self%inp * state%absorb(1:nz+1) + (1 - self%inp) * state%absorb_from_fabm(1:nz+1) + self%bg
+            state%absorb_to_fabm(1:nz) = self%inp * state%absorb_to_fabm(1:nz) - self%inp * state%absorb_from_fabm_vol(1:nz) + self%bg_vol(1:nz)
          end if
          return
 
