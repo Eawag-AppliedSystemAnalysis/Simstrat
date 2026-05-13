@@ -13,6 +13,8 @@ Set as `FABMConfigFile` in `FABMConfig`, in `.yaml` format.
 - `parameters` sets parameters for the module
 - `initialization` sets the scalar initial values of the variables in the module
 - `coupling` sets the coupling to variables from other modules
+- `use` toggles whether the module should be used (default: `false`)
+- `check_conservation` toggles whether to add diagnostics for the change in conserved quantities (default: `false`)
 
 ### Initial Conditions
 
