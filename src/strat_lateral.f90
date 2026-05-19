@@ -80,10 +80,11 @@ module strat_lateral
    end type
 
 contains
-   subroutine lateral_generic_update(self, state, output_cfg)
+   subroutine lateral_generic_update(self, state, fabm_cfg, output_cfg)
       implicit none
       class(GenericLateralModule) :: self
       class(ModelState) :: state
+      class(FABMConfig), intent(in) :: fabm_cfg
       class(OutputConfig), intent(in) :: output_cfg
    end subroutine
 
@@ -141,7 +142,7 @@ contains
          end if
          ! Update self
          self%fabm_path = fabm_config%inflow_path
-         self%n_vars = self%n_vars + state%n_fabm_interior_state
+         self%n_vars = self%n_vars + fabm_config%n_interior_state
       end if
 
       self%max_n_inflows = model_config%max_length_input_data
@@ -171,22 +172,26 @@ contains
       allocate(state%Q_inp(1:self%n_vars,1:grid%nz_grid + 1))
       allocate(self%has_surface_input(1:self%n_vars))
       allocate(self%has_deep_input(1:self%n_vars))
-
+      
       ! Surface-bound horizontal inflow for FABM
       if (self%couple_fabm) then
-         allocate(self%number_of_lines_read_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
-         allocate(self%fnum_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
-         self%number_of_lines_read_bound = 0
-         allocate(self%eof_bound(state%n_fabm_surface_state))
-         allocate(self%nval_bound(state%n_fabm_surface_state))
-         allocate(self%tb_start_bound(state%n_fabm_surface_state))
-         allocate(self%tb_end_bound(state%n_fabm_surface_state))
-         allocate(state%Q_inp_bound(state%n_fabm_surface_state))
-         allocate(state%Q_inp_bound_con(state%n_fabm_surface_state))
-         allocate(self%Q_start_bound(state%n_fabm_surface_state))
-         allocate(self%Q_start_bound_con(state%n_fabm_surface_state))
-         allocate(self%Q_end_bound(state%n_fabm_surface_state))
-         allocate(self%Q_end_bound_con(state%n_fabm_surface_state))
+         if (fabm_config%n_bottom_state + fabm_config%n_surface_state > 0) then
+            allocate(self%number_of_lines_read_bound(fabm_config%n_bottom_state + fabm_config%n_surface_state))
+            allocate(self%fnum_bound(fabm_config%n_bottom_state + fabm_config%n_surface_state))
+            self%number_of_lines_read_bound = 0
+         end if
+         if (fabm_config%n_surface_state > 0) then
+            allocate(self%eof_bound(fabm_config%n_surface_state))
+            allocate(self%nval_bound(fabm_config%n_surface_state))
+            allocate(self%tb_start_bound(fabm_config%n_surface_state))
+            allocate(self%tb_end_bound(fabm_config%n_surface_state))
+            allocate(state%Q_inp_bound(fabm_config%n_surface_state))
+            allocate(state%Q_inp_bound_con(fabm_config%n_surface_state))
+            allocate(self%Q_start_bound(fabm_config%n_surface_state))
+            allocate(self%Q_start_bound_con(fabm_config%n_surface_state))
+            allocate(self%Q_end_bound(fabm_config%n_surface_state))
+            allocate(self%Q_end_bound_con(fabm_config%n_surface_state))
+         end if
       end if
    end subroutine
 
@@ -280,10 +285,11 @@ contains
       
       
    ! Implementation for lateral rho
-   subroutine lateral_rho_update(self, state, output_cfg)
+   subroutine lateral_rho_update(self, state, fabm_cfg, output_cfg)
       implicit none
       class(LateralRhoModule) :: self
       class(ModelState) :: state
+      class(FABMConfig), intent(in) :: fabm_cfg
       class(OutputConfig), intent(in) :: output_cfg
 
       ! Local Declarations
@@ -291,7 +297,7 @@ contains
       real(RK) :: dummy
       real(RK) :: Q_in(1:self%grid%ubnd_vol), h_in(1:self%grid%ubnd_vol)
       real(RK) :: T_in, S_in, rho_in, CD_in, g_red, slope, Ri, E, Q_inp_inc
-      real(RK) :: fabm_in_interior(state%n_fabm_interior_state)
+      real(RK) :: fabm_in_interior(fabm_cfg%n_interior_state)
       integer :: i, j, k, i1, i2, l, status, unit
       character(len=100) :: fname
 
@@ -653,10 +659,11 @@ contains
    end subroutine
 
    ! "Normal" Implementation
-   subroutine lateral_update(self, state, output_cfg)
+   subroutine lateral_update(self, state, fabm_cfg, output_cfg)
       implicit none
       class(LateralModule) :: self
       class(ModelState) :: state
+      class(FABMConfig), intent(in) :: fabm_cfg
       class(OutputConfig), intent(in) :: output_cfg
 
       ! Local Declarations
@@ -909,17 +916,18 @@ contains
 
    ! FABM: Surface- / Bottom-bound inflows and outflows (absolute and concentration-dependent)
    ! Inflow file consists of one time and two inflow/outflow columns (absolute and concentration-dependent)
-   subroutine lateral_bound_update(self, state, output_cfg)
+   subroutine lateral_bound_update(self, state, fabm_cfg, output_cfg)
       implicit none
       class(GenericLateralModule) :: self
       class(ModelState) :: state
+      class(FABMConfig), intent(in) :: fabm_cfg
       class(OutputConfig), intent(in) :: output_cfg
 
       ! Local Declarations
       integer :: i, l, status, unit, interpolation_factor
       character(len=100) :: fname
 
-      do i=1, state%n_fabm_bottom_state + state%n_fabm_surface_state
+      do i=1, fabm_cfg%n_bottom_state + fabm_cfg%n_surface_state
 
          associate (datum=>state%datum, &
                idx=>state%first_timestep, &
@@ -930,7 +938,7 @@ contains
             if (idx) then  ! If first timestep
                if (self%number_of_lines_read_bound(i) == 0) then  ! If not started from snapshot
 
-                  fname = trim(self%fabm_path)//'/'//trim(output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + i)%name)//'_inflow.dat'
+                  fname = trim(self%fabm_path)//'/'//trim(output_cfg%output_vars_fabm_state(fabm_cfg%n_interior_state + i)%name)//'_inflow.dat'
 
                   ! Read inflow files
                   open(newunit=unit, action='read', status='old', file=fname, iostat = status)
@@ -938,13 +946,13 @@ contains
                   
                   ! Check whether the inflow file has been read and whether it is for a surface state variable
                   if (status .ne. 0) then
-                     if (i > state%n_fabm_bottom_state) then
+                     if (i > fabm_cfg%n_bottom_state) then
                         goto 9
                      else
                         cycle
                      end if
                   else
-                     if (i > state%n_fabm_bottom_state) then
+                     if (i > fabm_cfg%n_bottom_state) then
                         write(6,*) 'Reading ', fname
                      else
                         call warn('Bottom Inflow File '//trim(fname)//' ignored')
@@ -974,7 +982,7 @@ contains
                   call ok('FABM bound input file successfully read: '//trim(fname))
                else ! if start from snapshot
                   ! Open inflow files
-                  fname = trim(self%fabm_path)//'/'//trim(output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + i)%name)//'_inflow.dat'
+                  fname = trim(self%fabm_path)//'/'//trim(output_cfg%output_vars_fabm_state(fabm_cfg%n_interior_state + i)%name)//'_inflow.dat'
                   
                   open(self%fnum_bound(i), action='read', status='old', file=fname)
 
@@ -986,7 +994,7 @@ contains
             end if ! idx = 1
             
             ! Exit loop for bottom state variables
-            if (i <= state%n_fabm_bottom_state) cycle
+            if (i <= fabm_cfg%n_bottom_state) cycle
 
             ! Temporal treatment of inflow
             if ((datum <= self%tb_start_bound(i)) .or. (self%eof_bound(i) == 1)) then ! if datum before first date or end of file reached

@@ -293,16 +293,16 @@ contains
          ! If there is inflow/outflow do advection part
          if (simdata%model_cfg%inflow_mode > 0) then
             ! Treat inflow/outflow
-            call mod_lateral%update(simdata%model, simdata%output_cfg)
+            call mod_lateral%update(simdata%model, simdata%fabm_cfg, simdata%output_cfg)
             ! Surface-bound in/outflow, no in/outflow for bottom state variables
-            if (simdata%model%n_fabm_bottom_state > 0 .or. simdata%model%n_fabm_surface_state > 0) then
-               call mod_lateral%update_bound(simdata%model, simdata%output_cfg)
+            if (simdata%fabm_cfg%n_bottom_state + simdata%fabm_cfg%n_surface_state > 0) then
+               call mod_lateral%update_bound(simdata%model, simdata%fabm_cfg, simdata%output_cfg)
             end if
             ! Set old lake level (before it is changed by advection module)
             simdata%grid%lake_level_old = simdata%grid%z_face(simdata%grid%ubnd_fce)
 
             ! Update lake advection using the inflow/outflow data
-            call mod_advection%update(simdata%model, simdata%output_cfg)
+            call mod_advection%update(simdata%model, simdata%fabm_cfg, simdata%output_cfg)
             ! Update lake level
             simdata%grid%lake_level = simdata%grid%z_face(simdata%grid%ubnd_fce)
          end if

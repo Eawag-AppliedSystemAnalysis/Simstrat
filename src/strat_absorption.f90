@@ -47,10 +47,9 @@ module strat_absorption
       real(RK) :: inp !Fraction of input absorption added to FABM bioshade feedback
       real(RK), dimension(:), allocatable :: z_absorb !Read depths
       real(RK), dimension(:), allocatable :: absorb_start, absorb_end !Interpolated start and end values
-      real(RK), dimension(:), allocatable :: bg, bg_vol !Background absorption added to FABM bioshade feedback
+      real(RK), dimension(:), allocatable :: bg !Background absorption added to FABM bioshade feedback
       integer :: number_of_lines_read = 0
       integer :: eof, nval
-      logical :: fabm_contribution
 
    contains
       procedure, pass :: init => absorption_init
@@ -83,30 +82,17 @@ contains
       allocate (self%absorb_start(grid%nz_grid + 1))
       allocate (self%absorb_end(grid%nz_grid + 1))
 
-      ! Check whether there is FABM contribution (bioshade feedback)
-      ! No FABM contribution if input contribution is 1
+      ! Get input contribution if there is FABM coupling
+      ! No FABM contribution (bioshade feedback) if input contribution is 1
+      ! Get background extinction in case of FABM contribution
       if (model_config%couple_fabm) then
-         if ((fabm_config%input_extinction < 0.0_RK) .or. (fabm_config%input_extinction > 1.0_RK)) then
-            call error('FABM Input Extinction Factor must be between 0 and 1')
-         else if (fabm_config%input_extinction == 1.0_RK) then
-            self%fabm_contribution = .false.
-         else
-            self%fabm_contribution = .true.
-            if ((fabm_config%background_extinction < 0.0_RK) .or. (fabm_config%background_extinction > 1.0_RK)) then
-               call error('FABM Background Extinction must be between 0 and 1')
-            end if
-         end if
-      else
-         self%fabm_contribution = .false.
-      end if
-
-      ! Get input contribution and background extinction in case of FABM contribution
-      if (self%fabm_contribution) then
-         allocate (self%bg(grid%nz_grid + 1))
-         allocate (self%bg_vol(grid%nz_grid))
          self%inp = fabm_config%input_extinction
-         self%bg(:) = fabm_config%background_extinction
-         self%bg_vol(:) = fabm_config%background_extinction
+         if ((self%inp < 0.0_RK) .or. (self%inp > 1.0_RK)) then
+            call error('FABM Input Extinction Factor must be between 0 and 1')
+         else if (self%inp < 1.0_RK) then
+            allocate(self%bg(grid%nz_grid))
+            self%bg(:) = fabm_config%background_extinction
+         end if
       end if
    end subroutine
 
@@ -155,14 +141,14 @@ contains
                  nval=>self%nval, &
                  nz=>self%grid%nz_occupied)
 
-         ! In case of FABM contribution
-         if (self%fabm_contribution) then      
-            ! If there is no input contribution, set absorb to the biogeochemical contribution + background extinction
-            ! Absorption passed to FABM is just background extinction
-            ! No further calculation necessary
+         ! In case of FABM coupling if there is no input contribution:
+         ! Set absorb to the biogeochemical contribution + background extinction
+         ! Absorption passed to FABM is just background extinction
+         ! No further calculation necessary
+         if (self%cfg%couple_fabm) then
             if (self%inp == 0.0_RK) then
-               state%absorb(1:nz+1) = state%absorb_from_fabm(1:nz+1) + self%bg(1:nz+1)
-               state%absorb_to_fabm(1:nz) = self%bg_vol(1:nz)
+               state%absorb(1:nz) = state%absorb_from_fabm(1:nz) + self%bg(1:nz)
+               state%absorb_to_fabm(1:nz) = self%bg(1:nz)
                return
             end if
          end if
@@ -214,38 +200,41 @@ contains
          else
             do while (state%datum > tb_end) !Move to appropriate interval to get correct value
                tb_start = tb_end
-               absorb_start(1:nz+1) = absorb_end(1:nz+1)
+               absorb_start(1:nz) = absorb_end(1:nz)
                !Read next value
                read (30, *, end=7) tb_end, (absorb_read_end(i), i=1, nval)
                call count_read(self)
                call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end)
             end do
             !Linearly interpolate value at correct datum (for all depths)
-            state%absorb(1:nz+1) = absorb_start(1:nz+1) + (state%datum - tb_start)/(tb_end - tb_start)*(absorb_end(1:nz+1)  - absorb_start(1:nz+1))
-            state%absorb(1:nz+1) = self%param%p_absorb*state%absorb(1:nz+1)
+            state%absorb(1:nz) = absorb_start(1:nz) + (state%datum - tb_start)/(tb_end - tb_start)*(absorb_end(1:nz)  - absorb_start(1:nz))
+            state%absorb(1:nz) = self%param%p_absorb*state%absorb(1:nz)
          end if
-         ! In case of FABM contribution add the contribution and calculate absorption passed to FABM
-         if (self%fabm_contribution) then
-            ! Interpolate to volume for absorption passed to FABM array, interpolate_to_vol handles boundaries
-            call self%grid%interpolate_to_vol(self%grid%z_face, state%absorb, nz + 1, state%absorb_to_fabm)
+         ! In case of FABM coupling add the FABM contribution and calculate absorption passed to FABM
+         if (self%cfg%couple_fabm) then
+            state%absorb_to_fabm(1:nz) = state%absorb(1:nz)
             ! Add biogeochemical contribution (absorb_from_fabm) and background extinction to absorption
-            ! Linear regression between input absorbtion and biogeochemical absorption with factor inp
-            state%absorb(1:nz+1) = self%inp * state%absorb(1:nz+1) + (1 - self%inp) * state%absorb_from_fabm(1:nz+1) + self%bg(1:nz+1)
-            ! Absorption passed to FABM such that adding bgc contribution once (done by bgc model) results in absorption above
-            ! Assuming that biogeochemical contribution does not change in one timestep
-            state%absorb_to_fabm(1:nz) = self%inp * state%absorb_to_fabm(1:nz) - self%inp * state%absorb_from_fabm_vol(1:nz) + self%bg_vol(1:nz)
+            if (self%inp < 1.0_RK) then
+               ! Linear regression between input absorbtion and biogeochemical absorption with factor inp
+               state%absorb(1:nz) = self%inp * state%absorb(1:nz) + (1 - self%inp) * state%absorb_from_fabm(1:nz) + self%bg(1:nz)
+               ! Absorption passed to FABM such that adding bgc contribution once (done by bgc model) results in absorption above
+               ! Assuming that biogeochemical contribution does not change in one timestep
+               state%absorb_to_fabm(1:nz) = self%inp * state%absorb_to_fabm(1:nz) - self%inp * state%absorb_from_fabm(1:nz) + self%bg(1:nz)
+            end if
          end if
          return
 
 7        eof = 1
          if(state%datum>tb_start) call warn('Last light attenuation date before simulation end time.')
 
-8        state%absorb(1:nz+1) = absorb_start(1:nz+1)           !Take first value of current interval
-         ! In case of FABM contribution add the contribution and calculate absorption passed to FABM
-         if (self%fabm_contribution) then
-            call self%grid%interpolate_to_vol(self%grid%z_face, state%absorb, nz + 1, state%absorb_to_fabm)
-            state%absorb(1:nz+1) = self%inp * state%absorb(1:nz+1) + (1 - self%inp) * state%absorb_from_fabm(1:nz+1) + self%bg
-            state%absorb_to_fabm(1:nz) = self%inp * state%absorb_to_fabm(1:nz) - self%inp * state%absorb_from_fabm_vol(1:nz) + self%bg_vol(1:nz)
+8        state%absorb(1:nz) = absorb_start(1:nz)           !Take first value of current interval
+         ! In case of FABM coupling add the FABM contribution and calculate absorption passed to FABM
+         if (self%cfg%couple_fabm) then
+            state%absorb_to_fabm(1:nz) = state%absorb(1:nz)
+            if (self%inp < 1.0_RK) then
+               state%absorb(1:nz) = self%inp * state%absorb(1:nz) + (1 - self%inp) * state%absorb_from_fabm(1:nz) + self%bg
+               state%absorb_to_fabm(1:nz) = self%inp * state%absorb_to_fabm(1:nz) - self%inp * state%absorb_from_fabm(1:nz) + self%bg(1:nz)
+            end if
          end if
          return
 

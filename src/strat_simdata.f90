@@ -93,31 +93,6 @@ module strat_simdata
       ! like 72.0 can be read (which are interpreted as a double)
    end type
 
-   ! Definition of a manipulation action
-   type, public :: Manipulation
-      ! Variable name
-      character(len=:), allocatable :: var_name
-      ! Variable index
-      integer :: var_index
-      ! Start time (days)
-      real(RK) :: start_time
-      ! End time (days)
-      ! Only relevant for action_type 2
-      real(RK) :: end_time
-      ! Action type (1: multiply, 2: add)
-      integer :: action_type
-      ! Action value
-      ! Multiplied by timestep for action_type 2
-      ! Divided by height for action_type 2 for depth varying variables
-      real(RK) :: action_val
-      ! Threshold: action_type 2 is not executed if all values are above
-      real(RK) :: threshold
-      ! Start depth for depth varying variables
-      integer :: start_depth
-      ! End depth for depth varying variables
-      integer :: end_depth
-   end type
-
    ! Simulation configuration
    type, public :: SimConfig
       integer :: timestep
@@ -174,6 +149,14 @@ module strat_simdata
       real(RK) :: input_extinction
       ! Background extinction if the attenuation coefficient is calculated with FABM
       real(RK) :: background_extinction
+      ! Amount of state variables
+      integer :: n_state, n_interior_state, n_bottom_state, n_surface_state
+      ! Amount of diagnostic variables
+      integer :: n_diagnostic, n_diagnostic_interior, n_diagnostic_horizontal
+      ! Amount of repaired variables
+      integer :: n_repaired, n_repaired_interior, n_repaired_bottom, n_repaired_surface
+      ! Amount of manipulations
+      integer :: n_manipulations
    end type
 
    ! Model params (read from file)
@@ -226,18 +209,10 @@ module strat_simdata
       real(RK), dimension(:), pointer :: rho ! Water density [kg/m^3], FABM needs pointer attribute
       integer :: n_pH
       
-      ! All FABM biogeochemical state variable values in an array *_state
-      ! In Simstrat_FABM allocated with shape (grid%nz_grid, size(n_fabm_*_state))
+      ! All FABM biogeochemical state variable values in an array fabm_*_state
+      ! In Simstrat_FABM allocated with shape (grid%nz_grid, size(fabm_cfg%n_*_state))
       real(RK), dimension(:,:), pointer :: fabm_interior_state, fabm_bottom_state
       real(RK), dimension(:), pointer :: fabm_surface_state
-      real(RK), dimension(:,:), pointer :: fabm_diagnostic_interior, fabm_diagnostic_horizontal
-      real(RK), dimension(:,:), pointer :: fabm_repaired_interior, fabm_repaired_bottom
-      real(RK), dimension(:), pointer :: fabm_repaired_surface
-      integer :: n_fabm_state, n_fabm_interior_state, n_fabm_bottom_state, n_fabm_surface_state
-      integer :: n_fabm_diagnostic, n_fabm_diagnostic_interior, n_fabm_diagnostic_horizontal
-      integer :: n_fabm_repaired, n_fabm_repaired_interior, n_fabm_repaired_bottom, n_fabm_repaired_surface
-      class(Manipulation), dimension(:), allocatable :: fabm_manipulations
-      integer :: n_fabm_manipulations
    
       ! Variables located on z_upp grid
       real(RK), dimension(:), allocatable :: k, ko ! Turbulent kinetic energy (TKE) [J/kg]
@@ -252,8 +227,7 @@ module strat_simdata
       real(RK) :: gamma ! Proportionality constant for loss of seiche energy
 
       real(RK), dimension(:), allocatable :: absorb ! Absorption coeff including FABM contribution and background extinction [m-1]
-      real(RK), dimension(:), allocatable :: absorb_from_fabm ! Biogeochemical contribution to Absorption coeff [m-1]
-      real(RK), dimension(:), allocatable :: absorb_from_fabm_vol ! Biogeochemical contribution to Absorption coeff [m-1], on volume grid
+      real(RK), dimension(:), pointer :: absorb_from_fabm ! Biogeochemical contribution to Absorption coeff [m-1]
       real(RK), dimension(:), pointer :: absorb_to_fabm ! Absorption coeff passed to FABM [m-1], FABM needs pointer attribute   
       real(RK) :: u10, v10, Wf ! Wind speeds, wind factor
       real(RK), pointer :: uv10, uv10_gas ! pointer attribute needed for FABM
@@ -482,6 +456,10 @@ contains
       call save_array(80, self%P_Seiche)
       write(80) self%E_Seiche, self%gamma
       call save_array(80, self%absorb)
+      if (couple_fabm) then
+         call save_array_pointer(80, self%absorb_from_fabm)
+         call save_array_pointer(80, self%absorb_to_fabm)
+      end if
       write(80) self%u10, self%v10, self%uv10, self%uv10_gas, self%Wf
       write(80) self%u_taub, self%drag, self%u_taus
       write(80) self%tx, self%ty
@@ -516,6 +494,8 @@ contains
          call save_matrix_pointer(80, self%fabm_interior_state)
          call save_matrix_pointer(80, self%fabm_bottom_state)
          call save_array_pointer(80, self%fabm_surface_state)
+         call save_array_pointer(80, self%absorb_from_fabm)
+         call save_array_pointer(80, self%absorb_to_fabm)
       end if
       if (inflow_mode > 0) then
          call save_matrix(80, self%Q_inp)
@@ -556,6 +536,10 @@ contains
       call read_array(81, self%P_Seiche)
       read(81) self%E_Seiche, self%gamma
       call read_array(81, self%absorb)
+      if (couple_fabm) then
+         call read_array_pointer(81, self%absorb_from_fabm)
+         call read_array_pointer(81, self%absorb_to_fabm)
+      end if
       read(81) self%u10, self%v10, self%uv10, self%uv10_gas, self%Wf
       read(81) self%u_taub, self%drag, self%u_taus
       read(81) self%tx, self%ty

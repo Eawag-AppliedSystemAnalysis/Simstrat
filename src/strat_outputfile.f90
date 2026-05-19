@@ -184,14 +184,14 @@ contains
       if (self%model_config%couple_fabm) then
          
          ! FABM state variables
-         self%n_vars_fabm_interior_state = state%n_fabm_interior_state
-         self%n_vars_fabm_bottom_state = state%n_fabm_bottom_state
-         self%n_vars_fabm_surface_state = state%n_fabm_surface_state
+         self%n_vars_fabm_interior_state = fabm_config%n_interior_state
+         self%n_vars_fabm_bottom_state = fabm_config%n_bottom_state
+         self%n_vars_fabm_surface_state = fabm_config%n_surface_state
 
          ! FABM diagnostic variables
          if (fabm_config%output_diag_vars) then
-            self%n_vars_fabm_diagnostic_interior = state%n_fabm_diagnostic_interior
-            self%n_vars_fabm_diagnostic_horizontal = state%n_fabm_diagnostic_horizontal
+            self%n_vars_fabm_diagnostic_interior = fabm_config%n_diagnostic_interior
+            self%n_vars_fabm_diagnostic_horizontal = fabm_config%n_diagnostic_horizontal
          else
             self%n_vars_fabm_diagnostic_interior = 0
             self%n_vars_fabm_diagnostic_horizontal = 0
@@ -199,9 +199,9 @@ contains
 
          ! FABM repaired variables
          if (fabm_config%output_repaired_vars) then
-            self%n_vars_fabm_repaired_interior = state%n_fabm_repaired_interior
-            self%n_vars_fabm_repaired_bottom = state%n_fabm_repaired_bottom
-            self%n_vars_fabm_repaired_surface = state%n_fabm_repaired_surface
+            self%n_vars_fabm_repaired_interior = fabm_config%n_repaired_interior
+            self%n_vars_fabm_repaired_bottom = fabm_config%n_repaired_bottom
+            self%n_vars_fabm_repaired_surface = fabm_config%n_repaired_surface
          else
             self%n_vars_fabm_repaired_interior = 0
             self%n_vars_fabm_repaired_bottom = 0
