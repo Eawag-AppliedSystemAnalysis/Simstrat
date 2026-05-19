@@ -11,7 +11,7 @@ from functions_input import read_input_paths, load_absorption_data, load_inflow_
 
 # Main function
 
-def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-10, skip_initial=False, inflow_mode_not_1=True):
+def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-10, datetime_slice=(None,None), depth_slice=(None,None), inflow_mode_not_1=True):
     """
     Convert Output file from CSV to NetCDF
     
@@ -30,9 +30,12 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-10
     eps : float
         Tolerance for variation among dimension to drop that dimension
         (Default: 1e-20)
-    skip_initial : bool, optional
-        Whether to skip the first timepoint
-        (Default: False)
+    datetime_slice : tuple
+        Slice for Datetime points to be included
+        (Default: (None,None))
+    depth_slice : tuple
+        Slice for Depth points to be included
+        (Default: (None,None))
     inflow_mode_not_1 : bool, optional
         Whether inflow mode in configuration file is not 1 (Manual inflow mode)
         (Default: True)
@@ -242,9 +245,9 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-10
     for data_listed in data_list:
         full_data[data_listed.name] = data_listed
 
-    # Skip initial state
-    if skip_initial:
-        full_data = full_data.isel(Datetime=slice(1,None))
+    # Slice among dimensions according to input
+    full_data = full_data.isel(Datetime=slice(*datetime_slice))
+    full_data = full_data.isel(Depth=slice(*depth_slice))
 
     # Add coordinate units
     full_data['Depth'].attrs['units'] = 'm'
