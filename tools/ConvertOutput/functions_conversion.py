@@ -31,10 +31,10 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-10
         Tolerance for variation among dimension to drop that dimension
         (Default: 1e-20)
     datetime_slice : tuple
-        Slice for Datetime points to be included
+        Slice for datetime points to be included
         (Default: (None,None))
     depth_slice : tuple
-        Slice for Depth points to be included
+        Slice for depths to be included
         (Default: (None,None))
     inflow_mode_not_1 : bool, optional
         Whether inflow mode in configuration file is not 1 (Manual inflow mode)
@@ -88,6 +88,10 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-10
         data = data.dropna(dim='Datetime', how='all')
         # Drop depths that have only nan
         data = data.dropna(dim='Depth', how='all')
+        # Slice datetime points according to input
+        data = data.isel(Datetime=slice(*datetime_slice))
+        # Slice depths according to input
+        data = data.isel(Depth=slice(*depth_slice))
         # Drop constant dimensions
         with warnings.catch_warnings():
             # Ignore warning appearing for empty results
@@ -244,10 +248,6 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-10
     full_data = xr.Dataset()
     for data_listed in data_list:
         full_data[data_listed.name] = data_listed
-
-    # Slice among dimensions according to input
-    full_data = full_data.isel(Datetime=slice(*datetime_slice))
-    full_data = full_data.isel(Depth=slice(*depth_slice))
 
     # Add coordinate units
     full_data['Depth'].attrs['units'] = 'm'

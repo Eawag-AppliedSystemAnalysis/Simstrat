@@ -8,9 +8,9 @@ from functions_conversion import csv_to_netcdf
 var_names = [] # Variable names; pass an empty list to convert all variables in the output folder
 path_to_output = '../../tests/TestCases_Results' # Path to output folder
 paths_to_input = ['../../tests/TestCase_LakeZurich', '../../tests/TestCase_LakeZurich/FABM_initialconditions', '../../tests/TestCase_LakeZurich/FABM_inflow'] # Paths to input folders
-eps =  1e-10 # Tolerance for variation among dimension to drop that dimension (optional, default: 1e-10)
-datetime_slice = (None, None) # Select Datetime points to be included (optional, default: (None, None): include all)
-depth_slice = (None, None) # Select Depth points to be included (optional, default: (None, None): include all)
+eps =  1e-10 # Tolerance for variation among dimension to drop that dimension for files in output folder (optional, default: 1e-10)
+datetime_slice = (None, None) # Select included datetime points for files in output folder (optional, default: (None, None): include all)
+depth_slice = (None, None) # Select included depths for files in output folder (optional, default: (None, None): include all)
 conversion_function = 'csv_to_netcdf' # Currently available: csv_to_netcdf
 inflow_mode = 2 # Inflow mode for deep inflows as set in configuration file
 filename = 'output_converted' # Name of new file
