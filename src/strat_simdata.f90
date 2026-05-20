@@ -135,14 +135,10 @@ module strat_simdata
       character(len=:), allocatable :: inflow_path
       ! Path to FABM configurations
       character(len=:), allocatable :: config_path
-      ! Whether to output diagnostic variables
-      logical :: output_diag_vars
       ! Whether to clip all state variables to valid range from bgc models when update is called
       logical :: repair_states
       ! Whether to output repaired variables
       logical :: output_repaired_vars
-      ! Whether to manipulate state variables according to input file
-      logical :: manipulate_states
       ! Whether there is a pelagic-benthic interface at every depth
       logical :: bottom_everywhere
       ! Proportion of absorption from input file to total extinction

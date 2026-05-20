@@ -40,10 +40,8 @@
     "FABMInitialPath"         : "TestCase_LakeZurich/FABM_initialconditions/",
     "FABMInflowPath"          : "TestCase_LakeZurich/FABM_inflow/",
     "FABMConfigPath"          : "TestCase_LakeZurich/FABM_configurations/",
-    "OutputDiagnosticVars"    : false,
     "RepairStates"            : true,
     "OutputRepairedVars"      : false,
-    "ManipulateStates"        : false,
     "BottomEverywhere"        : true,
     "InputExtinctionFactor"   : 0.5,
     "BackgroundExtinction"    : 0.1

@@ -26,7 +26,7 @@ To add inflow for a FABM variable, add an inflow file of the same format as the 
 
 ### Output Diagnostic Variables
 
-To output diagnostic variables, first set `OutputDiagnosticVars` in `FABMConfig` to `true`. Then go to `FABMConfigPath` in `FABMConfig`.
+To output diagnostic variables, first go to `FABMConfigPath` in `FABMConfig`.
 
 After having started the simulation once, you will find a list of all diagnostic variables under `list_diagnostic_interior.dat` and `list_diagnostic_horizontal.dat` for interior and horizontal (bottom and surface) diagnostic variables, respectively. In the file `output_diagnostics.dat`, you can add the diagnostic variables to output with the following options:
 
@@ -34,18 +34,25 @@ After having started the simulation once, you will find a list of all diagnostic
 - Add `select_all_*` to output all FABM diagnostic variables that start with `*` (e.g. `select_all_npzd`) or `select_all_` to output all FABM diagnostic variables
 - Add `select_output_*` to output all FABM diagnostic variables that start with `*` (e.g. `select_output_npzd`) and have `Output` set `Yes` by the biogeochemical model or `select_output_` to output all FABM diagnostic variables that have Output set true
 
+> **N.B.** If `BottomEverywhere` is set `True`, the output of horizontal diagnostics highly increases runtime
+
 ### Output Repaired Variables
 
-FABM repairs variables below minimum or above maximum by restricting them to their extrema, if `RepairStates` is set to `true` in `FABMConfig`. To output repaired variables, first set `OutputRepairedVars` in `FABMConfig` to `true`. Then go to `FABMConfigPath` in `FABMConfig`.
+FABM repairs variables below minimum or above maximum by restricting them to their extrema, if `RepairStates` is set to `true` in `FABMConfig`. 
+
+To output repaired variables, first set `OutputRepairedVars` in `FABMConfig` to `true`. Then go to `FABMConfigPath` in `FABMConfig`.
 
 After having run the simulation once, you will find a list of all repaired variables and the boundary they have crossed under `list_repaired.dat`. Upon re-running the simulation, next to the variable output there is an additional output for the variable showing:
 
 - The value of the variable had it not been repaired, if the boundary is crossed by the variable
 - The boundary if the variable stays within bounds
 
+> **N.B.1** `RepairStates` is usually necessary and should be set to `True` unless there are specific reasons not to do so.
+> **N.B.2** Setting `OutputRepairedVars` to `True` highly increases runtime and should only be done if necessary.
+
 ### Manipulations
 
-To manipulate FABM state variables, first set `Manipulate` in `FABMConfig` to `true`. Then go to `FABMConfigPath` in `FABMConfig`. Add manipulations to be executed during the simulation to the file `manipulations.nml`, with the following options:
+To manipulate FABM state variables, first go to `FABMConfigPath` in `FABMConfig`. Add manipulations to be executed during the simulation to the file `manipulations.nml`, with the following options:
 
 - `var_name` is the variable short name, must be among the FABM state variables (a list can be found in `_variables.dat` in `Path` in `Output`)
 - `start_time` is the time in days at which the manipulation starts, must be smaller than `End d` in `Simulation`
@@ -97,4 +104,5 @@ The following are additional configurations that can be found in `FABMConfig`:
 - `InputExtinctionFactor` sets the proportional contribution to the extinction from the input file at `Absorption` in `Input` (the contribution from the biogeochemical models is (1 - `InputExtinctionFactor`), thus 0 if `InputExtinctionFactor` is 1)
 - `BackgroundExtinction` sets background extinction due to pure water extinction added to the light extinction calculated by the biogeochemical models if `InputExtinctionFactor` is smaller than 1, must be regulated to avoid double counting of the pure water extinction
 
-> **N.B.** If `BottomEverywhere` is set to `True`, also all horizontal diagnostic variables have output at every layer, even if for some of them (e.g. surface diagnostic variables) this is not physically meaningful. This does not affect the simulation.
+> **N.B.1** Setting `BottomEverywhere` to `True` heavily increases runtime.
+> **N.B.2** If `BottomEverywhere` is set to `True`, also all horizontal diagnostic variables have output at every layer, even if for some of them (e.g. surface diagnostic variables) this is not physically meaningful. This does not affect the simulation.
