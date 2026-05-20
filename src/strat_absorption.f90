@@ -90,6 +90,11 @@ contains
          if ((self%inp < 0.0_RK) .or. (self%inp > 1.0_RK)) then
             call error('FABM Input Extinction Factor must be between 0 and 1')
          else if (self%inp < 1.0_RK) then
+            if (fabm_config%background_extinction < 0.0_RK) then
+               call error('FABM Background Extinction cannot be negative.')
+            else if (fabm_config%background_extinction > 0.0_RK) then
+               call warn('FABM Background Extinction added to Input Extinction.')
+            end if
             allocate(self%bg(grid%nz_grid))
             self%bg(:) = fabm_config%background_extinction
          end if
@@ -219,6 +224,8 @@ contains
                state%absorb(1:nz) = self%inp * state%absorb(1:nz) + (1 - self%inp) * state%absorb_from_fabm(1:nz) + self%bg(1:nz)
                ! Absorption passed to FABM such that adding bgc contribution once (done by bgc model) results in absorption above
                ! Assuming that biogeochemical contribution does not change in one timestep
+               ! Careful: The light extinction could potentially, but very improbably become negative if
+               ! the biogeochemical contribution absorb_from_fabm were to decrease drastically by (inp-1)*absorb_from_fabm-inp*absorb-bg in one timestep
                state%absorb_to_fabm(1:nz) = self%inp * state%absorb_to_fabm(1:nz) - self%inp * state%absorb_from_fabm(1:nz) + self%bg(1:nz)
             end if
          end if
@@ -232,7 +239,7 @@ contains
          if (self%cfg%couple_fabm) then
             state%absorb_to_fabm(1:nz) = state%absorb(1:nz)
             if (self%inp < 1.0_RK) then
-               state%absorb(1:nz) = self%inp * state%absorb(1:nz) + (1 - self%inp) * state%absorb_from_fabm(1:nz) + self%bg
+               state%absorb(1:nz) = self%inp * state%absorb(1:nz) + (1 - self%inp) * state%absorb_from_fabm(1:nz) + self%bg(1:nz)
                state%absorb_to_fabm(1:nz) = self%inp * state%absorb_to_fabm(1:nz) - self%inp * state%absorb_from_fabm(1:nz) + self%bg(1:nz)
             end if
          end if

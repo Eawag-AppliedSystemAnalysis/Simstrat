@@ -986,7 +986,11 @@ contains
       if (fabm_cfg%input_extinction < 1.0_RK) then
          ! Get total absorption
          state%absorb_from_fabm = self%fabm_model%get_interior_diagnostic_data(att_index)
-         ! Substract absorption passed to FABM to get only biogeochemical contribution to extinction
+         ! Check for negative light extinction inside FABM due to drastic changes in the biogeochemical calculation
+         if (any(state%absorb_from_fabm < 0.0_RK)) then
+            call error('Negative light extinction calculated in FABM. Decrease InputExtinctionFactor.')
+         end if
+         ! Subtract absorption passed to FABM to get only biogeochemical contribution to extinction
          state%absorb_from_fabm = state%absorb_from_fabm - state%absorb_to_fabm
       end if
 

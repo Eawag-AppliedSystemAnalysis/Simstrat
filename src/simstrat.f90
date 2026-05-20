@@ -284,7 +284,7 @@ contains
          ! Update forcing
          call mod_forcing%update(simdata%model)
 
-         ! Update absorption with Simstrat, or with FABM (if the coupling is enabled and bioshade feedback is on)
+         ! Update absorption
          call mod_absorption%update(simdata%model)
 
          ! Update physics
