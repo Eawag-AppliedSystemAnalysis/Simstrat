@@ -302,7 +302,7 @@ contains
                  ubnd_vol=>self%grid%ubnd_vol, &
                  ubnd_fce=>self%grid%ubnd_fce)
 
-         do i=1, self%n_vars - (fabm_cfg%n_bottom_state + fabm_cfg%n_surface_state)
+         do i=1, self%n_vars
             if (idx) then  ! If first timestep
                if (self%number_of_lines_read(i) == 0) then ! If start is not from snapshot
                   ! max_n_inflows was set to 1000 automatically. To reduce the size, it is redetermined here
@@ -545,7 +545,7 @@ contains
             if(i==2) self%Q_start(i,1:ubnd_fce) = 0.0_RK
             self%Qs_start(i,1:ubnd_fce) = 0.0_RK
 
-11          continue
+   11       continue
 
          end do      ! end do i=1,n_vars
 
@@ -559,7 +559,7 @@ contains
 
          ! Plunging algorithm
          do j = 1,self%nval_deep(1)  ! nval_deep needs to be the same for all i
-            if (Inp(1,j) > 1E-15) then
+            if (Inp(1,j) > 1.0e-15_RK) then
                k = ubnd_vol
                do while (grid%z_volume(k) > self%z_Inp(1,j)) ! Find the place where the plunging inflow enters the lake (defined in file)
                   k = k - 1
@@ -573,7 +573,9 @@ contains
                ! Only if biochemistry enabled
                if (self%couple_fabm) then
                   ! Get initial FABM values for the plunging inflow (before entrainment of ambient water)
-                  fabm_in_interior = Inp(n_simstrat + 1 : self%n_vars, j) ! Inflow [var_unit]
+                  if (fabm_cfg%n_interior_state > 0) then
+                     fabm_in_interior(1:fabm_cfg%n_interior_state) = Inp(n_simstrat + 1 : self%n_vars, j) ! Inflow [var_unit]
+                  end if
                end if
 
                ! Compute density as a function of T and S
@@ -597,7 +599,9 @@ contains
                      T_in = (T_in*Q_in(k) + state%T(k)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
                      S_in = (S_in*Q_in(k) + state%S(k)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
                      if (self%couple_fabm) then
-                        fabm_in_interior = (fabm_in_interior*Q_in(k) + state%fabm_interior_state(k,:)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
+                        if (fabm_cfg%n_interior_state > 0) then
+                           fabm_in_interior(1:fabm_cfg%n_interior_state) = (fabm_in_interior(1:fabm_cfg%n_interior_state)*Q_in(k) + state%fabm_interior_state(k,:)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
+                        end if
                      end if
                      rho_in = (rho_in*Q_in(k) + state%rho(k)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
                      k = k - 1
@@ -615,7 +619,9 @@ contains
                      T_in = (T_in*Q_in(k) + state%T(k)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
                      S_in = (S_in*Q_in(k) + state%S(k)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
                      if (self%couple_fabm) then
-                        fabm_in_interior = (fabm_in_interior*Q_in(k) + state%fabm_interior_state(k,:)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
+                        if (fabm_cfg%n_interior_state > 0) then
+                           fabm_in_interior(1:fabm_cfg%n_interior_state) = (fabm_in_interior(1:fabm_cfg%n_interior_state)*Q_in(k) + state%fabm_interior_state(k,:)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
+                        end if
                      end if
                      rho_in = (rho_in*Q_in(k) + state%rho(k)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
                      k = k + 1
@@ -633,7 +639,11 @@ contains
                   Q_inp(1,i) = Q_inp(1,i) + Q_inp_inc
                   Q_inp(3,i) = Q_inp(3,i) + T_in*Q_inp_inc
                   Q_inp(4,i) = Q_inp(4,i) + S_in*Q_inp_inc
-                  if (self%couple_fabm) Q_inp(n_simstrat + 1 : self%n_vars,i) = Q_inp(n_simstrat + 1 : self%n_vars,i) + fabm_in_interior*Q_inp_inc
+                  if (self%couple_fabm) then
+                     if (fabm_cfg%n_interior_state > 0) then
+                        Q_inp(n_simstrat + 1 : self%n_vars,i) = Q_inp(n_simstrat + 1 : self%n_vars,i) + fabm_in_interior(1:fabm_cfg%n_interior_state) * Q_inp_inc
+                     end if
+                  end if
                end do
             end if
          end do
@@ -670,7 +680,7 @@ contains
                  ubnd_vol=>self%grid%ubnd_vol, &
                  ubnd_Fce=>self%grid%ubnd_fce)
 
-         do i=1, self%n_vars - (fabm_cfg%n_bottom_state + fabm_cfg%n_surface_state)
+         do i=1, self%n_vars
             if (idx) then  ! If first timestep
                if (self%number_of_lines_read(i) == 0) then  ! If not started from snapshot
 
