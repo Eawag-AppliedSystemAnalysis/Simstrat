@@ -33,6 +33,7 @@ module strat_temp
    use strat_statevar
    use strat_grid
    use strat_solver
+   use utilities
    implicit none
    private
 
@@ -95,7 +96,7 @@ contains
          end if
 
          ! Add geothermal flux to sources (Eq 1, Goudsmit(2002))
-         if (param%fgeo /= 0) sources(1:ubnd_vol) = sources(1:ubnd_vol) + state%fgeo_add(1:ubnd_vol)
+         if (compare_floats(param%fgeo, 0.0_RK)) sources(1:ubnd_vol) = sources(1:ubnd_vol) + state%fgeo_add(1:ubnd_vol)
 
       end associate
    end subroutine

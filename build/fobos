@@ -55,12 +55,14 @@ log = True
 
 [debug-gnu]
 compiler = Gnu
-cflags = -c -g -Og -std=f2008 -ffree-line-length-none \
+cflags = -c -g -O0 -std=f2008 -ffree-line-length-none \
     -fcheck=all -fbacktrace \
     -ffpe-trap=invalid,zero,overflow \
     -finit-real=snan -finit-integer=-999999 \
     -fno-omit-frame-pointer -fno-unsafe-math-optimizations \
-    -frounding-math
+    -frounding-math \
+    -Wall -Wextra -Wimplicit-interface \
+    -Wno-unused-dummy-argument
 lflags = -static-libgcc -static-libgfortran -static
 build_dir = .
 src = ../src/
@@ -77,12 +79,14 @@ log = True
 
 [debug-gnu-dynamic]
 compiler = Gnu
-cflags = -c -g -Og -std=f2008 -ffree-line-length-none \
+cflags = -c -g -O0 -std=f2008 -ffree-line-length-none \
     -fcheck=all -fbacktrace \
     -ffpe-trap=invalid,zero,overflow \
     -finit-real=snan -finit-integer=-999999 \
     -fno-omit-frame-pointer -fno-unsafe-math-optimizations \
-    -frounding-math
+    -frounding-math \
+    -Wall -Wextra -Wimplicit-interface \
+    -Wno-unused-dummy-argument
 lflags = -dynamic-libgcc -dynamic-libgfortran -dynamic
 build_dir = .
 src = ../src/

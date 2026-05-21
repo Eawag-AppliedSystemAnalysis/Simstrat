@@ -78,7 +78,6 @@ program simstrat_main
    class(GenericLateralModule), pointer :: mod_lateral
    ! Instantiate progress bar object
    type(bar_object):: bar
-   type(csv_file), dimension(:), allocatable :: csv_files
 
    character(len=100) :: arg
    character(len=:), allocatable :: ParName
@@ -363,7 +362,6 @@ contains
 
       logical :: status_ok
       type(csv_file), dimension(2):: save_files
-      real(RK) :: total_grid(size(simdata%grid%z_face) + size(simdata%grid%z_volume))
       real(RK),dimension(size(simdata%grid%z_face(1:simdata%grid%ubnd_fce)) + size(simdata%grid%z_volume(1:simdata%grid%ubnd_vol))) :: depth, U, V, T, S, k, eps, num, nuh
       integer :: i
       real(RK),dimension(9) :: row1

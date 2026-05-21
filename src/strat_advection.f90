@@ -59,9 +59,6 @@ contains
       class(ModelConfig), target :: model_config
       class(ModelParam), target :: model_param
 
-      ! Local variables
-      integer :: i
-
       self%cfg => model_config
       self%param => model_param
       self%grid => grid
@@ -77,12 +74,10 @@ contains
       class(OutputConfig), intent(in) :: output_cfg
 
       real(RK) :: top_z, top_h
-      real(RK) :: top
       real(RK) :: dh, dh_i(1:2), h_div_2, h_mult_2 ! depth differences
-      real(RK) :: dU(self%grid%nz_grid), dV(self%grid%nz_grid), dTemp(self%grid%nz_grid), dS(self%grid%nz_grid)
       real(RK) :: dt_i(1:2) ! first and second time step
       real(RK) :: AreaFactor_adv(1:self%grid%nz_grid)
-      integer :: i, t_i
+      integer :: t_i
 
       associate (grid=>self%grid, &
                  nz_occupied=>self%grid%nz_occupied, &
@@ -102,16 +97,16 @@ contains
 
          ! Calculate timestep splitting
          !Split timestep depending on situation
-         if (dh == 0.) then ! If volume does not change, take one normal time step
+         if (compare_floats(dh, 0.0_RK, 1.0e-4_RK)) then ! If volume does not change, take one normal time step
             dt_i(1) = dt
-         else if (top_z == grid%max_depth) then ! If we are already at the maximum lake level
+         else if (compare_floats(top_z, grid%max_depth, 1.0e-4_RK)) then ! If we are already at the maximum lake level
             dt_i(1) = dt
-         else if ((dh + top_z) >= grid%max_depth) then ! If the full timestep would lead to a lake level higher than maximum allowed lake level, split the timestep.
+         else if (ge_floats((dh + top_z), grid%max_depth, 1.0e-4_RK)) then ! If the full timestep would lead to a lake level higher than maximum allowed lake level, split the timestep.
             dt_i(1) = (grid%max_depth - top_z)/dh*dt
          else if (((dh + top_h) > h_div_2) .and. & ! If top box>0.5*lower box and <2*lower box, take one time step
                   ((dh + top_h) < h_mult_2)) then
             dt_i(1) = dt
-         else if ((dh + top_h) <= h_div_2) then ! If top box<=0.5*lower box, first step until top box=0.5*lower box
+         else if (se_floats((dh + top_h), h_div_2, 1.0e-4_RK)) then ! If top box<=0.5*lower box, first step until top box=0.5*lower box
             dt_i(1) = abs((top_h - h_div_2)/dh)*dt
          else ! If top box>=2*lower box, first step until top box = 2*lower box
             dt_i(1) = abs((2*h(nz_occupied - 1) - top_h)/dh)*dt
@@ -128,18 +123,18 @@ contains
 
             ! Adjust boxes (Horrible if/else construction - replace!)
             if (t_i == 1) then
-               if (dh == 0) then ! If volume does not change, return
+               if (compare_floats(dh, 0.0_RK, 1.0e-4_RK)) then ! If volume does not change, return
                   return
-               else if ((dh + top_z) >= grid%max_depth) then ! If surface level reached
+               else if (ge_floats((dh + top_z), grid%max_depth, 1.0e-4_RK)) then ! If surface level reached
                   call grid%modify_top_box(grid%max_depth - top_z)
                   return
                else if (((dh_i(t_i) + top_h) > h_div_2) .and. &  ! If top box>0.5*lower box 
                         ((dh_i(t_i) + top_h) < (h_mult_2))) then ! and top box<2*lower box
                   call grid%modify_top_box(dh_i(t_i))
                   return
-               else if ((dh + top_h) <= h_div_2) then ! If top box<=0.5*lower box, merge 2 boxes
+               else if (se_floats((dh + top_h), h_div_2, 1.0e-4_RK)) then ! If top box<=0.5*lower box, merge 2 boxes
                   call self%merge_box(state, fabm_cfg, output_cfg, dh_i(t_i))
-               else if ((dh + top_h) >= h_mult_2) then ! If top box>=2*lower box, add one box
+               else if (ge_floats((dh + top_h), h_mult_2, 1.0e-4_RK)) then ! If top box>=2*lower box, add one box
                   call self%add_box(state, fabm_cfg, output_cfg, dh_i(t_i))
                end if ! dh==0
             end if
@@ -171,21 +166,21 @@ contains
             ! Calculate changes through vertical advection
             do i = 1, ubnd_vol
                ! For the top-most cell, if Q_vert at the upper face is positive, there is still no outflow (the cell is simply growing, but this is done elsewhere)
-               if ((i == ubnd_vol) .and. Q_vert(i + 1) > 0) then
+               if ((i == ubnd_vol) .and. Q_vert(i + 1) > 0.0_RK) then
                   top = 0
                else
                   top = 1
                end if
 
                ! If Q_vert at the upper face of cell i is positive, then there is outflow to the cell above
-               if (Q_vert(i + 1) > 0) then
+               if (Q_vert(i + 1) > 0.0_RK) then
                      outflow_above = 1
                else 
                      outflow_above = 0
                end if
 
                ! If Q_vert at the lower face of cell i is negative, then there is outflow to the cell below
-               if (Q_vert(i) < 0) then
+               if (Q_vert(i) < 0.0_RK) then
                      outflow_below = 1
                else
                      outflow_below = 0
@@ -199,7 +194,7 @@ contains
                if (self%cfg%couple_fabm) dfabm_interior(i,:) = -(top*outflow_above*Q_vert(i + 1) - outflow_below*Q_vert(i))*state%fabm_interior_state(i,:)
 
                ! Calculate the advective flow into cell i from below
-               if (i > 1 .and. Q_vert(i ) > 0) then
+               if (i > 1 .and. Q_vert(i) > 0.0_RK) then
                   dU(i) = dU(i) + Q_vert(i)*state%U(i - 1)
                   dV(i) = dV(i) + Q_vert(i)*state%V(i - 1)
                   dTemp(i) = dTemp(i) + Q_vert(i)*state%T(i - 1)
@@ -208,7 +203,7 @@ contains
                end if
 
                ! Calculate the advective flow into cell i from above (- sign in front because Q_vert is negative if there is inflow)
-               if (i < ubnd_vol .and. Q_vert(i + 1) < 0) then
+               if (i < ubnd_vol .and. Q_vert(i + 1) < 0.0_RK) then
                   dU(i) = dU(i) - Q_vert(i + 1)*state%U(i + 1)
                   dV(i) = dV(i) - Q_vert(i + 1)*state%V(i + 1)
                   dTemp(i) = dTemp(i) - Q_vert(i + 1)*state%T(i + 1)

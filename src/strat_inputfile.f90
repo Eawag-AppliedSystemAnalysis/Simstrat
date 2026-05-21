@@ -432,11 +432,11 @@ contains
          model%gamma = grid%Az(grid%ubnd_fce)/(grid%volume**1.5_RK)/sqrt(rho_0)*model_param%CD
 
          ! Geothermal heat flux
-         if (model_param%fgeo /= 0) then
+         if (.not. compare_floats(model_param%fgeo, 0.0_RK)) then
             allocate(model%fgeo_add(grid%nz_grid))
 
             model%fgeo_add(1:grid%nz_grid) = model_param%fgeo/rho_0/cp*grid%dAz(1:grid%nz_grid)/grid%Az(2:grid%nz_grid + 1) ! calculation per kg
-            if (grid%Az(1) /= 0) then
+            if (.not. compare_floats(grid%Az(1), 0.0_RK)) then
                model%fgeo_add(1) = model%fgeo_add(1) + 2*model_param%fgeo/rho_0/cp*grid%Az(1)/((grid%Az(1) + grid%Az(2))*grid%h(1))
             end if
          end if

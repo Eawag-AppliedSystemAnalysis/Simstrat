@@ -104,5 +104,6 @@ The following are additional configurations that can be found in `FABMConfig`:
 - `InputExtinctionFactor` sets the proportional contribution to the extinction from the input file at `Absorption` in `Input` (the contribution from the biogeochemical models is (1 - `InputExtinctionFactor`), thus 0 if `InputExtinctionFactor` is 1)
 - `BackgroundExtinction` sets background extinction due to pure water extinction added to the light extinction calculated by the biogeochemical models if `InputExtinctionFactor` is smaller than 1, must be regulated to avoid double counting of the pure water extinction
 
-> **N.B.1** Setting `BottomEverywhere` to `True` heavily increases runtime.
-> **N.B.2** If `BottomEverywhere` is set to `True`, also all horizontal diagnostic variables have output at every layer, even if for some of them (e.g. surface diagnostic variables) this is not physically meaningful. This does not affect the simulation.
+> **N.B.1** Setting `BottomEverywhere` to `True` heavily increases runtime since this is a workaround to bottom variables having the same dimensionality as interior variables not being supported in FABM
+> See: https://github.com/fabm-model/fabm/issues/170
+> **N.B.2** If `BottomEverywhere` is set to `True`, also all horizontal diagnostic variables have output at every layer, even if for some of them (e.g. surface diagnostic variables) this is not physically meaningful >This does not affect the simulation.

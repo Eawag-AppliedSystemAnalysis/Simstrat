@@ -151,7 +151,7 @@ contains
          ! Absorption passed to FABM is just background extinction
          ! No further calculation necessary
          if (self%cfg%couple_fabm) then
-            if (self%inp == 0.0_RK) then
+            if (compare_floats(self%inp, 0.0_RK)) then
                state%absorb(1:nz) = state%absorb_from_fabm(1:nz) + self%bg(1:nz)
                state%absorb_to_fabm(1:nz) = self%bg(1:nz)
                return
@@ -200,7 +200,7 @@ contains
             end if
          end if
 
-         if (state%datum <= tb_start .or. eof == 1) then !If datum before first date or end of file reached
+         if (se_floats(state%datum, tb_start) .or. eof == 1) then !If datum before first date or end of file reached
             goto 8
          else
             do while (state%datum > tb_end) !Move to appropriate interval to get correct value

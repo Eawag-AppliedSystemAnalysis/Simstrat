@@ -99,7 +99,7 @@ contains
       class(ModelParam), target :: model_param
 
       ! Locals
-      integer :: i, exitstat, index_bs
+      integer :: exitstat
       logical :: inflow_path_exists
       character(len=256) :: mkdirCmd
 
@@ -129,17 +129,8 @@ contains
                fabm_config%inflow_path = 'FABM_inflow'
             end if
          end if
-         ! Transform backslashes to slash
-         do while(scan(fabm_config%inflow_path,'\\')>0)
-            index_bs = scan(fabm_config%inflow_path,'\\')
-            fabm_config%inflow_path(index_bs:index_bs) = '/'
-         end do
-         ! Remove trailing slashes at the end
-         if (len(fabm_config%inflow_path) == scan(trim(fabm_config%inflow_path),"/", BACK= .true.)) then
-            fabm_config%inflow_path = fabm_config%inflow_path(1:len(fabm_config%inflow_path) - 1)
-         else
-            fabm_config%inflow_path = trim(fabm_config%inflow_path)
-         end if
+         ! Normalize inflow path
+         call normalize_path(fabm_config%inflow_path)
          ! Update self
          self%fabm_path = fabm_config%inflow_path
          self%n_vars = self%n_vars + fabm_config%n_interior_state
@@ -298,7 +289,7 @@ contains
       real(RK) :: Q_in(1:self%grid%ubnd_vol), h_in(1:self%grid%ubnd_vol)
       real(RK) :: T_in, S_in, rho_in, CD_in, g_red, slope, Ri, E, Q_inp_inc
       real(RK) :: fabm_in_interior(fabm_cfg%n_interior_state)
-      integer :: i, j, k, i1, i2, l, status, unit
+      integer :: i, j, k, i1, i2, l, status
       character(len=100) :: fname
 
 
@@ -311,7 +302,7 @@ contains
                  ubnd_vol=>self%grid%ubnd_vol, &
                  ubnd_fce=>self%grid%ubnd_fce)
 
-         do i=1, self%n_vars
+         do i=1, self%n_vars - (fabm_cfg%n_bottom_state + fabm_cfg%n_surface_state)
             if (idx) then  ! If first timestep
                if (self%number_of_lines_read(i) == 0) then ! If start is not from snapshot
                   ! max_n_inflows was set to 1000 automatically. To reduce the size, it is redetermined here
@@ -342,10 +333,8 @@ contains
                   if (status .ne. 0) then
                      if (i > n_simstrat) then
                         ! Do not need to define all FABM inflow files, set depths to values from Qin
-                        self%has_deep_input(i) = self%has_deep_input(1)
-                        self%has_surface_input(i) = self%has_surface_input(1)
                         self%nval_deep(i) = self%nval_deep(1)
-                        self%nval_surface(i) =self%nval_surface(1)
+                        self%nval_surface(i) = self%nval_surface(1)
                         self%nval(i) = self%nval(1)
                         self%z_Inp(i,:) = self%z_Inp(1,:)
                         goto 9
@@ -460,7 +449,8 @@ contains
             end if ! if        
 
             ! If lake level changes and if there is surface inflow, adjust inflow depth to keep relative inflow depth constant
-            if ((.not. grid%lake_level == grid%lake_level_old) .and. self%has_surface_input(i)) then
+            if ((.not. compare_floats(grid%lake_level, grid%lake_level_old)) &
+               .and. self%has_surface_input(i)) then
 
                ! Readjust surface input depths
                self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)) = self%z_Inp(i, self%nval_deep(i) + 1 :self%nval(i)) - grid%lake_level_old + grid%lake_level
@@ -473,10 +463,11 @@ contains
             end if ! end if not lake_level...
 
 
-            if ((datum<=self%tb_start(i)).or.(self%eof(i)==1)) then    ! if datum before first date or end of file reached
+            if (se_floats(datum, self%tb_start(i)).or.(self%eof(i)==1)) then    ! if datum before first date or end of file reached
                goto 8
             else
-               do while (.not.((datum>=self%tb_start(i)).and.(datum<=self%tb_end(i)))) ! do until datum between dates
+               do while (.not.(ge_floats(datum, self%tb_start(i)) &
+                  .and. se_floats(datum, self%tb_end(i)))) ! do until datum between dates
                   ! Move one step in time
                   self%tb_start(i) = self%tb_end(i)
                   self%Qs_start(i, :) = self%Qs_end(i, :)
@@ -506,7 +497,7 @@ contains
                   end if
                end do
 
-               if(self%tb_end(i)<=self%tb_start(i)) then
+               if (se_floats(self%tb_end(i), self%tb_start(i))) then
                   call error('Dates in '//trim(fname)//' file must always be increasing.')
                end if
 
@@ -553,8 +544,6 @@ contains
             if(i==2) Q_inp(i,1:ubnd_vol) = 0.0_RK
             if(i==2) self%Q_start(i,1:ubnd_fce) = 0.0_RK
             self%Qs_start(i,1:ubnd_fce) = 0.0_RK
-            self%has_deep_input(i) = .false.
-            self%has_surface_input(i) = .false.
 
 11          continue
 
@@ -600,7 +589,7 @@ contains
                E = 1.6*CD_in**1.5/Ri !Entrainment coefficient
                h_in(k) = (2*Q_in(k)**2*Ri*tan(slope)**2/abs(g_red))**0.2 !Inflow thickness [m]
 
-               if (g_red > 0) then !Inflow plunges
+               if (g_red > 0.0_RK) then !Inflow plunges
                   do while ((rho_in > state%rho(k)).and.(k > 1))
                      h_in(k - 1) = 1.2*E*(grid%z_volume(k) - grid%z_volume(k-1))/sin(slope) + h_in(k)
                      Q_in(k - 1) = Q_in(k)*(h_in(k - 1)/h_in(k))**(5./3.)
@@ -618,7 +607,7 @@ contains
                      if(i1 == ubnd_vol) exit
                      if(grid%z_volume(i1 + 1) > (grid%z_volume(k) + h_in(k))) exit
                   end do
-               else if (g_red < 0) then !Inflow rises
+               else if (g_red < 0.0_RK) then !Inflow rises
                   do while ((rho_in < state%rho(k)) .and. (k < ubnd_vol))
                      h_in(k + 1) = 1.2*E*(grid%z_volume(k + 1) - grid%z_volume(k))/sin(slope) + h_in(k)
                      Q_in(k + 1) = Q_in(k)*(h_in(k + 1)/h_in(k))**(5./3.)
@@ -681,7 +670,7 @@ contains
                  ubnd_vol=>self%grid%ubnd_vol, &
                  ubnd_Fce=>self%grid%ubnd_fce)
 
-         do i=1, self%n_vars
+         do i=1, self%n_vars - (fabm_cfg%n_bottom_state + fabm_cfg%n_surface_state)
             if (idx) then  ! If first timestep
                if (self%number_of_lines_read(i) == 0) then  ! If not started from snapshot
 
@@ -708,10 +697,8 @@ contains
                   if (status .ne. 0) then
                      if (i > n_simstrat) then
                         ! Do not need to define all FABM inflow files, set depths to values from Qin
-                        self%has_deep_input(i) = self%has_deep_input(1)
-                        self%has_surface_input(i) = self%has_surface_input(1)
                         self%nval_deep(i) = self%nval_deep(1)
-                        self%nval_surface(i) =self%nval_surface(1)
+                        self%nval_surface(i) = self%nval_surface(1)
                         self%nval(i) = self%nval(1)
                         self%z_Inp(i,:) = self%z_Inp(1,:)
                         goto 9
@@ -829,7 +816,8 @@ contains
             end if ! idx = 1
 
             ! If lake level changes and if there is surface inflow, adjust inflow depth to keep them at the surface
-            if ((.not. grid%lake_level == grid%lake_level_old) .and. (self%has_surface_input(i))) then
+            if ((.not. compare_floats(grid%lake_level, grid%lake_level_old, 1.0e-4_RK)) &
+               .and. (self%has_surface_input(i))) then
 
                ! Readjust surface input depths
                self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)) = self%z_Inp(i, self%nval_deep(i) + 1 :self%nval(i)) - grid%lake_level_old + grid%lake_level
@@ -843,10 +831,12 @@ contains
 
 
             ! Temporal treatment of inflow
-            if ((datum <= self%tb_start(i)) .or. (self%eof(i) == 1)) then ! if datum before first date or end of file reached
+            if (se_floats(datum, self%tb_start(i)) &
+               .or. (self%eof(i) == 1)) then ! if datum before first date or end of file reached
                goto 8
             else
-               do while (.not. ((datum >= self%tb_start(i)) .and. (datum <= self%tb_end(i)))) ! Do until datum between dates
+               do while (.not. (ge_floats(datum, self%tb_start(i)) &
+                  .and. se_floats(datum, self%tb_end(i)))) ! Do until datum between dates
                   self%tb_start(i) = self%tb_end(i) ! Move one step in time
                   self%Q_start(i, :) = self%Q_end(i, :)
                   self%Qs_start(i, :) = self%Qs_end(i, :)
@@ -892,8 +882,6 @@ contains
             Q_inp(i, 1:ubnd_fce) = 0.0_RK
             self%Q_start(i, 1:ubnd_fce) = 0.0_RK
             self%Qs_start(i, 1:ubnd_fce) = 0.0_RK
-            self%has_deep_input(i) = .false.
-            self%has_surface_input(i) = .false.
 
 11          continue
 
@@ -924,7 +912,8 @@ contains
       class(OutputConfig), intent(in) :: output_cfg
 
       ! Local Declarations
-      integer :: i, l, status, unit, interpolation_factor
+      integer :: i, l, status, unit
+      real(RK) :: interpolation_factor
       character(len=100) :: fname
 
       do i=1, fabm_cfg%n_bottom_state + fabm_cfg%n_surface_state
@@ -997,10 +986,12 @@ contains
             if (i <= fabm_cfg%n_bottom_state) cycle
 
             ! Temporal treatment of inflow
-            if ((datum <= self%tb_start_bound(i)) .or. (self%eof_bound(i) == 1)) then ! if datum before first date or end of file reached
+            if (se_floats(datum, self%tb_start_bound(i)) &
+               .or. (self%eof_bound(i) == 1)) then ! if datum before first date or end of file reached
                goto 8
             else
-               do while (.not. ((datum >= self%tb_start_bound(i)) .and. (datum <= self%tb_end_bound(i)))) ! Do until datum between dates
+               do while (.not. (ge_floats(datum, self%tb_start_bound(i)) &
+                  .and. se_floats(datum, self%tb_end_bound(i)))) ! Do until datum between dates
                   self%tb_start_bound(i) = self%tb_end_bound(i) ! Move one step in time
                   self%Q_start_bound(i) = self%Q_end_bound(i)
                   self%Q_start_bound_con(i) = self%Q_end_bound_con(i)

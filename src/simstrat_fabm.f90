@@ -153,7 +153,7 @@ contains
       class(StaggeredGrid), intent(in) :: grid
 
       ! Local variables
-      integer :: ivar, ivar_diag, index, exitstat, index_bs
+      integer :: ivar, exitstat
       logical :: config_path_exists, initial_path_exists
       character(len=256) :: mkdirCmd
 
@@ -174,17 +174,8 @@ contains
             fabm_cfg%config_path = 'FABM_configurations'
          end if
       end if
-      ! Transform backslashes to slash
-      do while(scan(fabm_cfg%config_path,'\\')>0)
-         index_bs = scan(fabm_cfg%config_path,'\\')
-         fabm_cfg%config_path(index_bs:index_bs) = '/'
-      end do
-      ! Remove trailing slashes at the end
-      if (len(fabm_cfg%config_path) == scan(trim(fabm_cfg%config_path),"/", BACK= .true.)) then
-         fabm_cfg%config_path = fabm_cfg%config_path(1:len(fabm_cfg%config_path) - 1)
-      else
-         fabm_cfg%config_path = trim(fabm_cfg%config_path)
-      end if
+      ! Normalize configuration path
+      call normalize_path(fabm_cfg%config_path)
 
       ! Create the bgc models according to the configurations in FABMConfigFile
       ! The models interact with FABM and describe properties of all bgc variables and parameters
@@ -463,11 +454,11 @@ contains
       ! Write all diagnostic and aggregate variables to list_diagnostic
       ! Allocate arrays for diagnostic variables in output_diagnostics
       call list_diagnostic(self, fabm_cfg)
-      call set_fabm_diagnostic_vars(self, state, fabm_cfg, output_cfg, grid)
+      call set_diagnostic_vars(self, fabm_cfg, output_cfg, grid)
 
       ! Allocate arrays for repaired variables in list_repaired and initialize them with the boundary value
       if (fabm_cfg%output_repaired_vars) then
-         call set_fabm_repaired_vars(self, state, fabm_cfg, output_cfg, grid)
+         call set_repaired_vars(self, fabm_cfg, output_cfg, grid)
       else
          fabm_cfg%n_repaired = 0
          fabm_cfg%n_repaired_interior = 0
@@ -476,7 +467,7 @@ contains
       end if
 
       ! Allocate and set manipulations structure
-      call set_fabm_manipulations(self, state, fabm_cfg, output_cfg, sim_cfg, grid)
+      call set_manipulations(self, fabm_cfg, output_cfg, sim_cfg, grid)
       
       ! Complete initialization and check whether FABM has all dependencies fulfilled
       ! (i.e., whether all required calls to fabm_model%link_*_data have been made and all required data have been provided)
@@ -503,22 +494,13 @@ contains
                fabm_cfg%initial_path = 'FABM_initial'
             end if
          end if
-         ! Transform backslashes to slash
-         do while(scan(fabm_cfg%initial_path,'\\')>0)
-            index_bs = scan(fabm_cfg%initial_path,'\\')
-            fabm_cfg%initial_path(index_bs:index_bs) = '/'
-         end do
-         ! Remove trailing slashes at the end
-         if (len(fabm_cfg%initial_path) == scan(trim(fabm_cfg%initial_path),"/", BACK= .true.)) then
-            fabm_cfg%initial_path = fabm_cfg%initial_path(1:len(fabm_cfg%initial_path) - 1)
-         else
-            fabm_cfg%initial_path = trim(fabm_cfg%initial_path)
-         end if
+         ! Normalize initial path
+         call normalize_path(fabm_cfg%initial_path)
          ! Set interior state variable initial values
          ! Overwrite by values from FABM intial conditions folder if present
          call self%fabm_model%initialize_interior_state(1, grid%nz_grid)
          do ivar = 1, fabm_cfg%n_interior_state
-            call fabm_read_initial_data(self, state, model_cfg, fabm_cfg, output_cfg, grid, ivar)
+            call read_initial_data(state, model_cfg, fabm_cfg, output_cfg, grid, ivar)
          end do
          ! Set bottom state variable initial values
          ! Overwrite by values from FABM intial conditions folder if present
@@ -541,13 +523,13 @@ contains
             k_bot = 1
          end if
          do ivar = 1, fabm_cfg%n_bottom_state
-            call fabm_read_initial_data(self, state, model_cfg, fabm_cfg, output_cfg, grid, ivar, fabm_cfg%n_interior_state)
+            call read_initial_data(state, model_cfg, fabm_cfg, output_cfg, grid, ivar, fabm_cfg%n_interior_state)
          end do
          ! Set surface state variable initial values
          ! Overwrite by values from FABM intial conditions folder if present
          call self%fabm_model%initialize_surface_state()
          do ivar = 1, fabm_cfg%n_surface_state
-            call fabm_read_initial_data(self, state, model_cfg, fabm_cfg, output_cfg, grid, ivar, fabm_cfg%n_interior_state + fabm_cfg%n_bottom_state)
+            call read_initial_data(state, model_cfg, fabm_cfg, output_cfg, grid, ivar, fabm_cfg%n_interior_state + fabm_cfg%n_bottom_state)
          end do
       end if
 
@@ -654,7 +636,8 @@ contains
                select case (man%action_type)
                ! Multiply by action_val from start_depth to end_depth if current datum is between start time and start time plus one timestep
                case(1)
-                  if ((man%start_time <= state%datum) .and. (man%start_time + state%dt / SECONDS_PER_DAY > state%datum)) then
+                  if ((se_floats(man%start_time, state%datum)) &
+                     .and. (man%start_time + state%dt / SECONDS_PER_DAY > state%datum)) then
                      index = man%var_index
                      if (index <= fabm_cfg%n_interior_state) then
                         ! No diffusion for benthic variables
@@ -683,7 +666,8 @@ contains
                ! Only if there is any value lower than threshold between start_depth and end_depth
                ! For variables on volume grid action_val is additionally divided by the height between start_depth and end_depth
                case(2)
-                  if ((man%start_time <= state%datum) .and. (man%end_time >= state%datum)) then
+                  if ((se_floats(man%start_time, state%datum)) &
+                     .and. (ge_floats(man%end_time, state%datum))) then
                      index = man%var_index
                      if (index <= fabm_cfg%n_interior_state) then
                         if (output_cfg%output_vars_fabm_state(index)%benthic) then
@@ -737,7 +721,7 @@ contains
                         end if
                      end do
                   else
-                     call list_repaired(self, fabm_cfg, self%fabm_model%interior_state_variables(ivar)%name, 'minimum', self%fabm_model%interior_state_variables(ivar)%minimum)
+                     call list_repaired(fabm_cfg, self%fabm_model%interior_state_variables(ivar)%name, 'minimum', self%fabm_model%interior_state_variables(ivar)%minimum)
                   end if
                end if
                if (any(state%fabm_interior_state(1:grid%nz_occupied, ivar) > self%fabm_model%interior_state_variables(ivar)%maximum)) then
@@ -752,7 +736,7 @@ contains
                         end if
                      end do
                   else
-                     call list_repaired(self, fabm_cfg, self%fabm_model%interior_state_variables(ivar)%name, 'maximum', self%fabm_model%interior_state_variables(ivar)%maximum)
+                     call list_repaired(fabm_cfg, self%fabm_model%interior_state_variables(ivar)%name, 'maximum', self%fabm_model%interior_state_variables(ivar)%maximum)
                   end if
                end if
             end do
@@ -776,7 +760,7 @@ contains
                         end if
                      end do
                   else
-                     call list_repaired(self, fabm_cfg, self%fabm_model%bottom_state_variables(ivar)%name, 'minimum', self%fabm_model%bottom_state_variables(ivar)%minimum)
+                     call list_repaired(fabm_cfg, self%fabm_model%bottom_state_variables(ivar)%name, 'minimum', self%fabm_model%bottom_state_variables(ivar)%minimum)
                   end if
                end if
                if (any(state%fabm_bottom_state(1:grid%nz_occupied, ivar) > self%fabm_model%bottom_state_variables(ivar)%maximum)) then
@@ -791,7 +775,7 @@ contains
                         end if
                      end do
                   else
-                     call list_repaired(self, fabm_cfg, self%fabm_model%bottom_state_variables(ivar)%name, 'maximum', self%fabm_model%bottom_state_variables(ivar)%maximum)
+                     call list_repaired(fabm_cfg, self%fabm_model%bottom_state_variables(ivar)%name, 'maximum', self%fabm_model%bottom_state_variables(ivar)%maximum)
                   end if
                end if
             end do
@@ -827,7 +811,7 @@ contains
                   if (index > 0) then
                      self%repaired_surface(index) = self%fabm_model%surface_state_variables(ivar)%minimum
                   else
-                     call list_repaired(self, fabm_cfg, self%fabm_model%surface_state_variables(ivar)%name, 'minimum', self%fabm_model%surface_state_variables(ivar)%minimum)
+                     call list_repaired(fabm_cfg, self%fabm_model%surface_state_variables(ivar)%name, 'minimum', self%fabm_model%surface_state_variables(ivar)%minimum)
                   end if
                end if
                if (state%fabm_surface_state(ivar) > self%fabm_model%surface_state_variables(ivar)%maximum) then
@@ -836,7 +820,7 @@ contains
                   if (index > 0) then
                      self%repaired_surface(index) = self%fabm_model%surface_state_variables(ivar)%maximum
                   else
-                     call list_repaired(self, fabm_cfg, self%fabm_model%surface_state_variables(ivar)%name, 'maximum', self%fabm_model%surface_state_variables(ivar)%maximum)
+                     call list_repaired(fabm_cfg, self%fabm_model%surface_state_variables(ivar)%name, 'maximum', self%fabm_model%surface_state_variables(ivar)%maximum)
                   end if
                end if
             end do
@@ -872,7 +856,7 @@ contains
       ! FABM increments rather than sets argument sms_int: initialize with 0 at every time step
       if (fabm_cfg%n_interior_state > 0) then
          self%sms_int(1:grid%nz_occupied, :) = 0.0
-         call self%fabm_model%get_interior_sources(1, grid%nz_occupied, self%sms_int)
+         call self%fabm_model%get_interior_sources(1, grid%nz_occupied, self%sms_int(1:grid%nz_occupied, :))
          ! Set NaNs to 0
          if (any(ieee_is_nan(self%sms_int(1:grid%nz_occupied, :)))) then
             call warn('FABM Interior Source contains NaNs, set to 0')
@@ -936,13 +920,13 @@ contains
       ! >0: upward movement (floating, active movement)
       ! <0: downward movement (sinking, sedimentation, active movement)
       if (fabm_cfg%n_interior_state > 0) then
-         if (.not. state%first_timestep) self%velocity = 0.0
-         call self%fabm_model%get_vertical_movement(1, grid%nz_occupied, self%velocity)
+         if (.not. state%first_timestep) self%velocity(1:grid%nz_occupied, :) = 0.0
+         call self%fabm_model%get_vertical_movement(1, grid%nz_occupied, self%velocity(1:grid%nz_occupied, :))
          ! Set NaNs to 0
-         if (any(ieee_is_nan(self%velocity))) then
+         if (any(ieee_is_nan(self%velocity(1:grid%nz_occupied, :)))) then
             call warn('FABM Interior Velocity contains NaN, set to 0')
-            where (ieee_is_nan(self%velocity))
-               self%velocity = 0.0
+            where (ieee_is_nan(self%velocity(1:grid%nz_occupied, :)))
+               self%velocity(1:grid%nz_occupied, :) = 0.0
             end where
          end if
       end if
@@ -1026,8 +1010,8 @@ contains
             call self%fabm_model%link_bottom_state_data(ivar, state%fabm_bottom_state(1, ivar))
          end do
          k_bot = 1
-         if (interior_or_bottom_exist) call self%fabm_model%prepare_inputs(real(timestep_counter, kind=RK))
-         if (diagnostic_horizontal_exist) call self%fabm_model%finalize_outputs()
+         call self%fabm_model%prepare_inputs(real(timestep_counter, kind=RK))
+         call self%fabm_model%finalize_outputs()
       end if
 
       ! This is the ideal moment for the output: 
@@ -1084,7 +1068,7 @@ contains
       ! if the variable moves upward velocity_up is positive and velocity_down zero
       ! vice versa if the variable moves downward
       do k = 1, grid%nz_occupied
-         if (self%velocity(k, ivar) >= 0) then
+         if (ge_floats(self%velocity(k, ivar), 0.0_RK)) then
             velocity_up(k) = self%velocity(k, ivar)
             velocity_down(k) = 0
          else
@@ -1131,9 +1115,8 @@ contains
    end subroutine integrate_interior_state
 
    ! Read initial data and set in state
-   subroutine fabm_read_initial_data(self, state, model_cfg, fabm_cfg, output_cfg, grid, ivar, ivar_offset)
+   subroutine read_initial_data(state, model_cfg, fabm_cfg, output_cfg, grid, ivar, ivar_offset)
       ! Arguments
-      class(SimstratFABM), intent(inout) :: self
       class(ModelState), intent(inout) :: state
       class(ModelConfig), intent(in) :: model_cfg
       class(FABMConfig), intent(in) :: fabm_cfg
@@ -1146,9 +1129,13 @@ contains
       integer :: n, unit, status, ivar_state
       character(len=256) :: file_path
       real(RK) :: depth, initial_val
-      real(RK), dimension(model_cfg%max_length_input_data) :: temp_depths, temp_initials
+      real(RK), allocatable :: temp_depths(:), temp_initials(:)
       real(RK), dimension(:), allocatable :: depths, initials
       logical :: is_int
+
+      ! Allocation of temporary information arrays
+      allocate(temp_depths(model_cfg%max_length_input_data))
+      allocate(temp_initials(model_cfg%max_length_input_data))
 
       ! Set index including offset
       ! If there is no offset it is an interior variable
@@ -1182,7 +1169,7 @@ contains
          if (n > model_cfg%max_length_input_data) then
             call error('Too many lines in '//trim(file_path)//', increase MaxLengthInputData in ModelConfig.')
          end if
-         if (depth > 0) then
+         if (depth > 0.0_RK) then
             call error('One or several input depths of initial conditions file '//trim(file_path)//' are positive.')
          end if
          temp_depths(n) = abs(depth)
@@ -1320,10 +1307,9 @@ contains
    end subroutine list_diagnostic
 
    ! Read names of diagnostic Vars in SetDiagnosticVars file
-   subroutine set_fabm_diagnostic_vars(self, state, fabm_cfg, output_cfg, grid)
+   subroutine set_diagnostic_vars(self, fabm_cfg, output_cfg, grid)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
-      class(ModelState), intent(inout) :: state
       class(FABMConfig), intent(inout) :: fabm_cfg
       class(OutputConfig), intent(inout) :: output_cfg
       class(StaggeredGrid), intent(in) :: grid
@@ -1332,9 +1318,12 @@ contains
       integer :: i, j, n, n_int, n_hor, n_off, unit, status, unit_list, status_list
       character(len=256) :: line, line_trim, short_name, short_name_trim, long_name, units, output, file_path
       integer, parameter :: max_lines = 10000 ! Maximum amount of diagnostic variables in SetDiagnosticVars file
-      character(len=256), dimension(max_lines) :: temp_names ! Same len as fabm_diagnostic_names
+      character(len=256), allocatable :: temp_names(:) ! Same len as fabm_diagnostic_names
       integer, dimension(max_lines) :: fabm_index
       logical, dimension(max_lines) :: is_int, is_hor
+
+      ! Allocation of temporary information arrays
+      allocate(temp_names(max_lines))
 
       ! Construct the file path
       file_path = trim(fabm_cfg%config_path)//'/output_diagnostics.dat'
@@ -1386,7 +1375,7 @@ contains
                   if ((line_trim(:14) == 'select_output_') .and. output == 'No') cycle
                   n = n + 1
                   if (n > max_lines) then
-                     call error('Too many lines in '//trim(file_path)//', increase max_lines in set_fabm_diagnostic_vars.')
+                     call error('Too many lines in '//trim(file_path)//', increase max_lines in set_diagnostic_vars.')
                   end if
                   temp_names(n) = trim(short_name)
                   fabm_index(n) = 0
@@ -1411,7 +1400,7 @@ contains
                   if (any(temp_names == trim(short_name))) cycle
                   n = n + 1
                   if (n > max_lines) then
-                     call error('Too many lines in '//trim(file_path)//', increase max_lines in set_fabm_diagnostic_vars.')
+                     call error('Too many lines in '//trim(file_path)//', increase max_lines in set_diagnostic_vars.')
                   end if
                   temp_names(n) = trim(short_name)
                   fabm_index(n) = 0
@@ -1422,7 +1411,7 @@ contains
          else
             n = n + 1
             if (n > max_lines) then
-               call error('Too many lines in '//trim(file_path)//', increase max_lines in set_fabm_diagnostic_vars.')
+               call error('Too many lines in '//trim(file_path)//', increase max_lines in set_diagnostic_vars.')
             end if
             temp_names(n) = trim(line)
             fabm_index(n) = 0
@@ -1516,12 +1505,11 @@ contains
             j = j + 1
          end if
       end do
-   end subroutine set_fabm_diagnostic_vars
+   end subroutine set_diagnostic_vars
 
    ! Add to list of repaired variables
-   subroutine list_repaired(self, fabm_cfg, variable, boundary, boundary_value)
+   subroutine list_repaired(fabm_cfg, variable, boundary, boundary_value)
       ! Arguments
-      class(SimstratFABM), intent(in) :: self
       class(FABMConfig), intent(in) :: fabm_cfg
       character(len=*), intent(in) :: variable
       character(len=*), intent(in) :: boundary
@@ -1529,7 +1517,6 @@ contains
 
       ! Local variables
       integer :: unit, status
-      logical :: exists
       character(len=256) :: file_path, boundary_value_str
       character(len=256) :: line, new_line
 
@@ -1573,10 +1560,9 @@ contains
    end subroutine list_repaired
 
    ! Register repaired variables in RepairedVars file
-   subroutine set_fabm_repaired_vars(self, state, fabm_cfg, output_cfg, grid)
+   subroutine set_repaired_vars(self, fabm_cfg, output_cfg, grid)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
-      class(ModelState), intent(inout) :: state
       class(FABMConfig), intent(inout) :: fabm_cfg
       class(OutputConfig), intent(inout) :: output_cfg
       class(StaggeredGrid), intent(in) :: grid
@@ -1586,11 +1572,16 @@ contains
       character(len=256) :: file_path
       character(len=256) :: name
       character(len=16) :: bound
+      character(len=256), allocatable  :: temp_names(:)
+      character(len=16), allocatable :: temp_bounds(:)
+      character(len=16), allocatable :: temp_types(:)
       integer, parameter :: max_lines = 1000 ! Maximum amount of repaired variables in RepairedVars file
-      character(len=256), dimension(max_lines)  :: temp_names
-      character(len=16), dimension(max_lines) :: temp_bounds
-      character(len=16), dimension(max_lines) :: temp_types
       integer, dimension(max_lines) :: fabm_index
+
+      ! Allocation of temporary information arrays
+      allocate(temp_names(max_lines))
+      allocate(temp_bounds(max_lines))
+      allocate(temp_types(max_lines))
 
       ! Initialize counts to zero
       n = 0
@@ -1635,7 +1626,7 @@ contains
          if (len_trim(name) == 0) cycle  ! Skip empty lines, if any
          n = n + 1
          if (n > max_lines) then
-            call error('Too many lines in '//trim(file_path)//', increase max_lines in set_fabm_repaired_vars.')
+            call error('Too many lines in '//trim(file_path)//', increase max_lines in set_repaired_vars.')
          end if
          temp_names(n) = trim(name)
          if (.not. ((trim(bound) == 'minimum') .or. (trim(bound) == 'maximum'))) then
@@ -1699,7 +1690,7 @@ contains
       ! Also initialize state arrays to minimum / maximum value
       ! Also add names of repaired variables to arrays in self
       if (n > 0) allocate(output_cfg%output_vars_fabm_repaired(n))
-      ! j is the index in output_vars_fabm_diagnostic
+      ! j is the index in output_vars_fabm_repaired
       j = 1
       ! Interior repaired variables are set first
       do i = 1, n
@@ -1774,13 +1765,12 @@ contains
          end if
       end do
 
-   end subroutine set_fabm_repaired_vars
+   end subroutine set_repaired_vars
 
    ! Read manipulation namelist
-   subroutine set_fabm_manipulations(self, state, fabm_cfg, output_cfg, sim_cfg, grid)
+   subroutine set_manipulations(self, fabm_cfg, output_cfg, sim_cfg, grid)
       ! Arguments
       class(SimstratFABM), intent(inout) :: self
-      class(ModelState), intent(inout) :: state
       class(FABMConfig), intent(inout) :: fabm_cfg
       class(OutputConfig), intent(inout) :: output_cfg
       class(SimConfig), intent(in) :: sim_cfg
@@ -1792,11 +1782,14 @@ contains
       integer :: i, ivar, n, unit, status, action_type
       real(RK) :: start_time, end_time, action_val, threshold, start_depth, end_depth, offset_above_level, depth_to_grid
       integer, parameter :: max_manipulations = 1000 ! Maximum amount of manipulations
-      character(len=64), dimension(max_manipulations)  :: temp_names
+      character(len=64), allocatable  :: temp_names(:)
       integer, dimension(max_manipulations) :: temp_indices, temp_types, temp_kstarts, temp_kstops
       real(RK), dimension(max_manipulations) :: temp_starts, temp_ends, temp_actions, temp_thresholds
       logical :: found
       namelist /manipulation/ var_name, start_time, end_time, action_type, action_val, threshold, start_depth, end_depth
+
+      ! Allocation of temporary information arrays
+      allocate(temp_names(max_manipulations))
 
       ! Calculate conversion to depth below lake level
       ! Difference between lowest depth and total amount of depths
@@ -1849,7 +1842,7 @@ contains
          n = n + 1
          ! Check if too many manipulations are provided
          if (n > max_manipulations) then
-            call error('Too many manipulations in '//trim(file_path)//', increase max_manipulations in set_fabm_manipulations.')
+            call error('Too many manipulations in '//trim(file_path)//', increase max_manipulations in set_manipulations.')
          end if
          ! Search for var_name in state variables
          found = .false.
@@ -1866,7 +1859,7 @@ contains
             cycle
          end if
          ! Set start_time if it is before end_datum, skip manipulation otherwise
-         if (start_time <= sim_cfg%end_datum) then
+         if (se_floats(start_time, sim_cfg%end_datum)) then
             temp_starts(n) = start_time
          else
             call warn('Manipulation file '//trim(file_path)//' contains manipulation for variable '//trim(var_name)//' with start_time after end datum: ignored.')
@@ -1874,7 +1867,8 @@ contains
             cycle
          end if
          ! Set end_time if it is after start_datum and start_time, skip manipulation otherwise
-         if ((end_time >= sim_cfg%start_datum) .and. (end_time >= start_time)) then
+         if ((ge_floats(end_time, sim_cfg%start_datum)) &
+            .and. (ge_floats(end_time, start_time))) then
             temp_ends(n) = end_time
          else
             call warn('Manipulation file '//trim(file_path)//' contains manipulation for variable '//trim(var_name)//' with end_time before start_time or start datum: ignored.')
@@ -1889,7 +1883,7 @@ contains
             n = n - 1   
             cycle
          end if
-         if (action_val == 0.0_RK) then
+         if (compare_floats(action_val, 0.0_RK)) then
             call warn('Manipulation file '//trim(file_path)//' contains manipulation for variable '//trim(var_name)//' with action_val 0.0 or not provided.')
          end if
          ! Set action_val and threshold
@@ -1898,7 +1892,7 @@ contains
          ! Depth input is rounded to nearest integer after conversion to grid number and substracted from amount of grid points
          ! Set kstart if start_depth is above or equal to lowest depth, skip manipulation otherwise
          ! Restrict kstart to amount of grid cells
-         if (start_depth >= -grid%z_zero) then
+         if (ge_floats(start_depth, -grid%z_zero, 1.0e-4_RK)) then
             temp_kstarts(n) = min(grid%nz_grid, grid%nz_grid + nint((start_depth + offset_above_level) * depth_to_grid))
          else
             call warn('Manipulation file '//trim(file_path)//' contains manipulation for variable '//trim(var_name)//' with start_depth below lowest depth: ignored.')
@@ -1907,7 +1901,8 @@ contains
          end if
          ! Set kstop if end_depth is below or equal to 0, skip manipulation otherwise
          ! Minimum kstop is 1
-         if ((end_depth <= -offset_above_level) .and. (end_depth <= start_depth)) then
+         if ((se_floats(end_depth, -offset_above_level, 1.0e-4_RK)) &
+            .and. (se_floats(end_depth, start_depth, 1.0e-4_RK))) then
             temp_kstops(n) = max(1, grid%nz_grid + nint((end_depth + offset_above_level) * depth_to_grid))
          else
             call warn('Manipulation file '//trim(file_path)//' contains manipulation for variable '//trim(var_name)//' with end_depth above 0 or start_depth: ignored.')
@@ -1939,7 +1934,7 @@ contains
          self%manipulations(i)%start_depth = temp_kstarts(i)
          self%manipulations(i)%end_depth = temp_kstops(i)
       end do
-   end subroutine set_fabm_manipulations
+   end subroutine set_manipulations
 
    ! Deallocate memory
    subroutine deallocate_fabm(self)

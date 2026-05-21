@@ -56,13 +56,13 @@ contains
 
       ! Assign closest value if out of given grid
       posk1 = 1
-      do while (zi(posk1) <= z(1))
+      do while (se_floats(zi(posk1), z(1), 1.0e-4_RK))
          yi(posk1) = y(1)
          posk1 = posk1 + 1
          if (posk1 > size(zi)) exit
       end do
       posk2 = num_zi
-      do while (zi(posk2) >= z(num_z))
+      do while (ge_floats(zi(posk2), z(num_z), 1.0e-4_RK))
          yi(posk2) = y(num_z)
          posk2 = posk2 - 1
          if (posk2 < 1) exit
@@ -337,7 +337,7 @@ contains
       real(RK), intent(out) :: current_day, current_day_of_year
 
       ! Local variables
-      real(RK) :: elapsed_days, days_left, days_per_year
+      real(RK) :: elapsed_days, days_per_year
       integer :: i
       integer, dimension(12) :: days_per_month
 
@@ -556,5 +556,64 @@ contains
       ! Simulation time is a tuple of 2 integers (days, seconds)
       datum = start_datum + real(simulation_time(1), RK) + real(simulation_time(2), RK) / SECONDS_PER_DAY
    end function
+
+   ! Returns whether a == b
+   ! reltol is given as argument 1.0e-4_RK for grid-related comparisons
+   pure logical function compare_floats(a, b, reltol)
+      real(RK), intent(in) :: a, b
+      real(RK), intent(in), optional :: reltol
+      real(RK) :: tol
+
+      if (present(reltol)) then
+         tol = reltol
+      else
+         tol = sqrt(epsilon(1.0_RK))
+      end if
+
+      compare_floats = abs(a - b) < tol * max(abs(a), abs(b), 1.0_RK)
+   end function
+
+   ! Returns whether a >= b
+   pure logical function ge_floats(a, b, reltol)
+      real(RK), intent(in) :: a, b
+      real(RK), intent(in), optional :: reltol
+      real(RK) :: tol
+
+      if (present(reltol)) then
+         ge_floats = (a > b) .or. compare_floats(a, b, reltol)
+      else
+         ge_floats = (a > b) .or. compare_floats(a, b)
+      end if
+   end function
+
+   ! Returns whether a <= b
+   pure logical function se_floats(a, b, reltol)
+      real(RK), intent(in) :: a, b
+      real(RK), intent(in), optional :: reltol
+      real(RK) :: tol
+
+      if (present(reltol)) then
+         se_floats = (a < b) .or. compare_floats(a, b, reltol)
+      else
+         se_floats = (a < b) .or. compare_floats(a, b)
+      end if
+   end function
+
+   subroutine normalize_path(path)
+      character(*), intent(inout) :: path
+      integer :: i, n
+      
+      n = len_trim(path)
+
+      do i = 1, n
+         if (path(i:i) == '\') path(i:i) = '/'
+      end do
+
+      do while (n > 0 .and. path(n:n) == '/')
+         n = n - 1
+      end do
+
+      path = path(:n)
+   end subroutine
 
 end module utilities

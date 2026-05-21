@@ -121,6 +121,12 @@ to create the new directory `build` and generate the build configuration inside 
 > ~~~  
 > as argument to `cmake` to compile FABM in debug mode.
 
+> **N.B.3** Add:
+> ~~~bash
+> -DCMAKE_Fortran_FLAGS_DEBUG=<FLAGS>
+> ~~~  
+> as argument to `cmake` to add debugging flags to the FABM compilation, where `<FLAGS>` contains all flags inside quotes.
+
 Then run:
 
 ~~~bash

@@ -225,7 +225,7 @@ contains
          self%nz_grid = config%nz_grid
 
          ! If top value not included
-         if (config%grid_read(1) /= (config%max_depth - self%z_zero)) then
+         if (.not. compare_floats(config%grid_read(1), (config%max_depth - self%z_zero), 1.0e-4_RK)) then
             call error('Top value '//trim(toStr(config%max_depth - self%z_zero))//' is not included in grid file!')
          end if
 
@@ -277,12 +277,17 @@ contains
       end do
       self%z_volume(self%nz_grid) = nint(1e6_RK*self%z_volume(self%nz_grid))/1e6_RK
 
+      print *, 'a', self%z_face(self%nz_grid - 1:self%nz_grid + 1)
+
       do i = 2, self%nz_grid + 1
          self%z_face(i) = self%z_face(i - 1) + self%h(i - 1)
          self%z_face(i - 1) = nint(1e6_RK*self%z_face(i - 1))/1e6_RK
       end do
+      print *, 'a', self%z_face(self%nz_grid - 1:self%nz_grid + 1)
       self%z_face(self%nz_grid + 1) = nint(1e6_RK*self%z_face(self%nz_grid + 1))/1e6_RK
       self%layer_depth(1:self%nz_grid) = self%z_zero - self%z_volume(1:self%nz_grid)
+
+      print *, 'a', self%z_face(self%nz_grid - 1:self%nz_grid + 1)
 
    end subroutine grid_init_z_axes
 
@@ -436,6 +441,7 @@ contains
 
          ! Update number of occupied cells
          nz_occupied = nz_occupied - 1
+         print *, '3'
 
          ! Update boundaries (ubnd_fce and ubnd_vol)
          call self%update_nz()
@@ -487,6 +493,7 @@ contains
 
          ! Update number of occupied cells
          nz_occupied = nz_occupied + 1
+         print *, '2'
 
          ! Update boundaries (ubnd_fce and ubnd_vol)
          call self%update_nz()
@@ -508,8 +515,9 @@ contains
                  h=>self%h, &
                  z_zero=>self%z_zero, &
                  Az=>self%Az)
+         
          do i = 1, nz_grid + 1
-            if (z_face(i) >= (z_zero - new_depth)) then ! If above initial water level
+            if (ge_floats(z_face(i), (z_zero - new_depth), 1.0e-4_RK)) then ! If above initial water level
                zmax = z_face(i)
 
                ! Set top face to new water level
@@ -522,7 +530,7 @@ contains
                Az(i) = Az(i-1) + h(i - 1)/(zmax-z_face(i-1))*(Az(i)-Az(i-1))
                nz_occupied = i - 1
                self%h_old = h(nz_occupied)
-               if (h(nz_occupied) <= 0.5*h(nz_occupied - 1)) then ! If top box is too small
+               if (se_floats(h(nz_occupied), 0.5*h(nz_occupied - 1), 1.0e-4_RK)) then ! If top box is too small
                   z_face(nz_occupied) = z_face(nz_occupied + 1) ! Combine the two upper boxes
                   z_volume(nz_occupied - 1) = (z_face(nz_occupied) + z_face(nz_occupied - 1))/2
                   h(nz_occupied - 1) = h(nz_occupied) + h(nz_occupied - 1)
@@ -532,7 +540,7 @@ contains
                exit
             end if
          end do
-
+         
          call self%update_nz()
       end associate
    end subroutine

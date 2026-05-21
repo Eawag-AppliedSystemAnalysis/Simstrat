@@ -32,6 +32,7 @@ module strat_keps
    use strat_statevar
    use strat_grid
    use strat_solver
+   use utilities
    implicit none
    private
 
@@ -84,7 +85,7 @@ contains
             Prod = state%P(i) + state%P_Seiche(i) ! Add seiche energy
             Buoy = state%B(i)
             Diss = state%eps(i)
-            if (Prod + Buoy > 0) then
+            if (Prod + Buoy > 0.0_RK) then
                pplus(i) = Prod + Buoy
                pminus(i) = Diss
             else
@@ -177,7 +178,7 @@ contains
          end if
 
          do i = 2, ubnd_fce - 1
-            if (state%B(i) > 0) then
+            if (state%B(i) > 0.0_RK) then
                cee3 = 1.
             else
                cee3 = ce3
@@ -186,7 +187,7 @@ contains
             Buoy = cee3*state%eps(i)/state%ko(i)*state%B(i)
             Diss = ce2*state%eps(i)*state%eps(i)/state%ko(i)
 
-            if (Prod + Buoy > 0) then
+            if (Prod + Buoy > 0.0_RK) then
                pplus(i) = Prod + Buoy
                pminus(i) = Diss
             else
@@ -202,7 +203,7 @@ contains
          boundaries(2:ubnd_fce - 1) = pminus(2:ubnd_fce - 1)/state%eps(2:ubnd_fce - 1)
          if (self%cfg%flux_condition == 1 .and. self%cfg%turbulence_model == 1) then
             sources(2:ubnd_fce - 1) = sources(2:ubnd_fce - 1) + flux(2:ubnd_fce - 1)*grid%AreaFactor_eps(1:ubnd_fce - 2) ! AreaFactor_eps = 1/A * dA/dz (at epsilon posions)
-            if (grid%Az(1) /= 0) then ! Flux from bottom only!
+            if (compare_floats(grid%Az(1), 0.0_RK, 1.0e-4_RK)) then ! Flux from bottom only!
                sources(2) = sources(2) + flux(1)*(grid%Az(1) + grid%Az(2))/(grid%Az(2)*(grid%h(1) + grid%h(2)))
             end if
             sources(ubnd_fce-1)= sources(ubnd_fce-1)+flux(ubnd_fce)*(grid%Az(ubnd_fce)+grid%Az(ubnd_fce-1))/(grid%Az(ubnd_fce-1)*(grid%h(ubnd_vol)+grid%h(ubnd_vol-1)))
@@ -240,7 +241,7 @@ contains
 
          ! check lower limit of eps / update num
          do i = 1, ubnd_fce
-            if (state%NN(i) > 0) then
+            if (state%NN(i) > 0.0_RK) then
                epslim = 0.212_RK*state%k(i)*sqrt(state%NN(i))
             else
                epslim = eps_min
@@ -248,7 +249,7 @@ contains
             if (state%eps(i) < epslim) then
                state%eps(i) = epslim
             end if
-            if (state%eps(i) < 0) then
+            if (state%eps(i) < 0.0_RK) then
                write(*, *) 'Dissipation negative'
             end if
 

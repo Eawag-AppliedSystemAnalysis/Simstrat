@@ -46,6 +46,7 @@ module strat_ice
    use strat_consts
    use strat_simdata
    use strat_grid
+   use utilities
    implicit none
    private
 
@@ -103,33 +104,38 @@ contains
       !-------------------
       ! Below freezing
       !-------------------
-      if (param%Freez_Temp >= state%T(self%grid%ubnd_vol) .and. (state%black_ice_h + state%white_ice_h) == 0) then
+      if ((ge_floats(param%Freez_Temp, state%T(self%grid%ubnd_vol))) &
+         .and. compare_floats(state%black_ice_h + state%white_ice_h, 0.0_RK)) then
          ! Ice expanding (air temp & water temp less then Freez_Temp) no ice present
          call self%do_ice_freezing(state, param)
-      else if ((state%black_ice_h + state%white_ice_h) > 0 .and. param%Freez_Temp >= state%T_atm) then
+      else if ((state%black_ice_h + state%white_ice_h) > 0.0_RK &
+         .and. (ge_floats(param%Freez_Temp, state%T_atm))) then
          ! If ice exist and air temp < freez temp, initiate ice formation
          call self%do_ice_freezing(state, param)
       end if
 
       ! Snow fall addition onto ice
-      if (self%model_cfg%snow_model == 1 .and. param%snow_temp >= state%T_atm .and. (state%black_ice_h + state%white_ice_h) > 0 .and. state%precip > 0) then
+      if (self%model_cfg%snow_model == 1 &
+         .and. (ge_floats(param%snow_temp, state%T_atm)) &
+         .and. (state%black_ice_h + state%white_ice_h) > 0.0_RK &
+         .and. state%precip > 0.0_RK) then
          call self%do_snow_build(state)
       end if
 
       !------------------
       ! Above freezing
       !-------------------
-      if (param%Freez_Temp < state%T_atm .and. (state%black_ice_h + state%white_ice_h) > 0) then
+      if (param%Freez_Temp < state%T_atm .and. (state%black_ice_h + state%white_ice_h) > 0.0_RK) then
          ! Melt snow
-         if (state%snow_h > 0 .and. param%snow_temp < state%T_atm .and. self%model_cfg%snow_model == 1) then
+         if (state%snow_h > 0.0_RK .and. param%snow_temp < state%T_atm .and. self%model_cfg%snow_model == 1) then
             call self%do_snow_melting(state)
          end if
          ! Melt ice from above
-         if (state%white_ice_h + state%black_ice_h > 0) then
+         if (state%white_ice_h + state%black_ice_h > 0.0_RK) then
             call self%do_ice_melting(state, param)
          end if
          ! Melt ice from underneath
-         if (state%T(self%grid%ubnd_vol) > param%freez_temp .and. (state%white_ice_h + state%black_ice_h) > 0) then
+         if (state%T(self%grid%ubnd_vol) > param%freez_temp .and. (state%white_ice_h + state%black_ice_h) > 0.0_RK) then
             call self%do_underneath_melting(state, param)
          end if
       end if
@@ -170,7 +176,7 @@ contains
       real(RK) :: buoyancy_ice
       real(RK) :: snow_height_ice_mass
 
-      if (state%black_ice_h == 0) then
+      if (compare_floats(state%black_ice_h, 0.0_RK)) then
          ! Energy released for first ice forming
          Freez_energy = (param%Freez_Temp - state%T(self%grid%ubnd_vol))  * cp * (self%grid%h(self%grid%ubnd_vol) * rho_0)  ![J/kg/K]*[K]*[kg] = [J]
 
@@ -199,7 +205,7 @@ contains
          state%ice_temp = (P*param%freez_temp + state%T_atm)/(1 + P)
 
          ! Snow-Ice formation, if weight of snow exceeds ice buoyancy
-         if (self%model_cfg%snow_model == 1 .and. state%snow_h > 0) then
+         if (self%model_cfg%snow_model == 1 .and. state%snow_h > 0.0_RK) then
             snow_weight = state%snow_h * state%snow_dens*1*1 ! kg
             buoyancy_ice = state%black_ice_h*1*1 * (rho_0 - ice_dens) + state%white_ice_h*1*1 * (rho_0 - snowice_dens)!kg
 
@@ -217,7 +223,7 @@ contains
       end if
 
       ! If melt larger than ice height, put remaining energy to water and set ice height to zero
-      if (state%black_ice_h < 0) then
+      if (state%black_ice_h < 0.0_RK) then
          state%heat = state%heat + (l_h * ice_dens * (-1 * state%black_ice_h) / state%dt) ![J/kg] * [kg/m3] * [m] / [s] = [J/sm2] = [W/m2]
          state%black_ice_h = 0
       end if
@@ -276,7 +282,7 @@ contains
       ! Melt Snow from atmosphere
       Melt_energy1 = state%heat_snow * state%dt * 1 * 1 ! [W/m2] * [s] * [m2] = [J]
       MeltHeight1 = Melt_energy1 / (l_h + l_e) / (state%snow_dens * 1 * 1) ! [J] / [J/kg] / [kg/m3] / [m2] = [m]
-      if (MeltHeight1 < 0) then ! Do not add snow from above, only melt snow
+      if (MeltHeight1 < 0.0_RK) then ! Do not add snow from above, only melt snow
          Melt_energy1 = 0
          MeltHeight1 = 0
       end if
@@ -284,28 +290,29 @@ contains
       state%snow_h = state%snow_h - MeltHeight1! [m]
 
       ! If melting energy larger than required, put remaining energy to melting of snowice / ice and set snow height to zero
-      if (state%snow_h < 0) then
+      if (state%snow_h < 0.0_RK) then
          Melt_ice = (l_h + l_e) * state%snow_dens * (1 * 1) * (-1 * state%snow_h)! [J/kg]  [kg/m3]  [m2]  [m] = [J]
          state%snow_h = 0
-         if (state%white_ice_h > 0) then
+         if (state%white_ice_h > 0.0_RK) then
             MeltHeightIce = Melt_ice / (l_h + l_e) / (snowice_dens * 1 * 1) ! [J] / [J/kg] / [kg/m3] / [m2] = [m]
             state%white_ice_h = state%white_ice_h - MeltHeightIce! [m]
-            if (state%white_ice_h < 0) then
+            if (state%white_ice_h < 0.0_RK) then
                Melt_ice = (l_h + l_e) * snowice_dens * (1 * 1) * (-1 * state%white_ice_h)! [J/kg]  [kg/m3]  [m2]  [m] = [J]
                state%white_ice_h = 0
                MeltHeightIce = Melt_ice / (l_h + l_e) / (ice_dens * 1 * 1) ! [J] / [J/kg] / [kg/m3] / [m2] = [m]
                state%black_ice_h = state%black_ice_h - MeltHeightIce ! [m]
                ! If melt larger than ice height, put remaining energy to water and set ice height to zero
-               if (state%black_ice_h < 0) then
+               if (state%black_ice_h < 0.0_RK) then
                   state%heat = state%heat + (l_h * ice_dens * (-1 * state%black_ice_h) / state%dt) ! [J/kg] * [kg/m3] * [m] / [s] = [J/sm2] = [W/m2]
                   state%black_ice_h = 0
                end if
             end if
-         else if (state%white_ice_h == 0 .and. state%black_ice_h > 0 ) then
+         else if (compare_floats(state%white_ice_h, 0.0_RK) &
+            .and. state%black_ice_h > 0.0_RK ) then
             MeltHeightIce = Melt_ice / (l_h + l_e) / (ice_dens * 1 * 1) ! [J] / [J/kg] / [kg/m3] / [m2] = [m]
             state%black_ice_h = state%black_ice_h - MeltHeightIce ! [m]
             ! If melt larger than ice height, put remaining energy to water and set ice height to zero
-            if (state%black_ice_h < 0) then
+            if (state%black_ice_h < 0.0_RK) then
                state%heat = state%heat + (l_h  * ice_dens * (-1 * state%black_ice_h) / state%dt) ! [J/kg] * [kg/m3] * [m] / [s] = [J/sm2] = [W/m2]
                state%black_ice_h = 0
             end if
@@ -333,26 +340,27 @@ contains
        Melt_energy3 = state%heat_ice * state%dt * 1 * 1 ! [W/m2] * [s] * [m2] = [J]
 
       ! Snowice
-      if (state%snow_h == 0) then ! Free surface
+      if (compare_floats(state%snow_h, 0.0_RK)) then ! Free surface
          MeltHeight2 = Melt_energy2 / (l_h + l_e) / (snowice_dens * 1 * 1) ! [J] / [J/kg] / [kg/m3] / [m2] = [m]
-      else if (state%snow_h > 0 .and. state%black_ice_h == 0) then ! Layer above and none below
+      else if (state%snow_h > 0.0_RK &
+         .and. compare_floats(state%black_ice_h, 0.0_RK)) then ! Layer above and none below
          MeltHeight2 = Melt_energy2 / (l_h) / (snowice_dens * 1 * 1) ! [J] / [J/kg] / [kg/m3] / [m2] = [m]
       else ! Layer above and below, melt snow
          state%heat_snow = Melt_energy2 / state%dt
          call self%do_snow_melting(state)
          MeltHeight2 = 0
       end if
-      if (MeltHeight2 < 0) then ! Do not add ice, only melt.
+      if (MeltHeight2 < 0.0_RK) then ! Do not add ice, only melt.
          Melt_energy2 = 0;
          MeltHeight2 = 0;
       end if
       ! Ice
-      if (state%snow_h + state%white_ice_h == 0) then ! Free surface
+      if (compare_floats(state%snow_h + state%white_ice_h, 0.0_RK)) then ! Free surface
          MeltHeight3 = Melt_energy3 / (l_h + l_e) / (ice_dens * 1 * 1) ! [J] / [J/kg] / [kg/m3] / [m2] = [m]
-      else if (state%snow_h + state%white_ice_h > 0) then ! Layer above and none below
+      else if (state%snow_h + state%white_ice_h > 0.0_RK) then ! Layer above and none below
          MeltHeight3 = Melt_energy3 / (l_h) / (ice_dens * 1 * 1) ! [J] / [J/kg] / [kg/m3] / [m2] = [m]
       end if
-      if (MeltHeight3 < 0) then ! Do not add ice from above, only melt
+      if (MeltHeight3 < 0.0_RK) then ! Do not add ice from above, only melt
          Melt_energy3 = 0;
          MeltHeight3 = 0;
       end if
@@ -361,11 +369,12 @@ contains
       state%white_ice_h = state%white_ice_h - MeltHeight2! [m]
       MeltHeightIce = 0
       ! If melting energy larger than required, put remaining energy to melting of ice and set snowice height to zero
-      if (state%white_ice_h < 0 .and. state%black_ice_h > 0) then
+      if (state%white_ice_h < 0.0_RK .and. state%black_ice_h > 0.0_RK) then
          Melt_ice = (l_h + l_e) * snowice_dens * (1 * 1) * (-1 * state%white_ice_h) ! [J/kg]  [kg/m3] [m2] [m] = [J]
          state%white_ice_h = 0
          MeltHeightIce = Melt_ice / (l_h + l_e) / (ice_dens * 1 * 1) ! [J] / [J/kg] / [kg/m3] / [m2] = [m]
-      else if (state%white_ice_h < 0 .and. state%black_ice_h == 0) then ! If melt larger than snowice hight, put remaining energy to water and set snowice hight to zero
+      else if (state%white_ice_h < 0.0_RK &
+         .and. compare_floats(state%black_ice_h, 0.0_RK)) then ! If melt larger than snowice hight, put remaining energy to water and set snowice hight to zero
          state%heat = state%heat + (l_h * snowice_dens * (-1 * state%white_ice_h) / state%dt) ! [J/kg] * [kg/m3] * [m] / [s] = [J/sm2] = [W/m2]
          state%white_ice_h = 0
       end if
@@ -373,7 +382,7 @@ contains
       ! New ice height
       state%black_ice_h = state%black_ice_h - MeltHeight3 - MeltHeightIce ! [m]
       ! If melt larger than ice height, put remaining energy to water and set ice height to zero
-      if (state%black_ice_h < 0) then
+      if (state%black_ice_h < 0.0_RK) then
          state%heat = state%heat + (l_h * ice_dens * (-1 * state%black_ice_h) / state%dt) ! [J/kg] * [kg/m3] * [m] / [s] = [J/sm2] = [W/m2]
          state%black_ice_h = 0
       end if
@@ -393,12 +402,13 @@ contains
       real(RK) :: MeltHeight2
 
       Melt_energy2 = (state%T(self%grid%ubnd_vol) - param%freez_temp)  * cp * (self%grid%h(self%grid%ubnd_vol) * rho_0)  ! [J/kg/K]*[K]*[kg] = [J]
-      if (state%black_ice_h > 0) then
+      if (state%black_ice_h > 0.0_RK) then
          MeltHeight2 = Melt_energy2 / l_h / (ice_dens * 1 * 1) ! [J] / [J/kg] / [kg/m3] / [m2] = [m]
-      else if (state%black_ice_h == 0 .and. state%white_ice_h > 0) then
+      else if (compare_floats(state%black_ice_h, 0.0_RK) &
+         .and. state%white_ice_h > 0.0_RK) then
          MeltHeight2 = Melt_energy2 / l_h / (snowice_dens * 1 * 1) ! [J] / [J/kg] / [kg/m3] / [m2] = [m]
       end if
-      if (MeltHeight2 < 0) then !Do not add ice from below, only melt
+      if (MeltHeight2 < 0.0_RK) then !Do not add ice from below, only melt
          Melt_energy2 = 0;
          MeltHeight2 = 0;
       end if
@@ -407,22 +417,25 @@ contains
       state%T(self%grid%ubnd_vol) = param%freez_temp ![°C]
 
       ! New ice height
-      if (state%black_ice_h > 0) then
+      if (state%black_ice_h > 0.0_RK) then
          state%black_ice_h = state%black_ice_h - MeltHeight2 ! [m]
-      else if (state%black_ice_h == 0 .and. state%white_ice_h > 0) then
+      else if (compare_floats(state%black_ice_h, 0.0_RK) &
+         .and. state%white_ice_h > 0.0_RK) then
          state%white_ice_h = state%white_ice_h - MeltHeight2 ! [m]
       end if
 
       ! If melt larger than ice height, put remaining energy to water and set ice height to zero
-      if (state%black_ice_h < 0) then
+      if (state%black_ice_h < 0.0_RK) then
          state%heat = state%heat + (l_h * ice_dens * (-1 * state%black_ice_h) / state%dt) ! [J/kg] * [kg/m3] * [m] / [s] = [J/sm2] = [W/m2]
          state%black_ice_h = 0
       end if
-      if (state%white_ice_h < 0) then ! Open water
+      if (state%white_ice_h < 0.0_RK) then ! Open water
          state%heat = state%heat + l_h * (snowice_dens * (-1 * state%white_ice_h)) / state%dt ! [J/kg] * [kg/m3] * [m] / [s] = [J/sm2] = [W/m2]
          state%white_ice_h = 0
       end if
-      if (state%white_ice_h == 0 .and. state%black_ice_h == 0 .and. state%snow_h > 0) then
+      if (compare_floats(state%white_ice_h, 0.0_RK) &
+         .and. compare_floats(state%black_ice_h, 0.0_RK) &
+         .and. state%snow_h > 0.0_RK) then
          state%heat = state%heat + l_h * (state%snow_dens * (state%snow_h)) / state%dt ! [J/kg] * [kg/m3] * [m] / [s] = [J/sm2] = [W/m2]
          state%snow_h = 0
          state%snow_dens = rho_s_0
