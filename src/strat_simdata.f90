@@ -47,6 +47,8 @@ module strat_simdata
       real(RK), dimension(:), allocatable    :: read_grid_array_from_json
       real(RK) :: read_grid_value_from_json
       integer :: grid_input_type
+   contains
+      procedure, pass :: deallocate => input_config_deallocate
    end type
 
    ! Definition of a variable to log
@@ -82,7 +84,6 @@ module strat_simdata
       logical :: write_to_file, output_all
       integer :: number_output_vars
       character(len=20), dimension(:), allocatable :: output_var_names ! Names of output variables
-      class(LogVariable), pointer :: log_variable ! Current variable to log
       class(LogVariable), dimension(:), allocatable :: output_vars ! Output structure for Simstrat variables
       class(LogVariable), dimension(:), allocatable :: output_vars_fabm_state ! Output structure for FABM state variables
       class(LogVariable), dimension(:), allocatable :: output_vars_fabm_diagnostic ! Output structure for FABM diagnostic variables
@@ -91,6 +92,8 @@ module strat_simdata
       integer :: output_time_type, output_depth_type, thinning_interval
       real(RK) :: depth_interval, thinning_interval_read ! thinning_interval_read is a real to make sure that also values
       ! like 72.0 can be read (which are interpreted as a double)
+   contains
+      procedure, pass :: deallocate => output_config_deallocate
    end type
 
    ! Simulation configuration
@@ -104,6 +107,8 @@ module strat_simdata
       logical :: save_text_restart = .false.
       logical :: use_text_restart = .false.
       logical :: show_bar = .true.
+   contains
+      procedure, pass :: deallocate => sim_config_deallocate
    end type
 
    ! Model configuration (read from file)
@@ -123,7 +128,9 @@ module strat_simdata
       logical :: bottom_friction
       integer :: ice_model
       integer :: snow_model
-   end type
+   contains
+      procedure, pass :: deallocate => model_config_deallocate
+   end Type
 
    ! FABM configuration (read from file)
    type, public :: FABMConfig
@@ -153,6 +160,8 @@ module strat_simdata
       integer :: n_repaired, n_repaired_interior, n_repaired_bottom, n_repaired_surface
       ! Amount of manipulations
       integer :: n_manipulations
+   contains
+      procedure, pass :: deallocate => fabm_config_deallocate
    end type
 
    ! Model params (read from file)
@@ -182,6 +191,8 @@ module strat_simdata
       real(RK) :: b_ice_ini
       real(RK) :: snow_ini
       !real(RK) :: k_min
+   contains
+      procedure, pass :: deallocate => model_param_deallocate
    end type
 
    ! Model state (self is actually the simulation data!!!)
@@ -190,7 +201,7 @@ module strat_simdata
       integer :: current_year ! Current year of simulation, used for zenith angle dependent water albedo
       integer :: current_month ! Current month of simulation, used for zenith angle dependent water albedo
       real(RK) :: current_day ! Current day of simulation, used for zenith angle dependent water albedo
-      real(RK), pointer :: current_day_of_year ! Current day of the year, used for FABM
+      real(RK), pointer :: current_day_of_year => null() ! Current day of the year, used for FABM
       real(RK) :: datum, dt
       integer(8), dimension(2) :: simulation_time, simulation_time_old
       logical :: first_timestep = .true.
@@ -198,17 +209,17 @@ module strat_simdata
       ! Variables located on z_cent grid
       ! Note that for these variables the value at 0 z.b. U(0) is not used
       real(RK), dimension(:), allocatable :: U, V ! Water velocities [m/s]
-      real(RK), dimension(:), pointer :: T, S ! Temperature [°C], Salinity [‰], FABM needs pointer attribute
+      real(RK), dimension(:), pointer :: T => null(), S => null() ! Temperature [°C], Salinity [‰], FABM needs pointer attribute
       real(RK), dimension(:), allocatable :: dS ! Source/sink for salinity
       real(RK), dimension(:, :), allocatable :: Q_inp ! Horizontal inflow [m^3/s]
       real(RK), dimension(:), allocatable :: Q_inp_bound, Q_inp_bound_con ! Bottom- / Surface-bound horizontal inflow [m^2/s] (absolute and concentration dependent)
-      real(RK), dimension(:), pointer :: rho ! Water density [kg/m^3], FABM needs pointer attribute
+      real(RK), dimension(:), pointer :: rho => null() ! Water density [kg/m^3], FABM needs pointer attribute
       integer :: n_pH
       
       ! All FABM biogeochemical state variable values in an array fabm_*_state
       ! In Simstrat_FABM allocated with shape (grid%nz_grid, size(fabm_cfg%n_*_state))
-      real(RK), dimension(:,:), pointer :: fabm_interior_state, fabm_bottom_state
-      real(RK), dimension(:), pointer :: fabm_surface_state
+      real(RK), dimension(:,:), pointer :: fabm_interior_state => null(), fabm_bottom_state => null()
+      real(RK), dimension(:), pointer :: fabm_surface_state => null()
    
       ! Variables located on z_upp grid
       real(RK), dimension(:), allocatable :: k, ko ! Turbulent kinetic energy (TKE) [J/kg]
@@ -223,21 +234,21 @@ module strat_simdata
       real(RK) :: gamma ! Proportionality constant for loss of seiche energy
 
       real(RK), dimension(:), allocatable :: absorb ! Absorption coeff including FABM contribution and background extinction [m-1]
-      real(RK), dimension(:), pointer :: absorb_from_fabm ! Biogeochemical contribution to Absorption coeff [m-1]
-      real(RK), dimension(:), pointer :: absorb_to_fabm ! Absorption coeff passed to FABM [m-1], FABM needs pointer attribute   
+      real(RK), dimension(:), pointer :: absorb_from_fabm => null() ! Biogeochemical contribution to Absorption coeff [m-1]
+      real(RK), dimension(:), pointer :: absorb_to_fabm => null() ! Absorption coeff passed to FABM [m-1], FABM needs pointer attribute   
       real(RK) :: u10, v10, Wf ! Wind speeds, wind factor
-      real(RK), pointer :: uv10, uv10_gas ! pointer attribute needed for FABM
+      real(RK), pointer :: uv10 => null(), uv10_gas => null() ! pointer attribute needed for FABM
       real(RK) :: drag, u_taus ! Drag
-      real(RK), pointer :: u_taub ! Bottom stress, FABM needs pointer attribute
+      real(RK), pointer :: u_taub => null() ! Bottom stress, FABM needs pointer attribute
       real(RK) :: tx, ty ! Shear stress
-      real(RK), pointer :: C10 ! Wind drag coefficient, FABM needs pointer attribute
+      real(RK), pointer :: C10 => null() ! Wind drag coefficient, FABM needs pointer attribute
       real(RK) :: SST, heat, heat_snow, heat_ice, heat_snowice! Sea surface temperature and heat flux
 
       real(RK), pointer :: T_atm, qa ! Air temp and specific humidity at surface
       real(RK), pointer :: Cloud ! Cloud area fraction, FABM needs ponter attribute
       real(RK), dimension(:), allocatable :: rad ! Solar radiation (in water)
-      real(RK), dimension(:), pointer :: swr_vol ! Shortwave radiation [J/s/m2] (used for FABM: needs pointer attribute)
-      real(RK), dimension(:), pointer :: par_vol ! Photosynthetically active radiation (fraction of swr, used for FABM: needs pointer attribute)
+      real(RK), dimension(:), pointer :: swr_vol => null() ! Shortwave radiation [J/s/m2] (used for FABM: needs pointer attribute)
+      real(RK), dimension(:), pointer :: par_vol => null() ! Photosynthetically active radiation (fraction of swr, used for FABM: needs pointer attribute)
       real(RK), dimension(:), allocatable :: Q_vert ! Vertical exchange between boxes
       real(RK), dimension(9,12) :: albedo_data  ! Experimental monthly albedo data for determination of current water albedo
       real(RK) :: albedo_water   ! Current water albedo
@@ -251,38 +262,39 @@ module strat_simdata
       real(RK) :: snow_dens ! Snow density [kg m-3]
       real(RK) :: ice_temp ! Ice temperature [°C]
       real(RK) :: precip ! Precipiation in water eqvivalent hight [m]
-      real(RK), pointer :: ice_area_fraction ! Ice area fraction, FABM needs pointer attribute
+      real(RK), pointer :: ice_area_fraction => null() ! Ice area fraction, FABM needs pointer attribute
 
       !For saving heatflux
       real(RK), allocatable :: ha ! Incoming long wave [W m-2]
       real(RK), allocatable :: hw ! Outgoing long wave [W m-2]
       real(RK), allocatable :: hk ! Sensible flux [W m-2]
       real(RK), allocatable :: hv ! Latent heat [W m-2]
-      real(RK), pointer :: rad0 !  Solar radiation at surface  [W m-2], FABM needs pointer attribute
-      real(RK), pointer :: par0 ! Photosynthetically active radiation [W m-2], FABM needs pointer attribute
+      real(RK), pointer :: rad0 => null() !  Solar radiation at surface  [W m-2], FABM needs pointer attribute
+      real(RK), pointer :: par0 => null() ! Photosynthetically active radiation [W m-2], FABM needs pointer attribute
 
       real(RK) :: cde, cm0
       real(RK) ::  fsed
       real(RK), dimension(:), allocatable     :: fgeo_add
 
       ! Pointers to parameters for FABM (needs pointer attribute)
-      real(RK), pointer :: Lat ! latitude [degree_north]
-      real(RK), pointer :: p_air ! Surface air pressure [Pa]
-      real(RK), pointer :: wat_albedo ! Surface albedo [-]
+      real(RK), pointer :: Lat => null() ! latitude [degree_north]
+      real(RK), pointer :: p_air => null() ! Surface air pressure [Pa]
+      real(RK), pointer :: wat_albedo => null() ! Surface albedo [-]
 
    contains
       procedure, pass :: init => model_state_init
       procedure, pass :: save => save_model_state
       procedure, pass :: load => load_model_state
+      procedure, pass :: deallocate => deallocate_model_state
    end type
 
    ! Structure that encapsulates a full program state
    type, public :: SimulationData
       type(InputConfig), public   :: input_cfg
-      type(LogVariable), public   :: output_variable
       type(OutputConfig), public  :: output_cfg
       type(SimConfig), public     :: sim_cfg
       type(ModelConfig), public   :: model_cfg
+      type(GridConfig), public    :: grid_cfg
       type(FABMConfig), public    :: fabm_cfg
       type(ModelParam), public    :: model_param
       type(ModelState), public    :: model
@@ -490,8 +502,6 @@ contains
          call save_matrix_pointer(80, self%fabm_interior_state)
          call save_matrix_pointer(80, self%fabm_bottom_state)
          call save_array_pointer(80, self%fabm_surface_state)
-         call save_array_pointer(80, self%absorb_from_fabm)
-         call save_array_pointer(80, self%absorb_to_fabm)
       end if
       if (inflow_mode > 0) then
          call save_matrix(80, self%Q_inp)
@@ -578,6 +588,192 @@ contains
             call read_array(81, self%Q_inp_bound)
             call read_array(81, self%Q_inp_bound_con)
          end if
+      end if
+   end subroutine
+
+   ! Deallocate input configuration
+   subroutine input_config_deallocate(self)
+      class(InputConfig), intent(inout) :: self
+
+      if (allocated(self%MorphName)) deallocate(self%MorphName)
+      if (allocated(self%InitName)) deallocate(self%InitName)
+      if (allocated(self%ForcingName)) deallocate(self%ForcingName)
+      if (allocated(self%AbsorpName)) deallocate(self%AbsorpName)
+      if (allocated(self%GridName)) deallocate(self%GridName)
+      if (allocated(self%QinpName)) deallocate(self%QinpName)
+      if (allocated(self%QoutName)) deallocate(self%QoutName)
+      if (allocated(self%TinpName)) deallocate(self%TinpName)
+      if (allocated(self%SinpName)) deallocate(self%SinpName)
+      if (allocated(self%read_grid_array_from_json)) deallocate(self%read_grid_array_from_json)
+   end subroutine
+
+   ! Deallocate output configuration
+   subroutine output_config_deallocate(self)
+      class(OutputConfig), intent(inout) :: self
+
+      if (allocated(self%PathOut)) deallocate(self%PathOut)
+      if (allocated(self%zoutName)) deallocate(self%zoutName)
+      if (allocated(self%toutName)) deallocate(self%toutName)
+      if (allocated(self%output_depth_reference)) deallocate(self%output_depth_reference)
+      if (allocated(self%zout)) deallocate(self%zout)
+      if (allocated(self%zout_read)) deallocate(self%zout_read)
+      if (allocated(self%tout)) deallocate(self%tout)
+      if (allocated(self%simulation_times_for_output)) deallocate(self%simulation_times_for_output)
+      if (allocated(self%n_timesteps_between_tout)) deallocate(self%n_timesteps_between_tout)
+      if (allocated(self%output_var_names)) deallocate(self%output_var_names)
+      if (allocated(self%tout)) deallocate(self%tout)
+      if (allocated(self%output_vars)) deallocate(self%output_vars)
+      if (allocated(self%output_vars_fabm_state)) deallocate(self%output_vars_fabm_state)
+      if (allocated(self%output_vars_fabm_diagnostic)) deallocate(self%output_vars_fabm_diagnostic)
+      if (allocated(self%output_vars_fabm_repaired)) deallocate(self%output_vars_fabm_repaired)
+   end subroutine
+
+   ! Deallocate simulation configuration
+   subroutine sim_config_deallocate(self)
+      class(SimConfig), intent(inout) :: self
+   end subroutine
+
+   ! Deallocate model configuration
+   subroutine model_config_deallocate(self)
+      class(ModelConfig), intent(inout) :: self
+   end subroutine
+
+   ! Deallocate FABM configuration
+   subroutine fabm_config_deallocate(self)
+      class(FABMConfig), intent(inout) :: self
+
+      if (allocated(self%config_file)) deallocate(self%config_file)
+      if (allocated(self%initial_path)) deallocate(self%initial_path)
+      if (allocated(self%inflow_path)) deallocate(self%inflow_path)
+      if (allocated(self%config_path)) deallocate(self%config_path)
+   end subroutine
+
+   ! Deallocate model parameters
+   subroutine model_param_deallocate(self)
+      class(ModelParam), intent(inout) :: self
+   end subroutine
+
+   ! Deallocate model state
+   subroutine deallocate_model_state(self)
+      class(ModelState), intent(inout) :: self
+
+      if (associated(self%current_day_of_year)) then
+         deallocate(self%current_day_of_year)
+         nullify(self%current_day_of_year)
+      end if
+      if (allocated(self%U)) deallocate(self%U)
+      if (allocated(self%V)) deallocate(self%V)
+      if (associated(self%T)) then
+         deallocate(self%T)
+         nullify(self%T)
+      end if
+      if (associated(self%S)) then
+         deallocate(self%S)
+         nullify(self%S)
+      end if
+      if (allocated(self%dS)) deallocate(self%dS)
+      if (associated(self%rho)) then
+         deallocate(self%rho)
+         nullify(self%rho)
+      end if
+      if (allocated(self%k)) deallocate(self%k)
+      if (allocated(self%ko)) deallocate(self%ko)
+      if (allocated(self%avh)) deallocate(self%avh)
+      if (allocated(self%eps)) deallocate(self%eps)
+      if (allocated(self%num)) deallocate(self%num)
+      if (allocated(self%nuh)) deallocate(self%nuh)
+      if (allocated(self%P)) deallocate(self%P)
+      if (allocated(self%B)) deallocate(self%B)
+      if (allocated(self%NN)) deallocate(self%NN)
+      if (allocated(self%cmue1)) deallocate(self%cmue1)
+      if (allocated(self%cmue2)) deallocate(self%cmue2)
+      if (allocated(self%P_Seiche)) deallocate(self%P_Seiche)
+      if (allocated(self%absorb)) deallocate(self%absorb)
+      if (associated(self%absorb_from_fabm)) then
+         deallocate(self%absorb_from_fabm)
+         nullify(self%absorb_from_fabm)
+      end if
+      if (associated(self%absorb_to_fabm)) then
+         deallocate(self%absorb_to_fabm)
+         nullify(self%absorb_to_fabm)
+      end if
+      if (allocated(self%rad)) deallocate(self%rad)
+      if (associated(self%swr_vol)) then
+         deallocate(self%swr_vol)
+         nullify(self%swr_vol)
+      end if
+      if (associated(self%par_vol)) then
+         deallocate(self%par_vol)
+         nullify(self%par_vol)
+      end if
+      if (allocated(self%fgeo_add)) deallocate(self%fgeo_add)
+      if (associated(self%fabm_interior_state)) then
+         deallocate(self%fabm_interior_state)
+         nullify(self%fabm_interior_state)
+      end if
+      if (associated(self%fabm_bottom_state)) then
+         deallocate(self%fabm_bottom_state)
+         nullify(self%fabm_bottom_state)
+      end if
+      if (associated(self%fabm_surface_state)) then
+         deallocate(self%fabm_surface_state)
+         nullify(self%fabm_surface_state)
+      end if
+      if (allocated(self%Q_inp)) deallocate(self%Q_inp)
+      if (allocated(self%Q_vert)) deallocate(self%Q_vert)
+      if (allocated(self%Q_inp_bound)) deallocate(self%Q_inp_bound)
+      if (allocated(self%Q_inp_bound_con)) deallocate(self%Q_inp_bound_con)
+      if (associated(self%uv10)) then
+         deallocate(self%uv10)
+         nullify(self%uv10)
+      end if
+      if (associated(self%uv10_gas)) then
+         deallocate(self%uv10_gas)
+         nullify(self%uv10_gas)
+      end if
+      if (associated(self%u_taub)) then
+         deallocate(self%u_taub)
+         nullify(self%u_taub)
+      end if
+      if (associated(self%C10)) then
+         deallocate(self%C10)
+         nullify(self%C10)
+      end if
+      if (associated(self%T_atm)) then
+         deallocate(self%T_atm)
+         nullify(self%T_atm)
+      end if
+      if (associated(self%qa)) then
+         deallocate(self%qa)
+         nullify(self%qa)
+      end if
+      if (associated(self%Cloud)) then
+         deallocate(self%Cloud)
+         nullify(self%Cloud)
+      end if
+      if (associated(self%ice_area_fraction)) then
+         deallocate(self%ice_area_fraction)
+         nullify(self%ice_area_fraction)
+      end if
+      if (associated(self%rad0)) then
+         deallocate(self%rad0)
+         nullify(self%rad0)
+      end if
+      if (associated(self%par0)) then
+         deallocate(self%par0)
+         nullify(self%par0)
+      end if
+      if (associated(self%Lat)) then
+         deallocate(self%Lat)
+         nullify(self%Lat)
+      end if
+      if (associated(self%p_air)) then
+         deallocate(self%p_air)
+         nullify(self%p_air)
+      end if
+      if (associated(self%wat_albedo)) then
+         deallocate(self%wat_albedo)
+         nullify(self%wat_albedo)
       end if
    end subroutine
 

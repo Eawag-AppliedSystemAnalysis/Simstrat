@@ -56,7 +56,7 @@ program simstrat_main
    ! Instantiate all modules
    ! note that some are pointers/targets for polymorphism reasons
    type(SimstratSimulationFactory) :: factory
-   class(SimulationData), pointer :: simdata
+   class(SimulationData), pointer :: simdata => null()
    type(ThomasAlgSolver) :: solver
    type(EulerIDiscretizationMFQ) :: euler_i_disc
    type(EulerIDiscretizationKEPS) :: euler_i_disc_keps
@@ -217,6 +217,8 @@ program simstrat_main
    ! Close logger files after simulation
    call logger%close()
 
+   ! Finalize and deallocate the model
+   call finalize_simulation()
 contains
 
    subroutine run_simulation()
@@ -225,7 +227,7 @@ contains
       call ok("Start day: "//real_to_str(simdata%sim_cfg%start_datum, '(F7.1)'))
       new_start_datum = simdata%sim_cfg%start_datum
       if (continue_from_snapshot) then
-         call load_snapshot(snapshot_file_path, simdata%model_cfg%couple_fabm)
+         call load_snapshot(snapshot_file_path)
          call ok("Simulation snapshot successfully read. Snapshot day: "//real_to_str(simdata%model%datum, '(F7.1)'))
          call logger%calculate_simulation_time_for_next_output(simdata%model%simulation_time)
          new_start_datum = simdata%model%datum
@@ -348,7 +350,7 @@ contains
          end if
 
       end do
-      if (simdata%sim_cfg%continue_from_snapshot) call save_snapshot(snapshot_file_path, simdata%model_cfg%couple_fabm)
+      if (simdata%sim_cfg%continue_from_snapshot) call save_snapshot(snapshot_file_path)
       if (simdata%sim_cfg%save_text_restart) then
          call save_restart(file_text_restart, file_text_restart2)
       end if
@@ -414,36 +416,69 @@ contains
       call save_files(2)%close(status_ok)
    end subroutine
 
-   subroutine save_snapshot(file_path, couple_fabm)
+   subroutine save_snapshot(file_path)
       implicit none
       character(len=*), intent(in) :: file_path
-      logical, intent(in) :: couple_fabm
 
       open(80, file=file_path, Form='unformatted', Action='Write')
-      call simdata%model%save(couple_fabm, simdata%model_cfg%inflow_mode)
+      call simdata%model%save(simdata%model_cfg%couple_fabm, simdata%model_cfg%inflow_mode)
       call simdata%grid%save()
       call mod_absorption%save()
       if (simdata%model_cfg%inflow_mode > 0) then
          call mod_lateral%save()
       end if
+      if (simdata%model_cfg%couple_fabm) then
+         call mod_fabm%save()
+      end if
       call logger%save()
       close(80)
    end subroutine
 
-   subroutine load_snapshot(file_path, couple_fabm)
+   subroutine load_snapshot(file_path)
       implicit none
       character(len=*), intent(in) :: file_path
-      logical, intent(in) :: couple_fabm
 
       open(81, file=file_path, Form='unformatted', Action='Read')
-      call simdata%model%load(couple_fabm, simdata%model_cfg%inflow_mode)
+      call simdata%model%load(simdata%model_cfg%couple_fabm, simdata%model_cfg%inflow_mode)
       call simdata%grid%load()
       call mod_absorption%load()
-      if (simdata%model_cfg%inflow_mode > 0) then
-         call mod_lateral%load()
+      if (simdata%model_cfg%couple_fabm) then
+         call mod_fabm%load()
       end if
       call logger%load()
       close(81)
+   end subroutine
+
+   ! Deallocate in reverse order to initialization
+   subroutine finalize_simulation()
+      ! InterpolatingLogger
+      call logger%deallocate()
+      ! GenericLateralModule
+      call mod_lateral%deallocate()
+      ! SimstratFABM (also finalize and deallocate FABM)
+      call mod_fabm%finalize()
+      ! AbsorptionModule
+      call mod_absorption%deallocate()
+      ! First deallocate all types inside SimulationData
+      call simdata%input_cfg%deallocate()
+      call simdata%output_cfg%deallocate()
+      call simdata%sim_cfg%deallocate()
+      call simdata%model_cfg%deallocate()
+      call simdata%grid_cfg%deallocate()
+      call simdata%fabm_cfg%deallocate()
+      call simdata%model_param%deallocate()
+      call simdata%model%deallocate()
+      call simdata%grid%deallocate()
+      ! Deallocate SimulationData
+      if (associated(simdata)) then
+         deallocate(simdata)
+         nullify(simdata)
+      end if
+      ! Deallocate main
+      if (allocated(ParName)) deallocate(ParName)
+      if (allocated(snapshot_file_path)) deallocate(snapshot_file_path)
+      if (allocated(file_text_restart)) deallocate(file_text_restart)
+      if (allocated(file_text_restart2)) deallocate(file_text_restart2)
    end subroutine
 
 end program simstrat_main

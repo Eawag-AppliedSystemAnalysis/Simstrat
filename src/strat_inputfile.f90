@@ -453,22 +453,22 @@ contains
    subroutine read_grid_config(self)
       implicit none
       class(SimstratSimulationFactory) :: self
-      type(GridConfig) :: grid_config
       real(RK), dimension(:) :: z_tmp(self%simdata%model_cfg%max_length_input_data)
       real(RK), dimension(:) :: A_tmp(self%simdata%model_cfg%max_length_input_data)
       integer :: n_read, i
       associate (simdata=>self%simdata, &
-                 max_length_input_data=>grid_config%max_length_input_data)
+                 grid_cfg=>self%simdata%grid_cfg, &
+                 max_length_input_data=>self%simdata%grid_cfg%max_length_input_data)
 
-         grid_config%max_length_input_data = self%simdata%model_cfg%max_length_input_data
+         grid_cfg%max_length_input_data = self%simdata%model_cfg%max_length_input_data
 
          if (simdata%input_cfg%grid_input_type == 7) then
-            allocate (grid_config%grid_read(grid_config%max_length_input_data))
+            allocate (grid_cfg%grid_read(grid_cfg%max_length_input_data))
             ! Read grid
             open (12, status='old', file=simdata%input_cfg%GridName)
             read (12, *)
             do i = 1, max_length_input_data
-               read (12, *, end=69) grid_config%grid_read(i)
+               read (12, *, end=69) grid_cfg%grid_read(i)
             end do
 
 69          if(i==max_length_input_data) then
@@ -479,28 +479,28 @@ contains
             close (12)
 
             if (i == 2) then ! Constant spacing
-               grid_config%nz_grid = int(grid_config%grid_read(1))
-               grid_config%equidistant_grid = .TRUE.
+               grid_cfg%nz_grid = int(grid_cfg%grid_read(1))
+               grid_cfg%equidistant_grid = .TRUE.
             else ! Variable spacing
-               grid_config%nz_grid = i - 2
-               grid_config%equidistant_grid = .FALSE.
+               grid_cfg%nz_grid = i - 2
+               grid_cfg%equidistant_grid = .FALSE.
             end if
 
          ! If grid was read from json
          ! If an array of grid values is given
          else if (simdata%input_cfg%grid_input_type == 3) then
             ! Determine nz_grid from grid
-            grid_config%nz_grid = size(simdata%input_cfg%read_grid_array_from_json) - 1
+            grid_cfg%nz_grid = size(simdata%input_cfg%read_grid_array_from_json) - 1
             ! Set flag
-            grid_config%equidistant_grid = .FALSE.
+            grid_cfg%equidistant_grid = .FALSE.
             ! Store json-read values in grid_read array to be compatible with rest of the code
-            allocate (grid_config%grid_read(grid_config%max_length_input_data))
-            grid_config%grid_read(1:grid_config%nz_grid + 1) = simdata%input_cfg%read_grid_array_from_json(1:grid_config%nz_grid + 1)
+            allocate (grid_cfg%grid_read(grid_cfg%max_length_input_data))
+            grid_cfg%grid_read(1:grid_cfg%nz_grid + 1) = simdata%input_cfg%read_grid_array_from_json(1:grid_cfg%nz_grid + 1)
             call ok('Grid file successfully read')
          ! If the spacing is given
          else
-            grid_config%nz_grid = int(simdata%input_cfg%read_grid_value_from_json)
-            grid_config%equidistant_grid = .TRUE.
+            grid_cfg%nz_grid = int(simdata%input_cfg%read_grid_value_from_json)
+            grid_cfg%equidistant_grid = .TRUE.
             call ok('Grid file successfully read')
          end if
 
@@ -534,18 +534,18 @@ contains
 
          n_read = i - 1 ! Number of area values
 
-         allocate (grid_config%z_A_read(n_read), grid_config%A_read(n_read))
+         allocate (grid_cfg%z_A_read(n_read), grid_cfg%A_read(n_read))
 
          ! Reverse order of values
          do i = 1, n_read
-            grid_config%z_A_read(i) = -z_tmp(n_read - i + 1)
-            grid_config%A_read(i) = A_tmp(n_read - i + 1)
+            grid_cfg%z_A_read(i) = -z_tmp(n_read - i + 1)
+            grid_cfg%A_read(i) = A_tmp(n_read - i + 1)
          end do
 
-         grid_config%max_depth = grid_config%z_A_read(1) - grid_config%z_A_read(n_read) ! depth = max - min depth
+         grid_cfg%max_depth = grid_cfg%z_A_read(1) - grid_cfg%z_A_read(n_read) ! depth = max - min depth
 
          ! Initialize Grid of simdata
-         call simdata%grid%init(grid_config)
+         call simdata%grid%init(grid_cfg)
       end associate
    end subroutine
 

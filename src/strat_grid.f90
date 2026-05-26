@@ -26,7 +26,6 @@
 !     |  - Contains class to store, use and modify the grid
 !<    +---------------------------------------------------------------+
 
-
 module strat_grid
    use strat_kinds
    use utilities
@@ -42,21 +41,23 @@ module strat_grid
       real(RK), dimension(:), allocatable :: A_read ! Area definition
       real(RK), dimension(:), allocatable :: z_A_read ! Height of area definitions
       logical :: equidistant_grid
+   contains
+      procedure, pass :: deallocate => grid_config_deallocate
    end type
 
    ! StaggeredGrid implementation
    type, public :: StaggeredGrid
-      real(RK), dimension(:), pointer     :: h              ! Box height
-      real(RK), dimension(:), allocatable :: z_face         ! Holds z-values of faces
-      real(RK), dimension(:), allocatable :: z_volume       ! Holds z-values of volume centers
-      real(RK), dimension(:), pointer     :: layer_depth    ! Depth of each layer, used by FABM (needs pointer attribute)
-      real(RK), dimension(:), allocatable :: Az             ! Areas
-      real(RK), dimension(:), pointer     :: Az_vol         ! Areas on volume grid, needed for FABM
-      real(RK), dimension(:), allocatable :: dAz            ! Area derivative with respect to height
-      real(RK), dimension(:), pointer     :: dAz_norm          ! Normalized area derivative, used by FABM (needs pointer attribute)
-      real(RK), dimension(:), allocatable :: meanint        ! ?
-      real(RK), pointer :: max_depth                        ! Relative to lake surface depth of lowest layer, FABM needs pointer attribute
-      real(RK), pointer :: z_zero                           ! Absolute depth of lowest layer, FABM needs pointer attribute
+      real(RK), dimension(:), pointer     :: h => null()           ! Box height
+      real(RK), dimension(:), allocatable :: z_face                ! Holds z-values of faces
+      real(RK), dimension(:), allocatable :: z_volume              ! Holds z-values of volume centers
+      real(RK), dimension(:), pointer     :: layer_depth => null() ! Depth of each layer, used by FABM (needs pointer attribute)
+      real(RK), dimension(:), allocatable :: Az                    ! Areas
+      real(RK), dimension(:), pointer     :: Az_vol => null()      ! Areas on volume grid, needed for FABM
+      real(RK), dimension(:), allocatable :: dAz                   ! Area derivative with respect to height
+      real(RK), dimension(:), pointer     :: dAz_norm => null()    ! Normalized area derivative, used by FABM (needs pointer attribute)
+      real(RK), dimension(:), allocatable :: meanint               ! ?
+      real(RK), pointer :: max_depth => null()                     ! Relative to lake surface depth of lowest layer, FABM needs pointer attribute
+      real(RK), pointer :: z_zero => null()                        ! Absolute depth of lowest layer, FABM needs pointer attribute
       real(RK) :: volume, h_old
 
       !Area factors
@@ -104,6 +105,9 @@ module strat_grid
       ! Saving & loading methods
       procedure, pass :: save => grid_save
       procedure, pass :: load => grid_load
+
+      ! Deallocation method
+      procedure, pass :: deallocate => grid_deallocate
    end type
 
 contains
@@ -115,6 +119,7 @@ contains
       call save_array_pointer(80, self%h)
       call save_array(80, self%z_face)
       call save_array(80, self%z_volume)
+      call save_array_pointer(80, self%layer_depth)
       call save_array(80, self%Az)
       call save_array_pointer(80, self%Az_vol)
       call save_array(80, self%dAz)
@@ -138,6 +143,7 @@ contains
       call read_array_pointer(81, self%h)
       call read_array(81, self%z_face)
       call read_array(81, self%z_volume)
+      call read_array_pointer(81, self%layer_depth)
       call read_array(81, self%Az)
       call read_array_pointer(81, self%Az_vol)
       call read_array(81, self%dAz)
@@ -152,6 +158,55 @@ contains
       read(81) self%nz_grid, self%nz_occupied, self%max_length_input_data
       read(81) self%ubnd_vol, self%ubnd_fce
       read(81) self%z_zero, self%lake_level, self%lake_level_old
+   end subroutine
+
+   ! Deallocate all data allocated in self
+   subroutine grid_deallocate(self)
+      class(StaggeredGrid), intent(inout) :: self
+      
+      if (associated(self%h)) then
+         deallocate(self%h)
+         nullify(self%h)
+      end if
+      if (allocated(self%z_face)) deallocate(self%z_face)
+      if (allocated(self%z_volume)) deallocate(self%z_volume)
+      if (associated(self%layer_depth)) then
+         deallocate(self%layer_depth)
+         nullify(self%layer_depth)
+      end if
+      if (allocated(self%Az)) deallocate(self%Az)
+      if (associated(self%Az_vol)) then
+         deallocate(self%Az_vol)
+         nullify(self%Az_vol)
+      end if
+      if (allocated(self%dAz)) deallocate(self%dAz)
+      if (associated(self%dAz_norm)) then
+         deallocate(self%dAz_norm)
+         nullify(self%dAz_norm)
+      end if
+      if (allocated(self%meanint)) deallocate(self%meanint)
+      if (associated(self%max_depth)) then
+         deallocate(self%max_depth)
+         nullify(self%max_depth)
+      end if
+      if (associated(self%z_zero)) then
+         deallocate(self%z_zero)
+         nullify(self%z_zero)
+      end if
+      if (allocated(self%AreaFactor_1)) deallocate(self%AreaFactor_1)
+      if (allocated(self%AreaFactor_2)) deallocate(self%AreaFactor_2)
+      if (allocated(self%AreaFactor_k1)) deallocate(self%AreaFactor_k1)
+      if (allocated(self%AreaFactor_k2)) deallocate(self%AreaFactor_k2)
+      if (allocated(self%AreaFactor_eps)) deallocate(self%AreaFactor_eps)
+   end subroutine
+
+   ! Deallocate grid configuration
+   subroutine grid_config_deallocate(self)
+      class(GridConfig), intent(inout) :: self
+
+      if (allocated(self%grid_read)) deallocate(self%grid_read)
+      if (allocated(self%A_read)) deallocate(self%A_read)
+      if (allocated(self%z_A_read)) deallocate(self%z_A_read)
    end subroutine
 
   ! Set up grid at program start

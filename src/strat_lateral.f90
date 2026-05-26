@@ -43,6 +43,7 @@ module strat_lateral
    ! Generic base class for both modules (LateralRho and Normal)
    type, abstract, public :: GenericLateralModule
       class(ModelConfig), pointer :: cfg
+      class(FABMConfig), pointer :: fabm_cfg
       class(StaggeredGrid), pointer :: grid
       class(ModelParam), pointer :: param
 
@@ -64,6 +65,7 @@ module strat_lateral
       procedure, pass :: init => lateral_generic_init
       procedure, pass :: save => lateral_generic_save
       procedure, pass :: load => lateral_generic_load
+      procedure, pass :: deallocate => lateral_generic_deallocate
       procedure, pass :: update_bound => lateral_bound_update
       procedure(lateral_generic_update), deferred, pass :: update
    end type
@@ -218,14 +220,20 @@ contains
          call save_matrix(80, self%Qs_read_end)
          ! Surface-bound horizontal inflow for FABM
          if (self%couple_fabm) then
-            call save_integer_array(80, self%number_of_lines_read_bound)
-            call save_integer_array(80, self%eof_bound)
-            call save_integer_array(80, self%nval_bound)
-            call save_integer_array(80, self%fnum_bound)
-            call save_array(80, self%tb_start_bound)
-            call save_array(80, self%tb_end_bound)
-            call save_array(80, self%Q_start_bound)
-            call save_array(80, self%Q_end_bound)
+            if (self%fabm_cfg%n_bottom_state + self%fabm_cfg%n_surface_state > 0) then
+               call save_integer_array(80, self%number_of_lines_read_bound)
+               call save_integer_array(80, self%fnum_bound)
+            end if
+            if (self%fabm_cfg%n_surface_state > 0) then
+               call save_integer_array(80, self%eof_bound)
+               call save_integer_array(80, self%nval_bound)
+               call save_array(80, self%tb_start_bound)
+               call save_array(80, self%tb_end_bound)
+               call save_array(80, self%Q_start_bound)
+               call save_array(80, self%Q_end_bound)
+               call save_array(80, self%Q_start_bound_con)
+               call save_array(80, self%Q_end_bound_con)
+            end if
          end if
       end if
    end subroutine
@@ -262,18 +270,60 @@ contains
          call read_matrix(81, self%Qs_read_end)
          ! Surface-bound horizontal inflow for FABM
          if (self%couple_fabm) then
-            call read_integer_array(81, self%number_of_lines_read_bound)
-            call read_integer_array(81, self%eof_bound)
-            call read_integer_array(81, self%nval_bound)
-            call read_integer_array(81, self%fnum_bound)
-            call read_array(81, self%tb_start_bound)
-            call read_array(81, self%tb_end_bound)
-            call read_array(81, self%Q_start_bound)
-            call read_array(81, self%Q_end_bound)
+            if (self%fabm_cfg%n_bottom_state + self%fabm_cfg%n_surface_state > 0) then
+               call read_integer_array(80, self%number_of_lines_read_bound)
+               call read_integer_array(81, self%fnum_bound)
+            end if
+            if (self%fabm_cfg%n_surface_state > 0) then
+               call read_integer_array(81, self%eof_bound)
+               call read_integer_array(81, self%nval_bound)
+               call read_array(81, self%tb_start_bound)
+               call read_array(81, self%tb_end_bound)
+               call read_array(81, self%Q_start_bound)
+               call read_array(81, self%Q_end_bound)
+               call read_array(81, self%Q_start_bound_con)
+               call read_array(81, self%Q_end_bound_con)
+            end if
          end if
       end if
    end subroutine
-      
+
+   ! Deallocate all data allocated in self
+   subroutine lateral_generic_deallocate(self)
+      class(GenericLateralModule) :: self
+
+      if (allocated(self%number_of_lines_read)) deallocate(self%number_of_lines_read)
+      if (allocated(self%eof)) deallocate(self%eof)
+      if (allocated(self%nval)) deallocate(self%nval)
+      if (allocated(self%nval_deep)) deallocate(self%nval_deep)
+      if (allocated(self%nval_surface)) deallocate(self%nval_surface)
+      if (allocated(self%fnum)) deallocate(self%fnum)
+      if (allocated(self%has_surface_input)) deallocate(self%has_surface_input)
+      if (allocated(self%has_deep_input)) deallocate(self%has_deep_input)
+      if (allocated(self%tb_start)) deallocate(self%tb_start)
+      if (allocated(self%tb_end)) deallocate(self%tb_end)
+      if (allocated(self%z_Inp)) deallocate(self%z_Inp)
+      if (allocated(self%Q_start)) deallocate(self%Q_start)
+      if (allocated(self%Qs_start)) deallocate(self%Qs_start)
+      if (allocated(self%Q_end)) deallocate(self%Q_end)
+      if (allocated(self%Qs_end)) deallocate(self%Qs_end)
+      if (allocated(self%Q_read_start)) deallocate(self%Q_read_start)
+      if (allocated(self%Q_read_end)) deallocate(self%Q_read_end)
+      if (allocated(self%Inp_read_start)) deallocate(self%Inp_read_start)
+      if (allocated(self%Inp_read_end)) deallocate(self%Inp_read_end)
+      if (allocated(self%Qs_read_start)) deallocate(self%Qs_read_start)
+      if (allocated(self%Qs_read_end)) deallocate(self%Qs_read_end)
+      if (allocated(self%number_of_lines_read_bound)) deallocate(self%number_of_lines_read_bound)
+      if (allocated(self%eof_bound)) deallocate(self%eof_bound)
+      if (allocated(self%nval_bound)) deallocate(self%nval_bound)
+      if (allocated(self%fnum_bound)) deallocate(self%fnum_bound)
+      if (allocated(self%tb_start_bound)) deallocate(self%tb_start_bound)
+      if (allocated(self%tb_end_bound)) deallocate(self%tb_end_bound)
+      if (allocated(self%Q_start_bound)) deallocate(self%Q_start_bound)
+      if (allocated(self%Q_end_bound)) deallocate(self%Q_end_bound)
+      if (allocated(self%Q_start_bound_con)) deallocate(self%Q_start_bound_con)
+      if (allocated(self%Q_end_bound_con)) deallocate(self%Q_end_bound_con)
+   end subroutine
       
    ! Implementation for lateral rho
    subroutine lateral_rho_update(self, state, fabm_cfg, output_cfg)
@@ -449,7 +499,7 @@ contains
             end if ! if        
 
             ! If lake level changes and if there is surface inflow, adjust inflow depth to keep relative inflow depth constant
-            if ((.not. compare_floats(grid%lake_level, grid%lake_level_old)) &
+            if ((.not. compare_floats(grid%lake_level, grid%lake_level_old, 1.0e-4_RK)) &
                .and. self%has_surface_input(i)) then
 
                ! Readjust surface input depths

@@ -292,16 +292,14 @@ contains
       implicit none
       ! "Convert an integer to string."
       integer, intent(in) :: k
-      write (str_int, '(a)') k
-      str_int = adjustl(str_int)
+      write (str_int, '(i0)') k
    end function str_int
 
    character(len=20) function str_real(k)
       implicit none
-      ! "Convert an integer to string."
+      ! "Convert a float to string."
       real(RK), intent(in) :: k
-      write (str_real, '(a)') k
-      str_real = adjustl(str_real)
+      write (str_real, '(g0)') k
    end function str_real
 
    character(len=20) function real_to_str(k, fmt)
@@ -577,7 +575,6 @@ contains
    pure logical function ge_floats(a, b, reltol)
       real(RK), intent(in) :: a, b
       real(RK), intent(in), optional :: reltol
-      real(RK) :: tol
 
       if (present(reltol)) then
          ge_floats = (a > b) .or. compare_floats(a, b, reltol)
@@ -590,7 +587,6 @@ contains
    pure logical function se_floats(a, b, reltol)
       real(RK), intent(in) :: a, b
       real(RK), intent(in), optional :: reltol
-      real(RK) :: tol
 
       if (present(reltol)) then
          se_floats = (a < b) .or. compare_floats(a, b, reltol)

@@ -56,6 +56,7 @@ module strat_absorption
       procedure, pass :: update => absorption_update
       procedure, pass :: save => absorption_save
       procedure, pass :: load => absorption_load
+      procedure, pass :: deallocate => absorption_deallocate
    end type
 
 contains
@@ -111,6 +112,9 @@ contains
       call save_array(80, self%z_absorb)
       call save_array(80, self%absorb_start)
       call save_array(80, self%absorb_end)
+      if (self%cfg%couple_fabm) then
+         call save_array(80, self%bg)
+      end if
    end subroutine
 
    subroutine absorption_load(self)
@@ -123,6 +127,19 @@ contains
       call read_array(81, self%z_absorb)
       call read_array(81, self%absorb_start)
       call read_array(81, self%absorb_end)
+      if (self%cfg%couple_fabm) then
+         call read_array(81, self%bg)
+      end if
+   end subroutine
+
+   ! Deallocate all data allocated in self
+   subroutine absorption_deallocate(self)
+      class(AbsorptionModule) :: self
+
+      if (allocated(self%z_absorb)) deallocate(self%z_absorb)
+      if (allocated(self%absorb_start)) deallocate(self%absorb_start)
+      if (allocated(self%absorb_end)) deallocate(self%absorb_end)
+      if (allocated(self%bg)) deallocate(self%bg)
    end subroutine
 
    subroutine absorption_update(self, state)
