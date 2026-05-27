@@ -804,7 +804,7 @@ contains
             do k = 1, size(state%absorb_from_fabm)
                if (state%absorb_from_fabm(k) < 0.0_RK) then
                   state%absorb_to_fabm(k) = fabm_cfg%background_extinction
-                  call warn('Negative light extinction value at height '//trim(str_int(k))//' inside FABM -- changed absorption passed to FABM to background there. Possibly decrease Timestep or change InputExtinctionFactor.')
+                  call warn('Negative light extinction value at height '//trim(str_int(k))//' inside FABM -- momentarily changed absorption passed to FABM to background there. Avoid by decreasing Timestep or changing InputExtinctionFactor.')
                end if
             end do
             call self%fabm_model%prepare_inputs(real(timestep_counter, kind=RK))

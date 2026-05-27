@@ -454,9 +454,9 @@ contains
       ! InterpolatingLogger
       call logger%deallocate()
       ! GenericLateralModule
-      call mod_lateral%deallocate()
+      if (simdata%model_cfg%inflow_mode > 0) call mod_lateral%deallocate()
       ! SimstratFABM (also finalize and deallocate FABM)
-      call mod_fabm%finalize()
+      if (simdata%model_cfg%couple_fabm) call mod_fabm%finalize()
       ! AbsorptionModule
       call mod_absorption%deallocate()
       ! First deallocate all types inside SimulationData
