@@ -1,3 +1,28 @@
+## Biogeochemical models
+
+We have tested the following biogeochemical models:
+
+- [Selmaprotbas](https://github.com/jorritmesman/selmaprotbas), 28.05.26
+- [WET](https://gitlab.com/wateritech-public/waterecosystemstool/wet), 28.05.26
+
+### Notes on WET
+
+There is a small bug in WET, unresolved as of the date above. In order to run WET, line 1129 in [src/fish.f90](https://gitlab.com/wateritech-public/waterecosystemstool/wet/-/blob/master/src/fish.F90) has to be changed to
+
+~~~bash
+   _HORIZONTAL_LOOP_BEGIN_  !!! BEGINNING OF MODEL CODE::
+~~~
+
+before building FABM.
+
+In WET there are pelagic mirrors of the same value as their corresponding bottom state variable, but saved as interior state variables in FABM. Some adaptions to Simstrat had to be made for the pelagic mirrors not to be affected by diffusion and inflow.
+
+### Using a new biogeochemical model
+
+To use a new biogeochemical model, first clone any [available model from FABM Wiki](https://github.com/fabm-model/fabm/wiki/Biogeochemical-models-in-FABM#available-models) into your repository and then follow step 3. in [README.md](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/blob/couple_with_fabm/README.md). 
+
+A untested biogeochemical model might require additional environmental dependencies (`FABM is lacking required data`). If the dependency is among the [FABM Standard Variables](https://github.com/fabm-model/fabm/wiki/List-of-standard-variables), just add the link in the subroutine link_environmental_data in [src/simstrat_fabm.f90](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/blob/couple_with_fabm/src/simstrat_fabm.f90). If the dependency is not among the standard variables, you additionally have to define the variable of the right type, using the [Instructions from the FABM Wiki](link_environmental_data) or following the example of `bot_pel_conv` in [src/simstrat_fabm.f90](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/blob/couple_with_fabm/src/simstrat_fabm.f90). You might have to add the calculation of an additional environmental dependency in Simstrat.
+
 ## Configure FABM
 
 There are various configurations for the use of FABM
@@ -34,7 +59,11 @@ After having started the simulation once, you will find a list of all diagnostic
 - Add `select_all_*` to output all FABM diagnostic variables that start with `*` (e.g. `select_all_npzd`) or `select_all_` to output all FABM diagnostic variables
 - Add `select_output_*` to output all FABM diagnostic variables that start with `*` (e.g. `select_output_npzd`) and have `Output` set `Yes` by the biogeochemical model or `select_output_` to output all FABM diagnostic variables that have Output set true
 
-> **N.B.** If `BottomEverywhere` is set `True`, the output of horizontal diagnostics highly increases runtime
+> **N.B.1** If `BottomEverywhere` is set `True`, the output of horizontal diagnostics highly increases runtime
+
+> **N.B.2** The options `select_output_` or `select_all_` require a lot of runtime
+
+> **N.B.3** For the biogeochemical model WET with many diagnostic variables the option `select_all_` is not possible
 
 ### Output Repaired Variables
 
@@ -101,9 +130,49 @@ Whereas to add a density of 10<sup>-5</sup> mmol/m<sup>3</sup> during days 12005
 The following are additional configurations that can be found in `FABMConfig`:
 
 - `BottomEverywhere` selects whether FABM Bottom State variables should be calculated at every layer (`True`) or only at the lowermost layer (`False`)
-- `InputExtinctionFactor` sets the proportional contribution to the extinction from the input file at `Absorption` in `Input` (the contribution from the biogeochemical models is (1 - `InputExtinctionFactor`), thus 0 if `InputExtinctionFactor` is 1)
+- `InputExtinctionFactor` sets the proportional contribution to the extinction from the input file at `Absorption` in `Input` (the contribution from the biogeochemical models is (`1.0` - `InputExtinctionFactor`), thus `0.0` if `InputExtinctionFactor` is `1.0`)
 - `BackgroundExtinction` sets background extinction due to pure water extinction added to the light extinction calculated by the biogeochemical models if `InputExtinctionFactor` is smaller than 1, must be regulated to avoid double counting of the pure water extinction
 
 > **N.B.1** Setting `BottomEverywhere` to `True` heavily increases runtime since this is a workaround to bottom variables having the same dimensionality as interior variables not being supported in FABM
 > See: https://github.com/fabm-model/fabm/issues/170
+
 > **N.B.2** If `BottomEverywhere` is set to `True`, also all horizontal diagnostic variables have output at every layer, even if for some of them (e.g. surface diagnostic variables) this is not physically meaningful >This does not affect the simulation.
+
+## Common errors and warnings
+
+## To Dos
+
+In general the model works well. Still, there are some improvements and enhancements that could be done.
+
+### Environmental dependencies
+
+The environmental dependencies passed to FABM in the subroutine link_environmental_data in [src/simstrat_fabm.f90](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/blob/couple_with_fabm/src/simstrat_fabm.f90) could be optimized:
+
+- Simstrat passes the same light extinction for PAR and for SWR which is not exactly correct since the [attenuation coefficient for PAR can be higher than for SWR](https://www.sciencedirect.com/science/article/pii/S1001074217317734)
+- The light extinction calculation is a hacky solution to allow for contributions from both the physical host and the biogeochemical model and could be more stable
+- It is possible to only calculate and pass the dependencies that are actually required by the biogeochemical models [see FABM Wiki](https://www.sciencedirect.com/science/article/pii/S1001074217317734) 
+
+### FABM features
+
+There are some FABM features that are not required for the model to work but could be useful to implement:
+
+- [Provide FABM with custom logging and error handling routines](https://github.com/fabm-model/fabm/wiki/Using-FABM-from-a-physical-model#providing-routines-for-logging-and-error-handling)
+- [Provide mechanisms to provide additional forcing files](https://github.com/fabm-model/fabm/wiki/Using-FABM-from-a-physical-model#providing-additional-forcing-variables)
+- [Provide mask for regions excluded from calculations](https://github.com/fabm-model/fabm/wiki/Using-FABM-from-a-physical-model#providing-additional-forcing-variables)
+- [Obtain totals of conserved quantities to check mass conservation](https://github.com/fabm-model/fabm/wiki/Using-FABM-from-a-physical-model#obtain-the-totals-of-conserved-quantities)
+- [Enumerate parameters of biogeochemical models to the user](https://github.com/fabm-model/fabm/wiki/Using-FABM-from-a-physical-model#accessing-parameters-of-the-biogeochemical-model)
+- Add the macro `_FABM_CONTIGUOUS_` (Specifies that all arrays passed to FABM will be contiguous in memory and allows the compiler to make further optimizations) to [lib/fabm/src/drivers/simstrat/fabm_driver.h](https://github.com/fabm-model/fabm/blob/f85de87ae0ab0bb42c1bf65ed6fdda4fa5ca5813/src/drivers/simstrat/fabm_driver.h). This requires a pull request to the FABM code. This can work with Simstrat but with this macro small changes to Simstrat can heavily corrupt the repository, which is why this should only be done in a final version. More information in the [FABM Wiki](https://github.com/fabm-model/fabm/wiki/Using-FABM-from-a-physical-model#specifying-the-spatial-context).
+
+### Efficiency
+
+- Adding diagnostic variables increases runtime more than expected and it is not clear why
+- The `BottomEverywhere` implementation loops at every layer over the FABM function `prepare_inputs` if bottom or interior state variables exist and over the FABM function `finalize_outputs` if any horizontal diagnostic variables are output. Both of these functions perform calculations over the entire active spatial domain which is very inefficient. The [issue](https://github.com/fabm-model/fabm/issues/170) has been discussed with the FABM team.
+
+### Checks
+
+- Load and save snapshot subroutines have not been tested with FABM
+- Check the assumptions for the subroutine integrate_interior_state in [src/simstrat_fabm.f90](https://github.com/Eawag-AppliedSystemAnalysis/Simstrat/blob/couple_with_fabm/src/simstrat_fabm.f90)
+
+### Enhancements
+
+- Provide Simstrat configurations in a YAML file that allows for variable specific parameters (e.g. a parameter that could scale all the inflow properties)
