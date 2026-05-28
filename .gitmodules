@@ -3,4 +3,4 @@
 	url = git@github.com:d-vanzo/forbear.git
 [submodule "lib/fabm"]
 	path = lib/fabm
-	url = git@github.com:Eawag-AppliedSystemAnalysis/fabm.git
+	url = git@github.com:fabm-model/fabm.git
