@@ -448,16 +448,22 @@ contains
       if (allocated(self%output_files)) deallocate (self%output_files)
       allocate (self%output_files(1:self%n_vars))
 
+      ! Get variable structure
       do i = 1, self%n_vars
+         ! Simstrat
          if (i < (self%n_vars_Simstrat + 1)) then
             var => output_config%output_vars(i)
+         ! FABM
          else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + 1)) then
             var => output_config%output_vars_fabm_state(i - self%n_vars_Simstrat)
+         ! FABM diagnostic
          else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic + 1)) then
             var => output_config%output_vars_fabm_diagnostic(i - (self%n_vars_Simstrat + self%n_vars_fabm_state))
+         ! FABM repaired
          else
             var => output_config%output_vars_fabm_repaired(i - (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic))
          end if
+         ! Get file path
          file_path = output_config%PathOut//'/'//trim(var%name)//'_out.dat'
          inquire (file=file_path, exist=append)
          append = append .and. snapshot_file_exists

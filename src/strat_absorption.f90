@@ -241,8 +241,8 @@ contains
                state%absorb(1:nz) = self%inp * state%absorb(1:nz) + (1 - self%inp) * state%absorb_from_fabm(1:nz) + self%bg(1:nz)
                ! Absorption passed to FABM such that adding bgc contribution once (done by bgc model) results in absorption above
                ! Assuming that biogeochemical contribution does not change in one timestep
-               ! Careful: The light extinction could potentially, but very improbably become negative if
-               ! the biogeochemical contribution absorb_from_fabm were to decrease drastically by (inp-1)*absorb_from_fabm-inp*absorb-bg in one timestep
+               ! Careful: The light extinction can become negative if the biogeochemical contribution 
+               ! absorb_from_fabm decreases drastically by (inp-1)*absorb_from_fabm-inp*absorb-bg in one timestep
                state%absorb_to_fabm(1:nz) = self%inp * state%absorb_to_fabm(1:nz) - self%inp * state%absorb_from_fabm(1:nz) + self%bg(1:nz)
             end if
          end if
