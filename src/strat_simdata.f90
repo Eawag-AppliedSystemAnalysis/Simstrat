@@ -200,6 +200,7 @@ module strat_simdata
       real(RK) :: po4ret
       real(RK) :: rfr
       real(RK) :: rfn
+      real(RK) :: kc
 
       !real(RK) :: k_min
    end type
