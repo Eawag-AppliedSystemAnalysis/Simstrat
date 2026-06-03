@@ -175,8 +175,8 @@ contains
 
          ! Define variables that should be written
          if (output_cfg%output_all) then
-            output_cfg%number_output_vars = 24
-            output_cfg%output_var_names = [character(len=12) :: 'V','U','T','S','num','nuh','NN','k','eps','P','B','Ps','HA','HW','HK','HV','Rad0','SWR','TotalIceH','BlackIceH','WhiteIceH','SnowH','WaterH','Qvert','Eseiche']
+            output_cfg%number_output_vars = 27
+            output_cfg%output_var_names = [character(len=12) :: 'V','U','T','S','num','nuh','NN','k','eps','P','B','Ps','HA','HW','HK','HV','Rad0','SWR','TotalIceH','BlackIceH','WhiteIceH','SnowH','WaterH','Qvert','Eseiche','O2_hypo','T_hypo']
          else
             output_cfg%number_output_vars = size(output_cfg%output_var_names)
          end if
@@ -382,6 +382,20 @@ contains
                   self%simdata%output_cfg%output_vars(i)%long_name = "Total seiche energy"
                   self%simdata%output_cfg%output_vars(i)%units = "J"
                   self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%E_seiche
+
+               case('O2_hypo')
+                  ! Total seiche energy [J]
+                  self%simdata%output_cfg%output_vars(i)%name = "O2_hypo"
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Hypolimnetic mean oxygen"
+                  self%simdata%output_cfg%output_vars(i)%units = "mmol/L"
+                  self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%O2_hypo
+
+               case('T_hypo')
+                  ! Total seiche energy [J]
+                  self%simdata%output_cfg%output_vars(i)%name = "T_hypo"
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Hypolimnetic mean temperature"
+                  self%simdata%output_cfg%output_vars(i)%units = "°C"
+                  self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%T_hypo
 
                case default
                   call error('Output variable specified in config file not found: ' // trim(output_cfg%output_var_names(i)))
@@ -753,31 +767,56 @@ contains
          call par_file%get("ModelParameters.CD_in", model_param%CD_in, found); call check_field(found, 'ModelParameters.CD_in', ParName)
 
          ! selma
-         call par_file%get("ModelParameters.wdz", model_param%wdz, found); call check_field(found, 'ModelParameters.wdz', ParName)
-         call par_file%get("ModelParameters.dn", model_param%dn, found); call check_field(found, 'ModelParameters.dn', ParName)
-         call par_file%get("ModelParameters.dn_sed", model_param%dn_sed, found); call check_field(found, 'ModelParameters.dn_sed', ParName)
-         call par_file%get("ModelParameters.kc", model_param%kc, found); call check_field(found, 'ModelParameters.kc', ParName)
-         call par_file%get("ModelParameters.q10_rec", model_param%q10_rec, found); call check_field(found, 'ModelParameters.q10_rec', ParName)
-         call par_file%get("ModelParameters.q10_recs", model_param%q10_recs, found); call check_field(found, 'ModelParameters.q10_recs', ParName)
-         call par_file%get("ModelParameters.mbnnrate", model_param%mbnnrate, found); call check_field(found, 'ModelParameters.mbnnrate', ParName)
-         call par_file%get("ModelParameters.sedrate", model_param%sedrate, found); call check_field(found, 'ModelParameters.sedrate', ParName)
-         call par_file%get("ModelParameters.fds", model_param%fds, found); call check_field(found, 'ModelParameters.fds', ParName)
-         call par_file%get("ModelParameters.nitrif_rate", model_param%nitrif_rate, found); call check_field(found, 'ModelParameters.nitrif_rate', ParName)
-         call par_file%get("ModelParameters.pburialrate", model_param%pburialrate, found); call check_field(found, 'ModelParameters.pburialrate', ParName)
-         call par_file%get("ModelParameters.fl_burialrt", model_param%fl_burialrt, found); call check_field(found, 'ModelParameters.fl_burialrt', ParName)
+         call par_file%get("ModelParameters.wdz", model_param%wdz, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "wdz", model_param%wdz)
 
-         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "wdz", model_param%wdz)
-         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "dn", model_param%dn)
-         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "dn_sed", model_param%dn_sed)
-         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "kc", model_param%kc)
-         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "q10_rec", model_param%q10_rec)
-         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "q10_recs", model_param%q10_recs)
-         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "mbnnrate", model_param%mbnnrate)
-         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "sedrate", model_param%sedrate)
-         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "fds", model_param%fds)
-         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "nitrif_rate", model_param%nitrif_rate)
-         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "pburialrate", model_param%pburialrate)
-         call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "fl_burialrt", model_param%fl_burialrt)
+         call par_file%get("ModelParameters.wpo4", model_param%wpo4, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "wpo4", model_param%wpo4)
+
+         call par_file%get("ModelParameters.dn", model_param%dn, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "dn", model_param%dn)
+
+         call par_file%get("ModelParameters.dn_sed", model_param%dn_sed, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "dn_sed", model_param%dn_sed)
+
+         call par_file%get("ModelParameters.q10_rec", model_param%q10_rec, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "q10_rec", model_param%q10_rec)
+
+         call par_file%get("ModelParameters.q10_recs", model_param%q10_recs, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "q10_recs", model_param%q10_recs)
+
+         call par_file%get("ModelParameters.mbnnrate", model_param%mbnnrate, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "mbnnrate", model_param%mbnnrate)
+
+         call par_file%get("ModelParameters.sedrate_det", model_param%sedrate_det, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "sedrate_det", model_param%sedrate_det)
+
+         call par_file%get("ModelParameters.fds", model_param%fds, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "fds", model_param%fds)
+
+         call par_file%get("ModelParameters.pburialrate", model_param%pburialrate, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "pburialrate", model_param%pburialrate)
+
+         call par_file%get("ModelParameters.fl_burialrt", model_param%fl_burialrt, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "fl_burialrt", model_param%fl_burialrt)
+
+         call par_file%get("ModelParameters.po4ret", model_param%po4ret, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "po4ret", model_param%po4ret)
+
+         call par_file%get("ModelParameters.nitrif_rate", model_param%nitrif_rate, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "nitrif_rate", model_param%nitrif_rate)
+
+         call par_file%get("ModelParameters.ade_r0", model_param%ade_r0, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "ade_r0", model_param%ade_r0)
+
+         call par_file%get("ModelParameters.alphaade", model_param%alphaade, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "alphaade", model_param%alphaade)
+
+         call par_file%get("ModelParameters.rfr", model_param%rfr, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "rfr", model_param%rfr)
+
+         call par_file%get("ModelParameters.rfn", model_param%rfn, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "rfn", model_param%rfn)
 
          ! Simulation Parameter
          call par_file%get("Simulation.Timestep s", sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep s', ParName)

@@ -582,7 +582,7 @@ subroutine replace_yaml_parameter(filename, module_name, param_name, new_value)
 
     nlines = 0
     found_module = .false.
-    module_start = -1
+    !module_start = -1
 
     ! --------------------------------------------------
     ! Count lines
@@ -621,7 +621,7 @@ subroutine replace_yaml_parameter(filename, module_name, param_name, new_value)
         trimmed = adjustl(lines(i))
 
         if (index(trimmed, trim(module_name)//":") == 1) then
-            module_start = i
+            !module_start = i
             found_module = .true.
             exit
         end if
@@ -633,43 +633,25 @@ subroutine replace_yaml_parameter(filename, module_name, param_name, new_value)
         return
     end if
 
-    ! --------------------------------------------------
-    ! Search only next 50 lines
-    ! --------------------------------------------------
-
-    write(value_str,'(G0)') new_value
-
-    do i = module_start, min(module_start + 50, nlines)
-
-        line = lines(i)
-        trimmed = adjustl(line)
-
-        p1 = index(trimmed, trim(param_name)//":")
-
-        if (p1 == 1) then
-
-            p2 = index(line, "#")
-
-            if (p2 > 0) then
-
-                newline = trim(line(1:index(line,":"))) // " " // &
-                          trim(adjustl(value_str)) // " " // &
-                          trim(line(p2:))
-
-            else
-
-                newline = trim(line(1:index(line,":"))) // " " // &
-                          trim(adjustl(value_str))
-
-            end if
-
-            lines(i) = trim(newline)
-
-            exit
-
-        end if
-
-    end do
+   write(value_str,'(G0)') new_value
+   do i = 1, nlines
+       line = lines(i)
+       trimmed = adjustl(line)
+       p1 = index(trimmed, trim(param_name)//":")
+       if (p1 == 1) then
+           p2 = index(line, "#")
+           if (p2 > 0) then
+               newline = trim(line(1:index(line,":"))) // " " // &
+                         trim(adjustl(value_str)) // " " // &
+                         trim(line(p2:))
+           else
+               newline = trim(line(1:index(line,":"))) // " " // &
+                         trim(adjustl(value_str))
+           end if
+           lines(i) = trim(newline)
+           ! No exit here — continue to next line
+       end if
+   end do
 
     ! --------------------------------------------------
     ! Rewrite file

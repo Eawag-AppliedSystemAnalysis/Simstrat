@@ -88,6 +88,8 @@ program simstrat_main
    logical :: continue_from_snapshot = .false.
    integer(8),dimension(2) :: simulation_end_time
    real(RK) :: new_start_datum
+   real(RK) :: counter
+   integer :: i, n_O2
 
    ! Print some information
    write (6, *) 'Simstrat version '//version
@@ -343,6 +345,19 @@ contains
          if (simdata%model_cfg%couple_fabm) then
             call mod_fabm%update(simdata%model, simdata%fabm_cfg, simdata%output_cfg, simdata%grid)
          end if
+
+         simdata%model%T_hypo = 0
+         simdata%model%O2_hypo = 0
+         counter = 0
+         do i=1,size(simdata%grid%z_volume(1:simdata%grid%ubnd_vol))
+            if (simdata%grid%z_volume(i) < 10) then
+               counter = counter + 1.0
+               simdata%model%T_hypo = simdata%model%T_hypo + simdata%model%T(i)
+               simdata%model%O2_hypo = simdata%model%O2_hypo + simdata%model%fabm_interior_state(i,9)
+            end if
+         end do
+         simdata%model%T_hypo = simdata%model%T_hypo / counter
+         simdata%model%O2_hypo = simdata%model%O2_hypo / counter
 
          ! Call logger to write files
          call logger%log(simdata, simdata%output_cfg)

@@ -186,15 +186,21 @@ module strat_simdata
       real(RK) :: wdz
       real(RK) :: dn
       real(RK) :: dn_sed
-      real(RK) :: kc
       real(RK) :: q10_rec
       real(RK) :: q10_recs
       real(RK) :: mbnnrate
-      real(RK) :: sedrate
+      real(RK) :: sedrate_det
       real(RK) :: fds
       real(RK) :: nitrif_rate
       real(RK) :: pburialrate
       real(RK) :: fl_burialrt
+      real(RK) :: alphaade
+      real(RK) :: ade_r0
+      real(RK) :: wpo4
+      real(RK) :: po4ret
+      real(RK) :: rfr
+      real(RK) :: rfn
+
       !real(RK) :: k_min
    end type
 
@@ -280,6 +286,10 @@ module strat_simdata
       real(RK), allocatable :: hv ! Latent heat [W m-2]
       real(RK), pointer :: rad0 !  Solar radiation at surface  [W m-2], FABM needs pointer attribute
       real(RK), pointer :: par0 ! Photosynthetically active radiation [W m-2], FABM needs pointer attribute
+
+      ! hypolimnion averages
+      real(RK), allocatable :: O2_hypo
+      real(RK), allocatable :: T_hypo
 
       real(RK) :: cde, cm0
       real(RK) ::  fsed
@@ -371,6 +381,9 @@ contains
       allocate (self%rad0)
       allocate (self%par0)
 
+      allocate(self%O2_hypo)
+      allocate(self%T_hypo)
+
       ! Init to zero
       self%U = 0.0_RK
       self%V = 0.0_RK
@@ -416,6 +429,9 @@ contains
       self%rad0 = 0.0_RK
       self%par0 = 0.0_RK
       self%n_pH = 0
+
+      self%O2_hypo = 0.0_RK
+      self%T_hypo = 0.0_RK
 
       ! init pointers
       allocate(self%current_day_of_year)
