@@ -16,7 +16,7 @@
     "Times"  : 96,
     "OutputDepthReference": "surface",
     "All"   : false,
-    "Variables" : ["T", "S","HA","HW","HK","HV"]
+    "Variables" : ["T", "S","HA","HW","HK","HV","T_hypo","O2_hypo","chla_surface"]
   },
   "ModelConfig" : {
     "MaxLengthInputData"      : 1000,
@@ -37,9 +37,9 @@
   },
   "FABMConfig" : {
     "FABMConfigPath"          : "TestCase_LakeZurich/FABM_configurations/",
-    "FABMInitialPath"         : "TestCase_LakeZurich/FABM_initialconditions/",
+    "FABMInitialPath"         : "TestCase_LakeZurich/FABM_initial/",
     "FABMInflowPath"          : "TestCase_LakeZurich/FABM_inflow/",
-    "FABMConfigFile"          : "../lib/fabm/testcases/fabm-gotm-npzd.yaml",
+    "FABMConfigFile"          : "TestCase_LakeZurich/selmaprotbas_new.yaml",
     "FABMDiagnosticVars"      : "TestCase_LakeZurich/FABM_configurations/DiagnosticVars.dat",
     "OutputDiagnosticVars"    : true,
     "RepairStates"            : true,
@@ -83,6 +83,28 @@
     "seiche_ini"    : 0,
     "b_ice_ini"     : 0,
     "w_ice_ini"     : 0,
-    "snow_ini"      : 0
+    "snow_ini"      : 0,
+    "slope"         : 0.05,
+    "CD_in"         : 0.01,
+        "a_seiche": 0.0017252,
+        "f_wind": 0.9343422,
+        "p_lw": 0.9622014,
+        "p_wind_gas": 0.777558,
+        "wdz": -3.0,
+        "dn": 0.05,
+        "dn_sed": 0.001,
+        "q10_rec": 0.0711185,
+        "q10_recs": 0.5,
+        "kc": 0.005,
+        "mbnnrate": 0.144584,
+        "sedrate": 1.0,
+        "fds": 0.9992973,
+        "nitrif_rate": 0.040262,
+        "pburialrate": 0.4878635,
+        "fl_burialrt": 0.0019286,
+        "rfr": 0.007,
+        "rfn": 0.2,
+        "alpha_p": 0.01,
+        "alpha_n": 0.25
   }
 }
