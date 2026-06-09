@@ -45,8 +45,8 @@ build_dir = .
 src = ../src/
 libs = -L ../lib/fabm/build -lfabm
 include = ../lib/fabm/build/modules/
-colors=False
-quiet=False
+colors = False
+quiet = False
 target = ../src/simstrat.f90
 output = simstrat
 dependon = ../lib/csv_fortran/fobos:release-intel((direct))
@@ -55,11 +55,11 @@ log = True
 
 [debug-gnu]
 compiler = Gnu
-cflags = -c -g -Og -std=f2008 -ffree-line-length-none \
-    -fcheck=all -fbacktrace \
-    -ffpe-trap=invalid,zero,overflow \
-    -finit-real=snan -finit-integer=-999999 \
-    -fno-omit-frame-pointer -fno-unsafe-math-optimizations \
+cflags = -c -g -O0 -std=f2008 -ffree-line-length-none
+    -fcheck=all -fbacktrace
+    -ffpe-trap=invalid,zero,overflow
+    -finit-real=snan -finit-integer=-999999
+    -fno-omit-frame-pointer -fno-unsafe-math-optimizations
     -frounding-math
 lflags = -static-libgcc -static-libgfortran -static
 build_dir = .
@@ -77,11 +77,11 @@ log = True
 
 [debug-gnu-dynamic]
 compiler = Gnu
-cflags = -c -g -Og -std=f2008 -ffree-line-length-none \
-    -fcheck=all -fbacktrace \
-    -ffpe-trap=invalid,zero,overflow \
-    -finit-real=snan -finit-integer=-999999 \
-    -fno-omit-frame-pointer -fno-unsafe-math-optimizations \
+cflags = -c -g -O0 -std=f2008 -ffree-line-length-none
+    -fcheck=all -fbacktrace
+    -ffpe-trap=invalid,zero,overflow
+    -finit-real=snan -finit-integer=-999999
+    -fno-omit-frame-pointer -fno-unsafe-math-optimizations
     -frounding-math
 lflags = -dynamic-libgcc -dynamic-libgfortran -dynamic
 build_dir = .

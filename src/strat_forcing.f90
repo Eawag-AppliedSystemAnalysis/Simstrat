@@ -109,7 +109,8 @@ contains
          call ok("Forcing input file successfully read")
       end if
 
-      if (datum <= tb_start .or. eof == 1) then ! If datum before first date or end of file reached
+      if ((se_floats(datum, tb_start)) &
+         .or. eof == 1) then ! If datum before first date or end of file reached
          goto 8
       else
          do while (datum > tb_end) ! Move to appropriate interval to get correct values
@@ -156,7 +157,7 @@ contains
       save A_s, A_e
       associate (cfg=>self%cfg, param=>self%param)
 
-      if((state%snow_h + state%white_ice_h + state%black_ice_h) > 0) then ! Ice cover
+      if((state%snow_h + state%white_ice_h + state%black_ice_h) > 0.0_RK) then ! Ice cover
          T_surf = param%Freez_Temp
       else
          T_surf = state%T(self%grid%ubnd_vol) ! Free water
@@ -206,11 +207,14 @@ contains
             state%T_atm = A_cur(3)
             A_cur(4) = max(A_cur(4),0.0_RK)  ! To avoid negative values because of numerical problems
 
-            if (state%black_ice_h > 0 .and. state%white_ice_h == 0 .and. state%snow_h == 0) then ! Ice
+            if (state%black_ice_h > 0.0_RK &
+               .and. compare_floats(state%white_ice_h, 0.0_RK) &
+               .and. compare_floats(state%snow_h, 0.0_RK)) then ! Ice
                F_glob = A_cur(4)*(1 - ice_albedo) * param%p_sw_ice
-            else if (state%white_ice_h > 0 .and. state%snow_h == 0) then ! Snowice
+            else if (state%white_ice_h > 0.0_RK &
+               .and. compare_floats(state%snow_h, 0.0_RK)) then ! Snowice
                F_glob = A_cur(4)*(1 - snowice_albedo) * param%p_sw_ice
-            else if (state%snow_h > 0) then ! Snow
+            else if (state%snow_h > 0.0_RK) then ! Snow
                F_glob = A_cur(4)*(1 - snow_albedo) * param%p_sw_ice
             else ! Water
                F_glob = A_cur(4)*(1 - state%albedo_water) * param%p_sw_water
@@ -235,11 +239,14 @@ contains
             state%T_atm = A_cur(3)
             A_cur(4) = max(A_cur(4),0.0_RK)  ! To avoid negative values because of numerical problems
 
-            if (state%black_ice_h > 0 .and. state%white_ice_h == 0 .and. state%snow_h == 0) then ! Ice
+            if (state%black_ice_h > 0.0_RK &
+               .and. compare_floats(state%white_ice_h, 0.0_RK) &
+               .and. compare_floats(state%snow_h, 0.0_RK)) then ! Ice
                F_glob = A_cur(4)*(1 - ice_albedo) * param%p_sw_ice
-            else if (state%white_ice_h > 0 .and. state%snow_h == 0) then ! Snowice
+            else if (state%white_ice_h > 0.0_RK &
+               .and. compare_floats(state%snow_h, 0.0_RK)) then ! Snowice
                F_glob = A_cur(4)*(1 - snowice_albedo) * param%p_sw_ice
-            else if (state%snow_h > 0) then ! Snow
+            else if (state%snow_h > 0.0_RK) then ! Snow
                F_glob = A_cur(4)*(1 - snow_albedo) * param%p_sw_ice
             else ! Water
                F_glob = A_cur(4)*(1 - state%albedo_water) * param%p_sw_water
@@ -286,11 +293,14 @@ contains
             state%Cloud = 0.5_RK
             A_cur(4) = max(A_cur(4),0.0_RK)  ! To avoid negative values because of numerical problems
 
-            if (state%black_ice_h > 0 .and. state%white_ice_h == 0 .and. state%snow_h == 0) then ! Ice
+            if (state%black_ice_h > 0.0_RK &
+               .and. compare_floats(state%white_ice_h, 0.0_RK) &
+               .and. compare_floats(state%snow_h, 0.0_RK)) then ! Ice
                F_glob = A_cur(4)*(1 - ice_albedo) * param%p_sw_ice
-            else if (state%white_ice_h > 0 .and. state%snow_h == 0) then ! Snowice
+            else if (state%white_ice_h > 0.0_RK &
+               .and. compare_floats(state%snow_h, 0.0_RK)) then ! Snowice
                F_glob = A_cur(4)*(1 - snowice_albedo) * param%p_sw_ice
-            else if (state%snow_h > 0) then ! Snow
+            else if (state%snow_h > 0.0_RK) then ! Snow
                F_glob = A_cur(4)*(1 - snow_albedo) * param%p_sw_ice
             else ! Water
                F_glob = A_cur(4)*(1 - state%albedo_water) * param%p_sw_water
@@ -312,7 +322,7 @@ contains
          state%uv10_gas = state%uv10 * param%p_wind_gas
 
          if (cfg%forcing_mode /= 4) then ! Heat fluxes calculations (forcing 2, 3 and 5)
-            if (state%black_ice_h + state%white_ice_h == 0) then !Free water
+            if (compare_floats(state%black_ice_h + state%white_ice_h, 0.0_RK)) then !Free water
 
                ! Factor 0.6072 to account for changing wind height from 10 to 2 m
                ! Further evaluation of evaporation algorithm may be required.
@@ -353,10 +363,10 @@ contains
                state%heat_snowice = 0 ! Heat snowice
                state%heat_ice = 0 ! Heat ice
 
-            else if (state%black_ice_h > 0 .or. state%white_ice_h > 0) then ! Ice Cover
+            else if (state%black_ice_h > 0.0_RK .or. state%white_ice_h > 0.0_RK) then ! Ice Cover
                ! Light penetration in snow, ice and snowice as well as wind blocking added 2018 by Love Raaman
 
-               if (state%T_atm >= param%Freez_Temp) then! Melting occures when air temp above freezing point,
+               if (ge_floats(state%T_atm, param%Freez_Temp)) then! Melting occures when air temp above freezing point,
                   ! then activate surface heat fluxes following
                   ! Matti Leppäranta (2009), Modelling the Formation and Decay of Lake Ice DOI: 10.1007/978-90-481-2945-4_5 In book: The Impact of Climate Change on European Lakes
                   ! In G. George (Ed.), The Impact of Climate Change on European Lakes (pp. 63–83).
@@ -364,7 +374,7 @@ contains
                   ! and with corrections in
                   ! Leppäranta, M. (2014). Freezing of lakes and the evolution of their ice cover.
                   ! New York: Springer. ISBN 978-3-642-29080-0
-                  if (state%snow_h == 0) then ! Ice Cover (ice and snowice)
+                  if (compare_floats(state%snow_h, 0.0_RK)) then ! Ice Cover (ice and snowice)
                      emissivity = emiss_ice
                   else ! Snow Cover
                      ! Varies from 0.8 to 0.9 depending on snow density
@@ -388,8 +398,8 @@ contains
                end if
 
                H_tot = H_A + H_W + H_K + H_V
-               if (H_tot < 0) then
-                  H_tot = 0
+               if (H_tot < 0.0_RK) then
+                  H_tot = 0.0_RK
                end if
 
                ! Global heat flux (positive: air to water, negative: water to air) !MS: added beta_sol ; LRV added lambda_snow_ice
@@ -405,32 +415,44 @@ contains
                F_snow    = F_glob * (1 - exp(-lambda_snow*state%snow_h))
                F_snowice = F_glob * (exp(-lambda_snow*state%snow_h) - exp(-lambda_snow*state%snow_h - lambda_snowice*state%white_ice_h))
                F_ice     = F_glob * (exp(-lambda_snow*state%snow_h - lambda_snowice*state%white_ice_h) - exp(-lambda_snow*state%snow_h - lambda_snowice*state%white_ice_h - lambda_ice*state%black_ice_h))
-               if (F_snow < 0 .or. F_snowice < 0 .or. F_ice < 0 .or. state%heat < 0 .or. state%rad0 < 0) then
+               if (F_snow < 0.0_RK .or. F_snowice < 0-0_RK .or. F_ice < 0-0_RK .or. state%heat < 0-0_RK .or. state%rad0 < 0-0_RK) then
                   call error('Negative heat flux not allowed for melting.')
                end if
 
                !Light + other heat fluxes into top layer
-               if (state%snow_h > 0 .and. state%white_ice_h > 0 .and. state%black_ice_h > 0) then ! snow, snowice and ice
+               if (state%snow_h > 0.0_RK &
+                  .and. state%white_ice_h > 0.0_RK &
+                  .and. state%black_ice_h > 0.0_RK) then ! snow, snowice and ice
                   state%heat_snow = H_tot + F_snow
                   state%heat_snowice = F_snowice
                   state%heat_ice = F_ice
-               else if (state%snow_h > 0 .and. state%white_ice_h > 0 .and. state%black_ice_h == 0) then! snow and snowice
+               else if (state%snow_h > 0.0_RK &
+                   .and. state%white_ice_h > 0.0_RK &
+                   .and. compare_floats(state%black_ice_h, 0.0_RK)) then! snow and snowice
                   state%heat_snow = H_tot + F_snow
                   state%heat_snowice = F_snowice
                   state%heat_ice = 0
-               else if (state%snow_h > 0 .and. state%white_ice_h == 0 .and. state%black_ice_h > 0) then! snow and ice
+               else if (state%snow_h > 0.0_RK &
+                   .and. compare_floats(state%white_ice_h, 0.0_RK)&
+                   .and. state%black_ice_h > 0.0_RK) then! snow and ice
                   state%heat_snow = H_tot + F_snow
                   state%heat_snowice = 0
                   state%heat_ice = F_ice
-               else if (state%snow_h == 0 .and. state%white_ice_h > 0 .and. state%black_ice_h > 0) then! snowice and ice
+               else if (compare_floats(state%snow_h, 0.0_RK) &
+                  .and. state%white_ice_h > 0.0_RK &
+                  .and. state%black_ice_h > 0.0_RK) then! snowice and ice
                   state%heat_snow = 0
                   state%heat_snowice = H_tot + F_snowice
                   state%heat_ice = F_ice
-               else if (state%snow_h == 0 .and. state%white_ice_h == 0 .and. state%black_ice_h > 0) then! ice
+               else if (compare_floats(state%snow_h, 0.0_RK) &
+                  .and. compare_floats(state%white_ice_h, 0.0_RK) &
+                  .and. state%black_ice_h > 0.0_RK) then! ice
                   state%heat_snow = 0
                   state%heat_snowice = 0
                   state%heat_ice = H_tot + F_ice
-               else if (state%snow_h == 0 .and. state%white_ice_h > 0 .and. state%black_ice_h == 0) then! snowice
+               else if (compare_floats(state%snow_h, 0.0_RK) &
+                  .and. state%white_ice_h > 0.0_RK &
+                  .and. compare_floats(state%black_ice_h, 0.0_RK)) then! snowice
                   state%heat_snow = 0
                   state%heat_snowice = H_tot + F_snowice
                   state%heat_ice = 0
@@ -456,7 +478,7 @@ contains
             state%heat_ice = 0 ! Heat ice
          end if
          if (cfg%ice_model == 0) then
-            if (state%T(self%grid%ubnd_vol) < 0 .and. state%heat < 0) then
+            if (state%T(self%grid%ubnd_vol) < 0.0_RK .and. state%heat < 0.0_RK) then
                state%heat = 0
                state%T(self%grid%ubnd_vol) = 0
             end if
@@ -469,9 +491,9 @@ contains
       else if (cfg%wind_drag_model == 2) then ! Ocean model
          state%C10 = param%C10_constant*(-0.000000712_RK*state%uv10**2 + 0.00007387_RK*state%uv10 + 0.0006605_RK)
       else if (cfg%wind_drag_model == 3) then ! Lake model (Wüest and Lorke 2003)
-         if (state%uv10 <= 0.1) then
+         if (se_floats(state%uv10, 0.1_RK)) then
             state%C10 = param%C10_constant*0.06215_RK
-         else if (state%uv10 <= 3.85_RK) then
+         else if (se_floats(state%uv10, 3.85_RK)) then
               state%C10 = param%C10_constant*0.0044_RK*state%uv10**(-1.15_RK)
          else ! Polynomial approximation of Charnock's law
             state%C10 = param%C10_constant*(-0.000000712_RK*state%uv10**2 + 0.00007387_RK*state%uv10 + 0.0006605_RK)
@@ -518,7 +540,7 @@ contains
       class(ModelState) :: state
 
       ! Monthly albedo data according to Grishchenko, in Cogley 1979
-      if (self%param%Lat > 0)  then ! Northern hemisphere (1.000 if no sun)
+      if (self%param%Lat > 0.0_RK)  then ! Northern hemisphere (1.000 if no sun)
          state%albedo_data(9,1:12) = [1.000_RK, 0.301_RK, 0.333_RK, 0.253_RK, 0.167_RK, 0.133_RK, 0.150_RK, 0.226_RK, 0.317_RK, 0.301_RK, 1.000_RK, 1.000_RK]
          state%albedo_data(8,1:12) = [0.301_RK, 0.337_RK, 0.266_RK, 0.178_RK, 0.138_RK, 0.123_RK, 0.132_RK, 0.163_RK, 0.238_RK, 0.329_RK, 0.301_RK, 1.000_RK]
          state%albedo_data(7,1:12) = [0.340_RK, 0.281_RK, 0.185_RK, 0.122_RK, 0.099_RK, 0.095_RK, 0.097_RK, 0.113_RK, 0.163_RK, 0.254_RK, 0.336_RK, 0.325_RK]

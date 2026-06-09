@@ -56,13 +56,13 @@ contains
 
       ! Assign closest value if out of given grid
       posk1 = 1
-      do while (zi(posk1) <= z(1))
+      do while (se_floats(zi(posk1), z(1), 1.0e-4_RK))
          yi(posk1) = y(1)
          posk1 = posk1 + 1
          if (posk1 > size(zi)) exit
       end do
       posk2 = num_zi
-      do while (zi(posk2) >= z(num_z))
+      do while (ge_floats(zi(posk2), z(num_z), 1.0e-4_RK))
          yi(posk2) = y(num_z)
          posk2 = posk2 - 1
          if (posk2 < 1) exit
@@ -292,16 +292,14 @@ contains
       implicit none
       ! "Convert an integer to string."
       integer, intent(in) :: k
-      write (str_int, '(a)') k
-      str_int = adjustl(str_int)
+      write (str_int, '(i0)') k
    end function str_int
 
    character(len=20) function str_real(k)
       implicit none
-      ! "Convert an integer to string."
+      ! "Convert a float to string."
       real(RK), intent(in) :: k
-      write (str_real, '(a)') k
-      str_real = adjustl(str_real)
+      write (str_real, '(g0)') k
    end function str_real
 
    character(len=20) function real_to_str(k, fmt)
@@ -337,7 +335,7 @@ contains
       real(RK), intent(out) :: current_day, current_day_of_year
 
       ! Local variables
-      real(RK) :: elapsed_days, days_left, days_per_year
+      real(RK) :: elapsed_days, days_per_year
       integer :: i
       integer, dimension(12) :: days_per_month
 
@@ -557,115 +555,173 @@ contains
       datum = start_datum + real(simulation_time(1), RK) + real(simulation_time(2), RK) / SECONDS_PER_DAY
    end function
 
-subroutine replace_yaml_parameter(filename, module_name, param_name, new_value)
+   subroutine replace_yaml_parameter(filename, module_name, param_name, new_value)
 
-    implicit none
+       implicit none
 
-    character(len=*), intent(in) :: filename
-    character(len=*), intent(in) :: module_name
-    character(len=*), intent(in) :: param_name
-    real(RK), intent(in)             :: new_value
+       character(len=*), intent(in) :: filename
+       character(len=*), intent(in) :: module_name
+       character(len=*), intent(in) :: param_name
+       real(RK), intent(in)             :: new_value
 
-    character(len=1024), allocatable :: lines(:)
-    character(len=1024) :: line
-    character(len=1024) :: trimmed
-    character(len=1024) :: newline
-    character(len=64)   :: value_str
+       character(len=1024), allocatable :: lines(:)
+       character(len=1024) :: line
+       character(len=1024) :: trimmed
+       character(len=1024) :: newline
+       character(len=64)   :: value_str
 
-    integer :: nlines
-    integer :: ios
-    integer :: i
-    integer :: p1, p2
-    integer :: module_start
+       integer :: nlines
+       integer :: ios
+       integer :: i
+       integer :: p1, p2
+       integer :: module_start
 
-    logical :: found_module
+       logical :: found_module
 
-    nlines = 0
-    found_module = .false.
-    !module_start = -1
+       nlines = 0
+       found_module = .false.
+       !module_start = -1
 
-    ! --------------------------------------------------
-    ! Count lines
-    ! --------------------------------------------------
+       ! --------------------------------------------------
+       ! Count lines
+       ! --------------------------------------------------
 
-    open(10, file=trim(filename), status='old', action='read')
+       open(10, file=trim(filename), status='old', action='read')
 
-    do
-        read(10,'(A)', iostat=ios) line
-        if (ios /= 0) exit
-        nlines = nlines + 1
-    end do
+       do
+           read(10,'(A)', iostat=ios) line
+           if (ios /= 0) exit
+           nlines = nlines + 1
+       end do
 
-    close(10)
+       close(10)
 
-    ! --------------------------------------------------
-    ! Read file
-    ! --------------------------------------------------
+       ! --------------------------------------------------
+       ! Read file
+       ! --------------------------------------------------
 
-    allocate(lines(nlines))
+       allocate(lines(nlines))
 
-    open(10, file=trim(filename), status='old', action='read')
+       open(10, file=trim(filename), status='old', action='read')
 
-    do i = 1, nlines
-        read(10,'(A)') lines(i)
-    end do
+       do i = 1, nlines
+           read(10,'(A)') lines(i)
+       end do
 
-    close(10)
+       close(10)
 
-    ! --------------------------------------------------
-    ! Find module
-    ! --------------------------------------------------
+       ! --------------------------------------------------
+       ! Find module
+       ! --------------------------------------------------
 
-    do i = 1, nlines
+       do i = 1, nlines
 
-        trimmed = adjustl(lines(i))
+           trimmed = adjustl(lines(i))
 
-        if (index(trimmed, trim(module_name)//":") == 1) then
-            !module_start = i
-            found_module = .true.
-            exit
-        end if
-
-    end do
-
-    if (.not. found_module) then
-        print *, "Module not found: ", trim(module_name)
-        return
-    end if
-
-   write(value_str,'(G0)') new_value
-   do i = 1, nlines
-       line = lines(i)
-       trimmed = adjustl(line)
-       p1 = index(trimmed, trim(param_name)//":")
-       if (p1 == 1) then
-           p2 = index(line, "#")
-           if (p2 > 0) then
-               newline = trim(line(1:index(line,":"))) // " " // &
-                         trim(adjustl(value_str)) // " " // &
-                         trim(line(p2:))
-           else
-               newline = trim(line(1:index(line,":"))) // " " // &
-                         trim(adjustl(value_str))
+           if (index(trimmed, trim(module_name)//":") == 1) then
+               !module_start = i
+               found_module = .true.
+               exit
            end if
-           lines(i) = trim(newline)
-           ! No exit here — continue to next line
+
+       end do
+
+       if (.not. found_module) then
+           print *, "Module not found: ", trim(module_name)
+           return
        end if
-   end do
 
-    ! --------------------------------------------------
-    ! Rewrite file
-    ! --------------------------------------------------
+      write(value_str,'(G0)') new_value
+      do i = 1, nlines
+          line = lines(i)
+          trimmed = adjustl(line)
+          p1 = index(trimmed, trim(param_name)//":")
+          if (p1 == 1) then
+              p2 = index(line, "#")
+              if (p2 > 0) then
+                  newline = trim(line(1:index(line,":"))) // " " // &
+                            trim(adjustl(value_str)) // " " // &
+                            trim(line(p2:))
+              else
+                  newline = trim(line(1:index(line,":"))) // " " // &
+                            trim(adjustl(value_str))
+              end if
+              lines(i) = trim(newline)
+              ! No exit here — continue to next line
+          end if
+      end do
 
-    open(11, file=trim(filename), status='replace', action='write')
+       ! --------------------------------------------------
+       ! Rewrite file
+       ! --------------------------------------------------
 
-    do i = 1, nlines
-        write(11,'(A)') trim(lines(i))
-    end do
+       open(11, file=trim(filename), status='replace', action='write')
 
-    close(11)
+       do i = 1, nlines
+           write(11,'(A)') trim(lines(i))
+       end do
 
-    deallocate(lines)
+       close(11)
 
-end subroutine replace_yaml_parameter
+       deallocate(lines)
+
+   end subroutine replace_yaml_parameter
+
+   ! Returns whether a == b
+   ! reltol is given as argument 1.0e-4_RK for grid-related comparisons
+   pure logical function compare_floats(a, b, reltol)
+      real(RK), intent(in) :: a, b
+      real(RK), intent(in), optional :: reltol
+      real(RK) :: tol
+
+      if (present(reltol)) then
+         tol = reltol
+      else
+         tol = sqrt(epsilon(1.0_RK))
+      end if
+
+      compare_floats = abs(a - b) < tol * max(abs(a), abs(b), 1.0_RK)
+   end function
+
+   ! Returns whether a >= b
+   pure logical function ge_floats(a, b, reltol)
+      real(RK), intent(in) :: a, b
+      real(RK), intent(in), optional :: reltol
+
+      if (present(reltol)) then
+         ge_floats = (a > b) .or. compare_floats(a, b, reltol)
+      else
+         ge_floats = (a > b) .or. compare_floats(a, b)
+      end if
+   end function
+
+   ! Returns whether a <= b
+   pure logical function se_floats(a, b, reltol)
+      real(RK), intent(in) :: a, b
+      real(RK), intent(in), optional :: reltol
+
+      if (present(reltol)) then
+         se_floats = (a < b) .or. compare_floats(a, b, reltol)
+      else
+         se_floats = (a < b) .or. compare_floats(a, b)
+      end if
+   end function
+
+   subroutine normalize_path(path)
+      character(*), intent(inout) :: path
+      integer :: i, n
+      
+      n = len_trim(path)
+
+      do i = 1, n
+         if (path(i:i) == '\') path(i:i) = '/'
+      end do
+
+      do while (n > 0 .and. path(n:n) == '/')
+         n = n - 1
+      end do
+
+      path = path(:n)
+   end subroutine
+
 end module utilities

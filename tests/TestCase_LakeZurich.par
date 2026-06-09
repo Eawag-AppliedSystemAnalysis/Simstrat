@@ -36,6 +36,7 @@
     "SnowModel"               : 1
   },
   "FABMConfig" : {
+
     "FABMConfigPath"          : "TestCase_LakeZurich/FABM_configurations/",
     "FABMInitialPath"         : "TestCase_LakeZurich/FABM_initial/",
     "FABMInflowPath"          : "TestCase_LakeZurich/FABM_inflow/",
@@ -45,8 +46,8 @@
     "RepairStates"            : true,
     "OutputRepairedVars"      : false,
     "BottomEverywhere"        : true,
-    "BioshadeFeedback"        : true,
-    "BackgroundExtinction"    : 0.2
+    "InputExtinctionFactor"   : 0.5,
+    "BackgroundExtinction"    : 0.1
   },
   "Simulation" : {
     "Timestep s"                  : 300,

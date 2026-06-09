@@ -77,6 +77,7 @@ module strat_outputfile
       procedure, pass(self), public :: close => log_close
       procedure, pass(self), public :: save => log_save
       procedure, pass(self), public :: load => log_load
+      procedure, pass(self), public :: deallocate => log_deallocate
    end type
 
    type, private :: OutputHelper
@@ -169,7 +170,7 @@ contains
       class(StaggeredGrid), target :: grid
       logical, intent(in) :: snapshot_file_exists
 
-      integer :: i, j, n_output_times
+      integer :: i, n_output_times
 
       self%sim_config => sim_config
       self%model_config => model_config
@@ -184,29 +185,18 @@ contains
       if (self%model_config%couple_fabm) then
          
          ! FABM state variables
-         self%n_vars_fabm_interior_state = state%n_fabm_interior_state
-         self%n_vars_fabm_bottom_state = state%n_fabm_bottom_state
-         self%n_vars_fabm_surface_state = state%n_fabm_surface_state
+         self%n_vars_fabm_interior_state = fabm_config%n_interior_state
+         self%n_vars_fabm_bottom_state = fabm_config%n_bottom_state
+         self%n_vars_fabm_surface_state = fabm_config%n_surface_state
 
          ! FABM diagnostic variables
-         if (fabm_config%output_diag_vars) then
-            self%n_vars_fabm_diagnostic_interior = state%n_fabm_diagnostic_interior
-            self%n_vars_fabm_diagnostic_horizontal = state%n_fabm_diagnostic_horizontal
-         else
-            self%n_vars_fabm_diagnostic_interior = 0
-            self%n_vars_fabm_diagnostic_horizontal = 0
-         end if
+         self%n_vars_fabm_diagnostic_interior = fabm_config%n_diagnostic_interior
+         self%n_vars_fabm_diagnostic_horizontal = fabm_config%n_diagnostic_horizontal
 
          ! FABM repaired variables
-         if (fabm_config%output_repaired_vars) then
-            self%n_vars_fabm_repaired_interior = state%n_fabm_repaired_interior
-            self%n_vars_fabm_repaired_bottom = state%n_fabm_repaired_bottom
-            self%n_vars_fabm_repaired_surface = state%n_fabm_repaired_surface
-         else
-            self%n_vars_fabm_repaired_interior = 0
-            self%n_vars_fabm_repaired_bottom = 0
-            self%n_vars_fabm_repaired_surface = 0
-         end if
+         self%n_vars_fabm_repaired_interior = fabm_config%n_repaired_interior
+         self%n_vars_fabm_repaired_bottom = fabm_config%n_repaired_bottom
+         self%n_vars_fabm_repaired_surface = fabm_config%n_repaired_surface
          
       else
          self%n_vars_fabm_interior_state = 0
@@ -243,7 +233,7 @@ contains
 
 
       ! If output depth interval is given
-      if (output_config%depth_interval > 0) then
+      if (output_config%depth_interval > 0.0_RK) then
 
          ! Allocate zout
          allocate(output_config%zout(ceiling(grid%max_depth/output_config%depth_interval + 1e-6)))
@@ -267,7 +257,7 @@ contains
             call reverse_in_place(output_config%zout)
          end if
 
-      else if (output_config%depth_interval == 0) then
+      else if (compare_floats(output_config%depth_interval, 0.0_RK)) then
          allocate(output_config%zout(size(output_config%zout_read)))
          output_config%zout = output_config%zout_read
       end if
@@ -286,8 +276,8 @@ contains
       class(StaggeredGrid), target :: grid
       logical, intent(in) :: snapshot_file_exists
 
-      logical :: status_ok, exist_output_folder
-      integer :: i, exitstat
+      logical :: exist_output_folder
+      integer :: exitstat
       character(len=256) :: mkdirCmd
 
       self%n_depths = size(output_config%zout)
@@ -450,24 +440,30 @@ contains
       class(StaggeredGrid), target :: grid
 
       logical, intent(in) :: snapshot_file_exists
-      integer :: i, exitstat
+      integer :: i
       character(len=:), allocatable :: file_path
-      logical :: status_ok, append, exist_output_folder
+      logical :: status_ok, append
       type(LogVariable), pointer :: var
 
       if (allocated(self%output_files)) deallocate (self%output_files)
       allocate (self%output_files(1:self%n_vars))
 
+      ! Get variable structure
       do i = 1, self%n_vars
+         ! Simstrat
          if (i < (self%n_vars_Simstrat + 1)) then
             var => output_config%output_vars(i)
+         ! FABM
          else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + 1)) then
             var => output_config%output_vars_fabm_state(i - self%n_vars_Simstrat)
+         ! FABM diagnostic
          else if (i < (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic + 1)) then
             var => output_config%output_vars_fabm_diagnostic(i - (self%n_vars_Simstrat + self%n_vars_fabm_state))
+         ! FABM repaired
          else
             var => output_config%output_vars_fabm_repaired(i - (self%n_vars_Simstrat + self%n_vars_fabm_state + self%n_vars_fabm_diagnostic))
          end if
+         ! Get file path
          file_path = output_config%PathOut//'/'//trim(var%name)//'_out.dat'
          inquire (file=file_path, exist=append)
          append = append .and. snapshot_file_exists
@@ -520,7 +516,8 @@ contains
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
       integer(8), dimension(2), intent(in) :: simulation_time
-      integer :: i, number_of_days
+      real(RK) :: number_of_days
+      integer :: i
 
       associate (thinning_interval => self%output_config%thinning_interval, &
                  timestep => self%sim_config%timestep, &
@@ -557,7 +554,7 @@ contains
       !workaround gfortran bug => cannot pass allocatable array to csv file
       real(RK), dimension(self%n_depths) :: values_on_zout
       type(OutputHelper) :: output_helper
-      integer :: i, j
+      integer :: i
       type(LogVariable), pointer :: var
 
       call output_helper%init(simdata%model%simulation_time, simdata%model%simulation_time_old, self%sim_config%timestep, self%simulation_time_for_next_output, &
@@ -616,7 +613,8 @@ contains
       integer, intent(inout) :: counter
 
       ! Local variables
-      integer :: i, number_of_days
+      real(RK) :: number_of_days
+      integer :: i
       logical :: write_condition1, write_condition2
 
       ! Write condition 1: the next output time is larger than the old simulation time
@@ -685,7 +683,7 @@ contains
       character(len=*), intent(in) :: format
 
       if (self%write_to_file .and. self%write_to_file2) then
-         if (self%w1 == 0) then
+         if (compare_floats(self%w1, 0.0_RK)) then
             call output_file%add(data, real_fmt=format)
          else
             if (.not. allocated(self%interpolated_data)) then
@@ -708,7 +706,7 @@ contains
       character(len=*), intent(in) :: format
 
       if (self%write_to_file .and. self%write_to_file2) then
-         if (self%w1 == 0) then
+         if (compare_floats(self%w1, 0.0_RK)) then
             call output_file%add(data, real_fmt=format)
          else
             call output_file%add(self%w1 * last_iteration_data(index, 1) + self%w0 * data, real_fmt=format)
@@ -784,6 +782,17 @@ contains
       class(InterpolatingLogger), intent(inout) :: self
       !read(81) self%counter!, self%simulation_time_for_next_output(1), self%simulation_time_for_next_output(2)
       call read_matrix(81, self%last_iteration_data)
+   end subroutine
+
+
+   !************************* Deallocate ****************************
+
+   ! Deallocate all data allocated in self
+   subroutine log_deallocate(self)
+      class(InterpolatingLogger), intent(inout) :: self
+
+      if (allocated(self%output_files)) deallocate(self%output_files)
+      if (allocated(self%last_iteration_data)) deallocate(self%last_iteration_data)
    end subroutine
 
 end module

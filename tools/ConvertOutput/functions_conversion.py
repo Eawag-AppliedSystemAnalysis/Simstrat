@@ -11,7 +11,7 @@ from functions_input import read_input_paths, load_absorption_data, load_inflow_
 
 # Main function
 
-def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-10, inflow_mode_not_1=True):
+def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-10, datetime_slice=(None,None), depth_slice=(None,None), inflow_mode_not_1=True):
     """
     Convert Output file from CSV to NetCDF
     
@@ -30,6 +30,12 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-10
     eps : float
         Tolerance for variation among dimension to drop that dimension
         (Default: 1e-20)
+    datetime_slice : tuple
+        Slice for datetime points to be included
+        (Default: (None,None))
+    depth_slice : tuple
+        Slice for depths to be included
+        (Default: (None,None))
     inflow_mode_not_1 : bool, optional
         Whether inflow mode in configuration file is not 1 (Manual inflow mode)
         (Default: True)
@@ -82,6 +88,10 @@ def csv_to_netcdf(var_names, filename, path_to_output, paths_to_input, eps=1e-10
         data = data.dropna(dim='Datetime', how='all')
         # Drop depths that have only nan
         data = data.dropna(dim='Depth', how='all')
+        # Slice datetime points according to input
+        data = data.isel(Datetime=slice(*datetime_slice))
+        # Slice depths according to input
+        data = data.isel(Depth=slice(*depth_slice))
         # Drop constant dimensions
         with warnings.catch_warnings():
             # Ignore warning appearing for empty results

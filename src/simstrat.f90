@@ -56,7 +56,7 @@ program simstrat_main
    ! Instantiate all modules
    ! note that some are pointers/targets for polymorphism reasons
    type(SimstratSimulationFactory) :: factory
-   class(SimulationData), pointer :: simdata
+   class(SimulationData), pointer :: simdata => null()
    type(ThomasAlgSolver) :: solver
    type(EulerIDiscretizationMFQ) :: euler_i_disc
    type(EulerIDiscretizationKEPS) :: euler_i_disc_keps
@@ -78,7 +78,6 @@ program simstrat_main
    class(GenericLateralModule), pointer :: mod_lateral
    ! Instantiate progress bar object
    type(bar_object):: bar
-   type(csv_file), dimension(:), allocatable :: csv_files
 
    character(len=100) :: arg
    character(len=:), allocatable :: ParName
@@ -129,13 +128,14 @@ program simstrat_main
 
    ! Initialize absorption module
    call mod_absorption%init(simdata%model_cfg, &
+                            simdata%fabm_cfg, &
                             simdata%model_param, &
                             simdata%input_cfg%AbsorpName, &
                             simdata%grid)
 
    ! Initialize biogeochemical model "FABM" if used
    if (simdata%model_cfg%couple_fabm) then
-      call mod_fabm%init(simdata%model, simdata%fabm_cfg, simdata%output_cfg, simdata%sim_cfg, simdata%grid)
+      call mod_fabm%init(simdata%model, simdata%model_cfg, simdata%fabm_cfg, simdata%output_cfg, simdata%sim_cfg, simdata%grid)
    end if
 
    ! If there is advection (due to inflow)
@@ -219,6 +219,8 @@ program simstrat_main
    ! Close logger files after simulation
    call logger%close()
 
+   ! Finalize and deallocate the model
+   call finalize_simulation()
 contains
 
    subroutine run_simulation()
@@ -227,7 +229,7 @@ contains
       call ok("Start day: "//real_to_str(simdata%sim_cfg%start_datum, '(F7.1)'))
       new_start_datum = simdata%sim_cfg%start_datum
       if (continue_from_snapshot) then
-         call load_snapshot(snapshot_file_path, simdata%model_cfg%couple_fabm)
+         call load_snapshot(snapshot_file_path)
          call ok("Simulation snapshot successfully read. Snapshot day: "//real_to_str(simdata%model%datum, '(F7.1)'))
          call logger%calculate_simulation_time_for_next_output(simdata%model%simulation_time)
          new_start_datum = simdata%model%datum
@@ -285,16 +287,8 @@ contains
          ! Update forcing
          call mod_forcing%update(simdata%model)
 
-         ! Update absorption with Simstrat, or with FABM (if the coupling is enabled and bioshade feedback is on)
-         if (simdata%model_cfg%couple_fabm) then
-            if (simdata%fabm_cfg%bioshade_feedback) then
-               call mod_fabm%absorption_update_fabm(simdata%model, simdata%fabm_cfg, simdata%grid)
-            else
-               call mod_absorption%update(simdata%model)
-            end if
-         else
-            call mod_absorption%update(simdata%model)
-         end if
+         ! Update absorption
+         call mod_absorption%update(simdata%model)
 
          ! Update physics
          call mod_stability%update(simdata%model)
@@ -302,16 +296,16 @@ contains
          ! If there is inflow/outflow do advection part
          if (simdata%model_cfg%inflow_mode > 0) then
             ! Treat inflow/outflow
-            call mod_lateral%update(simdata%model, simdata%output_cfg)
+            call mod_lateral%update(simdata%model, simdata%fabm_cfg, simdata%output_cfg)
             ! Surface-bound in/outflow, no in/outflow for bottom state variables
-            if (simdata%model%n_fabm_bottom_state > 0 .or. simdata%model%n_fabm_surface_state > 0) then
-               call mod_lateral%update_bound(simdata%model, simdata%output_cfg)
+            if (simdata%fabm_cfg%n_bottom_state + simdata%fabm_cfg%n_surface_state > 0) then
+               call mod_lateral%update_bound(simdata%model, simdata%fabm_cfg, simdata%output_cfg)
             end if
             ! Set old lake level (before it is changed by advection module)
             simdata%grid%lake_level_old = simdata%grid%z_face(simdata%grid%ubnd_fce)
 
             ! Update lake advection using the inflow/outflow data
-            call mod_advection%update(simdata%model, simdata%output_cfg)
+            call mod_advection%update(simdata%model, simdata%fabm_cfg, simdata%output_cfg)
             ! Update lake level
             simdata%grid%lake_level = simdata%grid%z_face(simdata%grid%ubnd_fce)
          end if
@@ -378,7 +372,7 @@ contains
          end if
 
       end do
-      if (simdata%sim_cfg%continue_from_snapshot) call save_snapshot(snapshot_file_path, simdata%model_cfg%couple_fabm)
+      if (simdata%sim_cfg%continue_from_snapshot) call save_snapshot(snapshot_file_path)
       if (simdata%sim_cfg%save_text_restart) then
          call save_restart(file_text_restart, file_text_restart2)
       end if
@@ -392,7 +386,6 @@ contains
 
       logical :: status_ok
       type(csv_file), dimension(2):: save_files
-      real(RK) :: total_grid(size(simdata%grid%z_face) + size(simdata%grid%z_volume))
       real(RK),dimension(size(simdata%grid%z_face(1:simdata%grid%ubnd_fce)) + size(simdata%grid%z_volume(1:simdata%grid%ubnd_vol))) :: depth, U, V, T, S, k, eps, num, nuh
       integer :: i
       real(RK),dimension(9) :: row1
@@ -445,36 +438,69 @@ contains
       call save_files(2)%close(status_ok)
    end subroutine
 
-   subroutine save_snapshot(file_path, couple_fabm)
+   subroutine save_snapshot(file_path)
       implicit none
       character(len=*), intent(in) :: file_path
-      logical, intent(in) :: couple_fabm
 
       open(80, file=file_path, Form='unformatted', Action='Write')
-      call simdata%model%save(couple_fabm, simdata%model_cfg%inflow_mode)
+      call simdata%model%save(simdata%model_cfg%couple_fabm, simdata%model_cfg%inflow_mode)
       call simdata%grid%save()
       call mod_absorption%save()
       if (simdata%model_cfg%inflow_mode > 0) then
          call mod_lateral%save()
       end if
+      if (simdata%model_cfg%couple_fabm) then
+         call mod_fabm%save()
+      end if
       call logger%save()
       close(80)
    end subroutine
 
-   subroutine load_snapshot(file_path, couple_fabm)
+   subroutine load_snapshot(file_path)
       implicit none
       character(len=*), intent(in) :: file_path
-      logical, intent(in) :: couple_fabm
 
       open(81, file=file_path, Form='unformatted', Action='Read')
-      call simdata%model%load(couple_fabm, simdata%model_cfg%inflow_mode)
+      call simdata%model%load(simdata%model_cfg%couple_fabm, simdata%model_cfg%inflow_mode)
       call simdata%grid%load()
       call mod_absorption%load()
-      if (simdata%model_cfg%inflow_mode > 0) then
-         call mod_lateral%load()
+      if (simdata%model_cfg%couple_fabm) then
+         call mod_fabm%load()
       end if
       call logger%load()
       close(81)
+   end subroutine
+
+   ! Deallocate in reverse order to initialization
+   subroutine finalize_simulation()
+      ! InterpolatingLogger
+      call logger%deallocate()
+      ! GenericLateralModule
+      if (simdata%model_cfg%inflow_mode > 0) call mod_lateral%deallocate()
+      ! SimstratFABM (also finalize and deallocate FABM)
+      if (simdata%model_cfg%couple_fabm) call mod_fabm%finalize()
+      ! AbsorptionModule
+      call mod_absorption%deallocate()
+      ! First deallocate all types inside SimulationData
+      call simdata%input_cfg%deallocate()
+      call simdata%output_cfg%deallocate()
+      call simdata%sim_cfg%deallocate()
+      call simdata%model_cfg%deallocate()
+      call simdata%grid_cfg%deallocate()
+      call simdata%fabm_cfg%deallocate()
+      call simdata%model_param%deallocate()
+      call simdata%model%deallocate()
+      call simdata%grid%deallocate()
+      ! Deallocate SimulationData
+      if (associated(simdata)) then
+         deallocate(simdata)
+         nullify(simdata)
+      end if
+      ! Deallocate main
+      if (allocated(ParName)) deallocate(ParName)
+      if (allocated(snapshot_file_path)) deallocate(snapshot_file_path)
+      if (allocated(file_text_restart)) deallocate(file_text_restart)
+      if (allocated(file_text_restart2)) deallocate(file_text_restart2)
    end subroutine
 
 end program simstrat_main

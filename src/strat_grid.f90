@@ -26,7 +26,6 @@
 !     |  - Contains class to store, use and modify the grid
 !<    +---------------------------------------------------------------+
 
-
 module strat_grid
    use strat_kinds
    use utilities
@@ -42,21 +41,23 @@ module strat_grid
       real(RK), dimension(:), allocatable :: A_read ! Area definition
       real(RK), dimension(:), allocatable :: z_A_read ! Height of area definitions
       logical :: equidistant_grid
+   contains
+      procedure, pass :: deallocate => grid_config_deallocate
    end type
 
    ! StaggeredGrid implementation
    type, public :: StaggeredGrid
-      real(RK), dimension(:), pointer     :: h              ! Box height
-      real(RK), dimension(:), allocatable :: z_face         ! Holds z-values of faces
-      real(RK), dimension(:), allocatable :: z_volume       ! Holds z-values of volume centers
-      real(RK), dimension(:), pointer     :: layer_depth    ! Depth of each layer, used by FABM (needs pointer attribute)
-      real(RK), dimension(:), allocatable :: Az             ! Areas
-      real(RK), dimension(:), pointer     :: Az_vol         ! Areas on volume grid, needed for FABM
-      real(RK), dimension(:), allocatable :: dAz            ! Area derivative with respect to height
-      real(RK), dimension(:), pointer     :: dAz_norm          ! Normalized area derivative, used by FABM (needs pointer attribute)
-      real(RK), dimension(:), allocatable :: meanint        ! ?
-      real(RK), pointer :: max_depth                        ! Relative to lake surface depth of lowest layer, FABM needs pointer attribute
-      real(RK), pointer :: z_zero                           ! Absolute depth of lowest layer, FABM needs pointer attribute
+      real(RK), dimension(:), pointer     :: h => null()           ! Box height
+      real(RK), dimension(:), allocatable :: z_face                ! Holds z-values of faces
+      real(RK), dimension(:), allocatable :: z_volume              ! Holds z-values of volume centers
+      real(RK), dimension(:), pointer     :: layer_depth => null() ! Depth of each layer, used by FABM (needs pointer attribute)
+      real(RK), dimension(:), allocatable :: Az                    ! Areas
+      real(RK), dimension(:), pointer     :: Az_vol => null()      ! Areas on volume grid, needed for FABM
+      real(RK), dimension(:), allocatable :: dAz                   ! Area derivative with respect to height
+      real(RK), dimension(:), pointer     :: dAz_norm => null()    ! Normalized area derivative, used by FABM (needs pointer attribute)
+      real(RK), dimension(:), allocatable :: meanint               ! ?
+      real(RK), pointer :: max_depth => null()                     ! Relative to lake surface depth of lowest layer, FABM needs pointer attribute
+      real(RK), pointer :: z_zero => null()                        ! Absolute depth of lowest layer, FABM needs pointer attribute
       real(RK) :: volume, h_old
 
       !Area factors
@@ -104,6 +105,9 @@ module strat_grid
       ! Saving & loading methods
       procedure, pass :: save => grid_save
       procedure, pass :: load => grid_load
+
+      ! Deallocation method
+      procedure, pass :: deallocate => grid_deallocate
    end type
 
 contains
@@ -115,6 +119,7 @@ contains
       call save_array_pointer(80, self%h)
       call save_array(80, self%z_face)
       call save_array(80, self%z_volume)
+      call save_array_pointer(80, self%layer_depth)
       call save_array(80, self%Az)
       call save_array_pointer(80, self%Az_vol)
       call save_array(80, self%dAz)
@@ -138,6 +143,7 @@ contains
       call read_array_pointer(81, self%h)
       call read_array(81, self%z_face)
       call read_array(81, self%z_volume)
+      call read_array_pointer(81, self%layer_depth)
       call read_array(81, self%Az)
       call read_array_pointer(81, self%Az_vol)
       call read_array(81, self%dAz)
@@ -152,6 +158,55 @@ contains
       read(81) self%nz_grid, self%nz_occupied, self%max_length_input_data
       read(81) self%ubnd_vol, self%ubnd_fce
       read(81) self%z_zero, self%lake_level, self%lake_level_old
+   end subroutine
+
+   ! Deallocate all data allocated in self
+   subroutine grid_deallocate(self)
+      class(StaggeredGrid), intent(inout) :: self
+      
+      if (associated(self%h)) then
+         deallocate(self%h)
+         nullify(self%h)
+      end if
+      if (allocated(self%z_face)) deallocate(self%z_face)
+      if (allocated(self%z_volume)) deallocate(self%z_volume)
+      if (associated(self%layer_depth)) then
+         deallocate(self%layer_depth)
+         nullify(self%layer_depth)
+      end if
+      if (allocated(self%Az)) deallocate(self%Az)
+      if (associated(self%Az_vol)) then
+         deallocate(self%Az_vol)
+         nullify(self%Az_vol)
+      end if
+      if (allocated(self%dAz)) deallocate(self%dAz)
+      if (associated(self%dAz_norm)) then
+         deallocate(self%dAz_norm)
+         nullify(self%dAz_norm)
+      end if
+      if (allocated(self%meanint)) deallocate(self%meanint)
+      if (associated(self%max_depth)) then
+         deallocate(self%max_depth)
+         nullify(self%max_depth)
+      end if
+      if (associated(self%z_zero)) then
+         deallocate(self%z_zero)
+         nullify(self%z_zero)
+      end if
+      if (allocated(self%AreaFactor_1)) deallocate(self%AreaFactor_1)
+      if (allocated(self%AreaFactor_2)) deallocate(self%AreaFactor_2)
+      if (allocated(self%AreaFactor_k1)) deallocate(self%AreaFactor_k1)
+      if (allocated(self%AreaFactor_k2)) deallocate(self%AreaFactor_k2)
+      if (allocated(self%AreaFactor_eps)) deallocate(self%AreaFactor_eps)
+   end subroutine
+
+   ! Deallocate grid configuration
+   subroutine grid_config_deallocate(self)
+      class(GridConfig), intent(inout) :: self
+
+      if (allocated(self%grid_read)) deallocate(self%grid_read)
+      if (allocated(self%A_read)) deallocate(self%A_read)
+      if (allocated(self%z_A_read)) deallocate(self%z_A_read)
    end subroutine
 
   ! Set up grid at program start
@@ -225,7 +280,7 @@ contains
          self%nz_grid = config%nz_grid
 
          ! If top value not included
-         if (config%grid_read(1) /= (config%max_depth - self%z_zero)) then
+         if (.not. compare_floats(config%grid_read(1), (config%max_depth - self%z_zero), 1.0e-4_RK)) then
             call error('Top value '//trim(toStr(config%max_depth - self%z_zero))//' is not included in grid file!')
          end if
 
@@ -277,12 +332,17 @@ contains
       end do
       self%z_volume(self%nz_grid) = nint(1e6_RK*self%z_volume(self%nz_grid))/1e6_RK
 
+      print *, 'a', self%z_face(self%nz_grid - 1:self%nz_grid + 1)
+
       do i = 2, self%nz_grid + 1
          self%z_face(i) = self%z_face(i - 1) + self%h(i - 1)
          self%z_face(i - 1) = nint(1e6_RK*self%z_face(i - 1))/1e6_RK
       end do
+      print *, 'a', self%z_face(self%nz_grid - 1:self%nz_grid + 1)
       self%z_face(self%nz_grid + 1) = nint(1e6_RK*self%z_face(self%nz_grid + 1))/1e6_RK
       self%layer_depth(1:self%nz_grid) = self%z_zero - self%z_volume(1:self%nz_grid)
+
+      print *, 'a', self%z_face(self%nz_grid - 1:self%nz_grid + 1)
 
    end subroutine grid_init_z_axes
 
@@ -436,6 +496,7 @@ contains
 
          ! Update number of occupied cells
          nz_occupied = nz_occupied - 1
+         print *, '3'
 
          ! Update boundaries (ubnd_fce and ubnd_vol)
          call self%update_nz()
@@ -487,6 +548,7 @@ contains
 
          ! Update number of occupied cells
          nz_occupied = nz_occupied + 1
+         print *, '2'
 
          ! Update boundaries (ubnd_fce and ubnd_vol)
          call self%update_nz()
@@ -508,8 +570,9 @@ contains
                  h=>self%h, &
                  z_zero=>self%z_zero, &
                  Az=>self%Az)
+         
          do i = 1, nz_grid + 1
-            if (z_face(i) >= (z_zero - new_depth)) then ! If above initial water level
+            if (ge_floats(z_face(i), (z_zero - new_depth), 1.0e-4_RK)) then ! If above initial water level
                zmax = z_face(i)
 
                ! Set top face to new water level
@@ -522,7 +585,7 @@ contains
                Az(i) = Az(i-1) + h(i - 1)/(zmax-z_face(i-1))*(Az(i)-Az(i-1))
                nz_occupied = i - 1
                self%h_old = h(nz_occupied)
-               if (h(nz_occupied) <= 0.5*h(nz_occupied - 1)) then ! If top box is too small
+               if (se_floats(h(nz_occupied), 0.5*h(nz_occupied - 1), 1.0e-4_RK)) then ! If top box is too small
                   z_face(nz_occupied) = z_face(nz_occupied + 1) ! Combine the two upper boxes
                   z_volume(nz_occupied - 1) = (z_face(nz_occupied) + z_face(nz_occupied - 1))/2
                   h(nz_occupied - 1) = h(nz_occupied) + h(nz_occupied - 1)
@@ -532,7 +595,7 @@ contains
                exit
             end if
          end do
-
+         
          call self%update_nz()
       end associate
    end subroutine

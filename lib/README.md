@@ -9,7 +9,7 @@ For now we have:
 | csv_fortran  | 1.1.0 / 05.09.2019			| BSD	  | static       |
 | json_fortan  | 7.1.0 / 19.07.2019         | BSD 	  | static       |
 | forbear      | 1.2.0 / 05.11.2020         | BSD     | static       |
-| fabm         | 3.0.0 / 20.01.2026         | GPL-2.0 | static       |
+| fabm         | 3.0.0 / 28.05.2026         | GPL-2.0 | static       |
 
 Please note that the first two libraries are hard copies, while the `forbear` and `fabm` libraries are submodules, added in the first place as:
 

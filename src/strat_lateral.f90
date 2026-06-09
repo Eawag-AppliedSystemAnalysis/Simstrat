@@ -43,6 +43,7 @@ module strat_lateral
    ! Generic base class for both modules (LateralRho and Normal)
    type, abstract, public :: GenericLateralModule
       class(ModelConfig), pointer :: cfg
+      class(FABMConfig), pointer :: fabm_cfg
       class(StaggeredGrid), pointer :: grid
       class(ModelParam), pointer :: param
 
@@ -64,6 +65,7 @@ module strat_lateral
       procedure, pass :: init => lateral_generic_init
       procedure, pass :: save => lateral_generic_save
       procedure, pass :: load => lateral_generic_load
+      procedure, pass :: deallocate => lateral_generic_deallocate
       procedure, pass :: update_bound => lateral_bound_update
       procedure(lateral_generic_update), deferred, pass :: update
    end type
@@ -80,10 +82,11 @@ module strat_lateral
    end type
 
 contains
-   subroutine lateral_generic_update(self, state, output_cfg)
+   subroutine lateral_generic_update(self, state, fabm_cfg, output_cfg)
       implicit none
       class(GenericLateralModule) :: self
       class(ModelState) :: state
+      class(FABMConfig), intent(in) :: fabm_cfg
       class(OutputConfig), intent(in) :: output_cfg
    end subroutine
 
@@ -98,7 +101,7 @@ contains
       class(ModelParam), target :: model_param
 
       ! Locals
-      integer :: i, exitstat, index_bs
+      integer :: exitstat
       logical :: inflow_path_exists
       character(len=256) :: mkdirCmd
 
@@ -128,20 +131,11 @@ contains
                fabm_config%inflow_path = 'FABM_inflow'
             end if
          end if
-         ! Transform backslashes to slash
-         do while(scan(fabm_config%inflow_path,'\\')>0)
-            index_bs = scan(fabm_config%inflow_path,'\\')
-            fabm_config%inflow_path(index_bs:index_bs) = '/'
-         end do
-         ! Remove trailing slashes at the end
-         if (len(fabm_config%inflow_path) == scan(trim(fabm_config%inflow_path),"/", BACK= .true.)) then
-            fabm_config%inflow_path = fabm_config%inflow_path(1:len(fabm_config%inflow_path) - 1)
-         else
-            fabm_config%inflow_path = trim(fabm_config%inflow_path)
-         end if
+         ! Normalize inflow path
+         call normalize_path(fabm_config%inflow_path)
          ! Update self
          self%fabm_path = fabm_config%inflow_path
-         self%n_vars = self%n_vars + state%n_fabm_interior_state
+         self%n_vars = self%n_vars + fabm_config%n_interior_state
       end if
 
       self%max_n_inflows = model_config%max_length_input_data
@@ -171,22 +165,26 @@ contains
       allocate(state%Q_inp(1:self%n_vars,1:grid%nz_grid + 1))
       allocate(self%has_surface_input(1:self%n_vars))
       allocate(self%has_deep_input(1:self%n_vars))
-
+      
       ! Surface-bound horizontal inflow for FABM
       if (self%couple_fabm) then
-         allocate(self%number_of_lines_read_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
-         allocate(self%fnum_bound(state%n_fabm_bottom_state + state%n_fabm_surface_state))
-         self%number_of_lines_read_bound = 0
-         allocate(self%eof_bound(state%n_fabm_surface_state))
-         allocate(self%nval_bound(state%n_fabm_surface_state))
-         allocate(self%tb_start_bound(state%n_fabm_surface_state))
-         allocate(self%tb_end_bound(state%n_fabm_surface_state))
-         allocate(state%Q_inp_bound(state%n_fabm_surface_state))
-         allocate(state%Q_inp_bound_con(state%n_fabm_surface_state))
-         allocate(self%Q_start_bound(state%n_fabm_surface_state))
-         allocate(self%Q_start_bound_con(state%n_fabm_surface_state))
-         allocate(self%Q_end_bound(state%n_fabm_surface_state))
-         allocate(self%Q_end_bound_con(state%n_fabm_surface_state))
+         if (fabm_config%n_bottom_state + fabm_config%n_surface_state > 0) then
+            allocate(self%number_of_lines_read_bound(fabm_config%n_bottom_state + fabm_config%n_surface_state))
+            allocate(self%fnum_bound(fabm_config%n_bottom_state + fabm_config%n_surface_state))
+            self%number_of_lines_read_bound = 0
+         end if
+         if (fabm_config%n_surface_state > 0) then
+            allocate(self%eof_bound(fabm_config%n_surface_state))
+            allocate(self%nval_bound(fabm_config%n_surface_state))
+            allocate(self%tb_start_bound(fabm_config%n_surface_state))
+            allocate(self%tb_end_bound(fabm_config%n_surface_state))
+            allocate(state%Q_inp_bound(fabm_config%n_surface_state))
+            allocate(state%Q_inp_bound_con(fabm_config%n_surface_state))
+            allocate(self%Q_start_bound(fabm_config%n_surface_state))
+            allocate(self%Q_start_bound_con(fabm_config%n_surface_state))
+            allocate(self%Q_end_bound(fabm_config%n_surface_state))
+            allocate(self%Q_end_bound_con(fabm_config%n_surface_state))
+         end if
       end if
    end subroutine
 
@@ -222,14 +220,20 @@ contains
          call save_matrix(80, self%Qs_read_end)
          ! Surface-bound horizontal inflow for FABM
          if (self%couple_fabm) then
-            call save_integer_array(80, self%number_of_lines_read_bound)
-            call save_integer_array(80, self%eof_bound)
-            call save_integer_array(80, self%nval_bound)
-            call save_integer_array(80, self%fnum_bound)
-            call save_array(80, self%tb_start_bound)
-            call save_array(80, self%tb_end_bound)
-            call save_array(80, self%Q_start_bound)
-            call save_array(80, self%Q_end_bound)
+            if (self%fabm_cfg%n_bottom_state + self%fabm_cfg%n_surface_state > 0) then
+               call save_integer_array(80, self%number_of_lines_read_bound)
+               call save_integer_array(80, self%fnum_bound)
+            end if
+            if (self%fabm_cfg%n_surface_state > 0) then
+               call save_integer_array(80, self%eof_bound)
+               call save_integer_array(80, self%nval_bound)
+               call save_array(80, self%tb_start_bound)
+               call save_array(80, self%tb_end_bound)
+               call save_array(80, self%Q_start_bound)
+               call save_array(80, self%Q_end_bound)
+               call save_array(80, self%Q_start_bound_con)
+               call save_array(80, self%Q_end_bound_con)
+            end if
          end if
       end if
    end subroutine
@@ -266,24 +270,67 @@ contains
          call read_matrix(81, self%Qs_read_end)
          ! Surface-bound horizontal inflow for FABM
          if (self%couple_fabm) then
-            call read_integer_array(81, self%number_of_lines_read_bound)
-            call read_integer_array(81, self%eof_bound)
-            call read_integer_array(81, self%nval_bound)
-            call read_integer_array(81, self%fnum_bound)
-            call read_array(81, self%tb_start_bound)
-            call read_array(81, self%tb_end_bound)
-            call read_array(81, self%Q_start_bound)
-            call read_array(81, self%Q_end_bound)
+            if (self%fabm_cfg%n_bottom_state + self%fabm_cfg%n_surface_state > 0) then
+               call read_integer_array(80, self%number_of_lines_read_bound)
+               call read_integer_array(81, self%fnum_bound)
+            end if
+            if (self%fabm_cfg%n_surface_state > 0) then
+               call read_integer_array(81, self%eof_bound)
+               call read_integer_array(81, self%nval_bound)
+               call read_array(81, self%tb_start_bound)
+               call read_array(81, self%tb_end_bound)
+               call read_array(81, self%Q_start_bound)
+               call read_array(81, self%Q_end_bound)
+               call read_array(81, self%Q_start_bound_con)
+               call read_array(81, self%Q_end_bound_con)
+            end if
          end if
       end if
    end subroutine
-      
+
+   ! Deallocate all data allocated in self
+   subroutine lateral_generic_deallocate(self)
+      class(GenericLateralModule) :: self
+
+      if (allocated(self%number_of_lines_read)) deallocate(self%number_of_lines_read)
+      if (allocated(self%eof)) deallocate(self%eof)
+      if (allocated(self%nval)) deallocate(self%nval)
+      if (allocated(self%nval_deep)) deallocate(self%nval_deep)
+      if (allocated(self%nval_surface)) deallocate(self%nval_surface)
+      if (allocated(self%fnum)) deallocate(self%fnum)
+      if (allocated(self%has_surface_input)) deallocate(self%has_surface_input)
+      if (allocated(self%has_deep_input)) deallocate(self%has_deep_input)
+      if (allocated(self%tb_start)) deallocate(self%tb_start)
+      if (allocated(self%tb_end)) deallocate(self%tb_end)
+      if (allocated(self%z_Inp)) deallocate(self%z_Inp)
+      if (allocated(self%Q_start)) deallocate(self%Q_start)
+      if (allocated(self%Qs_start)) deallocate(self%Qs_start)
+      if (allocated(self%Q_end)) deallocate(self%Q_end)
+      if (allocated(self%Qs_end)) deallocate(self%Qs_end)
+      if (allocated(self%Q_read_start)) deallocate(self%Q_read_start)
+      if (allocated(self%Q_read_end)) deallocate(self%Q_read_end)
+      if (allocated(self%Inp_read_start)) deallocate(self%Inp_read_start)
+      if (allocated(self%Inp_read_end)) deallocate(self%Inp_read_end)
+      if (allocated(self%Qs_read_start)) deallocate(self%Qs_read_start)
+      if (allocated(self%Qs_read_end)) deallocate(self%Qs_read_end)
+      if (allocated(self%number_of_lines_read_bound)) deallocate(self%number_of_lines_read_bound)
+      if (allocated(self%eof_bound)) deallocate(self%eof_bound)
+      if (allocated(self%nval_bound)) deallocate(self%nval_bound)
+      if (allocated(self%fnum_bound)) deallocate(self%fnum_bound)
+      if (allocated(self%tb_start_bound)) deallocate(self%tb_start_bound)
+      if (allocated(self%tb_end_bound)) deallocate(self%tb_end_bound)
+      if (allocated(self%Q_start_bound)) deallocate(self%Q_start_bound)
+      if (allocated(self%Q_end_bound)) deallocate(self%Q_end_bound)
+      if (allocated(self%Q_start_bound_con)) deallocate(self%Q_start_bound_con)
+      if (allocated(self%Q_end_bound_con)) deallocate(self%Q_end_bound_con)
+   end subroutine
       
    ! Implementation for lateral rho
-   subroutine lateral_rho_update(self, state, output_cfg)
+   subroutine lateral_rho_update(self, state, fabm_cfg, output_cfg)
       implicit none
       class(LateralRhoModule) :: self
       class(ModelState) :: state
+      class(FABMConfig), intent(in) :: fabm_cfg
       class(OutputConfig), intent(in) :: output_cfg
 
       ! Local Declarations
@@ -291,8 +338,8 @@ contains
       real(RK) :: dummy
       real(RK) :: Q_in(1:self%grid%ubnd_vol), h_in(1:self%grid%ubnd_vol)
       real(RK) :: T_in, S_in, rho_in, CD_in, g_red, slope, Ri, E, Q_inp_inc
-      real(RK) :: fabm_in_interior(state%n_fabm_interior_state)
-      integer :: i, j, k, i1, i2, l, status, unit
+      real(RK) :: fabm_in_interior(fabm_cfg%n_interior_state)
+      integer :: i, j, k, i1, i2, l, status
       character(len=100) :: fname
 
 
@@ -336,10 +383,8 @@ contains
                   if (status .ne. 0) then
                      if (i > n_simstrat) then
                         ! Do not need to define all FABM inflow files, set depths to values from Qin
-                        self%has_deep_input(i) = self%has_deep_input(1)
-                        self%has_surface_input(i) = self%has_surface_input(1)
                         self%nval_deep(i) = self%nval_deep(1)
-                        self%nval_surface(i) =self%nval_surface(1)
+                        self%nval_surface(i) = self%nval_surface(1)
                         self%nval(i) = self%nval(1)
                         self%z_Inp(i,:) = self%z_Inp(1,:)
                         goto 9
@@ -454,7 +499,8 @@ contains
             end if ! if        
 
             ! If lake level changes and if there is surface inflow, adjust inflow depth to keep relative inflow depth constant
-            if ((.not. grid%lake_level == grid%lake_level_old) .and. self%has_surface_input(i)) then
+            if ((.not. compare_floats(grid%lake_level, grid%lake_level_old, 1.0e-4_RK)) &
+               .and. self%has_surface_input(i)) then
 
                ! Readjust surface input depths
                self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)) = self%z_Inp(i, self%nval_deep(i) + 1 :self%nval(i)) - grid%lake_level_old + grid%lake_level
@@ -467,10 +513,11 @@ contains
             end if ! end if not lake_level...
 
 
-            if ((datum<=self%tb_start(i)).or.(self%eof(i)==1)) then    ! if datum before first date or end of file reached
+            if (se_floats(datum, self%tb_start(i)).or.(self%eof(i)==1)) then    ! if datum before first date or end of file reached
                goto 8
             else
-               do while (.not.((datum>=self%tb_start(i)).and.(datum<=self%tb_end(i)))) ! do until datum between dates
+               do while (.not.(ge_floats(datum, self%tb_start(i)) &
+                  .and. se_floats(datum, self%tb_end(i)))) ! do until datum between dates
                   ! Move one step in time
                   self%tb_start(i) = self%tb_end(i)
                   self%Qs_start(i, :) = self%Qs_end(i, :)
@@ -500,7 +547,7 @@ contains
                   end if
                end do
 
-               if(self%tb_end(i)<=self%tb_start(i)) then
+               if (se_floats(self%tb_end(i), self%tb_start(i))) then
                   call error('Dates in '//trim(fname)//' file must always be increasing.')
                end if
 
@@ -547,10 +594,8 @@ contains
             if(i==2) Q_inp(i,1:ubnd_vol) = 0.0_RK
             if(i==2) self%Q_start(i,1:ubnd_fce) = 0.0_RK
             self%Qs_start(i,1:ubnd_fce) = 0.0_RK
-            self%has_deep_input(i) = .false.
-            self%has_surface_input(i) = .false.
 
-11          continue
+   11       continue
 
          end do      ! end do i=1,n_vars
 
@@ -564,7 +609,7 @@ contains
 
          ! Plunging algorithm
          do j = 1,self%nval_deep(1)  ! nval_deep needs to be the same for all i
-            if (Inp(1,j) > 1E-15) then
+            if (Inp(1,j) > 1.0e-15_RK) then
                k = ubnd_vol
                do while (grid%z_volume(k) > self%z_Inp(1,j)) ! Find the place where the plunging inflow enters the lake (defined in file)
                   k = k - 1
@@ -578,7 +623,9 @@ contains
                ! Only if biochemistry enabled
                if (self%couple_fabm) then
                   ! Get initial FABM values for the plunging inflow (before entrainment of ambient water)
-                  fabm_in_interior = Inp(n_simstrat + 1 : self%n_vars, j) ! Inflow [var_unit]
+                  if (fabm_cfg%n_interior_state > 0) then
+                     fabm_in_interior(1:fabm_cfg%n_interior_state) = Inp(n_simstrat + 1 : self%n_vars, j) ! Inflow [var_unit]
+                  end if
                end if
 
                ! Compute density as a function of T and S
@@ -596,7 +643,7 @@ contains
                E = 1.6*CD_in**1.5/Ri !Entrainment coefficient
                h_in(k) = (2*Q_in(k)**2*Ri*tan(slope)**2/abs(g_red))**0.2 !Inflow thickness [m]
 
-               if (g_red > 0) then !Inflow plunges
+               if (g_red > 0.0_RK) then !Inflow plunges
                   do while ((rho_in > state%rho(k)).and.(k > 1))
                      h_in(k - 1) = 1.2*E*(grid%z_volume(k) - grid%z_volume(k-1))/sin(slope) + h_in(k)
                      Q_in(k - 1) = Q_in(k)*(h_in(k - 1)/h_in(k))**(5./3.)
@@ -604,7 +651,9 @@ contains
                      T_in = (T_in*Q_in(k) + state%T(k)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
                      S_in = (S_in*Q_in(k) + state%S(k)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
                      if (self%couple_fabm) then
-                        fabm_in_interior = (fabm_in_interior*Q_in(k) + state%fabm_interior_state(k,:)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
+                        if (fabm_cfg%n_interior_state > 0) then
+                           fabm_in_interior(1:fabm_cfg%n_interior_state) = (fabm_in_interior(1:fabm_cfg%n_interior_state)*Q_in(k) + state%fabm_interior_state(k,:)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
+                        end if
                      end if
                      rho_in = (rho_in*Q_in(k) + state%rho(k)*(Q_in(k - 1) - Q_in(k)))/Q_in(k - 1)
                      k = k - 1
@@ -614,7 +663,7 @@ contains
                      if(i1 == ubnd_vol) exit
                      if(grid%z_volume(i1 + 1) > (grid%z_volume(k) + h_in(k))) exit
                   end do
-               else if (g_red < 0) then !Inflow rises
+               else if (g_red < 0.0_RK) then !Inflow rises
                   do while ((rho_in < state%rho(k)) .and. (k < ubnd_vol))
                      h_in(k + 1) = 1.2*E*(grid%z_volume(k + 1) - grid%z_volume(k))/sin(slope) + h_in(k)
                      Q_in(k + 1) = Q_in(k)*(h_in(k + 1)/h_in(k))**(5./3.)
@@ -622,7 +671,9 @@ contains
                      T_in = (T_in*Q_in(k) + state%T(k)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
                      S_in = (S_in*Q_in(k) + state%S(k)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
                      if (self%couple_fabm) then
-                        fabm_in_interior = (fabm_in_interior*Q_in(k) + state%fabm_interior_state(k,:)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
+                        if (fabm_cfg%n_interior_state > 0) then
+                           fabm_in_interior(1:fabm_cfg%n_interior_state) = (fabm_in_interior(1:fabm_cfg%n_interior_state)*Q_in(k) + state%fabm_interior_state(k,:)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
+                        end if
                      end if
                      rho_in = (rho_in*Q_in(k) + state%rho(k)*(Q_in(k + 1) - Q_in(k)))/Q_in(k + 1)
                      k = k + 1
@@ -640,7 +691,11 @@ contains
                   Q_inp(1,i) = Q_inp(1,i) + Q_inp_inc
                   Q_inp(3,i) = Q_inp(3,i) + T_in*Q_inp_inc
                   Q_inp(4,i) = Q_inp(4,i) + S_in*Q_inp_inc
-                  if (self%couple_fabm) Q_inp(n_simstrat + 1 : self%n_vars,i) = Q_inp(n_simstrat + 1 : self%n_vars,i) + fabm_in_interior*Q_inp_inc
+                  if (self%couple_fabm) then
+                     if (fabm_cfg%n_interior_state > 0) then
+                        Q_inp(n_simstrat + 1 : self%n_vars,i) = Q_inp(n_simstrat + 1 : self%n_vars,i) + fabm_in_interior(1:fabm_cfg%n_interior_state) * Q_inp_inc
+                     end if
+                  end if
                end do
             end if
          end do
@@ -655,10 +710,11 @@ contains
    end subroutine
 
    ! "Normal" Implementation
-   subroutine lateral_update(self, state, output_cfg)
+   subroutine lateral_update(self, state, fabm_cfg, output_cfg)
       implicit none
       class(LateralModule) :: self
       class(ModelState) :: state
+      class(FABMConfig), intent(in) :: fabm_cfg
       class(OutputConfig), intent(in) :: output_cfg
 
       ! Local Declarations
@@ -703,10 +759,8 @@ contains
                   if (status .ne. 0) then
                      if (i > n_simstrat) then
                         ! Do not need to define all FABM inflow files, set depths to values from Qin
-                        self%has_deep_input(i) = self%has_deep_input(1)
-                        self%has_surface_input(i) = self%has_surface_input(1)
                         self%nval_deep(i) = self%nval_deep(1)
-                        self%nval_surface(i) =self%nval_surface(1)
+                        self%nval_surface(i) = self%nval_surface(1)
                         self%nval(i) = self%nval(1)
                         self%z_Inp(i,:) = self%z_Inp(1,:)
                         goto 9
@@ -824,7 +878,8 @@ contains
             end if ! idx = 1
 
             ! If lake level changes and if there is surface inflow, adjust inflow depth to keep them at the surface
-            if ((.not. grid%lake_level == grid%lake_level_old) .and. (self%has_surface_input(i))) then
+            if ((.not. compare_floats(grid%lake_level, grid%lake_level_old, 1.0e-4_RK)) &
+               .and. (self%has_surface_input(i))) then
 
                ! Readjust surface input depths
                self%z_Inp(i, self%nval_deep(i) + 1:self%nval(i)) = self%z_Inp(i, self%nval_deep(i) + 1 :self%nval(i)) - grid%lake_level_old + grid%lake_level
@@ -838,10 +893,12 @@ contains
 
 
             ! Temporal treatment of inflow
-            if ((datum <= self%tb_start(i)) .or. (self%eof(i) == 1)) then ! if datum before first date or end of file reached
+            if (se_floats(datum, self%tb_start(i)) &
+               .or. (self%eof(i) == 1)) then ! if datum before first date or end of file reached
                goto 8
             else
-               do while (.not. ((datum >= self%tb_start(i)) .and. (datum <= self%tb_end(i)))) ! Do until datum between dates
+               do while (.not. (ge_floats(datum, self%tb_start(i)) &
+                  .and. se_floats(datum, self%tb_end(i)))) ! Do until datum between dates
                   self%tb_start(i) = self%tb_end(i) ! Move one step in time
                   self%Q_start(i, :) = self%Q_end(i, :)
                   self%Qs_start(i, :) = self%Qs_end(i, :)
@@ -887,8 +944,6 @@ contains
             Q_inp(i, 1:ubnd_fce) = 0.0_RK
             self%Q_start(i, 1:ubnd_fce) = 0.0_RK
             self%Qs_start(i, 1:ubnd_fce) = 0.0_RK
-            self%has_deep_input(i) = .false.
-            self%has_surface_input(i) = .false.
 
 11          continue
 
@@ -911,17 +966,19 @@ contains
 
    ! FABM: Surface- / Bottom-bound inflows and outflows (absolute and concentration-dependent)
    ! Inflow file consists of one time and two inflow/outflow columns (absolute and concentration-dependent)
-   subroutine lateral_bound_update(self, state, output_cfg)
+   subroutine lateral_bound_update(self, state, fabm_cfg, output_cfg)
       implicit none
       class(GenericLateralModule) :: self
       class(ModelState) :: state
+      class(FABMConfig), intent(in) :: fabm_cfg
       class(OutputConfig), intent(in) :: output_cfg
 
       ! Local Declarations
-      integer :: i, l, status, unit, interpolation_factor
+      integer :: i, l, status, unit
+      real(RK) :: interpolation_factor
       character(len=100) :: fname
 
-      do i=1, state%n_fabm_bottom_state + state%n_fabm_surface_state
+      do i=1, fabm_cfg%n_bottom_state + fabm_cfg%n_surface_state
 
          associate (datum=>state%datum, &
                idx=>state%first_timestep, &
@@ -932,7 +989,7 @@ contains
             if (idx) then  ! If first timestep
                if (self%number_of_lines_read_bound(i) == 0) then  ! If not started from snapshot
 
-                  fname = trim(self%fabm_path)//'/'//trim(output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + i)%name)//'_inflow.dat'
+                  fname = trim(self%fabm_path)//'/'//trim(output_cfg%output_vars_fabm_state(fabm_cfg%n_interior_state + i)%name)//'_inflow.dat'
 
                   ! Read inflow files
                   open(newunit=unit, action='read', status='old', file=fname, iostat = status)
@@ -940,13 +997,13 @@ contains
                   
                   ! Check whether the inflow file has been read and whether it is for a surface state variable
                   if (status .ne. 0) then
-                     if (i > state%n_fabm_bottom_state) then
+                     if (i > fabm_cfg%n_bottom_state) then
                         goto 9
                      else
                         cycle
                      end if
                   else
-                     if (i > state%n_fabm_bottom_state) then
+                     if (i > fabm_cfg%n_bottom_state) then
                         write(6,*) 'Reading ', fname
                      else
                         call warn('Bottom Inflow File '//trim(fname)//' ignored')
@@ -976,7 +1033,7 @@ contains
                   call ok('FABM bound input file successfully read: '//trim(fname))
                else ! if start from snapshot
                   ! Open inflow files
-                  fname = trim(self%fabm_path)//'/'//trim(output_cfg%output_vars_fabm_state(state%n_fabm_interior_state + i)%name)//'_inflow.dat'
+                  fname = trim(self%fabm_path)//'/'//trim(output_cfg%output_vars_fabm_state(fabm_cfg%n_interior_state + i)%name)//'_inflow.dat'
                   
                   open(self%fnum_bound(i), action='read', status='old', file=fname)
 
@@ -988,13 +1045,15 @@ contains
             end if ! idx = 1
             
             ! Exit loop for bottom state variables
-            if (i <= state%n_fabm_bottom_state) cycle
+            if (i <= fabm_cfg%n_bottom_state) cycle
 
             ! Temporal treatment of inflow
-            if ((datum <= self%tb_start_bound(i)) .or. (self%eof_bound(i) == 1)) then ! if datum before first date or end of file reached
+            if (se_floats(datum, self%tb_start_bound(i)) &
+               .or. (self%eof_bound(i) == 1)) then ! if datum before first date or end of file reached
                goto 8
             else
-               do while (.not. ((datum >= self%tb_start_bound(i)) .and. (datum <= self%tb_end_bound(i)))) ! Do until datum between dates
+               do while (.not. (ge_floats(datum, self%tb_start_bound(i)) &
+                  .and. se_floats(datum, self%tb_end_bound(i)))) ! Do until datum between dates
                   self%tb_start_bound(i) = self%tb_end_bound(i) ! Move one step in time
                   self%Q_start_bound(i) = self%Q_end_bound(i)
                   self%Q_start_bound_con(i) = self%Q_end_bound_con(i)

@@ -175,8 +175,8 @@ contains
 
          ! Define variables that should be written
          if (output_cfg%output_all) then
-            output_cfg%number_output_vars = 28
-            output_cfg%output_var_names = [character(len=12) :: 'V','U','T','S','num','nuh','NN','k','eps','P','B','Ps','HA','HW','HK','HV','Rad0','SWR','TotalIceH','BlackIceH','WhiteIceH','SnowH','WaterH','Qvert','Eseiche','O2_hypo','T_hypo','chla_surface']
+            output_cfg%number_output_vars = 30
+            output_cfg%output_var_names = [character(len=12) :: 'V','U','T','S','num','nuh','NN','k','eps','P','B','Ps','HA','HW','HK','HV','Rad0','SWR','PAR','AbsCoeff','TotalIceH','BlackIceH','WhiteIceH','SnowH','WaterH','Qvert','Eseiche','O2_hypo','T_hypo','chla_surface']
          else
             output_cfg%number_output_vars = size(output_cfg%output_var_names)
          end if
@@ -328,6 +328,22 @@ contains
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%swr_vol
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
 
+               case('PAR')
+                  ! Photosynthetically active radiative flux [W m-2]
+                  self%simdata%output_cfg%output_vars(i)%name = "PAR"
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Photosynthetically active radiative flux"
+                  self%simdata%output_cfg%output_vars(i)%units = "W/m2"
+                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%par_vol
+                  self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
+
+               case('AbsCoeff')
+                  ! Absorption coefficient [m-1]
+                  self%simdata%output_cfg%output_vars(i)%name = "AbsCoeff"
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Absorption coefficient"
+                  self%simdata%output_cfg%output_vars(i)%units = "1/m"
+                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%absorb
+                  self%simdata%output_cfg%output_vars(i)%face_grid = .true.
+
                case('TotalIceH')
                   ! Total ice thickness [m]
                   self%simdata%output_cfg%output_vars(i)%name = "TotalIceH"
@@ -437,11 +453,11 @@ contains
          model%gamma = grid%Az(grid%ubnd_fce)/(grid%volume**1.5_RK)/sqrt(rho_0)*model_param%CD
 
          ! Geothermal heat flux
-         if (model_param%fgeo /= 0) then
+         if (.not. compare_floats(model_param%fgeo, 0.0_RK)) then
             allocate(model%fgeo_add(grid%nz_grid))
 
             model%fgeo_add(1:grid%nz_grid) = model_param%fgeo/rho_0/cp*grid%dAz(1:grid%nz_grid)/grid%Az(2:grid%nz_grid + 1) ! calculation per kg
-            if (grid%Az(1) /= 0) then
+            if (.not. compare_floats(grid%Az(1), 0.0_RK)) then
                model%fgeo_add(1) = model%fgeo_add(1) + 2*model_param%fgeo/rho_0/cp*grid%Az(1)/((grid%Az(1) + grid%Az(2))*grid%h(1))
             end if
          end if
@@ -458,22 +474,22 @@ contains
    subroutine read_grid_config(self)
       implicit none
       class(SimstratSimulationFactory) :: self
-      type(GridConfig) :: grid_config
       real(RK), dimension(:) :: z_tmp(self%simdata%model_cfg%max_length_input_data)
       real(RK), dimension(:) :: A_tmp(self%simdata%model_cfg%max_length_input_data)
       integer :: n_read, i
       associate (simdata=>self%simdata, &
-                 max_length_input_data=>grid_config%max_length_input_data)
+                 grid_cfg=>self%simdata%grid_cfg, &
+                 max_length_input_data=>self%simdata%grid_cfg%max_length_input_data)
 
-         grid_config%max_length_input_data = self%simdata%model_cfg%max_length_input_data
+         grid_cfg%max_length_input_data = self%simdata%model_cfg%max_length_input_data
 
          if (simdata%input_cfg%grid_input_type == 7) then
-            allocate (grid_config%grid_read(grid_config%max_length_input_data))
+            allocate (grid_cfg%grid_read(grid_cfg%max_length_input_data))
             ! Read grid
             open (12, status='old', file=simdata%input_cfg%GridName)
             read (12, *)
             do i = 1, max_length_input_data
-               read (12, *, end=69) grid_config%grid_read(i)
+               read (12, *, end=69) grid_cfg%grid_read(i)
             end do
 
 69          if(i==max_length_input_data) then
@@ -484,28 +500,28 @@ contains
             close (12)
 
             if (i == 2) then ! Constant spacing
-               grid_config%nz_grid = int(grid_config%grid_read(1))
-               grid_config%equidistant_grid = .TRUE.
+               grid_cfg%nz_grid = int(grid_cfg%grid_read(1))
+               grid_cfg%equidistant_grid = .TRUE.
             else ! Variable spacing
-               grid_config%nz_grid = i - 2
-               grid_config%equidistant_grid = .FALSE.
+               grid_cfg%nz_grid = i - 2
+               grid_cfg%equidistant_grid = .FALSE.
             end if
 
          ! If grid was read from json
          ! If an array of grid values is given
          else if (simdata%input_cfg%grid_input_type == 3) then
             ! Determine nz_grid from grid
-            grid_config%nz_grid = size(simdata%input_cfg%read_grid_array_from_json) - 1
+            grid_cfg%nz_grid = size(simdata%input_cfg%read_grid_array_from_json) - 1
             ! Set flag
-            grid_config%equidistant_grid = .FALSE.
+            grid_cfg%equidistant_grid = .FALSE.
             ! Store json-read values in grid_read array to be compatible with rest of the code
-            allocate (grid_config%grid_read(grid_config%max_length_input_data))
-            grid_config%grid_read(1:grid_config%nz_grid + 1) = simdata%input_cfg%read_grid_array_from_json(1:grid_config%nz_grid + 1)
+            allocate (grid_cfg%grid_read(grid_cfg%max_length_input_data))
+            grid_cfg%grid_read(1:grid_cfg%nz_grid + 1) = simdata%input_cfg%read_grid_array_from_json(1:grid_cfg%nz_grid + 1)
             call ok('Grid file successfully read')
          ! If the spacing is given
          else
-            grid_config%nz_grid = int(simdata%input_cfg%read_grid_value_from_json)
-            grid_config%equidistant_grid = .TRUE.
+            grid_cfg%nz_grid = int(simdata%input_cfg%read_grid_value_from_json)
+            grid_cfg%equidistant_grid = .TRUE.
             call ok('Grid file successfully read')
          end if
 
@@ -539,18 +555,18 @@ contains
 
          n_read = i - 1 ! Number of area values
 
-         allocate (grid_config%z_A_read(n_read), grid_config%A_read(n_read))
+         allocate (grid_cfg%z_A_read(n_read), grid_cfg%A_read(n_read))
 
          ! Reverse order of values
          do i = 1, n_read
-            grid_config%z_A_read(i) = -z_tmp(n_read - i + 1)
-            grid_config%A_read(i) = A_tmp(n_read - i + 1)
+            grid_cfg%z_A_read(i) = -z_tmp(n_read - i + 1)
+            grid_cfg%A_read(i) = A_tmp(n_read - i + 1)
          end do
 
-         grid_config%max_depth = grid_config%z_A_read(1) - grid_config%z_A_read(n_read) ! depth = max - min depth
+         grid_cfg%max_depth = grid_cfg%z_A_read(1) - grid_cfg%z_A_read(n_read) ! depth = max - min depth
 
          ! Initialize Grid of simdata
-         call simdata%grid%init(grid_config)
+         call simdata%grid%init(grid_cfg)
       end associate
    end subroutine
 
@@ -709,21 +725,15 @@ contains
 
          ! FABM configuration
          if (model_cfg%couple_fabm) then
-            call par_file%get("FABMConfig.FABMConfigPath", fabm_cfg%config_path,found); call check_field(found, 'FABMConfig.FABMConfigPath',ParName)
+            call par_file%get("FABMConfig.FABMConfigFile", fabm_cfg%config_file,found); call check_field(found, 'FABMConfig.FABMConfigFile',ParName)
             call par_file%get("FABMConfig.FABMInitialPath", fabm_cfg%initial_path,found); call check_field(found, 'FABMConfig.FABMInitialPath',ParName)
             call par_file%get("FABMConfig.FABMInflowPath", fabm_cfg%inflow_path,found); call check_field(found, 'FABMConfig.FABMInflowPath',ParName)
-            call par_file%get("FABMConfig.FABMConfigFile", fabm_cfg%config_file,found); call check_field(found, 'FABMConfig.FABMConfigFile',ParName)
-            call par_file%get("FABMConfig.FABMDiagnosticVars", fabm_cfg%diag_vars,found); call check_field(found, 'FABMConfig.FABMDiagnosticVars',ParName)
-            call par_file%get("FABMConfig.OutputDiagnosticVars", fabm_cfg%output_diag_vars,found); call check_field(found, 'FABMConfig.OutputDiagnosticVars', ParName)
+            call par_file%get("FABMConfig.FABMConfigPath", fabm_cfg%config_path,found); call check_field(found, 'FABMConfig.FABMConfigPath',ParName)
             call par_file%get("FABMConfig.RepairStates", fabm_cfg%repair_states,found); call check_field(found, 'FABMConfig.RepairStates',ParName)
             call par_file%get("FABMConfig.OutputRepairedVars", fabm_cfg%output_repaired_vars,found); call check_field(found, 'FABMConfig.OutputRepairedVars',ParName)
             call par_file%get("FABMConfig.BottomEverywhere", fabm_cfg%bottom_everywhere,found); call check_field(found, 'FABMConfig.BottomEverywhere',ParName)
-            call par_file%get("FABMConfig.BioshadeFeedback", fabm_cfg%bioshade_feedback,found); call check_field(found, 'FABMConfig.BioshadeFeedback', ParName)
+            call par_file%get("FABMConfig.InputExtinctionFactor", fabm_cfg%input_extinction,found); call check_field(found, 'FABMConfig.InputExtinctionFactor', ParName)
             call par_file%get("FABMConfig.BackgroundExtinction", fabm_cfg%background_extinction,found); call check_field(found, 'FABMConfig.BackgroundExtinction', ParName)
-            call par_file%get("FABMConfig.MaxLengthInputData", fabm_cfg%max_length_input_data, found);
-            if (.not. found) then
-               fabm_cfg%max_length_input_data = model_cfg%max_length_input_data
-            end if
          end if
 
          !Model Parameter

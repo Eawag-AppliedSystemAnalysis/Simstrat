@@ -34,6 +34,7 @@ module strat_turbulence
    use strat_consts
    use strat_grid
    use strat_simdata
+   use utilities
    implicit none
    private
 
@@ -131,7 +132,7 @@ contains
          if (self%model_cfg%split_a_seiche) then   ! If a_seiche is splitted seasonally
 
             ! If maximum stratification (N2) is higher than threshold
-            if (maxval(state%NN(2:ubnd_fce - 1)) >= param%strat_sumr) then
+            if (ge_floats(maxval(state%NN(2:ubnd_fce - 1)), param%strat_sumr)) then
                a_seiche_local = param%a_seiche
 
             ! If maximum stratification (N2) is lower than threshold
@@ -143,7 +144,7 @@ contains
          end if
 
          ! Exit function if a_seiche is 0
-         if (a_seiche_local == 0) then
+         if (compare_floats(a_seiche_local, 0.0_RK)) then
             state%P_seiche = 0.0_RK
             return
          end if
@@ -165,7 +166,7 @@ contains
 
          ! todo: direct float comparison...? OK?
          ! why is this code here?
-         if (f_norm == 0.) then
+         if (compare_floats(f_norm, 0.0_RK)) then
             do i = 2, ubnd_fce - 1
                distrib(i) = 1/grid%h(i - 1)
             end do

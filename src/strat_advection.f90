@@ -59,9 +59,6 @@ contains
       class(ModelConfig), target :: model_config
       class(ModelParam), target :: model_param
 
-      ! Local variables
-      integer :: i
-
       self%cfg => model_config
       self%param => model_param
       self%grid => grid
@@ -69,19 +66,18 @@ contains
    end subroutine
 
    ! A lot of code that is hard to test - might be refactored in the future
-   subroutine advection_update(self, state, output_cfg)
+   subroutine advection_update(self, state, fabm_cfg, output_cfg)
       implicit none
       class(AdvectionModule) :: self
       class(ModelState) :: state
+      class(FABMConfig), intent(in) :: fabm_cfg
       class(OutputConfig), intent(in) :: output_cfg
 
       real(RK) :: top_z, top_h
-      real(RK) :: top
       real(RK) :: dh, dh_i(1:2), h_div_2, h_mult_2 ! depth differences
-      real(RK) :: dU(self%grid%nz_grid), dV(self%grid%nz_grid), dTemp(self%grid%nz_grid), dS(self%grid%nz_grid)
       real(RK) :: dt_i(1:2) ! first and second time step
       real(RK) :: AreaFactor_adv(1:self%grid%nz_grid)
-      integer :: i, t_i
+      integer :: t_i
 
       associate (grid=>self%grid, &
                  nz_occupied=>self%grid%nz_occupied, &
@@ -101,16 +97,16 @@ contains
 
          ! Calculate timestep splitting
          !Split timestep depending on situation
-         if (dh == 0.) then ! If volume does not change, take one normal time step
+         if (compare_floats(dh, 0.0_RK, 1.0e-4_RK)) then ! If volume does not change, take one normal time step
             dt_i(1) = dt
-         else if (top_z == grid%max_depth) then ! If we are already at the maximum lake level
+         else if (compare_floats(top_z, grid%max_depth, 1.0e-4_RK)) then ! If we are already at the maximum lake level
             dt_i(1) = dt
-         else if ((dh + top_z) >= grid%max_depth) then ! If the full timestep would lead to a lake level higher than maximum allowed lake level, split the timestep.
+         else if (ge_floats((dh + top_z), grid%max_depth, 1.0e-4_RK)) then ! If the full timestep would lead to a lake level higher than maximum allowed lake level, split the timestep.
             dt_i(1) = (grid%max_depth - top_z)/dh*dt
          else if (((dh + top_h) > h_div_2) .and. & ! If top box>0.5*lower box and <2*lower box, take one time step
                   ((dh + top_h) < h_mult_2)) then
             dt_i(1) = dt
-         else if ((dh + top_h) <= h_div_2) then ! If top box<=0.5*lower box, first step until top box=0.5*lower box
+         else if (se_floats((dh + top_h), h_div_2, 1.0e-4_RK)) then ! If top box<=0.5*lower box, first step until top box=0.5*lower box
             dt_i(1) = abs((top_h - h_div_2)/dh)*dt
          else ! If top box>=2*lower box, first step until top box = 2*lower box
             dt_i(1) = abs((2*h(nz_occupied - 1) - top_h)/dh)*dt
@@ -123,23 +119,23 @@ contains
             dh_i(t_i) = dh*dt_i(t_i)/dt ! Depth difference for dt(t_i)
 
             ! Update Simstrat variables U, V, T and S as well as FABM variables
-            call do_update_statvars(self, state, output_cfg, AreaFactor_adv(1:nz_occupied), dh_i(t_i))
+            call do_update_statvars(self, state, fabm_cfg, output_cfg, AreaFactor_adv(1:nz_occupied), dh_i(t_i))
 
             ! Adjust boxes (Horrible if/else construction - replace!)
             if (t_i == 1) then
-               if (dh == 0) then ! If volume does not change, return
+               if (compare_floats(dh, 0.0_RK, 1.0e-4_RK)) then ! If volume does not change, return
                   return
-               else if ((dh + top_z) >= grid%max_depth) then ! If surface level reached
+               else if (ge_floats((dh + top_z), grid%max_depth, 1.0e-4_RK)) then ! If surface level reached
                   call grid%modify_top_box(grid%max_depth - top_z)
                   return
                else if (((dh_i(t_i) + top_h) > h_div_2) .and. &  ! If top box>0.5*lower box 
                         ((dh_i(t_i) + top_h) < (h_mult_2))) then ! and top box<2*lower box
                   call grid%modify_top_box(dh_i(t_i))
                   return
-               else if ((dh + top_h) <= h_div_2) then ! If top box<=0.5*lower box, merge 2 boxes
-                  call self%merge_box(state, output_cfg, dh_i(t_i))
-               else if ((dh + top_h) >= h_mult_2) then ! If top box>=2*lower box, add one box
-                  call self%add_box(state, output_cfg, dh_i(t_i))
+               else if (se_floats((dh + top_h), h_div_2, 1.0e-4_RK)) then ! If top box<=0.5*lower box, merge 2 boxes
+                  call self%merge_box(state, fabm_cfg, output_cfg, dh_i(t_i))
+               else if (ge_floats((dh + top_h), h_mult_2, 1.0e-4_RK)) then ! If top box>=2*lower box, add one box
+                  call self%add_box(state, fabm_cfg, output_cfg, dh_i(t_i))
                end if ! dh==0
             end if
 
@@ -147,10 +143,11 @@ contains
       end associate
    end subroutine
 
-   subroutine do_update_statvars(self, state, output_cfg, AreaFactor_adv, dh)
+   subroutine do_update_statvars(self, state, fabm_cfg, output_cfg, AreaFactor_adv, dh)
       ! Arguments
       class(AdvectionModule) :: self
       class(ModelState) :: state
+      class(FABMConfig), intent(in) :: fabm_cfg
       class(OutputConfig), intent(in) :: output_cfg
       real(RK), dimension(:) :: AreaFactor_adv
       real(RK) :: dh
@@ -158,8 +155,8 @@ contains
       ! Local variables
       integer :: i, top, ivar
       real(RK) :: dU(self%grid%nz_grid), dV(self%grid%nz_grid), dTemp(self%grid%nz_grid), dS(self%grid%nz_grid)
-      real(RK) :: dfabm_interior(self%grid%nz_grid, state%n_fabm_interior_state)
-      real(RK) :: dfabm_surface(state%n_fabm_surface_state)
+      real(RK) :: dfabm_interior(self%grid%nz_grid, fabm_cfg%n_interior_state)
+      real(RK) :: dfabm_surface(fabm_cfg%n_surface_state)
       integer :: outflow_above, outflow_below
 
       associate(ubnd_vol => self%grid%ubnd_vol, &
@@ -169,21 +166,21 @@ contains
             ! Calculate changes through vertical advection
             do i = 1, ubnd_vol
                ! For the top-most cell, if Q_vert at the upper face is positive, there is still no outflow (the cell is simply growing, but this is done elsewhere)
-               if ((i == ubnd_vol) .and. Q_vert(i + 1) > 0) then
+               if ((i == ubnd_vol) .and. Q_vert(i + 1) > 0.0_RK) then
                   top = 0
                else
                   top = 1
                end if
 
                ! If Q_vert at the upper face of cell i is positive, then there is outflow to the cell above
-               if (Q_vert(i + 1) > 0) then
+               if (Q_vert(i + 1) > 0.0_RK) then
                      outflow_above = 1
                else 
                      outflow_above = 0
                end if
 
                ! If Q_vert at the lower face of cell i is negative, then there is outflow to the cell below
-               if (Q_vert(i) < 0) then
+               if (Q_vert(i) < 0.0_RK) then
                      outflow_below = 1
                else
                      outflow_below = 0
@@ -197,7 +194,7 @@ contains
                if (self%cfg%couple_fabm) dfabm_interior(i,:) = -(top*outflow_above*Q_vert(i + 1) - outflow_below*Q_vert(i))*state%fabm_interior_state(i,:)
 
                ! Calculate the advective flow into cell i from below
-               if (i > 1 .and. Q_vert(i ) > 0) then
+               if (i > 1 .and. Q_vert(i) > 0.0_RK) then
                   dU(i) = dU(i) + Q_vert(i)*state%U(i - 1)
                   dV(i) = dV(i) + Q_vert(i)*state%V(i - 1)
                   dTemp(i) = dTemp(i) + Q_vert(i)*state%T(i - 1)
@@ -206,7 +203,7 @@ contains
                end if
 
                ! Calculate the advective flow into cell i from above (- sign in front because Q_vert is negative if there is inflow)
-               if (i < ubnd_vol .and. Q_vert(i + 1) < 0) then
+               if (i < ubnd_vol .and. Q_vert(i + 1) < 0.0_RK) then
                   dU(i) = dU(i) - Q_vert(i + 1)*state%U(i + 1)
                   dV(i) = dV(i) - Q_vert(i + 1)*state%V(i + 1)
                   dTemp(i) = dTemp(i) - Q_vert(i + 1)*state%T(i + 1)
@@ -222,15 +219,15 @@ contains
             dS(1:ubnd_vol) = dS(1:ubnd_vol) + state%Q_inp(4, 1:ubnd_vol) + state%Q_inp(2, 1:ubnd_vol)*state%S(1:ubnd_vol)
             if (self%cfg%couple_fabm) then
                ! dfabm_interior = dfabm_interior + dfabm_interior(inflow) + dfabm_interior(outflow), units: var_unit*m^3/s
-               do ivar = 1, state%n_fabm_interior_state
+               do ivar = 1, fabm_cfg%n_interior_state
                   dfabm_interior(1:ubnd_vol, ivar) = dfabm_interior(1:ubnd_vol, ivar) +&
                      state%Q_inp(n_simstrat + ivar, 1:ubnd_vol) +&
                      state%Q_inp(2, 1:ubnd_vol)*state%fabm_interior_state(1:ubnd_vol, ivar)
                end do
                ! dfabm_surface = dfabm_surface(absolute in/outflow) + dfabm_surface(concentration-dependent in/outflow), units: var_unit*m^2/s
-               if (state%n_fabm_surface_state > 0) then
-                  dfabm_surface(:) = state%Q_inp_bound(state%n_fabm_bottom_state + 1 : state%n_fabm_bottom_state + state%n_fabm_surface_state) +&
-                     state%Q_inp_bound_con(state%n_fabm_bottom_state + 1 : state%n_fabm_bottom_state + state%n_fabm_surface_state)*state%fabm_surface_state(:)
+               if (fabm_cfg%n_surface_state > 0) then
+                  dfabm_surface(:) = state%Q_inp_bound(fabm_cfg%n_bottom_state + 1 : fabm_cfg%n_bottom_state + fabm_cfg%n_surface_state) +&
+                     state%Q_inp_bound_con(fabm_cfg%n_bottom_state + 1 : fabm_cfg%n_bottom_state + fabm_cfg%n_surface_state)*state%fabm_surface_state(:)
                end if
             end if
 
@@ -240,14 +237,14 @@ contains
             state%T(1:ubnd_vol) = state%T(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dTemp(1:ubnd_vol)
             state%S(1:ubnd_vol) = state%S(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dS(1:ubnd_vol)
             if (self%cfg%couple_fabm) then
-               do ivar = 1, state%n_fabm_interior_state
+               do ivar = 1, fabm_cfg%n_interior_state
                   ! Leave benthic variables unaffected
                   if (.not. output_cfg%output_vars_fabm_state(ivar)%benthic) then
                      state%fabm_interior_state(1:ubnd_vol, ivar) = state%fabm_interior_state(1:ubnd_vol, ivar) + &
                         AreaFactor_adv(1:ubnd_vol) * dfabm_interior(1:ubnd_vol, ivar)
                   end if
                end do
-               if (state%n_fabm_surface_state > 0) state%fabm_surface_state(:) = state%fabm_surface_state(:) + state%dt/self%grid%Az(ubnd_vol+1)*dfabm_surface(:)
+               if (fabm_cfg%n_surface_state > 0) state%fabm_surface_state(:) = state%fabm_surface_state(:) + state%dt/self%grid%Az(ubnd_vol+1)*dfabm_surface(:)
             end if
 
             ! Variation of variables due to change in volume
@@ -256,7 +253,7 @@ contains
             state%T(ubnd_vol) = state%T(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
             state%S(ubnd_vol) = state%S(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
             if (self%cfg%couple_fabm) then
-               do ivar = 1, state%n_fabm_interior_state
+               do ivar = 1, fabm_cfg%n_interior_state
                   ! Leave benthic variables unaffected
                   if (.not. output_cfg%output_vars_fabm_state(ivar)%benthic) then
                      state%fabm_interior_state(ubnd_vol, ivar) = state%fabm_interior_state(ubnd_vol, ivar)*h(ubnd_vol)/(h(ubnd_vol) + dh)
@@ -269,10 +266,11 @@ contains
    ! Merges two boxes
    ! - Takes care of calculating the new state variable for this box
    ! - Calls grid methods to modify grid spacing etc
-   subroutine advection_merge_box(self, state, output_cfg, dh)
+   subroutine advection_merge_box(self, state, fabm_cfg, output_cfg, dh)
       implicit none
       class(AdvectionModule) :: self
       class(ModelState) :: state
+      class(FABMConfig), intent(in) :: fabm_cfg
       class(OutputConfig), intent(in) :: output_cfg
       real(RK) :: dh
       real(RK) :: w_a, w_b
@@ -299,7 +297,7 @@ contains
 
          ! FABM
          if (self%cfg%couple_fabm) then
-            do ivar = 1, state%n_fabm_interior_state
+            do ivar = 1, fabm_cfg%n_interior_state
                ! Leave benthic variables unaffected
                if (.not. output_cfg%output_vars_fabm_state(ivar)%benthic) then
                   fabm_interior_state(ubnd_vol,ivar) = (w_a*fabm_interior_state(ubnd_vol + 1,ivar) + w_b*fabm_interior_state(ubnd_vol,ivar))/(w_a + w_b)
@@ -316,10 +314,11 @@ contains
    ! Adds a new box
    ! - Takes care of calculating the new state variable for this box
    ! - Calls grid methods to modify grid spacing etc
-   subroutine advection_add_box(self, state, output_cfg, dh)
+   subroutine advection_add_box(self, state, fabm_cfg, output_cfg, dh)
       implicit none
       class(AdvectionModule) :: self
       class(ModelState) :: state
+      class(FABMConfig), intent(in) :: fabm_cfg
       class(OutputConfig), intent(in) :: output_cfg
       real(RK) :: dh
       integer :: ivar
@@ -340,7 +339,7 @@ contains
 
          ! FABM
          if (self%cfg%couple_fabm) then
-            do ivar = 1, state%n_fabm_interior_state
+            do ivar = 1, fabm_cfg%n_interior_state
                ! Leave benthic variables unaffected
                if (.not. output_cfg%output_vars_fabm_state(ivar)%benthic) then
                   fabm_interior_state(ubnd_vol,ivar) = fabm_interior_state(ubnd_vol - 1,ivar)
