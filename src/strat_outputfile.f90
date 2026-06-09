@@ -501,7 +501,7 @@ contains
             if (status_ok) then
                if (.not. append) then
                   call self%output_files(i)%add('Datetime')
-                  call self%output_files(i)%add(grid%z_face(grid%ubnd_fce), real_fmt='(F12.3)')
+                  call self%output_files(i)%add(0, real_fmt='(F12.3)')
                   call self%output_files(i)%next_row()
                end if
             else

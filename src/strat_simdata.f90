@@ -198,9 +198,14 @@ module strat_simdata
       real(RK) :: ade_r0
       real(RK) :: wpo4
       real(RK) :: po4ret
+      real(RK) :: tau_crit
+      real(RK) :: kc_det
       real(RK) :: rfr
       real(RK) :: rfn
       real(RK) :: kc
+      real(RK) :: alpha_p
+      real(RK) :: alpha_n
+      real(RK) :: c0
 
       !real(RK) :: k_min
    end type
@@ -291,6 +296,9 @@ module strat_simdata
       ! hypolimnion averages
       real(RK), allocatable :: O2_hypo
       real(RK), allocatable :: T_hypo
+
+      ! chlorophyll A
+      real(RK), allocatable :: chla_surface
 
       real(RK) :: cde, cm0
       real(RK) ::  fsed
@@ -384,6 +392,7 @@ contains
 
       allocate(self%O2_hypo)
       allocate(self%T_hypo)
+      allocate(self%chla_surface)
 
       ! Init to zero
       self%U = 0.0_RK
@@ -433,6 +442,7 @@ contains
 
       self%O2_hypo = 0.0_RK
       self%T_hypo = 0.0_RK
+      self%chla_surface = 0.0_RK
 
       ! init pointers
       allocate(self%current_day_of_year)

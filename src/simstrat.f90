@@ -88,7 +88,7 @@ program simstrat_main
    logical :: continue_from_snapshot = .false.
    integer(8),dimension(2) :: simulation_end_time
    real(RK) :: new_start_datum
-   real(RK) :: counter
+   real(RK) :: counter, counter2
    integer :: i, n_O2
 
    ! Print some information
@@ -348,16 +348,23 @@ contains
 
          simdata%model%T_hypo = 0
          simdata%model%O2_hypo = 0
+         simdata%model%chla_surface = 0
          counter = 0
+         counter2 = 0
          do i=1,size(simdata%grid%z_volume(1:simdata%grid%ubnd_vol))
-            if (simdata%grid%z_volume(i) < 10) then
+            if ((simdata%grid%z_volume(simdata%grid%ubnd_vol) - simdata%grid%z_volume(i)) > 12) then
                counter = counter + 1.0
                simdata%model%T_hypo = simdata%model%T_hypo + simdata%model%T(i)
                simdata%model%O2_hypo = simdata%model%O2_hypo + simdata%model%fabm_interior_state(i,9)
             end if
+            if ((simdata%grid%z_volume(simdata%grid%ubnd_vol) - simdata%grid%z_volume(i)) <= 15) then
+               counter2 = counter2 + 1.0
+               simdata%model%chla_surface = simdata%model%chla_surface + simdata%model%fabm_diagnostic_interior(i,1)
+            end if
          end do
          simdata%model%T_hypo = simdata%model%T_hypo / counter
          simdata%model%O2_hypo = simdata%model%O2_hypo / counter
+         simdata%model%chla_surface = simdata%model%chla_surface / counter2
 
          ! Call logger to write files
          call logger%log(simdata, simdata%output_cfg)

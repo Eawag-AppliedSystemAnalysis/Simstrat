@@ -175,8 +175,8 @@ contains
 
          ! Define variables that should be written
          if (output_cfg%output_all) then
-            output_cfg%number_output_vars = 27
-            output_cfg%output_var_names = [character(len=12) :: 'V','U','T','S','num','nuh','NN','k','eps','P','B','Ps','HA','HW','HK','HV','Rad0','SWR','TotalIceH','BlackIceH','WhiteIceH','SnowH','WaterH','Qvert','Eseiche','O2_hypo','T_hypo']
+            output_cfg%number_output_vars = 28
+            output_cfg%output_var_names = [character(len=12) :: 'V','U','T','S','num','nuh','NN','k','eps','P','B','Ps','HA','HW','HK','HV','Rad0','SWR','TotalIceH','BlackIceH','WhiteIceH','SnowH','WaterH','Qvert','Eseiche','O2_hypo','T_hypo','chla_surface']
          else
             output_cfg%number_output_vars = size(output_cfg%output_var_names)
          end if
@@ -384,18 +384,25 @@ contains
                   self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%E_seiche
 
                case('O2_hypo')
-                  ! Total seiche energy [J]
+                  ! Mean hypolimnion oxygen
                   self%simdata%output_cfg%output_vars(i)%name = "O2_hypo"
                   self%simdata%output_cfg%output_vars(i)%long_name = "Hypolimnetic mean oxygen"
                   self%simdata%output_cfg%output_vars(i)%units = "mmol/L"
                   self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%O2_hypo
 
                case('T_hypo')
-                  ! Total seiche energy [J]
+                  ! Mean hypolimnion temperature
                   self%simdata%output_cfg%output_vars(i)%name = "T_hypo"
                   self%simdata%output_cfg%output_vars(i)%long_name = "Hypolimnetic mean temperature"
                   self%simdata%output_cfg%output_vars(i)%units = "°C"
                   self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%T_hypo
+
+               case('chla_surface')
+                  ! Mean chlorophyll A concentration
+                  self%simdata%output_cfg%output_vars(i)%name = "chla_surface"
+                  self%simdata%output_cfg%output_vars(i)%long_name = "Mean chlorophyll a concentration between 0 and 15m"
+                  self%simdata%output_cfg%output_vars(i)%units = "mmg/m3"
+                  self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%chla_surface
 
                case default
                   call error('Output variable specified in config file not found: ' // trim(output_cfg%output_var_names(i)))
@@ -812,6 +819,15 @@ contains
          call par_file%get("ModelParameters.alphaade", model_param%alphaade, found)
          if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "alphaade", model_param%alphaade)
 
+         call par_file%get("ModelParameters.kc_det", model_param%kc_det, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "kc_det", model_param%kc_det)
+
+         call par_file%get("ModelParameters.tau_crit", model_param%tau_crit, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "tau_crit", model_param%tau_crit)
+
+         call par_file%get("ModelParameters.c0", model_param%c0, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "c0", model_param%c0)
+
          call par_file%get("ModelParameters.rfr", model_param%rfr, found)
          if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "rfr", model_param%rfr)
 
@@ -820,6 +836,12 @@ contains
 
          call par_file%get("ModelParameters.kc", model_param%kc, found)
          if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "kc", model_param%kc)
+
+         call par_file%get("ModelParameters.alpha_p", model_param%alpha_p, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "alpha_p", model_param%alpha_p)
+
+         call par_file%get("ModelParameters.alpha_n", model_param%alpha_n, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "alpha_n", model_param%alpha_n)
 
          ! Simulation Parameter
          call par_file%get("Simulation.Timestep s", sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep s', ParName)
