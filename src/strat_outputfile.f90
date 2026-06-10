@@ -769,7 +769,6 @@ contains
    subroutine log_save(self)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
-      !write(80) self%counter!, self%simulation_time_for_next_output(1), self%simulation_time_for_next_output(2)
       call save_matrix(80, self%last_iteration_data)
    end subroutine
 
@@ -780,7 +779,6 @@ contains
    subroutine log_load(self)
       implicit none
       class(InterpolatingLogger), intent(inout) :: self
-      !read(81) self%counter!, self%simulation_time_for_next_output(1), self%simulation_time_for_next_output(2)
       call read_matrix(81, self%last_iteration_data)
    end subroutine
 

@@ -332,8 +332,6 @@ contains
       end do
       self%z_volume(self%nz_grid) = nint(1e6_RK*self%z_volume(self%nz_grid))/1e6_RK
 
-      print *, 'a', self%z_face(self%nz_grid - 1:self%nz_grid + 1)
-
       do i = 2, self%nz_grid + 1
          self%z_face(i) = self%z_face(i - 1) + self%h(i - 1)
          self%z_face(i - 1) = nint(1e6_RK*self%z_face(i - 1))/1e6_RK
@@ -341,8 +339,6 @@ contains
       print *, 'a', self%z_face(self%nz_grid - 1:self%nz_grid + 1)
       self%z_face(self%nz_grid + 1) = nint(1e6_RK*self%z_face(self%nz_grid + 1))/1e6_RK
       self%layer_depth(1:self%nz_grid) = self%z_zero - self%z_volume(1:self%nz_grid)
-
-      print *, 'a', self%z_face(self%nz_grid - 1:self%nz_grid + 1)
 
    end subroutine grid_init_z_axes
 

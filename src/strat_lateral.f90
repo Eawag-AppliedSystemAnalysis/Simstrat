@@ -924,7 +924,7 @@ contains
                Q_inp(i,j) = (self%Q_start(i,j) + self%Qs_start(i,j)) + (datum-self%tb_start(i))/(self%tb_end(i)-self%tb_start(i))* &
                (self%Q_end(i,j) + self%Qs_end(i,j) - self%Q_start(i,j) - self%Qs_start(i,j))
             end do
-            !write(6,*) i, self%z_Inp(i, self%nval(i)), self%Qs_read_end(i, self%nval(i)), self%nval_surface(i), self%Qs_end(i, ubnd_vol)
+
             goto 11
 
             ! If end of file reached, set to closest available value
