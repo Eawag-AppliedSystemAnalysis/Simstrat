@@ -217,6 +217,8 @@ module strat_simdata
       real(RK) :: alpha_p
       real(RK) :: alpha_n
       real(RK) :: c0
+      real(RK) :: r0_scaling
+      real(RK) :: deltao
 
       !real(RK) :: k_min
    contains

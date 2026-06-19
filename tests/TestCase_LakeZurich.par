@@ -41,7 +41,6 @@
     "FABMInitialPath"         : "TestCase_LakeZurich/FABM_initial/",
     "FABMInflowPath"          : "TestCase_LakeZurich/FABM_inflow/",
     "FABMConfigFile"          : "TestCase_LakeZurich/selmaprotbas_new.yaml",
-    "FABMDiagnosticVars"      : "TestCase_LakeZurich/FABM_configurations/DiagnosticVars.dat",
     "OutputDiagnosticVars"    : true,
     "RepairStates"            : true,
     "OutputRepairedVars"      : false,

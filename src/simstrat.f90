@@ -352,8 +352,12 @@ contains
                simdata%model%O2_hypo = simdata%model%O2_hypo + simdata%model%fabm_interior_state(i,9)
             end if
             if ((simdata%grid%z_volume(simdata%grid%ubnd_vol) - simdata%grid%z_volume(i)) <= 15) then
-               counter2 = counter2 + 1.0
-               simdata%model%chla_surface = simdata%model%chla_surface + simdata%output_cfg%output_vars_fabm_diagnostic(1)%values(i) 
+               if (allocated(simdata%output_cfg%output_vars_fabm_diagnostic)) then
+                  if (simdata%output_cfg%output_vars_fabm_diagnostic(1)%name == 'total_chlorophyll') then
+                     counter2 = counter2 + 1.0
+                     simdata%model%chla_surface = simdata%model%chla_surface + simdata%output_cfg%output_vars_fabm_diagnostic(1)%values(i)
+                  end if
+               end if
             end if
          end do
          simdata%model%T_hypo = simdata%model%T_hypo / counter

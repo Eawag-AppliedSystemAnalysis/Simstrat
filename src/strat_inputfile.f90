@@ -733,7 +733,7 @@ contains
             call par_file%get("FABMConfig.OutputRepairedVars", fabm_cfg%output_repaired_vars,found); call check_field(found, 'FABMConfig.OutputRepairedVars',ParName)
             call par_file%get("FABMConfig.BottomEverywhere", fabm_cfg%bottom_everywhere,found); call check_field(found, 'FABMConfig.BottomEverywhere',ParName)
             call par_file%get("FABMConfig.InputExtinctionFactor", fabm_cfg%input_extinction,found); call check_field(found, 'FABMConfig.InputExtinctionFactor', ParName)
-            call par_file%get("FABMConfig.BackgroundExtinction", fabm_cfg%background_extinction,found); call check_field(found, 'FABMConfig.BackgroundExtinction', ParName)
+            call par_file%get("FABMConfig.BackExt", fabm_cfg%background_extinction,found); call check_field(found, 'FABMConfig.BackExt', ParName)
          end if
 
          !Model Parameter
@@ -837,6 +837,12 @@ contains
 
          call par_file%get("ModelParameters.c0", model_param%c0, found)
          if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "c0", model_param%c0)
+
+         call par_file%get("ModelParameters.r0_scaling", model_param%r0_scaling, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "r0_scaling", model_param%r0_scaling)
+
+         call par_file%get("ModelParameters.deltao", model_param%deltao, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "deltao", model_param%deltao)
 
          call par_file%get("ModelParameters.rfr", model_param%rfr, found)
          if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "rfr", model_param%rfr)
