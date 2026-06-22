@@ -64,10 +64,8 @@ contains
          ! Radiation reaching a layer is equal to radiation in the layer above minus absorption
          do i = ubnd_fce - 1, 1, -1
             state%rad(i) = state%rad(i + 1)*exp(-grid%h(i)*(state%absorb(ubnd_fce - i)+state%absorb(ubnd_fce + 1 - i))/2) !Attenuated by absorption
-            state%swr_vol(i) = (state%rad(i + 1) + state%rad(i))/2*rho_0*cp
+            state%rad_vol(i) = (state%rad(i + 1) + state%rad(i))/2*rho_0*cp
          end do
-         ! Absorption is different for swr and par so this calculation is not exactly correct
-         state%par_vol(1:ubnd_vol) = state%swr_vol(1:ubnd_vol)*swr_par
 
          !!!!!!!! Define sources !!!!!!!!
          ! Add Hsol Term to sources (Eq 1, Goudsmit(2002))

@@ -247,8 +247,7 @@ module strat_simdata
       real(RK), pointer :: T_atm, qa ! Air temp and specific humidity at surface
       real(RK), pointer :: Cloud ! Cloud area fraction, FABM needs ponter attribute
       real(RK), dimension(:), allocatable :: rad ! Solar radiation (in water)
-      real(RK), dimension(:), pointer :: swr_vol => null() ! Shortwave radiation [J/s/m2] (used for FABM: needs pointer attribute)
-      real(RK), dimension(:), pointer :: par_vol => null() ! Photosynthetically active radiation (fraction of swr, used for FABM: needs pointer attribute)
+      real(RK), dimension(:), pointer :: rad_vol => null() ! Photosynthetically active radiation (used for FABM: needs pointer attribute)
       real(RK), dimension(:), allocatable :: Q_vert ! Vertical exchange between boxes
       real(RK), dimension(9,12) :: albedo_data  ! Experimental monthly albedo data for determination of current water albedo
       real(RK) :: albedo_water   ! Current water albedo
@@ -269,8 +268,8 @@ module strat_simdata
       real(RK), allocatable :: hw ! Outgoing long wave [W m-2]
       real(RK), allocatable :: hk ! Sensible flux [W m-2]
       real(RK), allocatable :: hv ! Latent heat [W m-2]
-      real(RK), pointer :: rad0 => null() !  Solar radiation at surface  [W m-2], FABM needs pointer attribute
-      real(RK), pointer :: par0 => null() ! Photosynthetically active radiation [W m-2], FABM needs pointer attribute
+      real(RK), pointer :: rad0 => null() ! Photosynthetically active radiation at surface [W m-2], FABM needs pointer attribute
+      real(RK), pointer :: swr0 => null() ! Solar radiation at surface (including UV and NIR) [W m-2], FABM needs pointer attribute
 
       real(RK) :: cde, cm0
       real(RK) ::  fsed
@@ -344,8 +343,7 @@ contains
 
       allocate (self%absorb(state_size + 1))
       allocate (self%rad(state_size + 1))
-      allocate (self%swr_vol(state_size))
-      allocate (self%par_vol(state_size))
+      allocate (self%rad_vol(state_size))
       allocate (self%Q_vert(state_size + 1))
 
       allocate (self%snow_h)
@@ -359,7 +357,7 @@ contains
       allocate (self%hk)
       allocate (self%hv)
       allocate (self%rad0)
-      allocate (self%par0)
+      allocate (self%swr0)
 
       ! Init to zero
       self%U = 0.0_RK
@@ -384,8 +382,7 @@ contains
 
       self%absorb = 0.0_RK
       self%rad = 0.0_RK
-      self%swr_vol = 0.0_RK
-      self%par_vol = 0.0_RK
+      self%rad_vol = 0.0_RK
       self%Q_vert = 0.0_RK
 
       self%snow_h = 0.0_RK
@@ -402,7 +399,7 @@ contains
       self%hk = 0.0_RK 
       self%hv = 0.0_RK
       self%rad0 = 0.0_RK
-      self%par0 = 0.0_RK
+      self%swr0 = 0.0_RK
       self%n_pH = 0
 
       ! init pointers
@@ -476,8 +473,7 @@ contains
       write(80) self%T_atm
       write(80) self%Cloud, self%qa, self%Lat, self%p_air, self%wat_albedo
       call save_array(80, self%rad)
-      call save_array_pointer(80, self%swr_vol)
-      call save_array_pointer(80, self%par_vol)
+      call save_array_pointer(80, self%rad_vol)
       write(80) self%albedo_data
       write(80) self%albedo_water
       write(80) self%lat_number
@@ -494,7 +490,7 @@ contains
       write(80) self%hk
       write(80) self%hv
       write(80) self%rad0
-      write(80) self%par0
+      write(80) self%swr0
       write(80) self%cde, self%cm0
       write(80) self%fsed
       call save_array(80, self%fgeo_add)
@@ -554,8 +550,7 @@ contains
       read(81) self%T_atm
       read(81) self%Cloud, self%qa, self%Lat, self%p_air, self%wat_albedo
       call read_array(81, self%rad)
-      call read_array_pointer(81, self%swr_vol)
-      call read_array_pointer(81, self%par_vol)
+      call read_array_pointer(81, self%rad_vol)
       read(81) self%albedo_data
       read(81) self%albedo_water
       read(81) self%lat_number
@@ -572,7 +567,7 @@ contains
       read(81) self%hk
       read(81) self%hv
       read(81) self%rad0
-      read(81) self%par0
+      read(81) self%swr0
       read(81) self%cde, self%cm0
       read(81) self%fsed
       call read_array(81, self%fgeo_add)
@@ -698,13 +693,9 @@ contains
          nullify(self%absorb_to_fabm)
       end if
       if (allocated(self%rad)) deallocate(self%rad)
-      if (associated(self%swr_vol)) then
-         deallocate(self%swr_vol)
-         nullify(self%swr_vol)
-      end if
-      if (associated(self%par_vol)) then
-         deallocate(self%par_vol)
-         nullify(self%par_vol)
+      if (associated(self%rad_vol)) then
+         deallocate(self%rad_vol)
+         nullify(self%rad_vol)
       end if
       if (allocated(self%fgeo_add)) deallocate(self%fgeo_add)
       if (associated(self%fabm_interior_state)) then
@@ -759,9 +750,9 @@ contains
          deallocate(self%rad0)
          nullify(self%rad0)
       end if
-      if (associated(self%par0)) then
-         deallocate(self%par0)
-         nullify(self%par0)
+      if (associated(self%swr0)) then
+         deallocate(self%swr0)
+         nullify(self%swr0)
       end if
       if (associated(self%Lat)) then
          deallocate(self%Lat)

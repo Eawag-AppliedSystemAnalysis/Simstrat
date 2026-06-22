@@ -35,8 +35,6 @@
      real(RK), parameter     :: kappa = 0.41_RK ! Von Karman constant [-]
      real(RK), parameter     :: K_s = 0.05_RK ! Bottom roughness [m]
      real(RK), parameter     :: z0 = 0.5_RK ! Surface roughness [m]
-     real(RK), parameter     :: swr_par = 0.45_RK ! Fraction of photosynthetically active radiation on shortwave radiation
-                                                  ! From: https://www.cambridge.org/core/services/aop-cambridge-core/content/view/54F461E11DE785352F65AFE8BA9704C2/9781139168212c2_p28-49_CBO.pdf/incident_solar_radiation.pdf, page 33
 
     ! *** Constants for freshwater ***
      real(RK), parameter     :: rho_0 = 1000.0_RK ! Mean freshwater density (seawater: 1023) [kg/m3]
