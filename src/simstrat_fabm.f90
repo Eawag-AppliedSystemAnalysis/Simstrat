@@ -1009,9 +1009,9 @@ contains
       ! Depth relative to surface [m]
       call self%fabm_model%link_interior_data(fabm_standard_variables%depth, grid%layer_depth)
       ! Shortwave radiative (SWR) flux [W m-2]
-      call self%fabm_model%link_interior_data(fabm_standard_variables%downwelling_shortwave_flux, state%swr_vol)
+      call self%fabm_model%link_interior_data(fabm_standard_variables%downwelling_shortwave_flux, state%rad_vol)
       ! Photosynthetically active radiative (PAR) flux, a fraction of SWR flux [W m-2]
-      call self%fabm_model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux, state%par_vol)
+      call self%fabm_model%link_interior_data(fabm_standard_variables%downwelling_photosynthetic_radiative_flux, state%rad_vol)
       ! Salinity at each layer [1e-3]
       call self%fabm_model%link_interior_data(fabm_standard_variables%practical_salinity, state%S)
       ! Pressure at each layer [dbar]: equal to layer depth, assuming one meter in depth is one dbar in pressure
@@ -1050,9 +1050,9 @@ contains
       ! Surface albedo [-], aggregate variable overwritten by Simstrat -> remove source=data_source_user to calculate by bgc models
       call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_albedo, state%wat_albedo, source=data_source_user)
       ! PAR flux at surface [W m-2]
-      call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux, state%par0)
+      call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_downwelling_photosynthetic_radiative_flux, state%rad0)
       ! SWR flux at surface [W m-2]
-      call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_flux, state%rad0)
+      call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_downwelling_shortwave_flux, state%swr0)
       ! Surface drag coefficient [-], aggregate variable overwritten by Simstrat -> remove source=data_source_user to calculate by bgc models
       call self%fabm_model%link_horizontal_data(fabm_standard_variables%surface_drag_coefficient_in_air, state%C10, source=data_source_user)
       ! Surface specific humidity [-]

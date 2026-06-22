@@ -175,8 +175,8 @@ contains
 
          ! Define variables that should be written
          if (output_cfg%output_all) then
-            output_cfg%number_output_vars = 30
-            output_cfg%output_var_names = [character(len=12) :: 'V','U','T','S','num','nuh','NN','k','eps','P','B','Ps','HA','HW','HK','HV','Rad0','SWR','PAR','AbsCoeff','TotalIceH','BlackIceH','WhiteIceH','SnowH','WaterH','Qvert','Eseiche','O2_hypo','T_hypo','chla_surface']
+            output_cfg%number_output_vars = 29
+            output_cfg%output_var_names = [character(len=12) :: 'V','U','T','S','num','nuh','NN','k','eps','P','B','Ps','HA','HW','HK','HV','Rad0','PAR','AbsCoeff','TotalIceH','BlackIceH','WhiteIceH','SnowH','WaterH','Qvert','Eseiche','O2_hypo','T_hypo','chla_surface']
          else
             output_cfg%number_output_vars = size(output_cfg%output_var_names)
          end if
@@ -320,20 +320,12 @@ contains
                   self%simdata%output_cfg%output_vars(i)%units = "W/m2"
                   self%simdata%output_cfg%output_vars(i)%global_value => self%simdata%model%rad0
 
-               case('SWR')
-                  ! Shortwave radiative flux [W m-2]
-                  self%simdata%output_cfg%output_vars(i)%name = "SWR"
-                  self%simdata%output_cfg%output_vars(i)%long_name = "Shortwave radiative flux"
-                  self%simdata%output_cfg%output_vars(i)%units = "W/m2"
-                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%swr_vol
-                  self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
-
                case('PAR')
                   ! Photosynthetically active radiative flux [W m-2]
                   self%simdata%output_cfg%output_vars(i)%name = "PAR"
                   self%simdata%output_cfg%output_vars(i)%long_name = "Photosynthetically active radiative flux"
                   self%simdata%output_cfg%output_vars(i)%units = "W/m2"
-                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%par_vol
+                  self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%rad_vol
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
 
                case('AbsCoeff')

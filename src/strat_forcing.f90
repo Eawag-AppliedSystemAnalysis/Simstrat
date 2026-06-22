@@ -188,7 +188,7 @@ contains
          state%uv10_gas = state%uv10 * param%p_wind_gas
          state%SST = A_cur(3) ! Lake surface temperature
          state%rad0 = max(A_cur(4),0.0_RK)*(1 - state%albedo_water)*(1 - param%beta_sol) * param%p_sw_water ! MS: added beta_sol and albedo_water
-         state%par0 = state%rad0*swr_par
+         state%swr0 = state%rad0 / (1 - param%beta_sol)
          state%heat = 0.0_RK
          state%T_atm = 0.0_RK
          state%qa = 0.0_RK
@@ -357,7 +357,7 @@ contains
                state%heat = H_A + H_W + H_K + H_V + F_glob * param%beta_sol !MS: added term with beta_sol
                ! Removal of solar short-wave radiation absorbed in first water cell
                state%rad0 = F_glob * (1 - param%beta_sol) !MS: added beta_sol
-               state%par0 = state%rad0*swr_par
+               state%swr0 = state%rad0 / (1 - param%beta_sol)
 
                state%heat_snow = 0 ! Heat snow
                state%heat_snowice = 0 ! Heat snowice
@@ -407,7 +407,7 @@ contains
                ! Removal of solar short-wave radiation absorbed in snow, snowice, ice and first water cell (works also when x_h = 0)
                state%heat = F_glob * exp(-lambda_snow*state%snow_h - lambda_snowice*state%white_ice_h - lambda_ice*state%black_ice_h) * param%beta_sol
                state%rad0 = F_glob * exp(-lambda_snow*state%snow_h - lambda_snowice*state%white_ice_h - lambda_ice*state%black_ice_h) * (1 - param%beta_sol)
-               state%par0 = state%rad0*swr_par
+               state%swr0 = state%rad0 / (1 - param%beta_sol)
 
                ! Heat flux into snow, ice or snowice layer.
                ! Light absorption each layer
@@ -472,7 +472,7 @@ contains
          else !Forcing mode 4
             state%heat = heat0 + F_glob*param%beta_sol !MS: added term with beta_sol
             state%rad0 = F_glob * (1 - param%beta_sol) !FB, 2021: added term with beta_sol
-            state%par0 = state%rad0*swr_par
+            state%swr0 = state%rad0 / (1 - param%beta_sol)
             state%heat_snow = 0 ! Heat snow
             state%heat_snowice = 0 ! Heat snowice
             state%heat_ice = 0 ! Heat ice
