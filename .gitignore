@@ -13,6 +13,9 @@ lib/json_fortran/build/
 lib/csv_fortran/build/
 lib/fabm/build/
 
+## Desktop.ini
+desktop.ini
+
 #Latex gitignores:
 ## Core latex/pdflatex auxiliary files:
 *.aux
