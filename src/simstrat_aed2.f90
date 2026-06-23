@@ -260,10 +260,10 @@ contains
 
       self%par(:) = state%rad_vol(:)*rho_0*cp
 
-      ! Calculate irradiance spectrum from par (factors from GLM)
-      self%nir(:) = (self%par(:)/0.45) * 0.51
-      self%uva(:) = (self%par(:)/0.45) * 0.035
-      self%uvb(:) = (self%par(:)/0.45) * 0.005
+      ! nir, uva and uvb are zero below the water surface because everyting is absorbed in the top few cm
+      self%nir(:) = 0
+      self%uva(:) = 0
+      self%uvb(:) = 0
 
       call calculate_fluxes(self, state)
 
