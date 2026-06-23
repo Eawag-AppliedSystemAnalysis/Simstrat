@@ -63,14 +63,12 @@ contains
          ! Radiation reaching a layer is equal to radiation in the layer above minus absorption
          do i = ubnd_fce - 1, 1, -1
             state%rad(i) = state%rad(i + 1)*exp(-grid%h(i)*(state%absorb(ubnd_fce - i)+state%absorb(ubnd_fce + 1 - i))/2) !Attenuated by absorption
+            state%rad_vol(i) = (state%rad(i + 1) + state%rad(i))/2*rho_0*cp
          end do
-
-         ! Radiation staying in a layer (including the heat which goes into the sediment, therefore the weighting using Az)
-         state%rad_vol(1:ubnd_vol) = (state%rad(2:ubnd_fce)*grid%Az(2:ubnd_fce) - state%rad(1:ubnd_fce - 1)*grid%Az(1:ubnd_fce - 1))/(grid%Az(2:ubnd_fce) + grid%Az(1:ubnd_fce - 1))*2
 
          !!!!!!!! Define sources !!!!!!!!
          ! Add Hsol Term to sources (Eq 1, Goudsmit(2002))
-         sources(1:ubnd_vol) = state%rad_vol(1:ubnd_vol)/grid%h(1:ubnd_vol)
+         sources(1:ubnd_vol) = (state%rad(2:ubnd_fce)*grid%Az(2:ubnd_fce) - state%rad(1:ubnd_fce - 1)*grid%Az(1:ubnd_fce - 1))/(grid%Az(2:ubnd_fce) + grid%Az(1:ubnd_fce - 1))*2/grid%h(1:ubnd_vol)
 
          ! Experimenting with influence of soil temperature on water temperature using a sinusoidal soil temperature         
          !T_soil = 5 + 5*cos(2*pi/365*(state%current_month*30 + state%current_day - 270))
