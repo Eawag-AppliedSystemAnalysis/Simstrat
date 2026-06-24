@@ -74,7 +74,7 @@
     "p_windf"       : 1,
     "p_absorb"      : 1,
     "p_wind_gas"    : 1,
-    "beta_sol"      : 0.35,
+    "beta_sol"      : 0.5,
     "wat_albedo"    : 0.09,
     "p_sw_ice"      : 1,
     "freez_temp"    : 0.00,
