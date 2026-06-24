@@ -42,6 +42,7 @@
     "FABMConfigPath"          : "TestCase_LakeZurich/FABM_configurations/",
     "RepairStates"            : true,
     "OutputRepairedVars"      : false,
+    "BioshadeFeedback"        : false,
     "BottomEverywhere"        : true,
     "InputExtinctionFactor"   : 0.5,
     "BackgroundExtinction"    : 0.1
