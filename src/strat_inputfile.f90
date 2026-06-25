@@ -851,6 +851,9 @@ contains
          call par_file%get("ModelParameters.alpha_n", model_param%alpha_n, found)
          if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "alpha_n", model_param%alpha_n)
 
+         call par_file%get("ModelParameters.nb", model_param%nb, found)
+         if (found) call replace_yaml_parameter(fabm_cfg%config_file, "selmaprotbas", "nb", model_param%nb)
+
          ! Simulation Parameter
          call par_file%get("Simulation.Timestep s", sim_cfg%timestep, found); call check_field(found, 'Simulation.Timestep s', ParName)
          call par_file%get("Simulation.Reference year", sim_cfg%reference_year, found); call check_field(found, 'Simulation.Reference year', ParName)
