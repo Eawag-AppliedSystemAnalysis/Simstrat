@@ -220,6 +220,7 @@ module strat_simdata
       real(RK) :: r0_scaling
       real(RK) :: deltao
       real(RK) :: nb
+      real(RK) :: alpha_light
 
       !real(RK) :: k_min
    contains
