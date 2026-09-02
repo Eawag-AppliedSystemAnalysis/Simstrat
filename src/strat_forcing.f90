@@ -524,8 +524,6 @@ contains
            state%lat_number = 5
          else if (self%param%Lat < 60) then
            state%lat_number = 6
-         else if (self%param%Lat < 60) then
-           state%lat_number = 6
          else if (self%param%Lat < 70) then
            state%lat_number = 7
          else if (self%param%Lat < 80) then
@@ -555,8 +553,6 @@ contains
            state%lat_number = 4
          else if (self%param%Lat > -50) then
            state%lat_number = 5
-         else if (self%param%Lat > -60) then
-           state%lat_number = 6
          else if (self%param%Lat > -60) then
            state%lat_number = 6
          else if (self%param%Lat > -70) then
