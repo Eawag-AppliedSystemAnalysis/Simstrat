@@ -221,6 +221,8 @@ module strat_simdata
       real(RK) :: deltao
       real(RK) :: nb
       real(RK) :: alpha_light
+      real(RK) :: ipo4th
+      real(RK) :: plibrate
 
       !real(RK) :: k_min
    contains
