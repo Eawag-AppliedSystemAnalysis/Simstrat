@@ -336,7 +336,6 @@ contains
          self%z_face(i) = self%z_face(i - 1) + self%h(i - 1)
          self%z_face(i - 1) = nint(1e6_RK*self%z_face(i - 1))/1e6_RK
       end do
-      print *, 'a', self%z_face(self%nz_grid - 1:self%nz_grid + 1)
       self%z_face(self%nz_grid + 1) = nint(1e6_RK*self%z_face(self%nz_grid + 1))/1e6_RK
       self%layer_depth(1:self%nz_grid) = self%z_zero - self%z_volume(1:self%nz_grid)
 
@@ -492,7 +491,6 @@ contains
 
          ! Update number of occupied cells
          nz_occupied = nz_occupied - 1
-         print *, '3'
 
          ! Update boundaries (ubnd_fce and ubnd_vol)
          call self%update_nz()
@@ -544,7 +542,6 @@ contains
 
          ! Update number of occupied cells
          nz_occupied = nz_occupied + 1
-         print *, '2'
 
          ! Update boundaries (ubnd_fce and ubnd_vol)
          call self%update_nz()
