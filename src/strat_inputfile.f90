@@ -216,6 +216,7 @@ contains
                case('T')
                   ! Temperature [°C]
                   self%simdata%output_cfg%output_vars(i)%name = "T"
+                  self%simdata%output_cfg%output_vars(i)%format = FIXED_FORMAT
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%T
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .false.
@@ -223,6 +224,7 @@ contains
                case('S')
                   ! Salinity [‰]
                   self%simdata%output_cfg%output_vars(i)%name = "S"
+                  self%simdata%output_cfg%output_vars(i)%format = FIXED_FORMAT
                   self%simdata%output_cfg%output_vars(i)%values => self%simdata%model%S
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .true.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .false.
@@ -286,6 +288,7 @@ contains
                case('HA')
                   ! Infrared radiation from sky [W m-2]
                   self%simdata%output_cfg%output_vars(i)%name = "HA"
+                  self%simdata%output_cfg%output_vars(i)%format = FIXED_FORMAT
                   self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%ha
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .false.
@@ -293,6 +296,7 @@ contains
                case('HW')
                   ! Infrared ratidation from water [W m-2]
                   self%simdata%output_cfg%output_vars(i)%name = "HW"
+                  self%simdata%output_cfg%output_vars(i)%format = FIXED_FORMAT
                   self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%hw
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .false.
@@ -300,6 +304,7 @@ contains
                case('HK')
                   ! Sensible heat flux from water [W m-2]
                   self%simdata%output_cfg%output_vars(i)%name = "HK"
+                  self%simdata%output_cfg%output_vars(i)%format = FIXED_FORMAT
                   self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%hk
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .false.
@@ -307,6 +312,7 @@ contains
                case('HV')
                   ! Latent heat flux from water [W m-2]
                   self%simdata%output_cfg%output_vars(i)%name = "HV"
+                  self%simdata%output_cfg%output_vars(i)%format = FIXED_FORMAT
                   self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%hv
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .false.
@@ -314,6 +320,7 @@ contains
                case('Rad0')
                   ! Solar radiation at surface [W m-2]
                   self%simdata%output_cfg%output_vars(i)%name = "Rad0"
+                  self%simdata%output_cfg%output_vars(i)%format = FIXED_FORMAT
                   self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%rad0
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .false.
@@ -321,6 +328,7 @@ contains
                case('TotalIceH')
                   ! Total ice thickness [m]
                   self%simdata%output_cfg%output_vars(i)%name = "TotalIceH"
+                  self%simdata%output_cfg%output_vars(i)%format = FIXED_FORMAT
                   self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%total_ice_h
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .false.
@@ -328,6 +336,7 @@ contains
                case('BlackIceH')
                   ! Black ice thickness [m]
                   self%simdata%output_cfg%output_vars(i)%name = "BlackIceH"
+                  self%simdata%output_cfg%output_vars(i)%format = FIXED_FORMAT
                   self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%black_ice_h
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .false.
@@ -335,6 +344,7 @@ contains
                case('WhiteIceH')
                   ! White ice (snow ice) thickness [m]
                   self%simdata%output_cfg%output_vars(i)%name = "WhiteIceH"
+                  self%simdata%output_cfg%output_vars(i)%format = FIXED_FORMAT
                   self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%white_ice_h
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .false.
@@ -342,6 +352,7 @@ contains
                case('SnowH')
                   ! Snow layer thickness [m]
                   self%simdata%output_cfg%output_vars(i)%name = "SnowH"
+                  self%simdata%output_cfg%output_vars(i)%format = FIXED_FORMAT
                   self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%model%snow_h
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .false.
@@ -349,6 +360,7 @@ contains
                case('WaterH')
                   ! Water level [m]
                   self%simdata%output_cfg%output_vars(i)%name = "WaterH"
+                  self%simdata%output_cfg%output_vars(i)%format = FIXED_FORMAT
                   self%simdata%output_cfg%output_vars(i)%values_surf => self%simdata%grid%lake_level
                   self%simdata%output_cfg%output_vars(i)%volume_grid = .false.
                   self%simdata%output_cfg%output_vars(i)%face_grid = .false.

@@ -51,9 +51,15 @@ module strat_simdata
       procedure, pass :: deallocate => input_config_deallocate
    end type
 
+   ! Output formats for the result files: exponential (default) for quantities that can become very small or large,
+   ! fixed-point for quantities with a known, moderate range (e.g. temperature, water level, ice thickness)
+   character(len=*), parameter, public :: EXPONENTIAL_FORMAT = '(ES14.4E3)'
+   character(len=*), parameter, public :: FIXED_FORMAT = '(F12.4)'
+
    ! Definition of a variable to log
    type, public :: LogVariable
       character(len=:), allocatable :: name
+      character(len=16) :: format = EXPONENTIAL_FORMAT ! Output format of the values
       real(RK), dimension(:), pointer :: values => null()
       real(RK), pointer :: values_surf => null()
       logical :: volume_grid, face_grid
