@@ -195,7 +195,8 @@ contains
             state%absorb(1:nz) = absorb_start(1:nz) + (state%datum - tb_start)/(tb_end - tb_start)*(absorb_end(1:nz)  - absorb_start(1:nz))
             state%absorb(1:nz) = self%param%p_absorb*state%absorb(1:nz)
 
-            call self%grid%interpolate_to_vol(self%grid%z_face,state%absorb(1:nz),nz + 1,state%absorb_vol(1:nz))
+            ! Pass whole arrays: Interp reads nz + 1 values of absorb and writes nz_grid values of absorb_vol
+            call self%grid%interpolate_to_vol(self%grid%z_face, state%absorb, nz + 1, state%absorb_vol)
             state%absorb_vol(nz) = state%absorb_vol(nz - 1)
          end if
          return

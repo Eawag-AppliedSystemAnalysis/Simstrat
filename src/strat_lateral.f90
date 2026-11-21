@@ -286,8 +286,9 @@ contains
          do i=1, self%n_vars
             if (idx) then  ! If first timestep
                if (self%number_of_lines_read(i) == 0) then ! If start is not from snapshot
-                  ! max_n_inflows was set to 1000 automatically. To reduce the size, it is redetermined here.
-                  self%max_n_inflows = 0
+                  ! max_n_inflows was set to 1000 automatically. To reduce the size, it is redetermined here
+                  ! for the first variable and then increased if any other variable has more inflows
+                  if (i == 1) self%max_n_inflows = 0
 
                   ! Read inflow files
                   if (i > n_simstrat) then

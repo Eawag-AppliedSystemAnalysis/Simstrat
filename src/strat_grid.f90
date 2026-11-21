@@ -119,7 +119,9 @@ contains
       call save_array_pointer(80, self%h)
       call save_array(80, self%z_face)
       call save_array(80, self%z_volume)
+      call save_array_pointer(80, self%layer_depth)
       call save_array(80, self%Az)
+      call save_array_pointer(80, self%Az_vol)
       call save_array(80, self%dAz)
       call save_array(80, self%meanint)
       write(80) self%volume, self%h_old
@@ -140,7 +142,9 @@ contains
       call read_array_pointer(81, self%h)
       call read_array(81, self%z_face)
       call read_array(81, self%z_volume)
+      call read_array_pointer(81, self%layer_depth)
       call read_array(81, self%Az)
+      call read_array_pointer(81, self%Az_vol)
       call read_array(81, self%dAz)
       call read_array(81, self%meanint)
       read(81) self%volume, self%h_old
@@ -394,7 +398,8 @@ contains
                   Az_vol=>self%Az_vol, &
                   dAz=>self%dAz)
 
-      if (h(ubnd_vol) > self%h_old) then
+      ! dAz(ubnd_vol + 1) does not exist if the uppermost box is the last box of the grid
+      if ((h(ubnd_vol) > self%h_old) .and. (ubnd_vol < size(dAz))) then
          Az(ubnd_fce) = Az(ubnd_fce) + dAz(ubnd_vol + 1)*dh
       else
          Az(ubnd_fce) = Az(ubnd_fce) + dAz(ubnd_vol)*dh

@@ -59,11 +59,13 @@ contains
       do while (zi(posk1) <= z(1))
          yi(posk1) = y(1)
          posk1 = posk1 + 1
+         if (posk1 > num_zi) exit ! All points below given grid
       end do
       posk2 = num_zi
       do while (zi(posk2) >= z(num_z))
          yi(posk2) = y(num_z)
          posk2 = posk2 - 1
+         if (posk2 < 1) exit ! All points above given grid
       end do
 
       ! Linear interpolation
@@ -290,16 +292,14 @@ contains
       implicit none
       ! "Convert an integer to string."
       integer, intent(in) :: k
-      write (str_int, '(a)') k
-      str_int = adjustl(str_int)
+      write (str_int, '(i0)') k
    end function str_int
 
    character(len=20) function str_real(k)
       implicit none
-      ! "Convert an integer to string."
+      ! "Convert a float to string."
       real(RK), intent(in) :: k
-      write (str_real, '(a)') k
-      str_real = adjustl(str_real)
+      write (str_real, '(g0)') k
    end function str_real
 
    character(len=20) function real_to_str(k, fmt)
