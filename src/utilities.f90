@@ -224,7 +224,7 @@ contains
       implicit none
       character(len=*), intent(in) :: message
       write(6, *) '[ERROR] '//message
-      stop
+      error stop
    end subroutine error
 
    subroutine warn(message)

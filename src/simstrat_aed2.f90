@@ -132,14 +132,14 @@ contains
          open(50,file=fname,action='read',status='old',iostat=status)
          if ( status /= 0 ) then
             call error("Cannot open file " // trim(fname))
-            stop
+            error stop
          end if
 
          models = ''
          read(50, nml=aed2_models, iostat=status)
          if ( status /= 0 ) then
             call error("Cannot read namelist entry aed2_models")
-            stop
+            error stop
          end if
 
          do i=1,size(models)
@@ -188,7 +188,7 @@ contains
          ! Now set initial values of AED2 variables
          v = 0 ; sv = 0;
          do av=1,self%n_AED2_state_vars
-            if ( .not.  aed2_get_var(av, tvar) ) stop "Error getting variable info"
+            if ( .not.  aed2_get_var(av, tvar) ) error stop "Error getting variable info"
             if ( .not. ( tvar%extern .or. tvar%diag) ) then  ! neither global nor diagnostic variable
                if ( tvar%sheet ) then
                   sv = sv + 1

@@ -135,7 +135,12 @@ contains
             call do_update_statvars(self, state, AreaFactor_adv(1:nz_occupied), dh_i(t_i))
 
             ! Update AED2 variables
-            if(self%cfg%couple_aed2) call do_update_statvars_AED2(self, state, AreaFactor_adv(1:nz_occupied), dh_i(t_i))
+            if(self%cfg%couple_aed2) then
+               ! do_update_statvars_AED2 transforms [H] back to pH at its end. The lateral module transforms pH to [H] once
+               ! per timestep, so for the second part of a split timestep, the transformation to [H] has to be repeated here.
+               if (t_i == 2 .and. state%n_pH > 0) AED2_state(:,state%n_pH) = 10.**(-AED2_state(:,state%n_pH))
+               call do_update_statvars_AED2(self, state, AreaFactor_adv(1:nz_occupied), dh_i(t_i))
+            end if
 
             ! Adjust boxes (Horrible if/else construction - replace!)
             if (t_i == 1) then
@@ -153,6 +158,10 @@ contains
                else if (t_i == 1 .and. (dh + top_h) >= h_mult_2) then ! If top box>=2*lower box, add one box
                   call self%add_box(state, dh_i(t_i))
                end if ! dh==0
+            else if (dt_i(2) > 0.0_RK) then
+               ! Second part of a split timestep (after merging/adding a box): the state variables were updated
+               ! for a volume change of dh_i(2), so the lake surface has to be moved accordingly
+               call grid%modify_top_box(dh_i(t_i))
             end if
 
          end do !end do t_i=1,2
@@ -323,6 +332,12 @@ contains
       real(RK) :: dh
       real(RK) :: w_a, w_b
       associate (ubnd_fce=>self%grid%ubnd_fce, ubnd_vol=>self%grid%ubnd_vol, AED2_state=>state%AED2_state)
+
+         ! At least two boxes are needed (advection uses the second highest box, output interpolation needs two points)
+         if (self%grid%nz_occupied <= 2) then
+            call error('Lake almost empty at day '//trim(real_to_str(state%datum, '(F12.4)'))// &
+                       ' (less than two grid boxes left). Check inflow and outflow data.')
+         end if
 
          ! New values of the state variables are weighted averages
          !determine weighting an normalization connstant

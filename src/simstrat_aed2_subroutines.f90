@@ -39,72 +39,72 @@ subroutine allocate_memory(self)
 
    ! names = grab the names from info
    allocate(self%names(self%n_vars),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (names)'
+   if (status /= 0) error stop 'allocate_memory(): Error allocating (names)'
    allocate(self%bennames(self%n_vars_ben),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (bennames)'
+   if (status /= 0) error stop 'allocate_memory(): Error allocating (bennames)'
    allocate(self%diagnames(self%n_vars_diag),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (diagnames)'
+   if (status /= 0) error stop 'allocate_memory(): Error allocating (diagnames)'
    allocate(self%diagnames_sheet(self%n_vars_diag_sheet),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (diagnames_sheet)'
+   if (status /= 0) error stop 'allocate_memory(): Error allocating (diagnames_sheet)'
 
    ! Now that we know how many vars we need, we can allocate space for them
    allocate(self%cc(self%grid%nz_grid, (self%n_vars + self%n_vars_ben)),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (CC)'
+   if (status /= 0) error stop 'allocate_memory(): Error allocating (CC)'
    self%cc = 0.         !# initialise to zeroFastatus
 
    ! Allocate memory for fluxes
    allocate(self%flux_atm(self%n_vars + self%n_vars_ben),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (flux_atm)'
+   if (status /= 0) error stop 'allocate_memory(): Error allocating (flux_atm)'
 
    allocate(self%flux_ben(self%n_vars + self%n_vars_ben),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (flux_ben)'
+   if (status /= 0) error stop 'allocate_memory(): Error allocating (flux_ben)'
 
    allocate(self%flux_pel(self%grid%nz_occupied, self%n_vars + self%n_vars_ben),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (flux_pel)'
+   if (status /= 0) error stop 'allocate_memory(): Error allocating (flux_pel)'
 
    !allocate(self%flux_zone(self%aed2_cfg%n_zones, self%n_vars + self%n_vars_ben),stat=status)
    !if (status /= 0) stop 'allocate_memory(): Error allocating (flux_zone)'
 
    ! Min, max values
    allocate(self%min_(self%n_vars + self%n_vars_ben),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (min_)'
+   if (status /= 0) error stop 'allocate_memory(): Error allocating (min_)'
 
    allocate(self%max_(self%n_vars + self%n_vars_ben),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (max_)'
+   if (status /= 0) error stop 'allocate_memory(): Error allocating (max_)'
 
 
    !# Allocate diagnostic variable array and set all values to zero.
    !# (needed because time-integrated/averaged variables will increment rather than set the array)
    allocate(self%cc_diag(self%grid%nz_grid, self%n_vars_diag),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (cc_diag)'
+   if (status /= 0) error stop 'allocate_memory(): Error allocating (cc_diag)'
    self%cc_diag = zero_
 
    !# Allocate diagnostic variable array and set all values to zero.
    !# (needed because time-integrated/averaged variables will increment rather than set the array)
    allocate(self%cc_diag_sheet(self%n_vars_diag_sheet),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (cc_diag_sheet)'
+   if (status /= 0) error stop 'allocate_memory(): Error allocating (cc_diag_sheet)'
    self%cc_diag_sheet = zero_
 
    !# Allocate array with vertical movement rates (m/s, positive for upwards),
    !# and set these to the values provided by the model.
    allocate(self%ws(self%grid%nz_grid, self%n_AED2_state_vars),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (ws)'
+   if (status /= 0) error stop 'allocate_memory(): Error allocating (ws)'
    self%ws = zero_
 
    !# Allocate array for photosynthetically active radiation (PAR).
    !# This will be calculated internally during each time step.
    allocate(self%par(self%grid%nz_grid),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (par)'
+   if (status /= 0) error stop 'allocate_memory(): Error allocating (par)'
    self%par = zero_
 
    allocate(self%nir(self%grid%nz_grid),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (nir)'
+   if (status /= 0) error stop 'allocate_memory(): Error allocating (nir)'
    self%nir = zero_
    allocate(self%uva(self%grid%nz_grid),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (uva)'
+   if (status /= 0) error stop 'allocate_memory(): Error allocating (uva)'
    self%uva = zero_
    allocate(self%uvb(self%grid%nz_grid),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (uvb)'
+   if (status /= 0) error stop 'allocate_memory(): Error allocating (uvb)'
    self%uvb = zero_
 
    allocate(self%sed_zones(self%grid%nz_grid))
@@ -112,11 +112,11 @@ subroutine allocate_memory(self)
    !# This will be calculated [approximated] from layer depths internally
    !# during each time step.
    allocate(self%pres(self%grid%nz_grid),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (pres)'
+   if (status /= 0) error stop 'allocate_memory(): Error allocating (pres)'
    self%pres = zero_
 
    allocate(self%tss(self%grid%nz_grid),stat=status)
-   if (status /= 0) stop 'allocate_memory(): Error allocating (tss)'
+   if (status /= 0) error stop 'allocate_memory(): Error allocating (tss)'
    self%tss = zero_
 
    allocate(self%externalid(self%n_AED2_state_vars))
@@ -209,7 +209,7 @@ subroutine define_column(self, state)
 
       v = 0 ; d = 0; sv = 0; sd = 0 ; ev = 0
       do av=1,self%n_AED2_state_vars
-         if ( .not.  aed2_get_var(av, tvar) ) stop "Error getting variable info"
+         if ( .not.  aed2_get_var(av, tvar) ) error stop "Error getting variable info"
 
          if ( tvar%extern ) then !# global variable
             ev = ev + 1
@@ -287,7 +287,7 @@ subroutine check_data(self)
    do av=1,self%n_AED2_state_vars
       if ( .not.  aed2_get_var(av, tvar) ) then
          call error("Error getting variable info")
-         stop
+         error stop
       end if
 
       if ( tvar%extern ) then !# global variable
@@ -340,7 +340,7 @@ subroutine check_data(self)
 
    if ( err_count > 0 ) then
       call error("In AED2 configuration")
-      stop
+      error stop
    end if
 end subroutine check_data
 
@@ -404,7 +404,7 @@ subroutine AED2_InitCondition(self, var, varname, default_val)
     9   nval = i - 1                               ! Number of values
         if (nval<0) then
             write(6,*) 'Error reading ', trim(varname), ' initial conditions file (no data found).'
-            stop
+            error stop
         end if
         close(14)
         do i=1,nval
