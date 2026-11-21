@@ -345,9 +345,6 @@ contains
          ! AED2
          if (self%cfg%couple_AED2) AED2_state(ubnd_vol,:) = (w_a*AED2_state(ubnd_vol + 1,:) + w_b*AED2_state(ubnd_vol,:))/(w_a + w_b)
 
-         ! update area factors
-         call self%grid%update_area_factors()
-
       end associate
    end subroutine
 
@@ -375,8 +372,6 @@ contains
          state%eps(ubnd_fce) = state%eps(ubnd_fce - 1)
 
          if (self%cfg%couple_AED2) state%AED2_state(ubnd_vol,:) = state%AED2_state(ubnd_vol - 1,:)
-
-         call self%grid%update_area_factors()
 
       end associate
    end subroutine

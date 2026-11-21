@@ -54,9 +54,13 @@ module strat_grid
       real(RK), dimension(:), pointer     :: layer_depth => null() ! Depth of each layer, used by AED2
       real(RK), dimension(:), allocatable :: Az       ! Areas
       real(RK), dimension(:), pointer     :: Az_vol => null()   ! Areas on volume grid (needed or AED2)
-      real(RK), dimension(:), allocatable :: dAz      ! Difference of areas
+      real(RK), dimension(:), allocatable :: dAz      ! Area derivative dA/dz of each box
       real(RK), dimension(:), allocatable :: meanint  ! ?
-      real(RK) :: volume, h_old
+      real(RK) :: volume
+
+      ! Morphology (bathymetry) as read from file, used to compute areas whenever the grid changes
+      real(RK), dimension(:), allocatable :: z_bathy  ! Height above lake bottom of the morphology points (increasing)
+      real(RK), dimension(:), allocatable :: A_bathy  ! Area at z_bathy
 
       !Area factors
       real(RK), dimension(:), allocatable :: AreaFactor_1
@@ -89,6 +93,9 @@ module strat_grid
       procedure, pass :: update_area_factors => grid_update_area_factors  ! Called to recalculate area factors
       procedure, pass :: update_depth => grid_update_depth                ! Called for recalculating depth
       procedure, pass :: update_nz => grid_update_nz                      ! updates lower and upper bounds based on nz_occupied
+      procedure, pass :: area_at => grid_area_at                          ! Area at a given height from the morphology
+      procedure, pass :: update_box_geometry => grid_update_box_geometry  ! Recompute height, center, areas of a box from its faces
+      procedure, pass :: update_layer_depth => grid_update_layer_depth    ! Recompute depth of box centers below lake surface
 
       ! Interpolation methods
       procedure, pass :: interpolate_to_face => grid_interpolate_to_face    ! Interpolate quantitiy onto face grid
@@ -124,7 +131,7 @@ contains
       call save_array_pointer(80, self%Az_vol)
       call save_array(80, self%dAz)
       call save_array(80, self%meanint)
-      write(80) self%volume, self%h_old
+      write(80) self%volume
       call save_array(80, self%AreaFactor_1)
       call save_array(80, self%AreaFactor_2)
       call save_array(80, self%AreaFactor_k1)
@@ -147,7 +154,7 @@ contains
       call read_array_pointer(81, self%Az_vol)
       call read_array(81, self%dAz)
       call read_array(81, self%meanint)
-      read(81) self%volume, self%h_old
+      read(81) self%volume
       call read_array(81, self%AreaFactor_1)
       call read_array(81, self%AreaFactor_2)
       call read_array(81, self%AreaFactor_k1)
@@ -176,6 +183,8 @@ contains
       if (allocated(self%AreaFactor_k2)) deallocate(self%AreaFactor_k2)
       if (allocated(self%AreaFactor_eps)) deallocate(self%AreaFactor_eps)
       if (associated(self%lake_level)) deallocate(self%lake_level)
+      if (allocated(self%z_bathy)) deallocate(self%z_bathy)
+      if (allocated(self%A_bathy)) deallocate(self%A_bathy)
    end subroutine
 
    ! Deallocate grid configuration
@@ -344,6 +353,10 @@ contains
 
          n_read = size(config%A_read)
 
+         ! Keep morphology to compute areas when the grid changes (z_A_read is increasing, see grid_init_morphology)
+         self%z_bathy = config%z_A_read
+         self%A_bathy = config%A_read
+
          ! Interpolate area (A) at all depths (z_face)
          call Interp(config%z_A_read, config%A_read, n_read, self%z_face, Az, nz_grid + 1)
          ! Interpolate area on volume grid (needed for AED2)
@@ -388,31 +401,11 @@ contains
       class(StaggeredGrid), intent(inout) :: self
       real(RK) :: dh
 
-      associate (z_face=>self%z_face, &
-                  ubnd_fce=>self%ubnd_fce, &
-                  z_volume=>self%z_volume, &
-                  ubnd_vol=>self%ubnd_vol, &
-                  layer_depth=>self%layer_depth, &
-                  h=>self%h, &
-                  Az=>self%Az, &
-                  Az_vol=>self%Az_vol, &
-                  dAz=>self%dAz)
-
-      ! dAz(ubnd_vol + 1) does not exist if the uppermost box is the last box of the grid
-      if ((h(ubnd_vol) > self%h_old) .and. (ubnd_vol < size(dAz))) then
-         Az(ubnd_fce) = Az(ubnd_fce) + dAz(ubnd_vol + 1)*dh
-      else
-         Az(ubnd_fce) = Az(ubnd_fce) + dAz(ubnd_vol)*dh
-      end if
-
-      Az_vol(ubnd_vol) = Az_vol(ubnd_vol) + dAz(ubnd_vol)*dh
-
-      h(ubnd_vol) = h(ubnd_vol) + dh
-      z_volume(ubnd_vol) = z_volume(ubnd_vol) + 0.5_RK*dh
-      z_face(ubnd_fce) = z_face(ubnd_fce) + dh
-      layer_depth(1:ubnd_vol) = z_face(ubnd_fce) - z_volume(1:ubnd_vol)
-
-      end associate
+      ! Move lake surface and recompute geometry of the top box
+      self%z_face(self%ubnd_fce) = self%z_face(self%ubnd_fce) + dh
+      call self%update_box_geometry(self%ubnd_vol)
+      call self%update_layer_depth()
+      call self%update_area_factors()
    end subroutine
 
    !Shrink grid (mainly used by advection)
@@ -421,34 +414,15 @@ contains
       class(StaggeredGrid), intent(inout) :: self
       real(RK) :: dh
 
-      associate (z_face=>self%z_face, &
-                  ubnd_fce=>self%ubnd_fce, &
-                  z_volume=>self%z_volume, &
-                  ubnd_vol=>self%ubnd_vol, &
-                  layer_depth=>self%layer_depth, &
-                  h=>self%h, &
-                  nz_occupied=>self%nz_occupied, &
-                  Az=>self%Az, &
-                  Az_vol=>self%Az_vol)
+      ! Merge the two uppermost boxes: the face between them becomes the new lake surface
+      self%z_face(self%ubnd_fce - 1) = self%z_face(self%ubnd_fce) + dh
+      call self%update_box_geometry(self%ubnd_vol - 1)
 
-         ! Update grid
-         z_face(ubnd_fce - 1) = z_face(ubnd_fce) + dh
-         z_volume(ubnd_vol - 1) = 0.5_RK*(z_face(ubnd_fce - 1) + z_face(ubnd_fce - 2))
-
-         Az(ubnd_fce - 1) = Az(ubnd_fce)
-         Az_vol(ubnd_vol - 1) = Az_vol(ubnd_vol)
-
-         self%h_old = h(ubnd_vol - 1)
-         h(ubnd_vol - 1) = (z_face(ubnd_fce - 1) - z_face(ubnd_fce - 2))
-
-         layer_depth(ubnd_vol - 1) = z_face(ubnd_fce - 1) - z_volume(ubnd_vol - 1)
-
-         ! Update number of occupied cells
-         nz_occupied = nz_occupied - 1
-         ! Update boundaries (ubnd_fce and ubnd_vol)
-         call self%update_nz()
-
-      end associate
+      ! Update number of occupied cells and boundaries (ubnd_fce and ubnd_vol)
+      self%nz_occupied = self%nz_occupied - 1
+      call self%update_nz()
+      call self%update_layer_depth()
+      call self%update_area_factors()
    end subroutine
 
    ! Grow grid (mainly used by advection)
@@ -459,39 +433,21 @@ contains
 
       associate (z_face=>self%z_face, &
                  ubnd_fce=>self%ubnd_fce, &
-                 z_volume=>self%z_volume, &
-                 layer_depth=>self%layer_depth, &
-                 ubnd_vol=>self%ubnd_vol, &
-                 h=>self%h, &
-                 Az=>self%Az, &
-                 Az_vol=>self%Az_vol, &
-                 dAz=>self%dAz, &
-                 nz_occupied=>self%nz_occupied)
+                 ubnd_vol=>self%ubnd_vol)
 
-         h(ubnd_vol + 1) = (h(ubnd_vol) + dh)/2
-         h(ubnd_vol) = (h(ubnd_vol) + dh)/2
-         self%h_old = h(ubnd_vol + 1)
-
+         ! Split the top box (including dh) into two boxes of equal height
          z_face(ubnd_fce + 1) = z_face(ubnd_fce) + dh
-         z_face(ubnd_fce) = z_face(ubnd_fce) + dh - h(ubnd_vol)
-
-         z_volume(ubnd_vol + 1) = z_volume(ubnd_vol) + (h(ubnd_vol + 1) + dh)/2
-         z_volume(ubnd_vol) = z_volume(ubnd_vol) - (h(ubnd_vol) - dh)/2
-
-         Az(ubnd_fce) = Az(ubnd_fce - 1) + h(ubnd_vol)*dAz(ubnd_vol)
-         Az(ubnd_fce + 1) = Az(ubnd_fce) + h(ubnd_vol + 1)*dAz(ubnd_vol + 1)
-
-         Az_vol(ubnd_vol - 1) = (Az(ubnd_fce - 1) + Az(ubnd_fce - 2))/2
-         Az_vol(ubnd_vol) = (Az(ubnd_fce) + Az(ubnd_fce - 1))/2
-
-         layer_depth(ubnd_vol + 1) = z_face(ubnd_fce + 1) - z_volume(ubnd_vol + 1)
-         layer_depth(ubnd_vol) = z_face(ubnd_fce) - z_volume(ubnd_vol)
-
-         nz_occupied = nz_occupied + 1
-
-         call self%update_nz()
+         z_face(ubnd_fce) = 0.5_RK*(z_face(ubnd_fce + 1) + z_face(ubnd_fce - 1))
+         call self%update_box_geometry(ubnd_vol)
+         call self%update_box_geometry(ubnd_vol + 1)
 
       end associate
+
+      ! Update number of occupied cells and boundaries (ubnd_fce and ubnd_vol)
+      self%nz_occupied = self%nz_occupied + 1
+      call self%update_nz()
+      call self%update_layer_depth()
+      call self%update_area_factors()
    end subroutine
 
    ! Recalculate depth
@@ -500,40 +456,29 @@ contains
       class(StaggeredGrid), intent(inout) :: self
       real(RK), intent(inout) :: new_depth
       integer :: i
-      real(RK) ::  zmax
       associate (nz_grid=>self%nz_grid, &
                  nz_occupied=>self%nz_occupied, &
                  z_face=>self%z_face, &
-                 z_volume=>self%z_volume, &
                  h=>self%h, &
-                 z_zero=>self%z_zero, &
-                 Az=>self%Az)
+                 z_zero=>self%z_zero)
          do i = 1, nz_grid + 1
             if (z_face(i) >= (z_zero - new_depth)) then ! If above initial water level
-               zmax = z_face(i)
-
                ! Set top face to new water level
                z_face(i) = z_zero - new_depth
-
-               ! Adjust new volume center of cell i-1 (belonging to upper face i)
-               z_volume(i - 1) = (z_face(i) + z_face(i - 1))/2
-               h(i - 1) = z_face(i) - z_face(i - 1)
-
-               Az(i) = Az(i-1) + h(i - 1)/(zmax-z_face(i-1))*(Az(i)-Az(i-1))
                nz_occupied = i - 1
-               self%h_old = h(nz_occupied)
+               call self%update_box_geometry(nz_occupied)
+
                if (h(nz_occupied) <= 0.5*h(nz_occupied - 1)) then ! If top box is too small
                   z_face(nz_occupied) = z_face(nz_occupied + 1) ! Combine the two upper boxes
-                  z_volume(nz_occupied - 1) = (z_face(nz_occupied) + z_face(nz_occupied - 1))/2
-                  h(nz_occupied - 1) = h(nz_occupied) + h(nz_occupied - 1)
-                  self%h_old = h(nz_occupied - 1)
                   nz_occupied = nz_occupied - 1 ! Reduce number of boxes
+                  call self%update_box_geometry(nz_occupied)
                end if
                exit
             end if
          end do
 
          call self%update_nz()
+         call self%update_layer_depth()
       end associate
    end subroutine
 
@@ -617,6 +562,51 @@ contains
    end subroutine
 
    ! Update all upper bounds and lengths
+   ! Area at height z above the lake bottom, linearly interpolated from the morphology
+   ! (constant extrapolation outside the morphology range)
+   pure real(RK) function grid_area_at(self, z) result(A)
+      implicit none
+      class(StaggeredGrid), intent(in) :: self
+      real(RK), intent(in) :: z
+      integer :: i, n
+
+      n = size(self%z_bathy)
+      if (z <= self%z_bathy(1)) then
+         A = self%A_bathy(1)
+      else if (z >= self%z_bathy(n)) then
+         A = self%A_bathy(n)
+      else
+         i = 2
+         do while (self%z_bathy(i) < z)
+            i = i + 1
+         end do
+         A = self%A_bathy(i - 1) + (self%A_bathy(i) - self%A_bathy(i - 1)) &
+             *(z - self%z_bathy(i - 1))/(self%z_bathy(i) - self%z_bathy(i - 1))
+      end if
+   end function
+
+   ! Recompute height, center, face areas, center area and area derivative of box i from its faces z_face(i) and z_face(i + 1)
+   subroutine grid_update_box_geometry(self, i)
+      implicit none
+      class(StaggeredGrid), intent(inout) :: self
+      integer, intent(in) :: i
+
+      self%h(i) = self%z_face(i + 1) - self%z_face(i)
+      self%z_volume(i) = 0.5_RK*(self%z_face(i) + self%z_face(i + 1))
+      self%Az(i) = self%area_at(self%z_face(i))
+      self%Az(i + 1) = self%area_at(self%z_face(i + 1))
+      self%Az_vol(i) = self%area_at(self%z_volume(i))
+      self%dAz(i) = (self%Az(i + 1) - self%Az(i))/self%h(i)
+   end subroutine
+
+   ! Depth of box centers below the lake surface (used by AED2)
+   subroutine grid_update_layer_depth(self)
+      implicit none
+      class(StaggeredGrid), intent(inout) :: self
+
+      self%layer_depth(1:self%ubnd_vol) = self%z_face(self%ubnd_fce) - self%z_volume(1:self%ubnd_vol)
+   end subroutine
+
    subroutine grid_update_nz(self)
       implicit none
       class(StaggeredGrid), intent(inout) :: self
