@@ -247,7 +247,7 @@ module strat_simdata
       real(RK) :: cde, cm0
       real(RK) ::  fsed
       real(RK), dimension(:), allocatable     :: fgeo_add
-      integer :: n_AED2_state, n_AED2_diagnostic, n_AED2_diagnostic_sheet
+      integer :: n_AED2_state = 0, n_AED2_diagnostic = 0, n_AED2_diagnostic_sheet = 0 ! Stay 0 if AED2 is not coupled
 
 
    contains

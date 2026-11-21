@@ -436,7 +436,7 @@ contains
       type(GridConfig) :: grid_config
       real(RK), dimension(:) :: z_tmp(self%simdata%model_cfg%max_length_input_data)
       real(RK), dimension(:) :: A_tmp(self%simdata%model_cfg%max_length_input_data)
-      integer :: n_read, i
+      integer :: n_read, i, unit
       associate (simdata=>self%simdata, &
                  max_length_input_data=>grid_config%max_length_input_data)
 
@@ -445,10 +445,10 @@ contains
          if (simdata%input_cfg%grid_input_type == 7) then
             allocate (grid_config%grid_read(grid_config%max_length_input_data))
             ! Read grid
-            open (12, status='old', file=simdata%input_cfg%GridName)
-            read (12, *)
+            open (newunit=unit, status='old', file=simdata%input_cfg%GridName)
+            read (unit, *)
             do i = 1, max_length_input_data
-               read (12, *, end=69) grid_config%grid_read(i)
+               read (unit, *, end=69) grid_config%grid_read(i)
             end do
 
 69          if(i==max_length_input_data) then
@@ -456,7 +456,7 @@ contains
             else
                call ok('Grid file successfully read')
             end if
-            close (12)
+            close (unit)
 
             if (i == 2) then ! Constant spacing
                grid_config%nz_grid = int(grid_config%grid_read(1))
@@ -485,10 +485,10 @@ contains
          end if
 
          ! Read Morphology
-         open (11, status='old', file=simdata%input_cfg%MorphName)
-         read (11, *) ! Skip header
+         open (newunit=unit, status='old', file=simdata%input_cfg%MorphName)
+         read (unit, *) ! Skip header
          do i = 1, max_length_input_data ! Read depth and area
-            read (11, *, end=86) z_tmp(i), A_tmp(i)
+            read (unit, *, end=86) z_tmp(i), A_tmp(i)
 
             ! Check that the uppermost depth is not negative
             if (i==1) then
@@ -510,7 +510,7 @@ contains
          else
             call ok('Morphology file successfully read')
          end if
-         close (11)
+         close (unit)
 
          n_read = i - 1 ! Number of area values
 
@@ -768,7 +768,7 @@ contains
       real(RK) :: z_read(self%simdata%model_cfg%max_length_input_data), U_read(self%simdata%model_cfg%max_length_input_data), V_read(self%simdata%model_cfg%max_length_input_data)
       real(RK) :: T_read(self%simdata%model_cfg%max_length_input_data), S_read(self%simdata%model_cfg%max_length_input_data), k_read(self%simdata%model_cfg%max_length_input_data), eps_read(self%simdata%model_cfg%max_length_input_data), num_read(self%simdata%model_cfg%max_length_input_data), nuh_read(self%simdata%model_cfg%max_length_input_data)
       real(RK) :: z_ini_depth
-      integer :: i, n_read
+      integer :: i, n_read, unit
 
       associate (grid=>self%simdata%grid, &
                  model=>self%simdata%model, &
@@ -779,13 +779,13 @@ contains
          if (self%simdata%sim_cfg%use_text_restart) then
             call warn('Simulation is restarted from text file. This means that the Simstrat initial condition file needs to have 8 data columns instead of 6 (including num and nuh).')
          end if
-         open (13, status='old', file=self%simdata%input_cfg%InitName) ! Opens initial conditions file
-         read (13, *) ! Skip header
+         open (newunit=unit, status='old', file=self%simdata%input_cfg%InitName) ! Opens initial conditions file
+         read (unit, *) ! Skip header
          do i = 1, max_length_input_data ! Read initial u,v,T, etc
             if (self%simdata%sim_cfg%use_text_restart) then
-               read (13, *, end=99) z_read(i), U_read(i), V_read(i), T_read(i), S_read(i), k_read(i), eps_read(i), num_read(i), nuh_read(i)
+               read (unit, *, end=99) z_read(i), U_read(i), V_read(i), T_read(i), S_read(i), k_read(i), eps_read(i), num_read(i), nuh_read(i)
             else
-               read (13, *, end=99) z_read(i), U_read(i), V_read(i), T_read(i), S_read(i), k_read(i), eps_read(i)
+               read (unit, *, end=99) z_read(i), U_read(i), V_read(i), T_read(i), S_read(i), k_read(i), eps_read(i)
             end if
             if (z_read(i)>0) then
                call error('One or several input depths of initial conditions are positive.')
@@ -798,7 +798,7 @@ contains
             write(*,*) '[ERROR] ','Only first ',max_length_input_data,' values of initial data file read.'
          end if
 
-         close (13)
+         close (unit)
          do i = 1, n_read
             z_read(i) = abs(z_read(i)) ! Make depths positive
          end do

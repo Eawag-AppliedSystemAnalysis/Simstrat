@@ -46,7 +46,7 @@ module strat_outputfile
       class(StaggeredGrid), public, pointer ::grid
       type(csv_file), dimension(:), allocatable :: output_files
       integer, public :: n_depths
-      integer, public :: n_vars, n_vars_Simstrat, n_vars_AED2_state, n_vars_AED2_diagnostic, n_vars_AED2_diagnostic_sheet
+      integer, public :: n_vars = 0, n_vars_Simstrat = 0, n_vars_AED2_state = 0, n_vars_AED2_diagnostic = 0, n_vars_AED2_diagnostic_sheet = 0
       integer, public :: counter = 0
       integer(8), public, dimension(2) :: simulation_time_for_next_output = 0
       real(RK), dimension(:,:), allocatable :: last_iteration_data
@@ -200,6 +200,8 @@ contains
         end if
       else
          self%n_vars_AED2_state = 0
+         self%n_vars_AED2_diagnostic = 0
+         self%n_vars_AED2_diagnostic_sheet = 0
       end if
       self%n_vars = self%n_vars_Simstrat + self%n_vars_AED2_state + self%n_vars_AED2_diagnostic + self%n_vars_AED2_diagnostic_sheet
 

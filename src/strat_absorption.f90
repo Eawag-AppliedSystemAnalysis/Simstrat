@@ -40,6 +40,7 @@ module strat_absorption
       class(StaggeredGrid), pointer :: grid
       class(ModelParam), pointer :: param
       character(len=:), allocatable  :: file
+      integer :: unit = 0 ! Unit of the opened absorption file (0 if not open)
 
       ! Variables that are used in between iteration. These used to be "save" variables
       real(RK) :: tb_start, tb_end !Start and end time
@@ -67,6 +68,10 @@ contains
       class(ModelConfig), target :: model_config
       class(ModelParam), target :: model_param
       character(len=:), allocatable :: absorption_file
+
+      ! Close files and free memory of a previous initialization (if Simstrat is initialized several times)
+      call self%deallocate()
+      self%number_of_lines_read = 0
 
       self%cfg => model_config
       self%param => model_param
@@ -108,8 +113,11 @@ contains
       class(AbsorptionModule) :: self
       logical :: is_open
 
-      inquire (unit=30, opened=is_open)
-      if (is_open) close (30)
+      if (self%unit /= 0) then
+         inquire (unit=self%unit, opened=is_open)
+         if (is_open) close (self%unit)
+         self%unit = 0
+      end if
 
       if (allocated(self%file)) deallocate(self%file)
       if (allocated(self%z_absorb)) deallocate(self%z_absorb)
@@ -139,20 +147,20 @@ contains
                  nz=>self%grid%nz_occupied)
 
          if (state%first_timestep) then ! First iteration
-            open (30, status='old', file=self%file)
+            open (newunit=self%unit, status='old', file=self%file)
             if (self%number_of_lines_read > 0) then
                do i = 1, self%number_of_lines_read
-                  read (30, *, end=9) ! skip over already read lines
+                  read (self%unit, *, end=9) ! skip over already read lines
                end do
             else
                eof = 0
 
                !Read depths: first line are names, second line is number of depths available
-               read (30, *, end=9)
+               read (self%unit, *, end=9)
                call count_read(self)
-               read (30, *, end=9) nval
+               read (self%unit, *, end=9) nval
                call count_read(self)
-               read (30, *, end=9) dummy, (z_absorb(i), i=1, nval)
+               read (self%unit, *, end=9) dummy, (z_absorb(i), i=1, nval)
                call count_read(self)
 
                !Make depths positives
@@ -161,7 +169,7 @@ contains
                end do
 
                !Read first values
-               read (30, *, end=9) tb_start, (absorb_read_start(i), i=1, nval)
+               read (self%unit, *, end=9) tb_start, (absorb_read_start(i), i=1, nval)
                call count_read(self)
 
                if (state%datum < tb_start) call warn('First light attenuation date after simulation start time.')
@@ -169,7 +177,7 @@ contains
                !Interpolate absorb_read_start on z_absorb onto faces of grid
                call self%grid%interpolate_to_face(z_absorb, absorb_read_start, nval, absorb_start)
 
-               read (30, *, end=7) tb_end, (absorb_read_end(i), i=1, nval)
+               read (self%unit, *, end=7) tb_end, (absorb_read_end(i), i=1, nval)
                call count_read(self)
 
                ! Write to console that file was successfully read
@@ -187,7 +195,7 @@ contains
                tb_start = tb_end
                absorb_start(1:nz) = absorb_end(1:nz)
                !Read next value
-               read (30, *, end=7) tb_end, (absorb_read_end(i), i=1, nval)
+               read (self%unit, *, end=7) tb_end, (absorb_read_end(i), i=1, nval)
                call count_read(self)
                call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end)
             end do

@@ -109,7 +109,7 @@ contains
       character(len=64) :: models(64)
       namelist /aed2_models/ models
       type(aed2_variable_t),pointer :: tvar
-      integer i, status, av, v, sv
+      integer i, status, av, v, sv, unit
 
       ! Add grid and aed2_cfg to SimstratAED2 object
       self%grid => grid
@@ -129,14 +129,14 @@ contains
 
          ! Create model tree
          write (6,*) "     Processing aed2_models config from ", trim(fname)
-         open(50,file=fname,action='read',status='old',iostat=status)
+         open(newunit=unit,file=fname,action='read',status='old',iostat=status)
          if ( status /= 0 ) then
             call error("Cannot open file " // trim(fname))
             error stop
          end if
 
          models = ''
-         read(50, nml=aed2_models, iostat=status)
+         read(unit, nml=aed2_models, iostat=status)
          if ( status /= 0 ) then
             call error("Cannot read namelist entry aed2_models")
             error stop
@@ -144,11 +144,11 @@ contains
 
          do i=1,size(models)
             if (models(i)=='') exit
-            call aed2_define_model(models(i), 50)
+            call aed2_define_model(models(i), unit)
          end do
 
          ! Finished reading AED2 config
-         close(50)
+         close(unit)
          write (6,*) "      AED2 file parsing completed."
 
          ! Assign number of different variables

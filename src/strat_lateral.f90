@@ -97,6 +97,9 @@ contains
       ! Locals
       integer :: i
 
+      ! Close files and free memory of a previous initialization (if Simstrat is initialized several times)
+      call self%deallocate()
+
       self%cfg => model_config
       self%param => model_param
       self%grid => grid
@@ -161,7 +164,7 @@ contains
 
       if (allocated(self%fnum)) then
          do i = 1, size(self%fnum)
-            if (self%fnum(i) > 0) then
+            if (self%fnum(i) /= 0) then
                inquire (unit=self%fnum(i), opened=is_open)
                if (is_open) close (self%fnum(i))
             end if
@@ -297,8 +300,7 @@ contains
                      fname = trim(self%simstrat_path(i))
                   end if
 
-                  self%fnum(i) = i + 60  ! Should find a better way to manage unit numbers
-                  open(self%fnum(i), action='read', status='old', file=fname, iostat=status)
+                  open(newunit=self%fnum(i), action='read', status='old', file=fname, iostat=status)
                   
                   if (status .ne. 0) then
                      call error('File '//fname//' not found.')
@@ -404,7 +406,7 @@ contains
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
-                  open(self%fnum(i), action='read', status='old', file=fname, iostat=status)
+                  open(newunit=self%fnum(i), action='read', status='old', file=fname, iostat=status) ! The unit stored in the snapshot is not valid anymore
                   
                   if (status .ne. 0) then
                      call error('File '//fname//' not found.')
@@ -653,8 +655,7 @@ contains
                   end if
 
                   ! Read inflow files
-                  self%fnum(i) = i + 60  ! Should find a better way to manage unit numbers
-                  open(self%fnum(i), action='read', status='old', file=fname, iostat=status)
+                  open(newunit=self%fnum(i), action='read', status='old', file=fname, iostat=status)
                   
                   if (status .ne. 0) then
                      call error('File '//fname//' not found.')
@@ -760,7 +761,7 @@ contains
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
-                  open(self%fnum(i), action='read', status='old', file=fname, iostat=status)
+                  open(newunit=self%fnum(i), action='read', status='old', file=fname, iostat=status) ! The unit stored in the snapshot is not valid anymore
 
                   do l = 1, self%number_of_lines_read(i)
                      read (self%fnum(i), *, end=9) ! Skip already read and processed lines

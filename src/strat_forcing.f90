@@ -43,6 +43,12 @@ module strat_forcing
       class(StaggeredGrid), pointer :: grid
       class(ModelParam), pointer :: param
       character(len=:), allocatable  :: file  ! Forcing file name
+
+      ! State of reading the forcing file (kept between time steps)
+      integer :: unit = 0                   ! Unit of the opened forcing file (0 if not open)
+      integer :: eof = 0                    ! End of file reached
+      real(RK) :: tb_start, tb_end          ! Start and end time of the current interval
+      real(RK) :: A_s(8), A_e(8)            ! Values at start and end of the current interval (8 is the maximum number of columns)
    contains
       procedure, pass :: init => forcing_init
       procedure, pass :: read => forcing_read
@@ -67,19 +73,30 @@ contains
       self%param => model_param
       self%grid => grid
       self%file = forcing_file
+      call close_forcing_file(self)
+      self%eof = 0
 
       if(self%cfg%snow_model == 1) call warn('The snow module is turned on. This module needs precipitation data, note that the last column in the forcing file will be interpreted as precipitation.')
       !If precipitation column is missing in forcing file, Simstrat will read dates as precipitation
    end subroutine
 
-   ! Deallocate all data allocated in self and close the forcing file
-   subroutine forcing_deallocate(self)
+   ! Close the forcing file if it is open
+   subroutine close_forcing_file(self)
       class(ForcingModule) :: self
       logical :: is_open
 
-      inquire (unit=20, opened=is_open)
-      if (is_open) close (20)
+      if (self%unit /= 0) then
+         inquire (unit=self%unit, opened=is_open)
+         if (is_open) close (self%unit)
+         self%unit = 0
+      end if
+   end subroutine
 
+   ! Deallocate all data allocated in self and close the forcing file
+   subroutine forcing_deallocate(self)
+      class(ForcingModule) :: self
+
+      call close_forcing_file(self)
       if (allocated(self%file)) deallocate(self%file)
    end subroutine
 
@@ -87,7 +104,7 @@ contains
    ! This method has more or less been copied from old simstrat
    !AG 2014: revision + correction
    !####################################################################
-   subroutine forcing_read(self, datum, A_s, A_e, A_cur, nval, idx)
+   subroutine forcing_read(self, datum, A_cur, nval, idx)
       !####################################################################
 
       implicit none
@@ -97,26 +114,25 @@ contains
       integer, intent(in) :: nval
       logical, intent(in) :: idx
       real(RK), intent(in) :: datum ! Required date
-      real(RK), intent(inout) :: A_cur(1:nval), A_s(1:nval), A_e(1:nval) ! Output values, Start and end values
+      real(RK), intent(inout) :: A_cur(1:nval) ! Output values
 
       ! Local variables
-      real(RK) :: tb_start, tb_end !Start and end time
-      integer :: eof, i
+      integer :: i
 
-      save tb_start, tb_end
-      save eof
+      associate (tb_start=>self%tb_start, tb_end=>self%tb_end, eof=>self%eof, A_s=>self%A_s, A_e=>self%A_e)
 
       if (idx) then
 
-         open (20, status='old', file=self%file)
+         call close_forcing_file(self)
+         open (newunit=self%unit, status='old', file=self%file)
          eof = 0
          ! Read first values
-         read (20, *, end=9)
-         read (20, *, end=9) tb_start, (A_s(i), i=1, nval)
+         read (self%unit, *, end=9)
+         read (self%unit, *, end=9) tb_start, (A_s(i), i=1, nval)
          if (datum < tb_start) then
             write(*,*) '[WARNING] ','First forcing date after simulation start time. datum=', datum,  'start=', tb_start
          end if
-         read (20, *, end=7) tb_end, (A_e(i), i=1, nval)
+         read (self%unit, *, end=7) tb_end, (A_e(i), i=1, nval)
 
          call ok("Forcing input file successfully read")
       end if
@@ -128,7 +144,7 @@ contains
             tb_start = tb_end
             A_s(1:nval) = A_e(1:nval)
             ! Read next value
-            read (20, *, end=7) tb_end, (A_e(i), i=1, nval)
+            read (self%unit, *, end=7) tb_end, (A_e(i), i=1, nval)
          end do
          ! Linearly interpolate values at correct datum
          A_cur(1:nval) = A_s(1:nval) + (datum - tb_start)/(tb_end - tb_start)*(A_e(1:nval) - A_s(1:nval))
@@ -144,6 +160,7 @@ contains
 
   9   call error('Unable to read forcing file (no data found).')
 
+      end associate
    end subroutine
 
    ! Compute appropriate forcing parameters at given datum
@@ -159,13 +176,12 @@ contains
       ! Local iables
       integer :: nval_offset
       real(RK) :: tau
-      real(RK) :: A_s(8), A_e(8), A_cur(8) ! 8 is the maximum number of rows in the forcing file
+      real(RK) :: A_cur(8) ! 8 is the maximum number of columns in the forcing file
       real(RK) :: fu, Vap_wat, heat0, emissivity
       real(RK) :: T_surf, F_glob, Vap_atm, Cloud
       real(RK) :: H_A, H_K, H_V, H_W, H_tot, emiss_A
       real(RK) :: F_snow, F_snowice, F_ice
       real(RK) :: qa, q0, sh_c
-      save A_s, A_e
       associate (cfg=>self%cfg, param=>self%param)
 
       if((state%snow_h + state%white_ice_h + state%black_ice_h) > 0) then ! Ice cover
@@ -189,7 +205,7 @@ contains
             call error('Ice module not compatible with forcing mode 1, use 2, 3 or 5.')
          end if
 
-         call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%first_timestep)
+         call self%read (state%datum, A_cur, 4 + nval_offset, state%first_timestep)
          state%u10 = A_cur(1)*param%f_wind ! MS 2014: added f_wind
          state%v10 = A_cur(2)*param%f_wind ! MS 2014: added f_wind
          state%uv10 = sqrt(state%u10**2 + state%v10**2) ! AG 2014
@@ -205,7 +221,7 @@ contains
       ! Forcing mode 2 (date, U10, V10, T_atm, H_sol, Vap)
       else if (cfg%forcing_mode >= 2) then
          if (cfg%forcing_mode == 2) then
-            call self%read (state%datum, A_s, A_e, A_cur, 5 + nval_offset, state%first_timestep)
+            call self%read (state%datum, A_cur, 5 + nval_offset, state%first_timestep)
             state%u10 = A_cur(1)*param%f_wind ! MS 2014: added f_wind
             state%v10 = A_cur(2)*param%f_wind ! MS 2014: added f_wind
             state%T_atm = A_cur(3)
@@ -232,7 +248,7 @@ contains
 
          ! Forcing mode 3 (date, U10, V10, T_atm, H_sol, Vap, Clouds)
          else if (cfg%forcing_mode == 3) then
-            call self%read (state%datum, A_s, A_e, A_cur, 6 + nval_offset, state%first_timestep)
+            call self%read (state%datum, A_cur, 6 + nval_offset, state%first_timestep)
             state%u10 = A_cur(1)*param%f_wind ! MS 2014: added f_wind
             state%v10 = A_cur(2)*param%f_wind ! MS 2014: added f_wind
             state%T_atm = A_cur(3)
@@ -268,7 +284,7 @@ contains
                call error('Ice module not compatible with forcing mode 4, use 2, 3 or 5.')
             end if
 
-            call self%read (state%datum, A_s, A_e, A_cur, 4 + nval_offset, state%first_timestep)
+            call self%read (state%datum, A_cur, 4 + nval_offset, state%first_timestep)
             state%u10 = A_cur(1)*param%f_wind ! MS 2014: added f_wind
             state%v10 = A_cur(2)*param%f_wind ! MS 2014: added f_wind
             heat0 = A_cur(3) ! MS 2014
@@ -278,7 +294,7 @@ contains
 
          ! Forcing 5 (date, U10, V10, T_atm, H_sol, Vap, ILWR)
          else if (cfg%forcing_mode == 5) then
-            call self%read (state%datum, A_s, A_e, A_cur, 6 + nval_offset, state%first_timestep)
+            call self%read (state%datum, A_cur, 6 + nval_offset, state%first_timestep)
             state%u10 = A_cur(1)*param%f_wind !MS 2014: added f_wind
             state%v10 = A_cur(2)*param%f_wind !MS 2014: added f_wind
             state%T_atm = A_cur(3)

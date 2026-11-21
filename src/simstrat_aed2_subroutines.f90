@@ -392,21 +392,21 @@ subroutine AED2_InitCondition(self, var, varname, default_val)
         real(RK) :: z_read(self%grid%max_length_input_data), var_read(self%grid%max_length_input_data)
         real(RK) :: z_read_depth
         character(len=100) :: fname
-        integer :: i,nval
+        integer :: i,nval,unit
 
         fname = trim(self%aed2_cfg%path_aed2_initial)//trim(varname)//'_ini.dat'
-        open(14,action='read',status='unknown',err=1,file=fname)       ! Opens initial conditions file
+        open(newunit=unit,action='read',status='old',err=1,file=fname)       ! Opens initial conditions file
         write(6,*) 'reading initial conditions of ', trim(varname)
-        read(14,*)                                ! Skip header
+        read(unit,*)                              ! Skip header
         do i=1,self%grid%max_length_input_data                             ! Read initial values
-            read(14,*,end=9) z_read(i),var_read(i)
+            read(unit,*,end=9) z_read(i),var_read(i)
         end do
     9   nval = i - 1                               ! Number of values
         if (nval<0) then
             write(6,*) 'Error reading ', trim(varname), ' initial conditions file (no data found).'
             error stop
         end if
-        close(14)
+        close(unit)
         do i=1,nval
             z_read(i) = abs(z_read(i))               ! Make depths positive
         end do
