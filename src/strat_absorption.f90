@@ -53,6 +53,7 @@ module strat_absorption
       procedure, pass :: update => absorption_update
       procedure, pass :: save => absorption_save
       procedure, pass :: load => absorption_load
+      procedure, pass :: deallocate => absorption_deallocate
    end type
 
 contains
@@ -100,6 +101,20 @@ contains
       call read_array(81, self%z_absorb)
       call read_array(81, self%absorb_start)
       call read_array(81, self%absorb_end)
+   end subroutine
+
+   ! Deallocate all data allocated in self and close the absorption file
+   subroutine absorption_deallocate(self)
+      class(AbsorptionModule) :: self
+      logical :: is_open
+
+      inquire (unit=30, opened=is_open)
+      if (is_open) close (30)
+
+      if (allocated(self%file)) deallocate(self%file)
+      if (allocated(self%z_absorb)) deallocate(self%z_absorb)
+      if (allocated(self%absorb_start)) deallocate(self%absorb_start)
+      if (allocated(self%absorb_end)) deallocate(self%absorb_end)
    end subroutine
 
    subroutine absorption_update(self, state)

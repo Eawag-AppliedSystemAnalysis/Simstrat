@@ -42,17 +42,17 @@ module simstrat_aed2
       class(StaggeredGrid), pointer :: grid
 
       ! Arrays for state and diagnostic variables
-      real(RK),pointer,dimension(:,:) :: cc ! water quality array: nlayers, nvars
-      real(RK),pointer,dimension(:,:) :: cc_diag
-      real(RK),pointer,dimension(:) :: cc_diag_sheet
-      real(RK),pointer,dimension(:) :: tss
-      real(RK),pointer,dimension(:) :: sed_zones
+      real(RK),pointer,dimension(:,:) :: cc => null() ! water quality array: nlayers, nvars
+      real(RK),pointer,dimension(:,:) :: cc_diag => null()
+      real(RK),pointer,dimension(:) :: cc_diag_sheet => null()
+      real(RK),pointer,dimension(:) :: tss => null()
+      real(RK),pointer,dimension(:) :: sed_zones => null()
 
       ! Arrays for fluxes of state variables
-      real(RK),pointer,dimension(:) :: flux_atm
-      real(RK),pointer,dimension(:) :: flux_ben
-      real(RK),pointer,dimension(:,:) :: flux_pel
-      real(RK),pointer,dimension(:,:) :: flux_zone
+      real(RK),pointer,dimension(:) :: flux_atm => null()
+      real(RK),pointer,dimension(:) :: flux_ben => null()
+      real(RK),pointer,dimension(:,:) :: flux_pel => null()
+      real(RK),pointer,dimension(:,:) :: flux_zone => null()
 
       ! Arrays for work, vertical movement, and cross-boundary fluxes
       real(RK),allocatable,dimension(:,:) :: ws
@@ -60,19 +60,19 @@ module simstrat_aed2
       real(RK),allocatable,dimension(:)   :: local
 
       ! Arrays for environmental variables not supplied externally.
-      real(RK),pointer,dimension(:) :: par, pres
-      real(RK),pointer,dimension(:) :: uva, uvb, nir
+      real(RK),pointer,dimension(:) :: par => null(), pres => null()
+      real(RK),pointer,dimension(:) :: uva => null(), uvb => null(), nir => null()
 
       ! Column pointers
-      type (aed2_column_t),pointer,dimension(:) :: column, column_sed
+      type (aed2_column_t),pointer,dimension(:) :: column => null(), column_sed => null()
 
       ! External variables
       integer  :: w_adv_ctr    ! Scheme for vertical advection (0 if not used)
 
-      character(len=48),pointer :: names(:)
-      character(len=48),pointer :: bennames(:)
-      character(len=48),pointer :: diagnames(:)
-      character(len=48),pointer :: diagnames_sheet(:)
+      character(len=48),pointer :: names(:) => null()
+      character(len=48),pointer :: bennames(:) => null()
+      character(len=48),pointer :: diagnames(:) => null()
+      character(len=48),pointer :: diagnames_sheet(:) => null()
 
       integer,allocatable,dimension(:) :: externalid
 
@@ -84,6 +84,7 @@ module simstrat_aed2
    contains
       procedure, pass(self), public :: init
       procedure, pass(self), public :: update
+      procedure, pass(self), public :: deallocate => aed2_deallocate
    end type SimstratAED2
 
 contains
@@ -179,13 +180,9 @@ contains
 
          ! Assign name, min and max values of variables, print names to screen
          call assign_var_names(self)
-         allocate(state%AED2_state_names(n_vars))
+         ! The model state only references the name arrays owned by this module (no separate allocation needed)
          state%AED2_state_names => self%names
-
-         allocate(state%AED2_diagnostic_names(n_vars_diag))
          state%AED2_diagnostic_names => self%diagnames
-
-         allocate(state%AED2_diagnostic_names_sheet(n_vars_diag_sheet))
          state%AED2_diagnostic_names_sheet => self%diagnames_sheet
 
          ! Now set initial values of AED2 variables
@@ -501,6 +498,48 @@ contains
       ! Calculate RHS
       ! A*phi^{n+1} = phi^{n}+dt*S^{n}
       rhs(1:n) = var(1:n) + dt*sources(1:n)
+   end subroutine
+
+   ! Deallocate all data allocated in self and let AED2 clean up its models
+   ! Note: the AED2 pointers in the model state reference this memory and must not be used afterwards
+   subroutine aed2_deallocate(self)
+      implicit none
+      class(SimstratAED2) :: self
+
+      ! Only clean up if AED2 was initialized
+      if (.not. associated(self%cc)) return
+
+      call aed2_delete()
+
+      if (associated(self%column)) deallocate(self%column)
+      if (associated(self%column_sed)) deallocate(self%column_sed)
+      if (associated(self%names)) deallocate(self%names)
+      if (associated(self%bennames)) deallocate(self%bennames)
+      if (associated(self%diagnames)) deallocate(self%diagnames)
+      if (associated(self%diagnames_sheet)) deallocate(self%diagnames_sheet)
+      if (associated(self%cc)) deallocate(self%cc)
+      if (associated(self%cc_diag)) deallocate(self%cc_diag)
+      if (associated(self%cc_diag_sheet)) deallocate(self%cc_diag_sheet)
+      if (associated(self%tss)) deallocate(self%tss)
+      if (associated(self%sed_zones)) deallocate(self%sed_zones)
+      if (associated(self%flux_atm)) deallocate(self%flux_atm)
+      if (associated(self%flux_ben)) deallocate(self%flux_ben)
+      if (associated(self%flux_pel)) deallocate(self%flux_pel)
+      if (associated(self%flux_zone)) deallocate(self%flux_zone)
+      if (associated(self%par)) deallocate(self%par)
+      if (associated(self%pres)) deallocate(self%pres)
+      if (associated(self%uva)) deallocate(self%uva)
+      if (associated(self%uvb)) deallocate(self%uvb)
+      if (associated(self%nir)) deallocate(self%nir)
+      if (allocated(self%ws)) deallocate(self%ws)
+      if (allocated(self%total)) deallocate(self%total)
+      if (allocated(self%local)) deallocate(self%local)
+      if (allocated(self%externalid)) deallocate(self%externalid)
+      if (allocated(self%min_)) deallocate(self%min_)
+      if (allocated(self%max_)) deallocate(self%max_)
+
+      nullify(self%aed2_cfg)
+      nullify(self%grid)
    end subroutine
 
 end module simstrat_aed2

@@ -74,6 +74,7 @@ module strat_outputfile
       procedure, pass(self), public :: close => log_close
       procedure, pass(self), public :: save => log_save
       procedure, pass(self), public :: load => log_load
+      procedure, pass(self), public :: deallocate => log_deallocate
    end type
 
    type, private :: OutputHelper
@@ -659,6 +660,23 @@ contains
       class(InterpolatingLogger), intent(inout) :: self
       !read(81) self%counter!, self%simulation_time_for_next_output(1), self%simulation_time_for_next_output(2)
       call read_matrix(81, self%last_iteration_data)
+   end subroutine
+
+
+   !************************* Deallocate ****************************
+
+   ! Deallocate all data allocated in self (call after close)
+   subroutine log_deallocate(self)
+      implicit none
+      class(InterpolatingLogger), intent(inout) :: self
+
+      if (allocated(self%output_files)) deallocate(self%output_files)
+      if (allocated(self%last_iteration_data)) deallocate(self%last_iteration_data)
+      nullify(self%output_config)
+      nullify(self%sim_config)
+      nullify(self%model_config)
+      nullify(self%aed2_config)
+      nullify(self%grid)
    end subroutine
 
 end module

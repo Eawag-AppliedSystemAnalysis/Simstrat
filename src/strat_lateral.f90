@@ -62,6 +62,7 @@ module strat_lateral
       procedure, pass :: init => lateral_generic_init
       procedure, pass :: save => lateral_generic_save
       procedure, pass :: load => lateral_generic_load
+      procedure, pass :: deallocate => lateral_generic_deallocate
       procedure(lateral_generic_update), deferred, pass :: update
    end type
 
@@ -121,6 +122,7 @@ contains
       allocate(self%tb_start(self%n_vars))
       allocate(self%tb_end(self%n_vars))
       allocate(self%fnum(self%n_vars))
+      self%fnum = 0 ! Unit numbers are assigned when the files are opened
       allocate(self%number_of_lines_read(self%n_vars))
       self%number_of_lines_read = 0
 
@@ -149,6 +151,44 @@ contains
             end select
          end do
       end if
+   end subroutine
+
+   ! Deallocate all data allocated in self and close the inflow/outflow files
+   subroutine lateral_generic_deallocate(self)
+      class(GenericLateralModule) :: self
+      integer :: i
+      logical :: is_open
+
+      if (allocated(self%fnum)) then
+         do i = 1, size(self%fnum)
+            if (self%fnum(i) > 0) then
+               inquire (unit=self%fnum(i), opened=is_open)
+               if (is_open) close (self%fnum(i))
+            end if
+         end do
+         deallocate(self%fnum)
+      end if
+
+      if (allocated(self%z_Inp)) deallocate(self%z_Inp)
+      if (allocated(self%Q_start)) deallocate(self%Q_start)
+      if (allocated(self%Qs_start)) deallocate(self%Qs_start)
+      if (allocated(self%Q_end)) deallocate(self%Q_end)
+      if (allocated(self%Qs_end)) deallocate(self%Qs_end)
+      if (allocated(self%Q_read_start)) deallocate(self%Q_read_start)
+      if (allocated(self%Q_read_end)) deallocate(self%Q_read_end)
+      if (allocated(self%Inp_read_start)) deallocate(self%Inp_read_start)
+      if (allocated(self%Inp_read_end)) deallocate(self%Inp_read_end)
+      if (allocated(self%Qs_read_start)) deallocate(self%Qs_read_start)
+      if (allocated(self%Qs_read_end)) deallocate(self%Qs_read_end)
+      if (allocated(self%tb_start)) deallocate(self%tb_start)
+      if (allocated(self%tb_end)) deallocate(self%tb_end)
+      if (allocated(self%eof)) deallocate(self%eof)
+      if (allocated(self%nval)) deallocate(self%nval)
+      if (allocated(self%nval_deep)) deallocate(self%nval_deep)
+      if (allocated(self%nval_surface)) deallocate(self%nval_surface)
+      if (allocated(self%number_of_lines_read)) deallocate(self%number_of_lines_read)
+      if (allocated(self%has_surface_input)) deallocate(self%has_surface_input)
+      if (allocated(self%has_deep_input)) deallocate(self%has_deep_input)
    end subroutine
 
    subroutine lateral_generic_save(self)
@@ -257,7 +297,7 @@ contains
                   end if
 
                   self%fnum(i) = i + 60  ! Should find a better way to manage unit numbers
-                  open(self%fnum(i), action='read', status='old', file=fname)
+                  open(self%fnum(i), action='read', status='old', file=fname, iostat=status)
                   
                   if (status .ne. 0) then
                      call error('File '//fname//' not found.')
@@ -363,7 +403,7 @@ contains
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
-                  open(self%fnum(i), action='read', status='old', file=fname)
+                  open(self%fnum(i), action='read', status='old', file=fname, iostat=status)
                   
                   if (status .ne. 0) then
                      call error('File '//fname//' not found.')
@@ -613,7 +653,7 @@ contains
 
                   ! Read inflow files
                   self%fnum(i) = i + 60  ! Should find a better way to manage unit numbers
-                  open(self%fnum(i), action='read', status='old', file=fname)
+                  open(self%fnum(i), action='read', status='old', file=fname, iostat=status)
                   
                   if (status .ne. 0) then
                      call error('File '//fname//' not found.')
@@ -719,7 +759,7 @@ contains
                   else
                      fname = trim(self%simstrat_path(i))
                   end if
-                  open(self%fnum(i), action='read', status='old', file=fname)
+                  open(self%fnum(i), action='read', status='old', file=fname, iostat=status)
 
                   do l = 1, self%number_of_lines_read(i)
                      read (self%fnum(i), *, end=9) ! Skip already read and processed lines

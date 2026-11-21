@@ -45,7 +45,7 @@ module strat_inputfile
    !##################################################
    type, public :: SimstratSimulationFactory
       private
-      class(SimulationData), pointer :: simdata
+      class(SimulationData), pointer :: simdata => null()
 
    contains
       procedure, pass(self), public :: initialize_model
@@ -54,6 +54,7 @@ module strat_inputfile
       procedure, pass(self), public :: read_grid_config
       procedure, pass(self), public :: setup_model
       procedure, pass(self), public :: setup_output_conf
+      procedure, pass(self), public :: finalize_model
    end type SimstratSimulationFactory
 
 contains
@@ -91,6 +92,21 @@ contains
       call self%setup_output_conf()
 
    end subroutine initialize_model
+
+   ! Deallocate the simulation data created by initialize_model
+   ! All modules referencing the simulation data must be finalized before
+   subroutine finalize_model(self, simdata)
+      implicit none
+      class(SimstratSimulationFactory) :: self
+      class(SimulationData), pointer, intent(inout) :: simdata
+
+      if (associated(self%simdata)) then
+         call self%simdata%deallocate()
+         deallocate (self%simdata)
+      end if
+      nullify(self%simdata)
+      nullify(simdata)
+   end subroutine finalize_model
 
 
    ! Set up logger configuration

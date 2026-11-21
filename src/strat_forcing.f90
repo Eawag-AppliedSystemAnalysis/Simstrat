@@ -50,6 +50,7 @@ module strat_forcing
       procedure, pass :: update_coriolis => forcing_update_coriolis
       procedure, pass :: init_albedo => forcing_init_albedo
       procedure, pass :: update_albedo => forcing_update_albedo
+      procedure, pass :: deallocate => forcing_deallocate
    end type
 
 contains
@@ -69,6 +70,17 @@ contains
 
       if(self%cfg%snow_model == 1) call warn('The snow module is turned on. This module needs precipitation data, note that the last column in the forcing file will be interpreted as precipitation.')
       !If precipitation column is missing in forcing file, Simstrat will read dates as precipitation
+   end subroutine
+
+   ! Deallocate all data allocated in self and close the forcing file
+   subroutine forcing_deallocate(self)
+      class(ForcingModule) :: self
+      logical :: is_open
+
+      inquire (unit=20, opened=is_open)
+      if (is_open) close (20)
+
+      if (allocated(self%file)) deallocate(self%file)
    end subroutine
 
    !Read forcing file to get values A_cur at given datum

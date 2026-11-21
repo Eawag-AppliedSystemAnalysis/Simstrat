@@ -42,16 +42,18 @@ module strat_grid
       real(RK), dimension(:), allocatable :: A_read ! Area definition
       real(RK), dimension(:), allocatable :: z_A_read ! Height of area definitions
       logical :: equidistant_grid
+   contains
+      procedure, pass :: deallocate => grid_config_deallocate
    end type
 
    ! StaggeredGrid implementation
    type, public :: StaggeredGrid
-      real(RK), dimension(:), pointer     :: h        ! Box height
+      real(RK), dimension(:), pointer     :: h => null()        ! Box height
       real(RK), dimension(:), allocatable :: z_face   ! Holds z-values of faces
       real(RK), dimension(:), allocatable :: z_volume ! Holds z-values of volume centers
-      real(RK), dimension(:), pointer     :: layer_depth ! Depth of each layer, used by AED2
+      real(RK), dimension(:), pointer     :: layer_depth => null() ! Depth of each layer, used by AED2
       real(RK), dimension(:), allocatable :: Az       ! Areas
-      real(RK), dimension(:), pointer     :: Az_vol   ! Areas on volume grid (needed or AED2)
+      real(RK), dimension(:), pointer     :: Az_vol => null()   ! Areas on volume grid (needed or AED2)
       real(RK), dimension(:), allocatable :: dAz      ! Difference of areas
       real(RK), dimension(:), allocatable :: meanint  ! ?
       real(RK) :: volume, h_old
@@ -69,7 +71,7 @@ module strat_grid
 
       integer :: ubnd_vol, ubnd_fce, length_vol, length_fce   ! Upper and lenght for volume (vol) and face(fce) grids
       real(RK) :: z_zero
-      real(RK), pointer :: lake_level ! pointer attribute is needed for AED2
+      real(RK), pointer :: lake_level => null() ! pointer attribute is needed for AED2
       real(RK) :: lake_level_old
       real(RK) :: max_depth
 
@@ -103,6 +105,9 @@ module strat_grid
       ! Saving & loading methods
       procedure, pass :: save => grid_save
       procedure, pass :: load => grid_load
+
+      ! Deallocation method
+      procedure, pass :: deallocate => grid_deallocate
    end type
 
 contains
@@ -147,6 +152,35 @@ contains
       read(81) self%nz_grid, self%nz_occupied, self%max_length_input_data
       read(81) self%ubnd_vol, self%ubnd_fce, self%length_vol, self%length_fce
       read(81) self%z_zero, self%lake_level, self%lake_level_old, self%max_depth
+   end subroutine
+
+   ! Deallocate all data allocated in self
+   subroutine grid_deallocate(self)
+      class(StaggeredGrid), intent(inout) :: self
+
+      if (associated(self%h)) deallocate(self%h)
+      if (allocated(self%z_face)) deallocate(self%z_face)
+      if (allocated(self%z_volume)) deallocate(self%z_volume)
+      if (associated(self%layer_depth)) deallocate(self%layer_depth)
+      if (allocated(self%Az)) deallocate(self%Az)
+      if (associated(self%Az_vol)) deallocate(self%Az_vol)
+      if (allocated(self%dAz)) deallocate(self%dAz)
+      if (allocated(self%meanint)) deallocate(self%meanint)
+      if (allocated(self%AreaFactor_1)) deallocate(self%AreaFactor_1)
+      if (allocated(self%AreaFactor_2)) deallocate(self%AreaFactor_2)
+      if (allocated(self%AreaFactor_k1)) deallocate(self%AreaFactor_k1)
+      if (allocated(self%AreaFactor_k2)) deallocate(self%AreaFactor_k2)
+      if (allocated(self%AreaFactor_eps)) deallocate(self%AreaFactor_eps)
+      if (associated(self%lake_level)) deallocate(self%lake_level)
+   end subroutine
+
+   ! Deallocate grid configuration
+   subroutine grid_config_deallocate(self)
+      class(GridConfig), intent(inout) :: self
+
+      if (allocated(self%grid_read)) deallocate(self%grid_read)
+      if (allocated(self%A_read)) deallocate(self%A_read)
+      if (allocated(self%z_A_read)) deallocate(self%z_A_read)
    end subroutine
 
   ! Set up grid at program start

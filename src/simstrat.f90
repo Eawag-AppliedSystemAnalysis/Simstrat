@@ -56,7 +56,7 @@ program simstrat_main
    ! Instantiate all modules
    ! note that some are pointers/targets for polymorphism reasons
    type(SimstratSimulationFactory) :: factory
-   class(SimulationData), pointer :: simdata
+   class(SimulationData), pointer :: simdata => null()
    type(ThomasAlgSolver) :: solver
    type(EulerIDiscretizationMFQ) :: euler_i_disc
    type(EulerIDiscretizationKEPS) :: euler_i_disc_keps
@@ -75,7 +75,7 @@ program simstrat_main
    type(SimstratAED2) :: mod_aed2
    type(LateralModule), target :: mod_lateral_normal
    type(LateralRhoModule), target :: mod_lateral_rho
-   class(GenericLateralModule), pointer :: mod_lateral
+   class(GenericLateralModule), pointer :: mod_lateral => null()
    ! Instantiate progress bar object
    type(bar_object):: bar
    type(csv_file), dimension(:), allocatable :: csv_files
@@ -212,6 +212,9 @@ program simstrat_main
 
    ! Close logger files after simulation
    call logger%close()
+
+   ! Deallocate all memory of the model
+   call finalize_simulation()
 
 contains
 
@@ -423,6 +426,30 @@ contains
       end if
       call logger%save()
       close(80)
+   end subroutine
+
+   ! Deallocate all memory allocated during initialization and simulation
+   ! Done in reverse order of initialization, such that no module references deallocated data
+   subroutine finalize_simulation()
+      implicit none
+
+      call logger%deallocate()
+      if (associated(mod_lateral)) then
+         call mod_lateral%deallocate()
+         nullify(mod_lateral)
+      end if
+      call mod_aed2%deallocate()
+      call mod_absorption%deallocate()
+      call mod_forcing%deallocate()
+
+      ! Deallocate simulation data (configurations, model state and grid)
+      call factory%finalize_model(simdata)
+
+      if (allocated(csv_files)) deallocate(csv_files)
+      if (allocated(ParName)) deallocate(ParName)
+      if (allocated(snapshot_file_path)) deallocate(snapshot_file_path)
+      if (allocated(file_text_restart)) deallocate(file_text_restart)
+      if (allocated(file_text_restart2)) deallocate(file_text_restart2)
    end subroutine
 
    subroutine load_snapshot(file_path, couple_aed2)

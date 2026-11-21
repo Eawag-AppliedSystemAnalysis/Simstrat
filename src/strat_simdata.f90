@@ -47,21 +47,23 @@ module strat_simdata
       real(RK), dimension(:), allocatable    :: read_grid_array_from_json
       real(RK) :: read_grid_value_from_json
       integer :: grid_input_type
+   contains
+      procedure, pass :: deallocate => input_config_deallocate
    end type
 
    ! Definition of a variable to log
    type, public :: LogVariable
       character(len=:), allocatable :: name
-      real(RK), dimension(:), pointer :: values
-      real(RK), pointer :: values_surf 
+      real(RK), dimension(:), pointer :: values => null()
+      real(RK), pointer :: values_surf => null()
       logical :: volume_grid, face_grid
    end type
 
    ! Definition of a AED2 variable to log
    type, public :: LogVariableAED2
-      character(len=48), pointer, dimension(:) :: names
-      real(RK), dimension(:,:), pointer :: values
-      real(RK), dimension(:), pointer :: values_sheet
+      character(len=48), pointer, dimension(:) :: names => null()
+      real(RK), dimension(:,:), pointer :: values => null()
+      real(RK), dimension(:), pointer :: values_sheet => null()
    end type
 
    ! Logging configuration
@@ -85,6 +87,8 @@ module strat_simdata
       integer :: output_time_type, output_depth_type, thinning_interval
       real(RK) :: depth_interval, thinning_interval_read ! thinning_interval_read is a real to make sure that also values
       ! like 72.0 can be read (which are interpreted as a double)
+   contains
+      procedure, pass :: deallocate => output_config_deallocate
    end type
 
    ! Simulation configuration
@@ -131,6 +135,8 @@ module strat_simdata
       integer :: benthic_mode
       !integer :: n_zones
       real(RK), dimension(:), allocatable :: zone_heights
+   contains
+      procedure, pass :: deallocate => aed2_config_deallocate
    end type
 
    ! Model params (read from file)
@@ -174,16 +180,16 @@ module strat_simdata
       ! Variables located on z_cent grid
       ! Note that for these variables the value at 0 z.b. U(0) is not used
       real(RK), dimension(:), allocatable :: U, V ! Water velocities [m/s]
-      real(RK), dimension(:), pointer :: T, S ! Temperature [°C], Salinity [‰]
+      real(RK), dimension(:), pointer :: T => null(), S => null() ! Temperature [°C], Salinity [‰]
       real(RK), dimension(:), allocatable :: dS ! Source/sink for salinity
       real(RK), dimension(:, :), allocatable :: Q_inp ! Horizontal inflow [m^3/s]
-      real(RK), dimension(:), pointer :: rho ! Water density [kg/m^3]
-      real(RK), dimension(:,:), pointer :: AED2_state ! State matrix of AED2 variables (depth, variable)
-      real(RK), dimension(:,:), pointer :: AED2_diagnostic ! State matrix of AED2 diagnostic svariables
-      real(RK), dimension(:), pointer :: AED2_diagnostic_sheet ! State matrix of AED2 diagnostic svariables
-      character(len=48), dimension(:), pointer :: AED2_state_names ! Names of AED2 state variables used in the simulation
-      character(len=48), dimension(:), pointer :: AED2_diagnostic_names ! Names of AED2 diagnostic variables used in the simulation
-      character(len=48), dimension(:), pointer :: AED2_diagnostic_names_sheet ! Names of AED2 diagnostic surface variables used in the simulation
+      real(RK), dimension(:), pointer :: rho => null() ! Water density [kg/m^3]
+      real(RK), dimension(:,:), pointer :: AED2_state => null() ! State matrix of AED2 variables (depth, variable)
+      real(RK), dimension(:,:), pointer :: AED2_diagnostic => null() ! State matrix of AED2 diagnostic svariables
+      real(RK), dimension(:), pointer :: AED2_diagnostic_sheet => null() ! State matrix of AED2 diagnostic svariables
+      character(len=48), dimension(:), pointer :: AED2_state_names => null() ! Names of AED2 state variables used in the simulation
+      character(len=48), dimension(:), pointer :: AED2_diagnostic_names => null() ! Names of AED2 diagnostic variables used in the simulation
+      character(len=48), dimension(:), pointer :: AED2_diagnostic_names_sheet => null() ! Names of AED2 diagnostic surface variables used in the simulation
       integer :: n_pH
    
       ! Variables located on z_upp grid
@@ -199,12 +205,12 @@ module strat_simdata
       real(RK) :: gamma ! Proportionality constant for loss of seiche energy
 
       real(RK), dimension(:), allocatable :: absorb ! Absorption coeff [m-1]
-      real(RK), dimension(:), pointer :: absorb_vol ! Absorption coeff on vol grid [m-1]
+      real(RK), dimension(:), pointer :: absorb_vol => null() ! Absorption coeff on vol grid [m-1]
       real(RK) :: u10, v10, Wf ! Wind speeds, wind factor
-      real(RK), pointer :: uv10 ! pointer attribute needed for AED2
-      real(RK), pointer :: rain ! pointer attribute needed for AED2, rain is not calculated in Simstrat for the moment, but required by AED2
+      real(RK), pointer :: uv10 => null() ! pointer attribute needed for AED2
+      real(RK), pointer :: rain => null() ! pointer attribute needed for AED2, rain is not calculated in Simstrat for the moment, but required by AED2
       real(RK) :: drag, u_taus ! Drag
-      real(RK), pointer :: u_taub ! pointer attribute needed for AED2
+      real(RK), pointer :: u_taub => null() ! pointer attribute needed for AED2
       real(RK) :: tx, ty ! Shear stress
       real(RK) :: C10 ! Wind drag coefficient
       real(RK) :: SST, heat, heat_snow, heat_ice, heat_snowice! Sea surface temperature and heat flux
@@ -230,7 +236,7 @@ module strat_simdata
       real(RK), allocatable :: hw ! Outgoing long wave [W m-2]
       real(RK), allocatable :: hk ! Sensible flux [W m-2]
       real(RK), allocatable :: hv ! Latent heat [W m-2]
-      real(RK), pointer :: rad0 !  Solar radiation at surface  [W m-2]
+      real(RK), pointer :: rad0 => null() !  Solar radiation at surface  [W m-2]
    
       real(RK) :: cde, cm0
       real(RK) ::  fsed
@@ -242,6 +248,7 @@ module strat_simdata
       procedure, pass :: init => model_state_init
       procedure, pass :: save => save_model_state
       procedure, pass :: load => load_model_state
+      procedure, pass :: deallocate => model_state_deallocate
    end type
 
    ! Structure that encapsulates a full program state
@@ -256,6 +263,7 @@ module strat_simdata
       type(StaggeredGrid), public :: grid
    contains
       procedure, pass :: init => simulation_data_init
+      procedure, pass :: deallocate => simulation_data_deallocate
    end type
 
 contains
@@ -496,6 +504,144 @@ contains
          call read_matrix(81, self%Q_inp)
          call read_array(81, self%Q_vert)
       end if
+   end subroutine
+
+   ! Deallocate all data allocated in the simulation data (call after all modules referencing it are finalized)
+   subroutine simulation_data_deallocate(self)
+      class(SimulationData), intent(inout) :: self
+
+      call self%input_cfg%deallocate()
+      call self%output_cfg%deallocate()
+      call self%aed2_cfg%deallocate()
+      call self%model%deallocate()
+      call self%grid%deallocate()
+   end subroutine
+
+   ! Deallocate input configuration
+   subroutine input_config_deallocate(self)
+      class(InputConfig), intent(inout) :: self
+
+      if (allocated(self%MorphName)) deallocate(self%MorphName)
+      if (allocated(self%InitName)) deallocate(self%InitName)
+      if (allocated(self%ForcingName)) deallocate(self%ForcingName)
+      if (allocated(self%AbsorpName)) deallocate(self%AbsorpName)
+      if (allocated(self%GridName)) deallocate(self%GridName)
+      if (allocated(self%QinpName)) deallocate(self%QinpName)
+      if (allocated(self%QoutName)) deallocate(self%QoutName)
+      if (allocated(self%TinpName)) deallocate(self%TinpName)
+      if (allocated(self%SinpName)) deallocate(self%SinpName)
+      if (allocated(self%read_grid_array_from_json)) deallocate(self%read_grid_array_from_json)
+   end subroutine
+
+   ! Deallocate output configuration
+   ! The pointers in the log variables only reference model state / AED2 data, so they are only nullified here
+   subroutine output_config_deallocate(self)
+      class(OutputConfig), intent(inout) :: self
+      integer :: i
+
+      if (allocated(self%PathOut)) deallocate(self%PathOut)
+      if (allocated(self%zoutName)) deallocate(self%zoutName)
+      if (allocated(self%toutName)) deallocate(self%toutName)
+      if (allocated(self%output_depth_reference)) deallocate(self%output_depth_reference)
+      if (allocated(self%zout)) deallocate(self%zout)
+      if (allocated(self%zout_read)) deallocate(self%zout_read)
+      if (allocated(self%tout)) deallocate(self%tout)
+      if (allocated(self%simulation_times_for_output)) deallocate(self%simulation_times_for_output)
+      if (allocated(self%n_timesteps_between_tout)) deallocate(self%n_timesteps_between_tout)
+      if (allocated(self%output_var_names)) deallocate(self%output_var_names)
+      if (allocated(self%output_vars)) then
+         do i = 1, size(self%output_vars)
+            if (allocated(self%output_vars(i)%name)) deallocate(self%output_vars(i)%name)
+            nullify(self%output_vars(i)%values)
+            nullify(self%output_vars(i)%values_surf)
+         end do
+         deallocate(self%output_vars)
+      end if
+      if (allocated(self%output_vars_aed2_state)) then
+         call nullify_log_variable_aed2(self%output_vars_aed2_state)
+         deallocate(self%output_vars_aed2_state)
+      end if
+      if (allocated(self%output_vars_aed2_diagnostic)) then
+         call nullify_log_variable_aed2(self%output_vars_aed2_diagnostic)
+         deallocate(self%output_vars_aed2_diagnostic)
+      end if
+      if (allocated(self%output_vars_aed2_diagnostic_sheet)) then
+         call nullify_log_variable_aed2(self%output_vars_aed2_diagnostic_sheet)
+         deallocate(self%output_vars_aed2_diagnostic_sheet)
+      end if
+   end subroutine
+
+   subroutine nullify_log_variable_aed2(self)
+      class(LogVariableAED2), intent(inout) :: self
+
+      nullify(self%names)
+      nullify(self%values)
+      nullify(self%values_sheet)
+   end subroutine
+
+   ! Deallocate AED2 configuration
+   subroutine aed2_config_deallocate(self)
+      class(AED2Config), intent(inout) :: self
+
+      if (allocated(self%aed2_config_file)) deallocate(self%aed2_config_file)
+      if (allocated(self%path_aed2_initial)) deallocate(self%path_aed2_initial)
+      if (allocated(self%path_aed2_inflow)) deallocate(self%path_aed2_inflow)
+      if (allocated(self%zone_heights)) deallocate(self%zone_heights)
+   end subroutine
+
+   ! Deallocate model state
+   ! The AED2 pointers reference memory owned by the SimstratAED2 module, so they are only nullified here
+   subroutine model_state_deallocate(self)
+      class(ModelState), intent(inout) :: self
+
+      if (allocated(self%U)) deallocate(self%U)
+      if (allocated(self%V)) deallocate(self%V)
+      if (associated(self%T)) deallocate(self%T)
+      if (associated(self%S)) deallocate(self%S)
+      if (allocated(self%dS)) deallocate(self%dS)
+      if (allocated(self%Q_inp)) deallocate(self%Q_inp)
+      if (associated(self%rho)) deallocate(self%rho)
+      nullify(self%AED2_state)
+      nullify(self%AED2_diagnostic)
+      nullify(self%AED2_diagnostic_sheet)
+      nullify(self%AED2_state_names)
+      nullify(self%AED2_diagnostic_names)
+      nullify(self%AED2_diagnostic_names_sheet)
+
+      if (allocated(self%k)) deallocate(self%k)
+      if (allocated(self%ko)) deallocate(self%ko)
+      if (allocated(self%avh)) deallocate(self%avh)
+      if (allocated(self%eps)) deallocate(self%eps)
+      if (allocated(self%num)) deallocate(self%num)
+      if (allocated(self%nuh)) deallocate(self%nuh)
+      if (allocated(self%P)) deallocate(self%P)
+      if (allocated(self%B)) deallocate(self%B)
+      if (allocated(self%NN)) deallocate(self%NN)
+      if (allocated(self%cmue1)) deallocate(self%cmue1)
+      if (allocated(self%cmue2)) deallocate(self%cmue2)
+      if (allocated(self%P_Seiche)) deallocate(self%P_Seiche)
+
+      if (allocated(self%absorb)) deallocate(self%absorb)
+      if (associated(self%absorb_vol)) deallocate(self%absorb_vol)
+      if (associated(self%uv10)) deallocate(self%uv10)
+      if (associated(self%rain)) deallocate(self%rain)
+      if (associated(self%u_taub)) deallocate(self%u_taub)
+      if (allocated(self%rad)) deallocate(self%rad)
+      if (allocated(self%rad_vol)) deallocate(self%rad_vol)
+      if (allocated(self%Q_vert)) deallocate(self%Q_vert)
+
+      if (allocated(self%snow_h)) deallocate(self%snow_h)
+      if (allocated(self%total_ice_h)) deallocate(self%total_ice_h)
+      if (allocated(self%black_ice_h)) deallocate(self%black_ice_h)
+      if (allocated(self%white_ice_h)) deallocate(self%white_ice_h)
+
+      if (allocated(self%ha)) deallocate(self%ha)
+      if (allocated(self%hw)) deallocate(self%hw)
+      if (allocated(self%hk)) deallocate(self%hk)
+      if (allocated(self%hv)) deallocate(self%hv)
+      if (associated(self%rad0)) deallocate(self%rad0)
+
+      if (allocated(self%fgeo_add)) deallocate(self%fgeo_add)
    end subroutine
 
 end module strat_simdata
