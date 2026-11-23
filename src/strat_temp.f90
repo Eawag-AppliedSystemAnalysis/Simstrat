@@ -62,7 +62,7 @@ contains
 
          ! Radiation reaching a layer is equal to radiation in the layer above minus absorption
          do i = ubnd_fce - 1, 1, -1
-            state%rad(i) = state%rad(i + 1)*exp(-grid%h(i)*(state%absorb(ubnd_fce - i)+state%absorb(ubnd_fce + 1 - i))/2) !Attenuated by absorption
+            state%rad(i) = state%rad(i + 1)*exp(-grid%h(i)*(state%absorb(i) + state%absorb(i + 1))/2) !Attenuated by absorption (absorb on faces, grid order)
             state%rad_vol(i) = (state%rad(i + 1) + state%rad(i))/2*rho_0*cp
          end do
 

@@ -101,6 +101,8 @@ module strat_grid
       procedure, pass :: interpolate_to_face => grid_interpolate_to_face    ! Interpolate quantitiy onto face grid
       procedure, pass :: interpolate_to_face_from_second => grid_interpolate_to_face_from_second  ! Interpolate quantity onto face grid, ignoring first value
       procedure, pass :: interpolate_to_vol => grid_interpolate_to_vol      ! Interpolate quantity onto volume grid
+      procedure, pass :: interpolate_depth_to_face => grid_interpolate_depth_to_face  ! Interpolate quantity given at depths below the surface onto occupied faces
+      procedure, pass :: interpolate_depth_to_vol => grid_interpolate_depth_to_vol    ! Interpolate quantity given at depths below the surface onto occupied volumes
       procedure, pass :: interpolate_from_face => grid_interpolate_from_face  ! Interpolate quantity that is stored on face grid onto output grid
       procedure, pass :: interpolate_from_vol => grid_interpolate_from_vol    ! Interpolate quantity that is stored on volume grid onto output grid
 
@@ -537,6 +539,42 @@ contains
       end if
 
       call Interp_nan(z_volume_mod(1:self%ubnd_vol), y(1:self%ubnd_vol), self%ubnd_vol, zi, yi, num_zi)
+   end subroutine
+
+   ! Interpolates values y given at depths z (positive downwards from the current water surface, ascending)
+   ! onto the occupied faces 1:ubnd_fce, in grid order (index 1 at the bottom)
+   subroutine grid_interpolate_depth_to_face(self, z, y, num_z, yi)
+      implicit none
+      class(StaggeredGrid), intent(in) :: self
+      real(RK), dimension(:), intent(in) :: z, y
+      integer, intent(in) :: num_z
+      real(RK), dimension(:), intent(inout) :: yi
+
+      real(RK), dimension(self%ubnd_fce) :: depth, y_tmp
+      integer :: n
+
+      n = self%ubnd_fce
+      depth(1:n) = self%z_face(n) - self%z_face(n:1:-1) ! Face depths from the surface downwards (ascending)
+      call Interp(z, y, num_z, depth, y_tmp, n)
+      yi(1:n) = y_tmp(n:1:-1)
+   end subroutine
+
+   ! Interpolates values y given at depths z (positive downwards from the current water surface, ascending)
+   ! onto the occupied volumes 1:ubnd_vol, in grid order (index 1 at the bottom)
+   subroutine grid_interpolate_depth_to_vol(self, z, y, num_z, yi)
+      implicit none
+      class(StaggeredGrid), intent(in) :: self
+      real(RK), dimension(:), intent(in) :: z, y
+      integer, intent(in) :: num_z
+      real(RK), dimension(:), intent(inout) :: yi
+
+      real(RK), dimension(self%ubnd_vol) :: depth, y_tmp
+      integer :: n
+
+      n = self%ubnd_vol
+      depth(1:n) = self%z_face(self%ubnd_fce) - self%z_volume(n:1:-1) ! Volume center depths from the surface downwards (ascending)
+      call Interp(z, y, num_z, depth, y_tmp, n)
+      yi(1:n) = y_tmp(n:1:-1)
    end subroutine
 
    subroutine grid_interpolate_from_face(self, y, zi, yi, num_zi, output_depth_reference)

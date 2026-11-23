@@ -45,7 +45,7 @@ module strat_absorption
       ! Variables that are used in between iteration. These used to be "save" variables
       real(RK) :: tb_start, tb_end !Start and end time
       real(RK), dimension(:), allocatable :: z_absorb !Read depths
-      real(RK), dimension(:), allocatable :: absorb_start, absorb_end !Interpolated start and end values
+      real(RK), dimension(:), allocatable :: absorb_start, absorb_end !Start and end values at the read depths z_absorb
       integer :: number_of_lines_read = 0
       integer :: eof, nval
 
@@ -80,8 +80,8 @@ contains
 
       ! Allocate arrays (used to be "save" variables)
       allocate (self%z_absorb(grid%max_length_input_data))
-      allocate (self%absorb_start(grid%nz_grid + 1))
-      allocate (self%absorb_end(grid%nz_grid + 1))
+      allocate (self%absorb_start(grid%max_length_input_data))
+      allocate (self%absorb_end(grid%max_length_input_data))
    end subroutine
 
    subroutine absorption_save(self)
@@ -133,7 +133,7 @@ contains
 
       ! Local Variables
       real(RK) :: dummy !Read depths
-      real(RK) :: absorb_read_start(self%grid%max_length_input_data), absorb_read_end(self%grid%max_length_input_data) !Read start and end values
+      real(RK) :: absorb_cur(self%grid%max_length_input_data) !Values at the current time at the read depths
       integer :: i
 
       ! Associations for easier readability / comparability to old code
@@ -143,8 +143,7 @@ contains
                  absorb_start=>self%absorb_start, &
                  absorb_end=>self%absorb_end, &
                  eof=>self%eof, &
-                 nval=>self%nval, &
-                 nz=>self%grid%nz_occupied)
+                 nval=>self%nval)
 
          if (state%first_timestep) then ! First iteration
             open (newunit=self%unit, status='old', file=self%file)
@@ -169,50 +168,42 @@ contains
                end do
 
                !Read first values
-               read (self%unit, *, end=9) tb_start, (absorb_read_start(i), i=1, nval)
+               read (self%unit, *, end=9) tb_start, (absorb_start(i), i=1, nval)
                call count_read(self)
 
                if (state%datum < tb_start) call warn('First light attenuation date after simulation start time.')
 
-               !Interpolate absorb_read_start on z_absorb onto faces of grid
-               call self%grid%interpolate_to_face(z_absorb, absorb_read_start, nval, absorb_start)
-
-               read (self%unit, *, end=7) tb_end, (absorb_read_end(i), i=1, nval)
+               read (self%unit, *, end=7) tb_end, (absorb_end(i), i=1, nval)
                call count_read(self)
 
                ! Write to console that file was successfully read
                call ok('Absorption input file successfully read')
-
-               ! Do the same for absorb_read_end
-               call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end)
             end if
          end if
 
          if (state%datum <= tb_start .or. eof == 1) then !If datum before first date or end of file reached
-            goto 8
+            absorb_cur(1:nval) = absorb_start(1:nval) !Take first value of current interval
          else
             do while (state%datum > tb_end) !Move to appropriate interval to get correct value
                tb_start = tb_end
-               absorb_start(1:nz) = absorb_end(1:nz)
+               absorb_start(1:nval) = absorb_end(1:nval)
                !Read next value
-               read (self%unit, *, end=7) tb_end, (absorb_read_end(i), i=1, nval)
+               read (self%unit, *, end=7) tb_end, (absorb_end(i), i=1, nval)
                call count_read(self)
-               call self%grid%interpolate_to_face(z_absorb, absorb_read_end, nval, absorb_end)
             end do
             !Linearly interpolate value at correct datum (for all depths)
-            state%absorb(1:nz) = absorb_start(1:nz) + (state%datum - tb_start)/(tb_end - tb_start)*(absorb_end(1:nz)  - absorb_start(1:nz))
-            state%absorb(1:nz) = self%param%p_absorb*state%absorb(1:nz)
-
-            ! Pass whole arrays: Interp reads nz + 1 values of absorb and writes nz_grid values of absorb_vol
-            call self%grid%interpolate_to_vol(self%grid%z_face, state%absorb, nz + 1, state%absorb_vol)
-            state%absorb_vol(nz) = state%absorb_vol(nz - 1)
+            absorb_cur(1:nval) = absorb_start(1:nval) + (state%datum - tb_start)/(tb_end - tb_start)*(absorb_end(1:nval) - absorb_start(1:nval))
          end if
-         return
+         goto 8
 
 7        eof = 1
          if(state%datum>tb_start) call warn('Last light attenuation date before simulation end time.')
+         absorb_cur(1:nval) = absorb_start(1:nval) !Take first value of current interval
 
-8        state%absorb(1:nz) = absorb_start(1:nz)           !Take first value of current interval
+         ! Interpolate from the read depths (below the current surface) onto the occupied faces and volumes (grid order)
+8        absorb_cur(1:nval) = self%param%p_absorb*absorb_cur(1:nval)
+         call self%grid%interpolate_depth_to_face(z_absorb, absorb_cur, nval, state%absorb)
+         call self%grid%interpolate_depth_to_vol(z_absorb, absorb_cur, nval, state%absorb_vol)
          return
 
 9        call error('Reading absorption file (no data found).')

@@ -43,8 +43,9 @@ subroutine absorption_updateAED2(self, state)
       state%absorb_vol(i) = self%aed2_cfg%background_extinction + bio_extinction
 
    end do
-   ! Interpolate to faces to be compatible with Simstrat temperature module
-   call self%grid%interpolate_to_face(self%grid%z_volume, state%absorb_vol, self%grid%nz_occupied, state%absorb)
+   ! Interpolate to the occupied faces (grid order) to be compatible with Simstrat temperature module
+   call Interp(self%grid%z_volume(1:self%grid%ubnd_vol), state%absorb_vol, self%grid%ubnd_vol, &
+               self%grid%z_face(1:self%grid%ubnd_fce), state%absorb, self%grid%ubnd_fce)
 
 end subroutine
 
