@@ -161,7 +161,8 @@ module strat_simdata
       real(RK) :: p_lw
       real(RK) :: p_windf
       real(RK) :: p_absorb
-      real(RK) :: beta_sol
+      real(RK) :: beta_sol ! Fraction of the shortwave radiation (pyranometer, 280-2800 nm) in the UV and NIR (1 - PAR fraction, ~0.55),
+                           ! attenuated with the absorption coefficient absorb_nir. The rest (PAR) is attenuated with the absorption coefficient (e.g. 1.7/Secchi depth)
       real(RK) :: wat_albedo
       real(RK) :: p_sw_ice
       real(RK) :: freez_temp
@@ -243,6 +244,7 @@ module strat_simdata
       real(RK), allocatable :: hk ! Sensible flux [W m-2]
       real(RK), allocatable :: hv ! Latent heat [W m-2]
       real(RK), pointer :: rad0 => null() !  Solar radiation at surface  [W m-2]
+      real(RK) :: rad0_nir ! UV and NIR part of the solar radiation entering the water [W m-2]
    
       real(RK) :: cde, cm0
       real(RK) ::  fsed
@@ -366,6 +368,7 @@ contains
       self%hk = 0.0_RK 
       self%hv = 0.0_RK 
       self%rad0 = 0.0_RK
+      self%rad0_nir = 0.0_RK
       self%n_pH = 0
 
       ! init pointers
@@ -432,6 +435,7 @@ contains
       write(80) self%hk
       write(80) self%hv
       write(80) self%rad0
+      write(80) self%rad0_nir
       write(80) self%cde, self%cm0
       write(80) self%fsed
       call save_array(80, self%fgeo_add)
@@ -498,6 +502,7 @@ contains
       read(81) self%hk
       read(81) self%hv
       read(81) self%rad0
+      read(81) self%rad0_nir
       read(81) self%cde, self%cm0
       read(81) self%fsed
       call read_array(81, self%fgeo_add)

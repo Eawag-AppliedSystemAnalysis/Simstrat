@@ -210,7 +210,8 @@ contains
          state%v10 = A_cur(2)*param%f_wind ! MS 2014: added f_wind
          state%uv10 = sqrt(state%u10**2 + state%v10**2) ! AG 2014
          state%SST = A_cur(3) ! Lake surface temperature
-         state%rad0 = max(A_cur(4),0.0_RK)*(1 - state%albedo_water)*(1 - param%beta_sol) * param%p_sw_water ! MS: added beta_sol and albedo_water
+         state%rad0 = max(A_cur(4),0.0_RK)*(1 - state%albedo_water)*(1 - param%beta_sol) * param%p_sw_water ! PAR part
+         state%rad0_nir = max(A_cur(4),0.0_RK)*(1 - state%albedo_water)*param%beta_sol * param%p_sw_water ! UV and NIR part
          state%heat = 0.0_RK
          state%T_atm = 0.0_RK
          state%precip = 0.0_RK
@@ -364,9 +365,11 @@ contains
                H_V = -fu*(Vap_wat - Vap_atm)
 
                ! Global heat flux (positive: air to water, negative: water to air)
-               state%heat = H_A + H_W + H_K + H_V + F_glob * param%beta_sol !MS: added term with beta_sol
-               ! Removal of solar short-wave radiation absorbed in first water cell
-               state%rad0 = F_glob * (1 - param%beta_sol) !MS: added beta_sol
+               state%heat = H_A + H_W + H_K + H_V
+               ! Shortwave radiation entering the water, absorbed in strat_temp: the PAR part (fraction 1 - beta_sol) is attenuated
+               ! with the absorption coefficient, the UV and NIR part (fraction beta_sol of 280-2800 nm) with the absorption coefficient absorb_nir
+               state%rad0 = F_glob * (1 - param%beta_sol)
+               state%rad0_nir = F_glob * param%beta_sol
 
                state%heat_snow = 0 ! Heat snow
                state%heat_snowice = 0 ! Heat snowice
@@ -411,11 +414,12 @@ contains
                   H_tot = 0
                end if
 
-               ! Global heat flux (positive: air to water, negative: water to air) !MS: added beta_sol ; LRV added lambda_snow_ice
-               ! Leppäranta, M. (2014), Eq. 6.12
-               ! Removal of solar short-wave radiation absorbed in snow, snowice, ice and first water cell (works also when x_h = 0)
-               state%heat = F_glob * exp(-lambda_snow*state%snow_h - lambda_snowice*state%white_ice_h - lambda_ice*state%black_ice_h) * param%beta_sol
+               ! No heat flux at the water surface under ice; LRV added lambda_snow_ice
+               ! Shortwave radiation transmitted through snow, snowice and ice (Leppäranta, M. (2014), Eq. 6.12; works also when x_h = 0),
+               ! split into the PAR part and the UV and NIR part (absorbed in strat_temp)
+               state%heat = 0.0_RK
                state%rad0 = F_glob * exp(-lambda_snow*state%snow_h - lambda_snowice*state%white_ice_h - lambda_ice*state%black_ice_h) * (1 - param%beta_sol)
+               state%rad0_nir = F_glob * exp(-lambda_snow*state%snow_h - lambda_snowice*state%white_ice_h - lambda_ice*state%black_ice_h) * param%beta_sol
 
                ! Heat flux into snow, ice or snowice layer.
                ! Light absorption each layer
@@ -465,8 +469,9 @@ contains
             state%hk = H_K
             state%hv = H_V
          else !Forcing mode 4
-            state%heat = heat0 + F_glob*param%beta_sol !MS: added term with beta_sol
-            state%rad0 = F_glob * (1 - param%beta_sol) !FB, 2021: added term with beta_sol
+            state%heat = heat0
+            state%rad0 = F_glob * (1 - param%beta_sol) ! PAR part
+            state%rad0_nir = F_glob * param%beta_sol ! UV and NIR part
             state%heat_snow = 0 ! Heat snow
             state%heat_snowice = 0 ! Heat snowice
             state%heat_ice = 0 ! Heat ice

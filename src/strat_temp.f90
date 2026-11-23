@@ -51,6 +51,7 @@ contains
       class(ModelParam), intent(inout) :: param
       real(RK), dimension(:) ::  sources, boundaries
       integer :: i
+      real(RK), dimension(size(state%rad)) :: rad_nir ! UV and NIR part of the solar radiation on faces [°C*m/s]
       !real(RK) :: T_soil
       associate (grid=>self%grid, &
                  ubnd_fce=>self%grid%ubnd_fce, &
@@ -69,6 +70,14 @@ contains
          !!!!!!!! Define sources !!!!!!!!
          ! Add Hsol Term to sources (Eq 1, Goudsmit(2002))
          sources(1:ubnd_vol) = (state%rad(2:ubnd_fce)*grid%Az(2:ubnd_fce) - state%rad(1:ubnd_fce - 1)*grid%Az(1:ubnd_fce - 1))/(grid%Az(2:ubnd_fce) + grid%Az(1:ubnd_fce - 1))*2/grid%h(1:ubnd_vol)
+
+         ! UV and NIR part (fraction beta_sol of the shortwave radiation): attenuated with the absorption coefficient absorb_nir,
+         ! independent of the grid (not included in rad and rad_vol, which are the PAR part used by AED2)
+         rad_nir(ubnd_fce) = state%rad0_nir/rho_0/cp
+         do i = ubnd_fce - 1, 1, -1
+            rad_nir(i) = rad_nir(i + 1)*exp(-grid%h(i)*absorb_nir)
+         end do
+         sources(1:ubnd_vol) = sources(1:ubnd_vol) + (rad_nir(2:ubnd_fce)*grid%Az(2:ubnd_fce) - rad_nir(1:ubnd_fce - 1)*grid%Az(1:ubnd_fce - 1))/(grid%Az(2:ubnd_fce) + grid%Az(1:ubnd_fce - 1))*2/grid%h(1:ubnd_vol)
 
          ! Experimenting with influence of soil temperature on water temperature using a sinusoidal soil temperature         
          !T_soil = 5 + 5*cos(2*pi/365*(state%current_month*30 + state%current_day - 270))
