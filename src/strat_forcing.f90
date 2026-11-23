@@ -335,9 +335,10 @@ contains
                ! virtual temperature T_v = T/(1 - 0.378*e/p_air) [K]
                dTv = (T_surf + 273.15_RK)/(1 - 0.378_RK*Vap_wat/param%p_air) - (state%T_atm + 273.15_RK)/(1 - 0.378_RK*Vap_atm/param%p_air)
 
-               ! Factor 0.6072 to account for changing wind height from 10 to 2 m
-               ! Further evaluation of evaporation algorithm may be required.
-               fu = sqrt((2.7_RK*max(0.0_RK,dTv)**0.333_RK)**2 + (0.6072_RK*3.1_RK*state%uv10)**2)
+               ! Wind speed at 2 m from the wind speed at 10 m with a logarithmic profile over the lake surface:
+               ! U2 = U10*ln(2/z0)/ln(10/z0) = 0.851*U10 for z0 = 2e-4 m (was the power law (2/10)**0.31 = 0.6072,
+               ! typical of land with obstacles)
+               fu = sqrt((2.7_RK*max(0.0_RK,dTv)**0.333_RK)**2 + (log(2.0_RK/z0_water)/log(10.0_RK/z0_water)*3.1_RK*state%uv10)**2)
                fu = fu*param%p_windf ! Provided fitting factor p_windf (~1)
 
 

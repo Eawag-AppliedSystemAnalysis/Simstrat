@@ -84,6 +84,7 @@
      real(RK), parameter     :: r_a = 0.03_RK ! Ratio of reflected to total long-wave iradiance
      real(RK), parameter     :: B0 = 0.61_RK ! Bowen coefficient at the reference pressure p_ref_bowen [hPa/K] (Bowen 1926)
      real(RK), parameter     :: p_ref_bowen = 1000.0_RK ! Reference air pressure of B0 [hPa]
+     real(RK), parameter     :: z0_water = 2e-4_RK ! Roughness length of the lake surface for the wind profile [m]
      real(RK), parameter     :: sig = 5.67e-8_RK ! Stefan-Boltzmann constant [W/m2/K4]
 
      ! *** Parameters for MY model  ***
