@@ -569,7 +569,13 @@ contains
 
          ! Names of Inputfile
          call par_file%get('Input.Morphology', MorphName, found); input_cfg%MorphName = MorphName; call check_field(found, 'Input.Morphology', ParName)
-         call par_file%get('Input.Initial conditions', InitName, found); input_cfg%InitName = InitName; call check_field(found, 'Input.Initial conditions', ParName)
+         ! Initial conditions are optional in the par-file if the simulation continues from a snapshot (checked in read_initial_data)
+         call par_file%get('Input.Initial conditions', InitName, found)
+         if (found) then
+            input_cfg%InitName = InitName
+         else
+            input_cfg%InitName = ''
+         end if
          call par_file%get('Input.Forcing', ForcingName, found); input_cfg%ForcingName = ForcingName; call check_field(found, 'Input.Forcing', ParName)
          call par_file%get('Input.Absorption', AbsorpName, found); input_cfg%AbsorpName = AbsorpName; call check_field(found, 'Input.Absorption', ParName)
 
@@ -769,36 +775,52 @@ contains
       real(RK) :: T_read(self%simdata%model_cfg%max_length_input_data), S_read(self%simdata%model_cfg%max_length_input_data), k_read(self%simdata%model_cfg%max_length_input_data), eps_read(self%simdata%model_cfg%max_length_input_data), num_read(self%simdata%model_cfg%max_length_input_data), nuh_read(self%simdata%model_cfg%max_length_input_data)
       real(RK) :: z_ini_depth
       integer :: i, n_read, unit
+      logical :: from_snapshot
 
       associate (grid=>self%simdata%grid, &
                  model=>self%simdata%model, &
                  nz_occupied=>self%simdata%grid%nz_occupied, &
                  max_length_input_data=>self%simdata%model_cfg%max_length_input_data)
 
-         ! Read file
-         if (self%simdata%sim_cfg%use_text_restart) then
-            call warn('Simulation is restarted from text file. This means that the Simstrat initial condition file needs to have 8 data columns instead of 6 (including num and nuh).')
-         end if
-         open (newunit=unit, status='old', file=self%simdata%input_cfg%InitName) ! Opens initial conditions file
-         read (unit, *) ! Skip header
-         do i = 1, max_length_input_data ! Read initial u,v,T, etc
-            if (self%simdata%sim_cfg%use_text_restart) then
-               read (unit, *, end=99) z_read(i), U_read(i), V_read(i), T_read(i), S_read(i), k_read(i), eps_read(i), num_read(i), nuh_read(i)
-            else
-               read (unit, *, end=99) z_read(i), U_read(i), V_read(i), T_read(i), S_read(i), k_read(i), eps_read(i)
-            end if
-            if (z_read(i)>0) then
-               call error('One or several input depths of initial conditions are positive.')
-            end if
-         end do
-99       n_read = i-1                               ! Number of valuInitNamees
-         if (n_read < 1) then
-            call error('Unable to read initial conditions files (no data found).')
-         else if(n_read==max_length_input_data) then
-            write(*,*) '[ERROR] ','Only first ',max_length_input_data,' values of initial data file read.'
-         end if
+         ! If the simulation continues from a snapshot, the snapshot (read later in simstrat.f90) overwrites the
+         ! complete model state and grid (incl. lake level). The initial conditions file is then not needed (issue #63):
+         ! initialize with a homogeneous dummy column at the top of the morphology instead.
+         inquire (file=self%simdata%output_cfg%PathOut//'/simulation-snapshot.dat', exist=from_snapshot)
+         from_snapshot = from_snapshot .and. self%simdata%sim_cfg%continue_from_snapshot
 
-         close (unit)
+         if (from_snapshot) then
+            n_read = 1
+            z_read(1) = 0.0_RK; U_read(1) = 0.0_RK; V_read(1) = 0.0_RK; T_read(1) = 4.0_RK; S_read(1) = 0.0_RK
+            k_read(1) = k_min; eps_read(1) = eps_min; num_read(1) = avh_min; nuh_read(1) = avh_min
+         else
+            if (len(self%simdata%input_cfg%InitName) == 0) then
+               call error('Field Input.Initial conditions not found in par-file (only optional when continuing from a snapshot)')
+            end if
+            ! Read file
+            if (self%simdata%sim_cfg%use_text_restart) then
+               call warn('Simulation is restarted from text file. This means that the Simstrat initial condition file needs to have 8 data columns instead of 6 (including num and nuh).')
+            end if
+            open (newunit=unit, status='old', file=self%simdata%input_cfg%InitName) ! Opens initial conditions file
+            read (unit, *) ! Skip header
+            do i = 1, max_length_input_data ! Read initial u,v,T, etc
+               if (self%simdata%sim_cfg%use_text_restart) then
+                  read (unit, *, end=99) z_read(i), U_read(i), V_read(i), T_read(i), S_read(i), k_read(i), eps_read(i), num_read(i), nuh_read(i)
+               else
+                  read (unit, *, end=99) z_read(i), U_read(i), V_read(i), T_read(i), S_read(i), k_read(i), eps_read(i)
+               end if
+               if (z_read(i)>0) then
+                  call error('One or several input depths of initial conditions are positive.')
+               end if
+            end do
+99          n_read = i-1                               ! Number of values
+            if (n_read < 1) then
+               call error('Unable to read initial conditions files (no data found).')
+            else if(n_read==max_length_input_data) then
+               write(*,*) '[ERROR] ','Only first ',max_length_input_data,' values of initial data file read.'
+            end if
+
+            close (unit)
+         end if
          do i = 1, n_read
             z_read(i) = abs(z_read(i)) ! Make depths positive
          end do
@@ -829,7 +851,7 @@ contains
          end if
 
          if (n_read == 1) then
-            call warn('Only one row! Water column will be initially homogeneous.')
+            if (.not. from_snapshot) call warn('Only one row! Water column will be initially homogeneous.')
             model%U = U_read(1)
             model%V = V_read(1)
             model%T = T_read(1)
@@ -858,7 +880,11 @@ contains
             end if
          end if
 
-         call ok('Initial data file successfully read')
+         if (from_snapshot) then
+            call ok('Continuing from snapshot: initial conditions file not read')
+         else
+            call ok('Initial data file successfully read')
+         end if
 
       end associate
    end subroutine
