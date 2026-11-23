@@ -350,7 +350,9 @@ contains
                H_W = -emiss_water*sig*(T_surf + 273.15_RK)**4
 
                ! Flux of sensible heat (convection)
-               H_K = -B0*fu*(T_surf - state%T_atm)
+               ! The Bowen coefficient is proportional to air pressure (Bowen 1926), like the psychrometric constant
+               ! cp_air*p_air/(0.622*L_v). A constant B0 overestimates sensible heat at altitude (e.g. by 23 % at 815 hPa / 1800 m).
+               H_K = -B0*(param%p_air/p_ref_bowen)*fu*(T_surf - state%T_atm)
 
                ! Flux of latent heat (evaporation, condensation)
                H_V = -fu*(Vap_wat - Vap_atm)
