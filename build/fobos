@@ -1,5 +1,5 @@
 [modes]
-modes = release-gnu release-gnu-dynamic release-intel debug-gnu debug-gnu-dynamic
+modes = release-gnu release-gnu-noaed2 release-gnu-dynamic release-intel debug-gnu debug-gnu-dynamic
 
 [release-gnu]
 compiler=Gnu
@@ -7,6 +7,7 @@ cflags=-c -O2 -std=f2018 -ffree-line-length-none
 lflags=-static-libgcc -static-libgfortran -static
 build_dir=.
 src=../src/
+exclude_dirs=../src/no_aed2
 libs = ../lib/libaed2/obj/aed2_bio_utils.o
 	   ../lib/libaed2/obj/aed2_carbon.o
 	   ../lib/libaed2/obj/aed2_chlorophylla.o
@@ -38,12 +39,29 @@ dependon=../lib/csv_fortran/fobos:release-gnu((direct))
          ../lib/forbear/fobos:static-gnu((direct))
 log=True
 
+[release-gnu-noaed2]
+compiler=Gnu
+cflags=-c -O2 -std=f2018 -ffree-line-length-none
+lflags=-static-libgcc -static-libgfortran -static
+build_dir=.
+src=../src/
+exclude=../src/simstrat_aed2.f90 ../src/simstrat_aed2_subroutines.f90 ../src/simstrat_aed2_physics.f90
+colors=False
+quiet=False
+target=simstrat.f90
+output=simstrat
+dependon=../lib/csv_fortran/fobos:release-gnu((direct))
+         ../lib/json_fortran/fobos:release-gnu((direct))
+         ../lib/forbear/fobos:static-gnu((direct))
+log=True
+
 [release-gnu-dynamic]
 compiler=Gnu
 cflags=-c -O2 -std=f2018 -ffree-line-length-none
 lflags=-dynamic-libgcc -dynamic-libgfortran -dynamic
 build_dir=.
 src=../src/
+exclude_dirs=../src/no_aed2
 libs = ../lib/libaed2/obj/aed2_bio_utils.o
 	   ../lib/libaed2/obj/aed2_carbon.o
 	   ../lib/libaed2/obj/aed2_chlorophylla.o
@@ -80,6 +98,7 @@ cflags=-c -O3
 modsw=-module=
 build_dir=.
 src=../src/
+exclude_dirs=../src/no_aed2
 colors=False
 quiet=False
 target=simstrat.f90
@@ -94,6 +113,7 @@ cflags=-c -O2 -std=f2018 -ffree-line-length-none -g -ffpe-trap=overflow,zero -fn
 lflags=-static-libgcc -static-libgfortran -static
 build_dir=.
 src=../src/
+exclude_dirs=../src/no_aed2
 colors=False
 quiet=False
 target=simstrat.f90
@@ -109,6 +129,7 @@ cflags=-c -O2 -std=f2018 -ffree-line-length-none -g -ffpe-trap=overflow,zero -fn
 lflags=-dynamic-libgcc -dynamic-libgfortran -dynamic
 build_dir=.
 src=../src/
+exclude_dirs=../src/no_aed2
 colors=False
 quiet=False
 target=simstrat.f90

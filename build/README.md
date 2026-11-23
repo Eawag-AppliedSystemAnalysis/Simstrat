@@ -28,6 +28,14 @@ To compile Simstrat with default configuration, run:
 FoBiS.py build
 ~~~
 
+To compile only the physical model without AED2 (libaed2 does not need to be compiled or present), run:
+
+~~~bash
+FoBiS.py build -mode release-gnu-noaed2
+~~~
+
+This uses the stub `src/no_aed2/simstrat_aed2_stub.f90` instead of `src/simstrat_aed2*.f90`. `ModelConfig.CoupleAED2` must then be false.
+
 ## Clean the project
 To clean the main project, simply run
 
