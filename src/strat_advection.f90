@@ -89,7 +89,8 @@ contains
       real(RK) :: dU(self%grid%nz_grid), dV(self%grid%nz_grid), dTemp(self%grid%nz_grid), dS(self%grid%nz_grid)
       real(RK) :: dt_i(1:2) ! first and second time step
       real(RK) :: AreaFactor_adv(1:self%grid%nz_grid)
-      integer :: i, t_i
+      real(RK) :: h_top ! Height of the top cell at the beginning of an advection sub-step
+      integer :: i, t_i, k, n_sub
 
       associate (grid=>self%grid, &
                  nz_occupied=>self%grid%nz_occupied, &
@@ -131,16 +132,29 @@ contains
             AreaFactor_adv(1:nz_occupied) = dt_i(t_i)/((grid%Az(1:nz_occupied) + grid%Az(2:nz_occupied+1))/2*grid%h(1:nz_occupied)) ! Area factor for dt(t_i)
             dh_i(t_i) = dh*dt_i(t_i)/dt ! Depth difference for dt(t_i)
 
-            ! Update Simstrat variables U, V, T and S
-            call do_update_statvars(self, state, AreaFactor_adv(1:nz_occupied), dh_i(t_i))
+            ! The explicit upwind scheme is only stable and positive if no cell loses more than its volume per time step
+            ! (Courant number <= 1). For large inflows (e.g. reservoirs with a plunging inflow into small bottom cells),
+            ! split the advection step into n_sub sub-steps with the same flows (issue #84). For n_sub = 1 nothing changes.
+            n_sub = advection_substeps(self, state, AreaFactor_adv(1:nz_occupied))
+            if (n_sub > 1) AreaFactor_adv(1:nz_occupied) = AreaFactor_adv(1:nz_occupied)/n_sub
 
-            ! Update AED2 variables
-            if(self%cfg%couple_aed2) then
-               ! do_update_statvars_AED2 transforms [H] back to pH at its end. The lateral module transforms pH to [H] once
-               ! per timestep, so for the second part of a split timestep, the transformation to [H] has to be repeated here.
-               if (t_i == 2 .and. state%n_pH > 0) AED2_state(:,state%n_pH) = 10.**(-AED2_state(:,state%n_pH))
-               call do_update_statvars_AED2(self, state, AreaFactor_adv(1:nz_occupied), dh_i(t_i))
-            end if
+            do k = 1, n_sub
+               ! Height of the top cell at the beginning of the sub-step (the top cell grows/shrinks by dh_i/n_sub per sub-step)
+               h_top = h(ubnd_vol) + (k - 1)*dh_i(t_i)/n_sub
+               if (n_sub > 1) AreaFactor_adv(ubnd_vol) = dt_i(t_i)/n_sub/((grid%Az(ubnd_vol) + grid%Az(ubnd_fce))/2*h_top)
+
+               ! Update Simstrat variables U, V, T and S
+               call do_update_statvars(self, state, AreaFactor_adv(1:nz_occupied), dh_i(t_i)/n_sub, h_top)
+
+               ! Update AED2 variables
+               if(self%cfg%couple_aed2) then
+                  ! do_update_statvars_AED2 transforms [H] back to pH at its end. The lateral module transforms pH to [H] once
+                  ! per timestep, so for the second part of a split timestep and for further sub-steps, the transformation
+                  ! to [H] has to be repeated here.
+                  if ((t_i == 2 .or. k > 1) .and. state%n_pH > 0) AED2_state(:,state%n_pH) = 10.**(-AED2_state(:,state%n_pH))
+                  call do_update_statvars_AED2(self, state, AreaFactor_adv(1:nz_occupied), dh_i(t_i)/n_sub, h_top)
+               end if
+            end do
 
             ! Adjust boxes (Horrible if/else construction - replace!)
             if (t_i == 1) then
@@ -168,12 +182,47 @@ contains
       end associate
    end subroutine
 
-   subroutine do_update_statvars(self, state, AreaFactor_adv, dh)
+   ! Number of sub-steps needed for a stable and positive explicit upwind advection step (issue #84):
+   ! n_sub = ceiling(max Courant number), where the Courant number of cell i is the volume leaving the cell
+   ! (vertical outflow to the cells above/below and lateral outflow) during the step divided by the cell volume.
+   integer function advection_substeps(self, state, AreaFactor_adv) result(n_sub)
+      class(AdvectionModule) :: self
+      class(ModelState) :: state
+      real(RK), dimension(:) :: AreaFactor_adv
+
+      integer, parameter :: n_sub_max = 100 ! Safety limit (e.g. for erroneous inflow data)
+      real(RK) :: courant, courant_max
+      integer :: i, top
+
+      associate(ubnd_vol => self%grid%ubnd_vol, Q_vert => state%Q_vert)
+         courant_max = 0.0_RK
+         do i = 1, ubnd_vol
+            ! Same as in do_update_statvars: a growing top cell has no outflow at its upper face
+            if ((i == ubnd_vol) .and. Q_vert(i + 1) > 0) then
+               top = 0
+            else
+               top = 1
+            end if
+            courant = AreaFactor_adv(i)*(top*max(Q_vert(i + 1), 0.0_RK) - min(Q_vert(i), 0.0_RK) - min(state%Q_inp(2, i), 0.0_RK))
+            courant_max = max(courant_max, courant)
+         end do
+      end associate
+
+      n_sub = max(1, ceiling(courant_max))
+      if (n_sub > n_sub_max) then
+         call warn('Advection: Courant number '//trim(real_to_str(courant_max, '(F0.1)'))//' at day '// &
+                   trim(real_to_str(state%datum, '(F0.3)'))//', limited to 100 sub-steps. Check the inflow/outflow data.')
+         n_sub = n_sub_max
+      end if
+   end function
+
+   subroutine do_update_statvars(self, state, AreaFactor_adv, dh, h_top)
       ! Arguments
       class(AdvectionModule) :: self
       class(ModelState) :: state
       real(RK), dimension(:) :: AreaFactor_adv
       real(RK) :: dh
+      real(RK) :: h_top ! Height of the top cell before this (sub-)step
 
       ! Local variables
       integer :: i, top
@@ -243,19 +292,20 @@ contains
             state%S(1:ubnd_vol) = state%S(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dS(1:ubnd_vol)
 
             ! Variation of variables due to change in volume
-            state%U(ubnd_vol) = state%U(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
-            state%V(ubnd_vol) = state%V(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
-            state%T(ubnd_vol) = state%T(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
-            state%S(ubnd_vol) = state%S(ubnd_vol)*h(ubnd_vol)/(h(ubnd_vol) + dh)
+            state%U(ubnd_vol) = state%U(ubnd_vol)*h_top/(h_top + dh)
+            state%V(ubnd_vol) = state%V(ubnd_vol)*h_top/(h_top + dh)
+            state%T(ubnd_vol) = state%T(ubnd_vol)*h_top/(h_top + dh)
+            state%S(ubnd_vol) = state%S(ubnd_vol)*h_top/(h_top + dh)
       end associate
    end subroutine
 
-   subroutine do_update_statvars_AED2(self, state, AreaFactor_adv, dh)
+   subroutine do_update_statvars_AED2(self, state, AreaFactor_adv, dh, h_top)
       ! Arguments
       class(AdvectionModule) :: self
       class(ModelState) :: state
       real(RK), dimension(:) :: AreaFactor_adv(1:self%grid%ubnd_vol)
       real(RK) :: dh
+      real(RK) :: h_top ! Height of the top cell before this (sub-)step
 
       ! Local variables
       integer :: i, top, outflow_above, outflow_below
@@ -312,7 +362,7 @@ contains
          end do
 
          ! Variation of variables due to change in volume
-         AED2_state(ubnd_vol,:) = AED2_state(ubnd_vol,:)*h(ubnd_vol)/(h(ubnd_vol) + dh)
+         AED2_state(ubnd_vol,:) = AED2_state(ubnd_vol,:)*h_top/(h_top + dh)
 
          ! Transform [H] back to pH
          if(self%cfg%couple_aed2 .and. state%n_pH > 0) then
