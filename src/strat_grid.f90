@@ -125,12 +125,12 @@ contains
       implicit none
       class(StaggeredGrid), intent(inout) :: self
 
-      call save_array_pointer(80, self%h)
+      call save_array(80, self%h)
       call save_array(80, self%z_face)
       call save_array(80, self%z_volume)
-      call save_array_pointer(80, self%layer_depth)
+      call save_array(80, self%layer_depth)
       call save_array(80, self%Az)
-      call save_array_pointer(80, self%Az_vol)
+      call save_array(80, self%Az_vol)
       call save_array(80, self%dAz)
       call save_array(80, self%meanint)
       write(80) self%volume
@@ -148,12 +148,12 @@ contains
       implicit none
       class(StaggeredGrid), intent(inout) :: self
 
-      call read_array_pointer(81, self%h)
+      call read_array(81, self%h)
       call read_array(81, self%z_face)
       call read_array(81, self%z_volume)
-      call read_array_pointer(81, self%layer_depth)
+      call read_array(81, self%layer_depth)
       call read_array(81, self%Az)
-      call read_array_pointer(81, self%Az_vol)
+      call read_array(81, self%Az_vol)
       call read_array(81, self%dAz)
       call read_array(81, self%meanint)
       read(81) self%volume
@@ -265,7 +265,7 @@ contains
 
          ! If top value not included
          if (config%grid_read(1) /= (config%max_depth - self%z_zero)) then
-            call error('Top value '//trim(toStr(config%max_depth - self%z_zero))//' is not included in grid file!')
+            call error('Top value '//toStr(config%max_depth - self%z_zero)//' is not included in grid file!')
          end if
 
          !If maxdepth of grid larger than morphology
@@ -275,7 +275,7 @@ contains
 
          ! If bottom value not included
          if (config%grid_read(self%nz_grid + 1) > -self%z_zero) then
-            call error('Bottom value '//trim(toStr(-self%z_zero))//' is not included in grid file!')
+            call error('Bottom value '//toStr(-self%z_zero)//' is not included in grid file!')
          end if
 
          ! Check for monotonously decreasing grid values
@@ -538,7 +538,7 @@ contains
          z_volume_mod(self%ubnd_vol) = 0
       end if
 
-      call Interp_nan(z_volume_mod(1:self%ubnd_vol), y(1:self%ubnd_vol), self%ubnd_vol, zi, yi, num_zi)
+      call Interp(z_volume_mod(1:self%ubnd_vol), y(1:self%ubnd_vol), self%ubnd_vol, zi, yi, num_zi, nan_outside=.true.)
    end subroutine
 
    ! Interpolates values y given at depths z (positive downwards from the current water surface, ascending)
@@ -596,7 +596,7 @@ contains
          end do
       end if
 
-      call Interp_nan(z_face_mod(1:self%ubnd_fce), y(1:self%ubnd_fce), self%ubnd_fce, zi, yi, num_zi)
+      call Interp(z_face_mod(1:self%ubnd_fce), y(1:self%ubnd_fce), self%ubnd_fce, zi, yi, num_zi, nan_outside=.true.)
    end subroutine
 
    ! Update all upper bounds and lengths

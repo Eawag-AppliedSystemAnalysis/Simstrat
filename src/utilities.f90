@@ -31,39 +31,63 @@ module utilities
    use strat_consts
    implicit none
 
-   type, public :: string
-      character(len=:), allocatable :: str
-   end type
+   !> Save/read an array or matrix (allocatable or pointer) to/from a snapshot file, with its bounds
+   interface save_array
+      module procedure save_real_array, save_integer_array, save_logical_array, save_array_pointer
+   end interface
+   interface read_array
+      module procedure read_real_array, read_integer_array, read_logical_array, read_array_pointer
+   end interface
+   interface save_matrix
+      module procedure save_real_matrix, save_matrix_pointer
+   end interface
+   interface read_matrix
+      module procedure read_real_matrix, read_matrix_pointer
+   end interface
 
+   !> Number as string for messages: toStr(integer), toStr(real) or toStr(real, format)
    interface toStr
       module procedure str_int, str_real
    end interface
 
 contains
 
-   !> Interpolation of yi on grid zi (based on the given y on grid z)
-   subroutine Interp(z, y, num_z, zi, yi, num_zi)
+   !> Linear interpolation of yi on grid zi (based on the given y on the increasing grid z).
+   !> Outside of z, the closest value is used, or NaN if nan_outside is true.
+   pure subroutine Interp(z, y, num_z, zi, yi, num_zi, nan_outside)
+      use, intrinsic :: ieee_arithmetic, only: ieee_value, ieee_quiet_nan
       implicit none
       real(RK), dimension(:), intent(in) :: z, y, zi
       real(RK), dimension(:), intent(out) :: yi
       integer, intent(in) :: num_z, num_zi
+      logical, intent(in), optional :: nan_outside
       integer :: posk1, posk2, posi, i
+      real(RK) :: below, above
+      logical :: nan
+
+      nan = .false.
+      if (present(nan_outside)) nan = nan_outside
+      below = y(1); above = y(num_z)
+      if (nan) then
+         below = ieee_value(below, ieee_quiet_nan); above = below
+      end if
 
       if (num_z == 1) then ! only one value
          yi(1:num_zi) = y(1)
          return
       end if
 
-      ! Assign closest value if out of given grid
+      ! Points outside of the given grid (points on the boundary get the boundary value, also if z starts or ends
+      ! with a repeated depth)
       posk1 = 1
-      do while (zi(posk1) <= z(1))
-         yi(posk1) = y(1)
+      do while (zi(posk1) < z(1) .or. (.not. nan .and. zi(posk1) == z(1)))
+         yi(posk1) = below
          posk1 = posk1 + 1
          if (posk1 > num_zi) exit ! All points below given grid
       end do
       posk2 = num_zi
-      do while (zi(posk2) >= z(num_z))
-         yi(posk2) = y(num_z)
+      do while (zi(posk2) > z(num_z) .or. (.not. nan .and. zi(posk2) == z(num_z)))
+         yi(posk2) = above
          posk2 = posk2 - 1
          if (posk2 < 1) exit ! All points above given grid
       end do
@@ -76,49 +100,7 @@ contains
          end do
          yi(i) = y(posi) + ((zi(i) - z(posi)) / (z(posi + 1) - z(posi))) * (y(posi + 1) - y(posi))
       end do
-
-      return
-   end
-
-   ! Interpolation of yi on grid zi (based on the given y on grid z)
-   !####################################################################
-   pure subroutine Interp_nan(z, y, num_z, zi, yi, num_zi)
-      !####################################################################
-      !use, intrinsic :: iso_fortran_env
-      use, intrinsic :: ieee_arithmetic
-      implicit none
-
-      real(RK), dimension(:), intent(in) :: z, y, zi
-      real(RK), dimension(:), intent(out) :: yi
-      integer, intent(in) :: num_z, num_zi
-
-      integer posk1, posk2, posi, i
-
-      ! Assign NaN if out of given grid
-      posk1 = 1
-      do while (zi(posk1) < z(1))
-         yi(posk1) = 0.0_RK
-         yi(posk1) = ieee_value(yi(posk1), ieee_quiet_nan) ! NaN
-         posk1 = posk1 + 1
-      end do
-      posk2 = num_zi
-      do while (zi(posk2) > z(num_z))
-         yi(posk2) = 0.0_RK
-         yi(posk2) = ieee_value(yi(posk2), ieee_quiet_nan) ! NaN
-         posk2 = posk2 - 1
-      end do
-
-      ! Linear interpolation
-      posi = 1
-      do i = posk1, posk2
-         do while (zi(i) > z(posi + 1))
-            posi = posi + 1
-         end do
-         yi(i) = y(posi) + ((zi(i) - z(posi)) / (z(posi + 1) - z(posi))) * (y(posi + 1) - y(posi))
-      end do
-
-      return
-   end subroutine Interp_nan
+   end subroutine Interp
 
    !! Integrate discrete function y[x] using the trapezoidal rule
    !!####################################################################
@@ -137,67 +119,6 @@ contains
       return
    end
 
-      ! Assign nan to values out of current grid
-   !####################################################################
-   pure subroutine Assign_nan(y, ubnd, ubnd_grid)
-      !####################################################################
-      !use, intrinsic :: iso_fortran_env
-      use, intrinsic :: ieee_arithmetic
-      implicit none
-
-      real(RK), dimension(:), intent(out) :: y
-      integer, intent(in) :: ubnd, ubnd_grid
-
-      integer :: i
-
-      ! Assign NaN if out of given grid
-      i = ubnd_grid
-      do while (i > ubnd)
-         y(i) = 0.0_RK
-         y(i) = ieee_value(y(i), ieee_quiet_nan) ! NaN
-         i = i - 1
-      end do
-
-      return
-   end subroutine Assign_nan
-
-
-   pure function linspace(x0, xend, n, endpoint) result(x)
-      implicit none
-
-      integer, intent(in) :: n
-      real(RK), intent(in) :: x0, xend
-      logical, optional, intent(in) :: endpoint
-      real(RK), dimension(n) :: x
-
-      real(RK) :: dx
-      real(RK) :: denom
-      integer :: i
-
-      denom = real(n - 1, RK)
-      if (present(endpoint) .and. (.not. endpoint)) then
-         denom = real(n, RK)
-      end if
-
-      dx = (xend - x0)/denom
-
-      x = [(real(i, RK)*dx + x0, i=0, n - 1)]
-
-      return
-   end function linspace
-
-   pure subroutine diff(d, a, N)
-
-      implicit none
-
-      integer, intent(in) :: N
-      real(RK), dimension(N - 1), intent(out) :: d
-      real(RK), dimension(N), intent(in) :: a
-
-      d = a(2:N) - a(1:N - 1)
-
-      return
-   end subroutine diff
 
    subroutine check_file_exists(fname)
       implicit none
@@ -233,37 +154,6 @@ contains
       write(*, *) '[WARNING] '//message
    end subroutine warn
 
-   pure function find_index_ordered(array, target_value) result(idx)
-      implicit none
-      real(RK), dimension(:), intent(in) :: array
-      real(RK), intent(in) :: target_value
-
-      integer :: idx
-
-      do idx = 1, size(array)
-         if (array(idx) > target_value) exit
-      end do
-   end function
-
-   pure function linear_interpolate(t_start, t_end, v_start, v_end, t) result(v)
-      implicit none
-      real(RK), intent(in) :: t_start, t_end, v_start, v_end, t
-      real(RK) :: v
-
-      v = v_start + t*(v_end - v_start)/(t_end - t_start)
-   end function
-
-   pure function convert2height_above_sed(z, z_zero) result(h)
-      implicit none
-      real(RK), dimension(:), intent(in) :: z
-      real(RK), intent(in) :: z_zero
-
-      real(RK), dimension(size(z)) :: h
-      integer :: n
-
-      n = size(z)
-      h = -z_zero + z(n:1:-1)
-   end function
 
 
    ! Reverse an array without allocating a second array
@@ -288,26 +178,37 @@ contains
 
    end subroutine
 
-   character(len=20) function str_int(k)
+   !> Integer as string without blanks, e.g. for messages
+   function str_int(k) result(s)
       implicit none
-      ! "Convert an integer to string."
       integer, intent(in) :: k
-      write (str_int, '(i0)') k
-   end function str_int
+      character(len=:), allocatable :: s
+      character(len=20) :: buf
+      write (buf, '(I0)') k
+      s = trim(buf)
+   end function
 
-   character(len=20) function str_real(k)
+   !> Real as string without blanks, e.g. for messages: with format fmt if given, otherwise with 3 decimals
+   !> (or in exponential notation for very large/small numbers)
+   function str_real(x, fmt) result(s)
       implicit none
-      ! "Convert a float to string."
-      real(RK), intent(in) :: k
-      write (str_real, '(g0)') k
-   end function str_real
-
-   character(len=20) function real_to_str(k, fmt)
-      implicit none
-      real(RK), intent(in) :: k
-      character(len=*), intent(in) :: fmt
-      write (real_to_str, fmt) k
-      real_to_str = adjustl(real_to_str)
+      real(RK), intent(in) :: x
+      character(len=*), intent(in), optional :: fmt
+      character(len=:), allocatable :: s
+      character(len=64) :: buf
+      if (present(fmt)) then
+         write (buf, fmt) x
+      else if (abs(x) >= 1e5_RK .or. (abs(x) < 1e-2_RK .and. x /= 0)) then
+         write (buf, '(ES10.3)') x
+      else
+         write (buf, '(F0.3)') x
+      end if
+      s = trim(adjustl(buf))
+      ! Leading zero (F0.d writes e.g. ".5")
+      if (s(1:1) == '.') s = '0'//s
+      if (len(s) > 1) then
+         if (s(1:2) == '-.') s = '-0'//s(2:)
+      end if
    end function
 
    pure logical function is_leap_year(year)
@@ -445,7 +346,7 @@ contains
    end subroutine
 
 
-   subroutine save_array(output_unit, array)
+   subroutine save_real_array(output_unit, array)
       implicit none
       integer, intent(in) :: output_unit
       real(RK), dimension(:), allocatable, intent(in) :: array
@@ -475,13 +376,13 @@ contains
    subroutine save_array_pointer(output_unit, array)
       implicit none
       integer, intent(in) :: output_unit
-      real(RK), dimension(:), pointer, intent(in) :: array
+      real(RK), dimension(:), pointer :: array ! No intent(in): otherwise not distinguishable from save_real_array
 
       write(output_unit) lbound(array), ubound(array)
       write(output_unit) array
    end subroutine
 
-   subroutine read_array(input_unit, array)
+   subroutine read_real_array(input_unit, array)
       implicit none
       integer, intent(in) :: input_unit
       real(RK), dimension(:), allocatable, intent(inout) :: array
@@ -522,7 +423,7 @@ contains
    end subroutine
 
 
-   subroutine save_matrix(output_unit, matrix)
+   subroutine save_real_matrix(output_unit, matrix)
       implicit none
       integer, intent(in) :: output_unit
       real(RK), dimension(:, :), allocatable, intent(in) :: matrix
@@ -534,13 +435,13 @@ contains
    subroutine save_matrix_pointer(output_unit, matrix)
       implicit none
       integer, intent(in) :: output_unit
-      real(RK), dimension(:, :), pointer, intent(in) :: matrix
+      real(RK), dimension(:, :), pointer :: matrix ! No intent(in): otherwise not distinguishable from save_real_matrix
 
       write(output_unit) lbound(matrix, 1), ubound(matrix, 1), lbound(matrix, 2), ubound(matrix, 2)
       write(output_unit) matrix
    end subroutine
 
-   subroutine read_matrix(input_unit, matrix)
+   subroutine read_real_matrix(input_unit, matrix)
       implicit none
       integer, intent(in) :: input_unit
       real(RK), dimension(:, :), allocatable, intent(inout) :: matrix

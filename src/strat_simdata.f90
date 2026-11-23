@@ -394,10 +394,10 @@ contains
       !write(80) self%simulation_time(1), self%simulation_time(2), self%simulation_time_old(1), self%simulation_time_old(2)
       call save_array(80, self%U)
       call save_array(80, self%V)
-      call save_array_pointer(80, self%T)
-      call save_array_pointer(80, self%S)
+      call save_array(80, self%T)
+      call save_array(80, self%S)
       call save_array(80, self%dS)
-      call save_array_pointer(80, self%rho)
+      call save_array(80, self%rho)
       call save_array(80, self%k)
       call save_array(80, self%ko)
       call save_array(80, self%avh)
@@ -412,7 +412,7 @@ contains
       call save_array(80, self%P_Seiche)
       write(80) self%E_Seiche, self%gamma
       call save_array(80, self%absorb)
-      call save_array_pointer(80, self%absorb_vol)
+      call save_array(80, self%absorb_vol)
       write(80) self%u10, self%v10, self%uv10, self%Wf
       write(80) self%u_taub, self%drag, self%u_taus, self%rain
       write(80) self%tx, self%ty
@@ -440,9 +440,9 @@ contains
       write(80) self%fsed
       call save_array(80, self%fgeo_add)
       if (couple_aed2) then
-         call save_matrix_pointer(80, self%AED2_state)
-         call save_matrix_pointer(80, self%AED2_diagnostic)
-         call save_array_pointer(80, self%AED2_diagnostic_sheet)
+         call save_matrix(80, self%AED2_state)
+         call save_matrix(80, self%AED2_diagnostic)
+         call save_array(80, self%AED2_diagnostic_sheet)
       end if
       if (inflow_mode > 0) then
          call save_matrix(80, self%Q_inp)
@@ -461,10 +461,10 @@ contains
       !read(81) self%simulation_time(1), self%simulation_time(2), self%simulation_time_old(1), self%simulation_time_old(2)
       call read_array(81, self%U)
       call read_array(81, self%V)
-      call read_array_pointer(81, self%T)
-      call read_array_pointer(81, self%S)
+      call read_array(81, self%T)
+      call read_array(81, self%S)
       call read_array(81, self%dS)
-      call read_array_pointer(81, self%rho)
+      call read_array(81, self%rho)
       call read_array(81, self%k)
       call read_array(81, self%ko)
       call read_array(81, self%avh)
@@ -479,7 +479,7 @@ contains
       call read_array(81, self%P_Seiche)
       read(81) self%E_Seiche, self%gamma
       call read_array(81, self%absorb)
-      call read_array_pointer(81, self%absorb_vol)
+      call read_array(81, self%absorb_vol)
       read(81) self%u10, self%v10, self%uv10, self%Wf
       read(81) self%u_taub, self%drag, self%u_taus, self%rain
       read(81) self%tx, self%ty
@@ -507,9 +507,9 @@ contains
       read(81) self%fsed
       call read_array(81, self%fgeo_add)
       if (couple_aed2) then
-         call read_matrix_pointer(81, self%AED2_state)
-         call read_matrix_pointer(81, self%AED2_diagnostic)
-         call read_array_pointer(81, self%AED2_diagnostic_sheet)
+         call read_matrix(81, self%AED2_state)
+         call read_matrix(81, self%AED2_diagnostic)
+         call read_array(81, self%AED2_diagnostic_sheet)
       end if
       if (inflow_mode > 0) then
          call read_matrix(81, self%Q_inp)

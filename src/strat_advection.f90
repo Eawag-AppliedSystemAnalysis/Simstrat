@@ -211,8 +211,8 @@ contains
 
       n_sub = max(1, ceiling(courant_max))
       if (n_sub > n_sub_max) then
-         call warn('Advection: Courant number '//trim(real_to_str(courant_max, '(F0.1)'))//' at day '// &
-                   trim(real_to_str(state%datum, '(F0.3)'))//', limited to 100 sub-steps. Check the inflow/outflow data.')
+         call warn('Advection: Courant number '//toStr(courant_max, '(F0.1)')//' at day '// &
+                   toStr(state%datum, '(F0.3)')//', limited to 100 sub-steps. Check the inflow/outflow data.')
          n_sub = n_sub_max
       end if
    end function
@@ -387,7 +387,7 @@ contains
 
          ! At least two boxes are needed (advection uses the second highest box, output interpolation needs two points)
          if (self%grid%nz_occupied <= 2) then
-            call error('Lake almost empty at day '//trim(real_to_str(state%datum, '(F12.4)'))// &
+            call error('Lake almost empty at day '//toStr(state%datum, '(F12.4)')// &
                        ' (less than two grid boxes left). Check inflow and outflow data.')
          end if
 

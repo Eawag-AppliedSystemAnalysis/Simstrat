@@ -47,6 +47,7 @@ program simstrat_main
    use strat_advection
    use simstrat_aed2
    use strat_lateral
+   use strat_inflow_check, only: check_inflow_files
    use forbear
    use csv_module
    use, intrinsic :: ieee_arithmetic
@@ -146,6 +147,8 @@ program simstrat_main
          mod_lateral => mod_lateral_rho
       end if
       call mod_lateral%init(simdata%model, simdata%model_cfg, simdata%input_cfg, simdata%aed2_cfg, simdata%model_param, simdata%grid)
+      ! Check the inflow/outflow files (format, consistency, plausibility; issue #73)
+      call check_inflow_files(mod_lateral, simdata%model, simdata%sim_cfg)
    else
       call warn('Lake in-/outflow is turned off')
    end if
@@ -221,17 +224,17 @@ contains
    subroutine run_simulation()
 
       !! run the marching time loop
-      call ok("Start day: "//real_to_str(simdata%sim_cfg%start_datum, '(F7.1)'))
+      call ok("Start day: "//toStr(simdata%sim_cfg%start_datum, '(F7.1)'))
       new_start_datum = simdata%sim_cfg%start_datum
       if (continue_from_snapshot) then
          call load_snapshot(snapshot_file_path, simdata%model_cfg%couple_aed2)
-         call ok("Simulation snapshot successfully read. Snapshot day: "//real_to_str(simdata%model%datum, '(F7.1)'))
+         call ok("Simulation snapshot successfully read. Snapshot day: "//toStr(simdata%model%datum, '(F7.1)'))
          call logger%calculate_simulation_time_for_next_output(simdata%model%simulation_time)
          new_start_datum = simdata%model%datum
       else
          call logger%log(simdata)
       end if
-      call ok("End day: "//real_to_str(simdata%sim_cfg%end_datum, '(F7.1)'))
+      call ok("End day: "//toStr(simdata%sim_cfg%end_datum, '(F7.1)'))
       call logger%start()
 
       ! initialize a bar with the progress percentage counter
