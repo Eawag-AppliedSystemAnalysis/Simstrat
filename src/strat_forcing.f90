@@ -177,7 +177,7 @@ contains
       integer :: nval_offset
       real(RK) :: tau
       real(RK) :: A_cur(8) ! 8 is the maximum number of columns in the forcing file
-      real(RK) :: fu, Vap_wat, heat0, emissivity
+      real(RK) :: fu, Vap_wat, heat0, emissivity, dTv
       real(RK) :: T_surf, F_glob, Vap_atm, Cloud
       real(RK) :: H_A, H_K, H_V, H_W, H_tot, emiss_A
       real(RK) :: F_snow, F_snowice, F_ice
@@ -326,14 +326,19 @@ contains
          if (cfg%forcing_mode /= 4) then ! Heat fluxes calculations (forcing 2, 3 and 5)
             if (state%black_ice_h + state%white_ice_h == 0) then !Free water
 
-               ! Factor 0.6072 to account for changing wind height from 10 to 2 m
-               ! Further evaluation of evaporation algorithm may be required.
-               fu = sqrt((2.7_RK*max(0.0_RK,(T_surf-state%T_atm)/(1 - 0.378_RK*Vap_atm/param%p_air))**0.333_RK)**2 + (0.6072_RK*3.1_RK*state%uv10)**2)
-               fu = fu*param%p_windf ! Provided fitting factor p_windf (~1)
-
                ! Water vapor saturation pressure in air at water temperature (Gill 1992) [millibar]
                Vap_wat = 10**((0.7859_RK + 0.03477_RK*T_surf)/(1 + 0.00412_RK*T_surf))
                Vap_wat = Vap_wat*(1 + 1e-6_RK*param%p_air*(4.5_RK + 0.00006_RK*T_surf**2))
+
+               ! Free convection: virtual temperature difference between the saturated air at the water surface and the
+               ! ambient air (Adams et al. 1990, Eq. 11, with Delta Theta_v = T_sv - T_av defined below Eq. 7);
+               ! virtual temperature T_v = T/(1 - 0.378*e/p_air) [K]
+               dTv = (T_surf + 273.15_RK)/(1 - 0.378_RK*Vap_wat/param%p_air) - (state%T_atm + 273.15_RK)/(1 - 0.378_RK*Vap_atm/param%p_air)
+
+               ! Factor 0.6072 to account for changing wind height from 10 to 2 m
+               ! Further evaluation of evaporation algorithm may be required.
+               fu = sqrt((2.7_RK*max(0.0_RK,dTv)**0.333_RK)**2 + (0.6072_RK*3.1_RK*state%uv10)**2)
+               fu = fu*param%p_windf ! Provided fitting factor p_windf (~1)
 
 
                ! Long-wave radiation according to Dilley and O'Brien (1998) with cloud correction of Crawford and Duchon (1999)
