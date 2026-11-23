@@ -378,14 +378,15 @@ contains
          depth(i) = simdata%grid%z_volume(i/2)
       end do
 
-      call Interp(simdata%grid%z_volume(1:simdata%grid%ubnd_vol), simdata%model%U(1:simdata%grid%ubnd_vol), size(simdata%model%U), depth, U, size(U))
-      call Interp(simdata%grid%z_volume(1:simdata%grid%ubnd_vol), simdata%model%V(1:simdata%grid%ubnd_vol), size(simdata%model%V), depth, V, size(V))
-      call Interp(simdata%grid%z_volume(1:simdata%grid%ubnd_vol), simdata%model%T(1:simdata%grid%ubnd_vol), size(simdata%model%T), depth, T, size(T))
-      call Interp(simdata%grid%z_volume(1:simdata%grid%ubnd_vol), simdata%model%S(1:simdata%grid%ubnd_vol), size(simdata%model%S), depth, S, size(S))
-      call Interp(simdata%grid%z_face(1:simdata%grid%ubnd_fce), simdata%model%k(1:simdata%grid%ubnd_vol), size(simdata%model%k), depth, k, size(k))
-      call Interp(simdata%grid%z_face(1:simdata%grid%ubnd_fce), simdata%model%eps(1:simdata%grid%ubnd_vol), size(simdata%model%eps), depth, eps, size(eps))
-      call Interp(simdata%grid%z_face(1:simdata%grid%ubnd_fce), simdata%model%num(1:simdata%grid%ubnd_vol), size(simdata%model%num), depth, num, size(num))
-      call Interp(simdata%grid%z_face(1:simdata%grid%ubnd_fce), simdata%model%nuh(1:simdata%grid%ubnd_vol), size(simdata%model%nuh), depth, nuh, size(nuh))
+      ! Number of points = occupied cells/faces (not the allocated array size, which is larger if the lake is not full)
+      call Interp(simdata%grid%z_volume(1:simdata%grid%ubnd_vol), simdata%model%U(1:simdata%grid%ubnd_vol), simdata%grid%ubnd_vol, depth, U, size(U))
+      call Interp(simdata%grid%z_volume(1:simdata%grid%ubnd_vol), simdata%model%V(1:simdata%grid%ubnd_vol), simdata%grid%ubnd_vol, depth, V, size(V))
+      call Interp(simdata%grid%z_volume(1:simdata%grid%ubnd_vol), simdata%model%T(1:simdata%grid%ubnd_vol), simdata%grid%ubnd_vol, depth, T, size(T))
+      call Interp(simdata%grid%z_volume(1:simdata%grid%ubnd_vol), simdata%model%S(1:simdata%grid%ubnd_vol), simdata%grid%ubnd_vol, depth, S, size(S))
+      call Interp(simdata%grid%z_face(1:simdata%grid%ubnd_fce), simdata%model%k(1:simdata%grid%ubnd_fce), simdata%grid%ubnd_fce, depth, k, size(k))
+      call Interp(simdata%grid%z_face(1:simdata%grid%ubnd_fce), simdata%model%eps(1:simdata%grid%ubnd_fce), simdata%grid%ubnd_fce, depth, eps, size(eps))
+      call Interp(simdata%grid%z_face(1:simdata%grid%ubnd_fce), simdata%model%num(1:simdata%grid%ubnd_fce), simdata%grid%ubnd_fce, depth, num, size(num))
+      call Interp(simdata%grid%z_face(1:simdata%grid%ubnd_fce), simdata%model%nuh(1:simdata%grid%ubnd_fce), simdata%grid%ubnd_fce, depth, nuh, size(nuh))
 
       call reverse_in_place(depth)
       depth = depth - depth(1)
@@ -428,6 +429,8 @@ contains
          call mod_lateral%save()
       end if
       call logger%save()
+      ! Date of the snapshot (last record, so that snapshots of older versions without it can still be read)
+      write(80) simdata%model%datum
       close(80)
    end subroutine
 
@@ -459,6 +462,8 @@ contains
       implicit none
       character(len=*), intent(in) :: file_path
       logical, intent(in) :: couple_aed2
+      real(RK) :: snapshot_datum
+      integer :: status
 
       open(81, file=file_path, Form='unformatted', Action='Read')
       call simdata%model%load(couple_aed2, simdata%model_cfg%inflow_mode)
@@ -468,6 +473,16 @@ contains
          call mod_lateral%load()
       end if
       call logger%load()
+      ! The simulation continues at Simulation.Start d of the par file with the state of the snapshot: warn if the
+      ! snapshot is from another date (the date is not stored in snapshots of older versions)
+      read(81, iostat=status) snapshot_datum
+      if (status /= 0) then
+         call warn('The snapshot does not contain its date (older version), it cannot be checked against Start d.')
+      else if (abs(snapshot_datum - simdata%sim_cfg%start_datum) > 0.5_RK*simdata%sim_cfg%timestep/SECONDS_PER_DAY) then
+         call warn('The snapshot is from day '//toStr(snapshot_datum, '(F0.4)')//', but the simulation starts at day '// &
+                   toStr(simdata%sim_cfg%start_datum, '(F0.4)')//' (Simulation.Start d): the state of the snapshot is '// &
+                   'used at the start day.')
+      end if
       close(81)
    end subroutine
 

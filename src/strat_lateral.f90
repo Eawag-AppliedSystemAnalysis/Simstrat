@@ -536,8 +536,11 @@ contains
          ! Plunging algorithm
          do j = 1,self%nval_deep(1)  ! nval_deep needs to be the same for all i
             if (Inp(1,j) > 1E-15) then
+               ! Find the cell where the plunging inflow enters the lake (depth defined in file). An inflow below the centre of
+               ! the lowest cell enters the lowest cell (without the limit k > 1, k would become 0).
                k = ubnd_vol
-               do while (grid%z_volume(k) > self%z_Inp(1,j)) ! Find the place where the plunging inflow enters the lake (defined in file)
+               do while (k > 1)
+                  if (grid%z_volume(k) <= self%z_Inp(1,j)) exit
                   k = k - 1
                end do
 
@@ -564,7 +567,7 @@ contains
                !Ri = CD_in/tan(slope)*(1/sin(hang)+0.21*CD_in**0.5) !Richardson number
                Ri = CD_in/tan(slope)*(1.15 + 0.21*CD_in**0.5) !Richardson number (assuming an inflow half-angle of pi/3)
                E = 1.6*CD_in**1.5/Ri !Entrainment coefficient
-               h_in(k) = (2*Q_in(k)**2*Ri*tan(slope)**2/abs(g_red))**0.2 !Inflow thickness [m]
+               if (g_red /= 0) h_in(k) = (2*Q_in(k)**2*Ri*tan(slope)**2/abs(g_red))**0.2 !Inflow thickness [m]
 
                if (g_red > 0) then !Inflow plunges
                   do while ((rho_in > state%rho(k)).and.(k > 1))
@@ -602,6 +605,9 @@ contains
                      if(i2 == 1) exit
                      if(grid%z_volume(i2 - 1) < (grid%z_volume(k) - h_in(k))) exit
                   end do
+               else ! Same density as the lake at the inflow depth (g_red = 0): the inflow enters cell k only
+                  i1 = k
+                  i2 = k
                end if
 
                ! Deep plunging input is added to Q_inp for i=1,3,4 (inflow, temperature, salinity)
