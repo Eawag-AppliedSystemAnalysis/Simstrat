@@ -139,12 +139,13 @@ contains
             if (n_sub > 1) AreaFactor_adv(1:nz_occupied) = AreaFactor_adv(1:nz_occupied)/n_sub
 
             do k = 1, n_sub
-               ! Height of the top cell at the beginning of the sub-step (the top cell grows/shrinks by dh_i/n_sub per sub-step)
+               ! Height of the top cell at the beginning of the sub-step (the top cell grows/shrinks by dh_i/n_sub per sub-step),
+               ! used for the volume of the top cell in AreaFactor_adv
                h_top = h(ubnd_vol) + (k - 1)*dh_i(t_i)/n_sub
                if (n_sub > 1) AreaFactor_adv(ubnd_vol) = dt_i(t_i)/n_sub/((grid%Az(ubnd_vol) + grid%Az(ubnd_fce))/2*h_top)
 
                ! Update Simstrat variables U, V, T and S
-               call do_update_statvars(self, state, AreaFactor_adv(1:nz_occupied), dh_i(t_i)/n_sub, h_top)
+               call do_update_statvars(self, state, AreaFactor_adv(1:nz_occupied))
 
                ! Update AED2 variables
                if(self%cfg%couple_aed2) then
@@ -152,7 +153,7 @@ contains
                   ! per timestep, so for the second part of a split timestep and for further sub-steps, the transformation
                   ! to [H] has to be repeated here.
                   if ((t_i == 2 .or. k > 1) .and. state%n_pH > 0) AED2_state(:,state%n_pH) = 10.**(-AED2_state(:,state%n_pH))
-                  call do_update_statvars_AED2(self, state, AreaFactor_adv(1:nz_occupied), dh_i(t_i)/n_sub, h_top)
+                  call do_update_statvars_AED2(self, state, AreaFactor_adv(1:nz_occupied))
                end if
             end do
 
@@ -216,18 +217,17 @@ contains
       end if
    end function
 
-   subroutine do_update_statvars(self, state, AreaFactor_adv, dh, h_top)
+   subroutine do_update_statvars(self, state, AreaFactor_adv)
       ! Arguments
       class(AdvectionModule) :: self
       class(ModelState) :: state
-      real(RK), dimension(:) :: AreaFactor_adv
-      real(RK) :: dh
-      real(RK) :: h_top ! Height of the top cell before this (sub-)step
+      real(RK), dimension(:) :: AreaFactor_adv ! (sub-)time step / cell volume [s/m3]
 
       ! Local variables
       integer :: i, top
       real(RK) :: dU(self%grid%nz_grid), dV(self%grid%nz_grid), dTemp(self%grid%nz_grid), dS(self%grid%nz_grid)
       integer :: outflow_above, outflow_below
+      real(RK) :: dilution
 
       associate(ubnd_vol => self%grid%ubnd_vol, &
          Q_vert => state%Q_vert, &
@@ -291,21 +291,23 @@ contains
             state%T(1:ubnd_vol) = state%T(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dTemp(1:ubnd_vol)
             state%S(1:ubnd_vol) = state%S(1:ubnd_vol) + AreaFactor_adv(1:ubnd_vol)*dS(1:ubnd_vol)
 
-            ! Variation of variables due to change in volume
-            state%U(ubnd_vol) = state%U(ubnd_vol)*h_top/(h_top + dh)
-            state%V(ubnd_vol) = state%V(ubnd_vol)*h_top/(h_top + dh)
-            state%T(ubnd_vol) = state%T(ubnd_vol)*h_top/(h_top + dh)
-            state%S(ubnd_vol) = state%S(ubnd_vol)*h_top/(h_top + dh)
+            ! Variation of variables due to change in volume of the top cell: V_new/V_old = 1 + dt*Q_vert(top)/V_old.
+            ! Volume-based (not height-based h/(h+dh)): the volume of the top cell is A_mean*h, but the volume change
+            ! occurs at the lake surface (A_top*dh). With h/(h+dh), concentrations in the top cell increased when the
+            ! lake level rose (e.g. S > S_inflow) and decreased when it fell.
+            dilution = 1.0_RK/(1.0_RK + AreaFactor_adv(ubnd_vol)*Q_vert(ubnd_vol + 1))
+            state%U(ubnd_vol) = state%U(ubnd_vol)*dilution
+            state%V(ubnd_vol) = state%V(ubnd_vol)*dilution
+            state%T(ubnd_vol) = state%T(ubnd_vol)*dilution
+            state%S(ubnd_vol) = state%S(ubnd_vol)*dilution
       end associate
    end subroutine
 
-   subroutine do_update_statvars_AED2(self, state, AreaFactor_adv, dh, h_top)
+   subroutine do_update_statvars_AED2(self, state, AreaFactor_adv)
       ! Arguments
       class(AdvectionModule) :: self
       class(ModelState) :: state
-      real(RK), dimension(:) :: AreaFactor_adv(1:self%grid%ubnd_vol)
-      real(RK) :: dh
-      real(RK) :: h_top ! Height of the top cell before this (sub-)step
+      real(RK), dimension(:) :: AreaFactor_adv(1:self%grid%ubnd_vol) ! (sub-)time step / cell volume [s/m3]
 
       ! Local variables
       integer :: i, top, outflow_above, outflow_below
@@ -361,8 +363,8 @@ contains
             AED2_state(1:ubnd_vol,i) = AED2_state(1:ubnd_vol,i) + AreaFactor_adv(1:ubnd_vol)*dAED2(1:ubnd_vol,i)
          end do
 
-         ! Variation of variables due to change in volume
-         AED2_state(ubnd_vol,:) = AED2_state(ubnd_vol,:)*h_top/(h_top + dh)
+         ! Variation of variables due to change in volume of the top cell (volume-based, see do_update_statvars)
+         AED2_state(ubnd_vol,:) = AED2_state(ubnd_vol,:)/(1.0_RK + AreaFactor_adv(ubnd_vol)*Q_vert(ubnd_vol + 1))
 
          ! Transform [H] back to pH
          if(self%cfg%couple_aed2 .and. state%n_pH > 0) then
