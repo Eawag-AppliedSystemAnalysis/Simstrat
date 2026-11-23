@@ -408,22 +408,40 @@ contains
 
    end subroutine
 
-   ! Calculate density as a function of T and S
-   subroutine calc_density(rho, T, S)
+   ! Density of freshwater as a function of T and S (and optionally P)
+   ! according to Chen and Millero (1986), Limnol. Oceanogr. 31(3), 657-662
+   ! T [°C] in-situ temperature, S [g/kg] salinity, P [bar] pressure above atmospheric pressure (optional)
+   !
+   ! Without P (default): density at atmospheric pressure. This is used everywhere except for N2
+   !    (state%rho, plunging inflows in strat_lateral).
+   ! With P: in-situ density at pressure P. It is ONLY used in update_NN to compare two water parcels at the
+   !    same pressure (local potential density). The absolute in-situ density must not be used for N2 directly,
+   !    because compression alone would then add ~g^2/c^2 = 4e-5 s-2 to N2.
+   subroutine calc_density(rho, T, S, P)
       implicit none
 
       ! Arguments
       real(RK), intent(in) :: T, S
+      real(RK), intent(in), optional :: P
       real(RK), intent(out) :: rho
 
       ! Local variables
-      real(RK) :: rho0t, rho0st
+      real(RK) :: rho0t, rho0st, K
 
-      ! According to Chen Millero
+      ! Density at atmospheric pressure
       rho0t = 0.9998395_RK + T*(6.7914e-5_RK + T*(-9.0894e-6_RK + T*(1.0171e-7_RK + T*(-1.2846e-9_RK + T*(1.1592e-11_RK + T*(-5.0125e-14_RK))))))
       rho0st = (8.181e-4_RK + T*(-3.85e-6_RK + T*(4.96e-8_RK)))*S
 
       rho = rho_0*(rho0t + rho0st)
+
+      ! Pressure dependence with the secant bulk modulus K [bar]: rho(S,T,P) = rho(S,T,0)/(1 - P/K(S,T,P))
+      ! Because K depends on T and S, the thermal expansivity increases with pressure (by ~30 % at 300 m for 6 °C)
+      ! and the temperature of maximum density decreases (by ~0.2 K per 100 m)
+      if (present(P)) then
+         K = 19652.17_RK + T*(148.113_RK + T*(-2.293_RK + T*(1.256e-2_RK + T*(-4.18e-5_RK)))) &
+             + (3.2726_RK + T*(-2.147e-4_RK + T*1.128e-4_RK))*P + (53.238_RK - 0.313_RK*T + 5.728e-3_RK*P)*S
+         rho = rho/(1 - P/K)
+      end if
    end subroutine
 
 

@@ -100,17 +100,39 @@ contains
       real(RK), dimension(:), intent(inout) :: NN, rho
 
       ! Local variables
-      real(RK) :: buoy(self%grid%length_vol)
+      real(RK) :: P, rho_above, rho_below, Tf, Sf, alpha
       integer :: i
 
       associate (grd=>self%grid)
 
+         ! Density at atmospheric pressure (state%rho, used for plunging inflows and AED2; not used for N2)
          do i = 1, grd%ubnd_vol
             call calc_density(rho(i),T(i),S(i))
-            buoy(i) = -g*(rho(i)/rho_0 - 1.0_RK)
          end do
 
-         NN(2:grd%ubnd_fce - 1) = grd%meanint(1:grd%ubnd_vol - 1)*(buoy(2:grd%ubnd_fce - 1) - buoy(1:grd%ubnd_fce - 2))
+         ! Brunt-Vaisala frequency N2 with pressure effects (issue #87), following M. Schmid (Lake Baikal version of k-eps):
+         !    N2 = g*alpha(T,S,p)*(dT/dz + Gamma) - g*beta(T,S,p)*dS/dz
+         ! 1) Pressure-dependent expansivity alpha(T,S,p) (and contraction coefficient beta):
+         !    The two cells adjacent to face i are both evaluated at the pressure of face i (local potential density),
+         !    so that the density difference only reflects T and S, with alpha and beta valid at that depth.
+         !    Equivalent to alpha from Chen and Millero (1986) with the pressure term (0.3682-1.520e-2*T+1.91e-4*T^2)*p,
+         !    but exact for large T differences and including the salinity gradient.
+         ! 2) Adiabatic lapse rate Gamma = g*alpha*(T+273.15)/cp: T is in-situ temperature, so a parcel displaced
+         !    downwards warms (alpha > 0) or cools (alpha < 0) adiabatically. This adds (g*alpha)^2*(T+273.15)/cp >= 0.
+         !    Relevant for deep lakes near the temperature of maximum density, where N2 is very small.
+         do i = 2, grd%ubnd_fce - 1
+            P = rho_0*g*(grd%z_face(grd%ubnd_fce) - grd%z_face(i))*1e-5_RK ! Pressure above atmospheric pressure at face i [bar]
+            ! 1) Density difference of the two adjacent cells at the same pressure P
+            call calc_density(rho_above, T(i), S(i), P)
+            call calc_density(rho_below, T(i - 1), S(i - 1), P)
+            NN(i) = -g*grd%meanint(i - 1)*(rho_above - rho_below)/rho_0
+            ! 2) Adiabatic term, with alpha at face i from a central difference of the density (+-0.01 K) at pressure P
+            Tf = 0.5_RK*(T(i) + T(i - 1)); Sf = 0.5_RK*(S(i) + S(i - 1))
+            call calc_density(rho_above, Tf + 0.01_RK, Sf, P)
+            call calc_density(rho_below, Tf - 0.01_RK, Sf, P)
+            alpha = -(rho_above - rho_below)/(0.02_RK*rho_0)
+            NN(i) = NN(i) + (g*alpha)**2*(Tf + 273.15_RK)/cp
+         end do
          NN(1) = NN(2)
          NN(grd%ubnd_fce) = NN(grd%ubnd_fce - 1)
 
