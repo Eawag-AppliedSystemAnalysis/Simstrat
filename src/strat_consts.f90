@@ -93,6 +93,7 @@
      integer, parameter      :: n_sed = 10 ! Number of sediment layers (thickness 0.02 m at the top, x1.8 per layer, 8.9 m in total)
      real(RK), parameter     :: dz_sed_top = 0.02_RK ! Thickness of the top sediment layer [m]
      real(RK), parameter     :: dz_sed_factor = 1.8_RK ! Thickness ratio of successive sediment layers
+     real(RK), parameter     :: seconds_per_year = 365.25_RK*86400 ! [s]
      real(RK), parameter     :: dt_sed = 3600.0_RK ! Time step of the sediment model [s] (multiple of the model time step, at least one)
      real(RK), parameter     :: sig = 5.67e-8_RK ! Stefan-Boltzmann constant [W/m2/K4]
 

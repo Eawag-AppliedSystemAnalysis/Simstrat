@@ -356,7 +356,6 @@ contains
       class(SimConfig) :: sim_cfg
 
       real(RK) :: mean_in, mean_out, dlevel
-      real(RK), parameter :: seconds_per_year = 365.25_RK*86400
 
       mean_in = mean_total_flow(q_in, rho_mode, sim_cfg%start_datum, sim_cfg%end_datum)
       mean_out = mean_total_flow(q_out, .false., sim_cfg%start_datum, sim_cfg%end_datum)

@@ -39,6 +39,12 @@
 ! implicitly. This is stable for any time step and conserves energy exactly. The absorbed shortwave radiation is
 ! accumulated between the updates.
 ! Columns of cells above the lake surface keep their temperature until the cells are flooded again.
+! Start (spin-up): the sediment starts with the water temperature of its cell. The deep sediment would then need
+! several years to reach its equilibrium (about the annual mean water temperature), e.g. too cold for years after a
+! start in winter. Therefore the mean water temperature of each cell is recorded during the first year, and the
+! sediment is then set to this mean (plus the geothermal gradient fgeo/lambda_sed), with a weight 1 - exp(-z/d) that
+! increases with the depth z below the lake bed (d = penetration depth of the annual temperature wave, ~2 m): the top
+! layers keep their current (seasonal) temperature. This changes the heat content of the sediment once (not of the water).
 ! Thermal properties (lambda_sed, rhoc_sed) of water-saturated fine sediment are defined in strat_consts.
 
 module strat_sediment
@@ -60,6 +66,11 @@ module strat_sediment
       real(RK), allocatable :: sw_sum(:)        ! Shortwave radiation absorbed by the sediment since the last update [J]
       integer :: n_steps = 1                    ! Number of model time steps per sediment time step
       integer :: step = 0                       ! Model time steps since the last sediment update
+      ! Spin-up: mean water temperature of each cell during the first year
+      real(RK), allocatable :: Tdt_sum(:)         ! Sum of T*dt [°C s]
+      real(RK), allocatable :: time_sum(:)         ! Sum of dt [s] (cells below the lake surface)
+      real(RK) :: elapsed = 0.0_RK              ! Time since the start of the sediment model [s]
+      logical :: spun_up = .false.              ! True once the sediment was set to the first-year mean
    contains
       procedure, pass :: init => sediment_init
       procedure, pass :: update => sediment_update
@@ -95,11 +106,13 @@ contains
       ! The deep layers adjust within 1-2 years (spin-up). Overwritten when continuing from a snapshot.
       call sediment_deallocate(self)
       allocate (self%T_sed(n_sed, grid%nz_grid), self%flux(grid%nz_grid), self%sw_sum(grid%nz_grid))
+      allocate (self%Tdt_sum(grid%nz_grid), self%time_sum(grid%nz_grid))
       do i = 1, grid%nz_grid
          self%T_sed(:, i) = state%T(min(i, grid%ubnd_vol))
       end do
       self%flux = 0.0_RK
       self%sw_sum = 0.0_RK
+      self%Tdt_sum = 0.0_RK; self%time_sum = 0.0_RK; self%elapsed = 0.0_RK; self%spun_up = .false.
       self%n_steps = max(1, nint(dt_sed/state%dt))
       self%step = 0
 
@@ -171,16 +184,49 @@ contains
             self%flux(i) = cap(0)*(x(0) - T(i))
             T(i) = x(0)
             T_sed(:, i) = x(1:n_sed)
+
+            ! Spin-up: record the mean water temperature of the cell
+            if (.not. self%spun_up) then
+               self%Tdt_sum(i) = self%Tdt_sum(i) + T(i)*dt
+               self%time_sum(i) = self%time_sum(i) + dt
+            end if
          end do
          self%sw_sum = 0.0_RK
+
+         if (.not. self%spun_up) then
+            self%elapsed = self%elapsed + dt
+            if (self%elapsed >= seconds_per_year) call sediment_spin_up(self)
+         end if
       end associate
+   end subroutine
+
+   ! Set the sediment to the mean water temperature of the first year (plus the geothermal gradient), weighted with
+   ! 1 - exp(-z/d) (z: depth of the layer centre below the lake bed, d: penetration depth of the annual wave)
+   subroutine sediment_spin_up(self)
+      implicit none
+      class(SedimentModule) :: self
+      real(RK) :: z(n_sed), d, T_mean
+      integer :: i, k
+
+      z(1) = 0.5_RK*self%dz(1)
+      do k = 2, n_sed
+         z(k) = z(k - 1) + 0.5_RK*(self%dz(k - 1) + self%dz(k))
+      end do
+      d = sqrt(2*lambda_sed/rhoc_sed/(2*pi/seconds_per_year))
+      do i = 1, size(self%time_sum)
+         if (self%time_sum(i) < 0.5_RK*seconds_per_year) cycle ! Cell below the lake surface for less than half a year
+         T_mean = self%Tdt_sum(i)/self%time_sum(i)
+         self%T_sed(:, i) = self%T_sed(:, i) + (1 - exp(-z/d))*(T_mean + self%param%fgeo*z/lambda_sed - self%T_sed(:, i))
+      end do
+      self%spun_up = .true.
+      call ok('Sediment temperature set to the mean water temperature of the first year (spin-up)')
    end subroutine
 
    ! Sediment temperatures are written after the other snapshot data (see save_snapshot in simstrat.f90)
    subroutine sediment_save(self)
       implicit none
       class(SedimentModule) :: self
-      write(80) self%T_sed, self%sw_sum, self%step
+      write(80) self%T_sed, self%sw_sum, self%step, self%Tdt_sum, self%time_sum, self%elapsed, self%spun_up
    end subroutine
 
    ! Returns .false. if the snapshot does not contain sediment temperatures (the initial values are then kept)
@@ -188,12 +234,15 @@ contains
       implicit none
       class(SedimentModule) :: self
       real(RK), dimension(size(self%T_sed, 1), size(self%T_sed, 2)) :: tmp
-      real(RK), dimension(size(self%sw_sum)) :: tmp_sw
+      real(RK), dimension(size(self%sw_sum)) :: tmp_sw, tmp_Tdt_sum, tmp_time_sum
+      real(RK) :: tmp_elapsed
       integer :: status, tmp_step
-      read(81, iostat=status) tmp, tmp_sw, tmp_step
+      logical :: tmp_spun_up
+      read(81, iostat=status) tmp, tmp_sw, tmp_step, tmp_Tdt_sum, tmp_time_sum, tmp_elapsed, tmp_spun_up
       success = (status == 0)
       if (success) then
          self%T_sed = tmp; self%sw_sum = tmp_sw; self%step = tmp_step
+         self%Tdt_sum = tmp_Tdt_sum; self%time_sum = tmp_time_sum; self%elapsed = tmp_elapsed; self%spun_up = tmp_spun_up
       end if
    end function
 
@@ -203,6 +252,8 @@ contains
       if (allocated(self%T_sed)) deallocate(self%T_sed)
       if (allocated(self%flux)) deallocate(self%flux)
       if (allocated(self%sw_sum)) deallocate(self%sw_sum)
+      if (allocated(self%Tdt_sum)) deallocate(self%Tdt_sum)
+      if (allocated(self%time_sum)) deallocate(self%time_sum)
    end subroutine
 
 end module strat_sediment
