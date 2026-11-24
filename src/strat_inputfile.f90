@@ -690,6 +690,10 @@ contains
          call par_file%get("ModelConfig.BottomFriction", model_cfg%bottom_friction, found); call check_field(found, 'ModelConfig.BottomFriction', ParName)
          call par_file%get("ModelConfig.IceModel", model_cfg%ice_model, found); call check_field(found, 'ModelConfig.IceModel', ParName)
          call par_file%get("ModelConfig.SnowModel", model_cfg%snow_model, found); call check_field(found, 'ModelConfig.SnowModel', ParName)
+         ! Heat exchange with the sediment (optional, default 0 = off)
+         call par_file%get("ModelConfig.SedimentHeat", model_cfg%sediment_heat, found)
+         if (.not. found) model_cfg%sediment_heat = 0
+         if (model_cfg%sediment_heat /= 0 .and. model_cfg%sediment_heat /= 1) call error('ModelConfig.SedimentHeat must be 0 or 1.')
 
          ! AED2 configuration (or another biogeochemical model if implemented)
          if (model_cfg%couple_aed2) then

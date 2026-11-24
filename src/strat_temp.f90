@@ -52,7 +52,7 @@ contains
       real(RK), dimension(:) ::  sources, boundaries
       integer :: i
       real(RK), dimension(size(state%rad)) :: rad_nir ! UV and NIR part of the solar radiation on faces [°C*m/s]
-      !real(RK) :: T_soil
+      real(RK) :: a_sed ! Sediment area of a cell [m2]
       associate (grid=>self%grid, &
                  ubnd_fce=>self%grid%ubnd_fce, &
                  ubnd_vol=>self%grid%ubnd_vol)
@@ -79,10 +79,18 @@ contains
          end do
          sources(1:ubnd_vol) = sources(1:ubnd_vol) + (rad_nir(2:ubnd_fce)*grid%Az(2:ubnd_fce) - rad_nir(1:ubnd_fce - 1)*grid%Az(1:ubnd_fce - 1))/(grid%Az(2:ubnd_fce) + grid%Az(1:ubnd_fce - 1))*2/grid%h(1:ubnd_vol)
 
-         ! Experimenting with influence of soil temperature on water temperature using a sinusoidal soil temperature         
-         !T_soil = 5 + 5*cos(2*pi/365*(state%current_month*30 + state%current_day - 270))
-
-         !sources(1:ubnd_vol) = sources(1:ubnd_vol) + 2.4*(T_soil - state%T(1:ubnd_vol))/0.5*(grid%Az(2:ubnd_fce) - grid%Az(1:ubnd_fce-1))/rho_0/cp/grid%h(1:ubnd_vol)/(grid%Az(2:ubnd_fce) + grid%Az(1:ubnd_fce - 1))*2
+         ! Sediment heat model: the shortwave radiation reaching the lake bed of each cell (at its lower face, on the
+         ! sediment area of the cell) heats the sediment instead of the water (strat_sediment). Without the sediment model,
+         ! the radiation reaching the sloping bed is absorbed by the water of the cell and the radiation reaching the flat
+         ! bottom (rad(1)*Az(1)) leaves the model.
+         if (self%cfg%sediment_heat == 1) then
+            do i = 1, ubnd_vol
+               a_sed = max(grid%Az(i + 1) - grid%Az(i), 0.0_RK)
+               sources(i) = sources(i) - (state%rad(i) + rad_nir(i))*a_sed*2/((grid%Az(i) + grid%Az(i + 1))*grid%h(i))
+               if (i == 1) a_sed = a_sed + grid%Az(1) ! Flat bottom
+               state%sed_sw(i) = (state%rad(i) + rad_nir(i))*rho_0*cp*a_sed ! [W]
+            end do
+         end if
 
          ! Set boundary heat flux at surface (Eq 25, Goudsmit(2002))
          ! FB, 2021: Correction of relevant area (accoring to tests by Ana Ayala)
@@ -101,8 +109,8 @@ contains
          !    du(nz) = SST
          end if
 
-         ! Add geothermal flux to sources (Eq 1, Goudsmit(2002))
-         if (param%fgeo /= 0) sources(1:ubnd_vol) = sources(1:ubnd_vol) + state%fgeo_add(1:ubnd_vol)
+         ! Add geothermal flux to sources (Eq 1, Goudsmit(2002)); with the sediment model, it enters at the bottom of the sediment
+         if (param%fgeo /= 0 .and. self%cfg%sediment_heat /= 1) sources(1:ubnd_vol) = sources(1:ubnd_vol) + state%fgeo_add(1:ubnd_vol)
 
       end associate
    end subroutine
