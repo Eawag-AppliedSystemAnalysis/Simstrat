@@ -87,6 +87,13 @@
      real(RK), parameter     :: z0_water = 2e-4_RK ! Roughness length of the lake surface for the wind profile [m]
      real(RK), parameter     :: absorb_nir = 4.0_RK ! Absorption coefficient of the UV/NIR part (fraction beta_sol) of the shortwave radiation [m-1]
                                                     ! (same fraction absorbed in the top 0.5 m as the UV/NIR part of the solar spectrum)
+     ! *** Sediment heat model (strat_sediment, ModelConfig.SedimentHeat = 1): water-saturated fine sediment ***
+     real(RK), parameter     :: lambda_sed = 1.2_RK ! Thermal conductivity of the sediment [W/m/K]
+     real(RK), parameter     :: rhoc_sed = 3.0e6_RK ! Volumetric heat capacity of the sediment [J/m3/K]
+     integer, parameter      :: n_sed = 10 ! Number of sediment layers (thickness 0.02 m at the top, x1.8 per layer, 8.9 m in total)
+     real(RK), parameter     :: dz_sed_top = 0.02_RK ! Thickness of the top sediment layer [m]
+     real(RK), parameter     :: dz_sed_factor = 1.8_RK ! Thickness ratio of successive sediment layers
+     real(RK), parameter     :: dt_sed = 3600.0_RK ! Time step of the sediment model [s] (multiple of the model time step, at least one)
      real(RK), parameter     :: sig = 5.67e-8_RK ! Stefan-Boltzmann constant [W/m2/K4]
 
      ! *** Parameters for MY model  ***

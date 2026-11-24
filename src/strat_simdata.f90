@@ -127,6 +127,7 @@ module strat_simdata
       logical :: bottom_friction
       integer :: ice_model
       integer :: snow_model
+      integer :: sediment_heat = 0 ! 1: heat exchange with the sediment (heat storage, absorbed light, geothermal flux; strat_sediment)
    end type
 
    ! AED2 configuration (read from file)
@@ -224,6 +225,7 @@ module strat_simdata
 
       real(RK) :: T_atm ! Air temp at surface
       real(RK), dimension(:), allocatable :: rad, rad_vol ! Solar radiation (in water)
+      real(RK), dimension(:), allocatable :: sed_sw ! Shortwave radiation absorbed by the sediment of each cell [W] (sediment model)
       real(RK), dimension(:), allocatable :: Q_vert ! Vertical exchange between boxes
       real(RK), dimension(9,12) :: albedo_data  ! Experimental monthly albedo data for determination of current water albedo
       real(RK) :: albedo_water   ! Current water albedo
@@ -315,6 +317,7 @@ contains
       allocate (self%absorb_vol(state_size))
       allocate (self%rad(state_size + 1))
       allocate (self%rad_vol(state_size))
+      allocate (self%sed_sw(state_size))
       allocate (self%Q_vert(state_size + 1))
 
       allocate (self%snow_h)
@@ -353,6 +356,7 @@ contains
       self%absorb_vol = 0.0_RK
       self%rad = 0.0_RK
       self%rad_vol = 0.0_RK
+      self%sed_sw = 0.0_RK
       self%Q_vert = 0.0_RK
 
       self%snow_h = 0.0_RK
@@ -639,6 +643,7 @@ contains
       if (associated(self%u_taub)) deallocate(self%u_taub)
       if (allocated(self%rad)) deallocate(self%rad)
       if (allocated(self%rad_vol)) deallocate(self%rad_vol)
+      if (allocated(self%sed_sw)) deallocate(self%sed_sw)
       if (allocated(self%Q_vert)) deallocate(self%Q_vert)
 
       if (allocated(self%snow_h)) deallocate(self%snow_h)

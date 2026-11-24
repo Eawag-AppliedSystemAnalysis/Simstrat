@@ -42,6 +42,7 @@ program simstrat_main
    use strat_keps
    use strat_turbulence
    use strat_ice
+   use strat_sediment
    use strat_transport
    use strat_absorption
    use strat_advection
@@ -71,6 +72,7 @@ program simstrat_main
    type(TransportModVar) :: mod_s
    type(TurbulenceModule) :: mod_turbulence
    type(IceModule) :: mod_ice
+   type(SedimentModule) :: mod_sediment
    type(AbsorptionModule) :: mod_absorption
    type(AdvectionModule) :: mod_advection
    type(SimstratAED2) :: mod_aed2
@@ -191,6 +193,7 @@ program simstrat_main
    call mod_stability%init(simdata%grid, simdata%model_cfg, simdata%model_param)
    call mod_turbulence%init(simdata%model, simdata%grid, simdata%model_cfg, simdata%model_param)
    call mod_ice%init(simdata%model, simdata%model_cfg, simdata%model_param, simdata%grid)
+   if (simdata%model_cfg%sediment_heat == 1) call mod_sediment%init(simdata%model, simdata%grid, simdata%model_param)
 
    ! Set temperature state var to have nu_h as nu and T as model variable
    call mod_temperature%init(simdata%model_cfg, simdata%grid, solver, euler_i_disc, simdata%model%nuh, simdata%model%T, simdata%grid%ubnd_vol)
@@ -315,6 +318,9 @@ contains
          ! Update and solve T - terms
          call mod_temperature%update(simdata%model, simdata%model_param)
 
+         ! Heat exchange with the sediment
+         if (simdata%model_cfg%sediment_heat == 1) call mod_sediment%update(simdata%model)
+
          ! Update and solve transportation terms (here: Salinity S only)
          call mod_S%update(simdata%model, simdata%model_param)
 
@@ -431,6 +437,8 @@ contains
       call logger%save()
       ! Date of the snapshot (last record, so that snapshots of older versions without it can still be read)
       write(80) simdata%model%datum
+      ! Sediment temperatures (after the date, so that snapshots without them can still be read)
+      if (simdata%model_cfg%sediment_heat == 1) call mod_sediment%save()
       close(80)
    end subroutine
 
@@ -446,6 +454,7 @@ contains
       end if
       call mod_aed2%deallocate()
       call mod_absorption%deallocate()
+      call mod_sediment%deallocate()
       call mod_forcing%deallocate()
 
       ! Deallocate simulation data (configurations, model state and grid)
@@ -482,6 +491,10 @@ contains
          call warn('The snapshot is from day '//toStr(snapshot_datum, '(F0.4)')//', but the simulation starts at day '// &
                    toStr(simdata%sim_cfg%start_datum, '(F0.4)')//' (Simulation.Start d): the state of the snapshot is '// &
                    'used at the start day.')
+      end if
+      if (simdata%model_cfg%sediment_heat == 1) then
+         if (.not. mod_sediment%load()) call warn('The snapshot does not contain sediment temperatures: '// &
+                                                  'the sediment starts with the water temperature.')
       end if
       close(81)
    end subroutine
