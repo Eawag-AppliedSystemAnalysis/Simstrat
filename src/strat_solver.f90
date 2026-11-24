@@ -54,14 +54,16 @@ contains
 
       ! Local variables
       real(RK), dimension(size(md)) :: ru, qu
+      real(RK) :: den
       integer :: i
 
       ru(ubnd) = ud(ubnd)/md(ubnd)
       qu(ubnd) = rhs(ubnd)/md(ubnd)
 
       do i = ubnd - 1, 2, -1
-         ru(i) = ud(i)/(md(i) - ld(i)*ru(i + 1))
-         qu(i) = (rhs(i) - ld(i)*qu(i + 1))/(md(i) - ld(i)*ru(i + 1))
+         den = md(i) - ld(i)*ru(i + 1)
+         ru(i) = ud(i)/den
+         qu(i) = (rhs(i) - ld(i)*qu(i + 1))/den
       end do
 
       qu(1) = (rhs(1) - ld(1)*qu(2))/(md(1) - ld(1)*ru(2))

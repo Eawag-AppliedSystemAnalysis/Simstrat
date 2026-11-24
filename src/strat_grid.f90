@@ -371,24 +371,30 @@ contains
    end subroutine
 
    ! Updates area factors (good method names are self-explanatory)
-   subroutine grid_update_area_factors(self)
+   ! Area factors of all occupied cells, or (with i_start) only of the cells i_start:nz_occupied (e.g. when only the
+   ! top box changed; the factors of cell i depend on cells i-1 to i+1)
+   subroutine grid_update_area_factors(self, i_start)
       implicit none
       class(StaggeredGrid), intent(inout) :: self
+      integer, intent(in), optional :: i_start
 
-      integer :: i
+      integer :: i, i0
       associate (Az=>self%Az, &
                  h=>self%h, &
                  nz=>self%nz_occupied)
 
-         self%AreaFactor_1(1:nz) = -4*Az(1:nz)/(h(1:nz) + h(0:nz - 1))/h(1:nz)/(Az(2:nz + 1) + Az(1:nz))
-         self%AreaFactor_2(1:nz) = -4*Az(2:nz + 1)/(h(1:nz) + h(2:nz + 1))/h(1:nz)/(Az(2:nz + 1) + Az(1:nz))
-         self%AreaFactor_k1(1:nz - 1) = -(Az(2:nz) + Az(1:nz - 1))/(h(1:nz - 1) + h(2:nz))/h(1:nz - 1)/Az(2:nz)
+         i0 = 1
+         if (present(i_start)) i0 = max(1, i_start)
+         self%AreaFactor_1(i0:nz) = -4*Az(i0:nz)/(h(i0:nz) + h(i0 - 1:nz - 1))/h(i0:nz)/(Az(i0 + 1:nz + 1) + Az(i0:nz))
+         self%AreaFactor_2(i0:nz) = -4*Az(i0 + 1:nz + 1)/(h(i0:nz) + h(i0 + 1:nz + 1))/h(i0:nz)/(Az(i0 + 1:nz + 1) + Az(i0:nz))
+         self%AreaFactor_k1(i0:nz - 1) = -(Az(i0 + 1:nz) + Az(i0:nz - 1))/(h(i0:nz - 1) + h(i0 + 1:nz))/h(i0:nz - 1)/Az(i0 + 1:nz)
          self%AreaFactor_k1(nz) = 0
-         self%AreaFactor_k2(1:nz - 1) = -(Az(2:nz) + Az(3:nz + 1))/(h(1:nz - 1) + h(2:nz))/h(2:nz)/Az(2:nz)
+         self%AreaFactor_k2(i0:nz - 1) = -(Az(i0 + 1:nz) + Az(i0 + 2:nz + 1))/(h(i0:nz - 1) + h(i0 + 1:nz))/h(i0 + 1:nz)/Az(i0 + 1:nz)
          self%AreaFactor_k2(nz) = 0
-         self%AreaFactor_eps(1:nz - 1) = 0.5_RK*((Az(2:nz) - Az(1:nz - 1))/h(1:nz - 1) + (Az(3:nz + 1) - Az(2:nz))/h(2:nz))/Az(2:nz)
+         self%AreaFactor_eps(i0:nz - 1) = 0.5_RK*((Az(i0 + 1:nz) - Az(i0:nz - 1))/h(i0:nz - 1) &
+                                          + (Az(i0 + 2:nz + 1) - Az(i0 + 1:nz))/h(i0 + 1:nz))/Az(i0 + 1:nz)
          self%AreaFactor_eps(nz) = 0
-         self%meanint(1:nz) = 2.0_RK/(h(1:nz) + h(2:nz + 1))
+         self%meanint(i0:nz) = 2.0_RK/(h(i0:nz) + h(i0 + 1:nz + 1))
 
          self%volume = 0
          do i = 1, nz
@@ -407,7 +413,7 @@ contains
       self%z_face(self%ubnd_fce) = self%z_face(self%ubnd_fce) + dh
       call self%update_box_geometry(self%ubnd_vol)
       call self%update_layer_depth()
-      call self%update_area_factors()
+      call self%update_area_factors(self%ubnd_vol - 2) ! Only the top box changed
    end subroutine
 
    !Shrink grid (mainly used by advection)

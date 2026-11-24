@@ -29,7 +29,12 @@
 module utilities
    use strat_kinds
    use strat_consts
+   use, intrinsic :: iso_fortran_env, only: int64
    implicit none
+
+   !> Quiet NaN (IEEE double). A constant instead of ieee_value: procedures that use the module ieee_arithmetic save and
+   !> restore the floating-point state at every call, which made Interp (called several times per time step) slow.
+   real(RK), parameter :: quiet_nan = transfer(int(z'7FF8000000000000', int64), 1.0_RK)
 
    !> Save/read an array or matrix (allocatable or pointer) to/from a snapshot file, with its bounds
    interface save_array
@@ -55,7 +60,6 @@ contains
    !> Linear interpolation of yi on grid zi (based on the given y on the increasing grid z).
    !> Outside of z, the closest value is used, or NaN if nan_outside is true.
    pure subroutine Interp(z, y, num_z, zi, yi, num_zi, nan_outside)
-      use, intrinsic :: ieee_arithmetic, only: ieee_value, ieee_quiet_nan
       implicit none
       real(RK), dimension(:), intent(in) :: z, y, zi
       real(RK), dimension(:), intent(out) :: yi
@@ -69,7 +73,7 @@ contains
       if (present(nan_outside)) nan = nan_outside
       below = y(1); above = y(num_z)
       if (nan) then
-         below = ieee_value(below, ieee_quiet_nan); above = below
+         below = quiet_nan; above = quiet_nan
       end if
 
       if (num_z == 1) then ! only one value
@@ -343,6 +347,27 @@ contains
              + (3.2726_RK + T*(-2.147e-4_RK + T*1.128e-4_RK))*P + (53.238_RK - 0.313_RK*T + 5.728e-3_RK*P)*S
          rho = rho/(1 - P/K)
       end if
+   end subroutine
+
+   ! Temperature derivative of the density d(rho)/dT [kg/m3/K] at pressure P [bar] (analytic derivative of calc_density,
+   ! Chen and Millero 1986), used for the thermal expansivity alpha = -d(rho)/dT/rho_0 in N2 (adiabatic term)
+   subroutine calc_density_dT(drho, T, S, P)
+      implicit none
+      real(RK), intent(in) :: T, S, P
+      real(RK), intent(out) :: drho
+
+      real(RK) :: rho0, drho0, K, dK, f
+
+      rho0 = 0.9998395_RK + T*(6.7914e-5_RK + T*(-9.0894e-6_RK + T*(1.0171e-7_RK + T*(-1.2846e-9_RK + T*(1.1592e-11_RK + T*(-5.0125e-14_RK)))))) &
+             + (8.181e-4_RK + T*(-3.85e-6_RK + T*(4.96e-8_RK)))*S
+      drho0 = 6.7914e-5_RK + T*(-2*9.0894e-6_RK + T*(3*1.0171e-7_RK + T*(-4*1.2846e-9_RK + T*(5*1.1592e-11_RK + T*(-6*5.0125e-14_RK))))) &
+              + (-3.85e-6_RK + 2*4.96e-8_RK*T)*S
+      K = 19652.17_RK + T*(148.113_RK + T*(-2.293_RK + T*(1.256e-2_RK + T*(-4.18e-5_RK)))) &
+          + (3.2726_RK + T*(-2.147e-4_RK + T*1.128e-4_RK))*P + (53.238_RK - 0.313_RK*T + 5.728e-3_RK*P)*S
+      dK = 148.113_RK + T*(-2*2.293_RK + T*(3*1.256e-2_RK + T*(-4*4.18e-5_RK))) + (-2.147e-4_RK + 2*1.128e-4_RK*T)*P - 0.313_RK*S
+      ! rho = rho_0*rho0/f with f = 1 - P/K
+      f = 1 - P/K
+      drho = rho_0*(drho0/f - rho0*P*dK/(K*K*f*f))
    end subroutine
 
 

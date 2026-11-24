@@ -126,11 +126,10 @@ contains
             call calc_density(rho_above, T(i), S(i), P)
             call calc_density(rho_below, T(i - 1), S(i - 1), P)
             NN(i) = -g*grd%meanint(i - 1)*(rho_above - rho_below)/rho_0
-            ! 2) Adiabatic term, with alpha at face i from a central difference of the density (+-0.01 K) at pressure P
+            ! 2) Adiabatic term, with alpha at face i (analytic temperature derivative of the density at pressure P)
             Tf = 0.5_RK*(T(i) + T(i - 1)); Sf = 0.5_RK*(S(i) + S(i - 1))
-            call calc_density(rho_above, Tf + 0.01_RK, Sf, P)
-            call calc_density(rho_below, Tf - 0.01_RK, Sf, P)
-            alpha = -(rho_above - rho_below)/(0.02_RK*rho_0)
+            call calc_density_dT(alpha, Tf, Sf, P)
+            alpha = -alpha/rho_0
             NN(i) = NN(i) + (g*alpha)**2*(Tf + 273.15_RK)/cp
          end do
          NN(1) = NN(2)

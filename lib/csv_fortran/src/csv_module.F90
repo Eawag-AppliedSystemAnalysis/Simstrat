@@ -507,6 +507,35 @@
     logical,intent(in),optional :: trim_str !! if `val` is a string, then trim it.
 
     integer :: i !! counter
+    integer :: istat !! write `iostat` flag
+    character(len=:),allocatable :: rfmt !! format string for reals
+    character(len=:),allocatable :: line !! the cells of a real vector
+    character(len=max_real_str_len) :: real_val !! for writing a real value
+
+    ! Fast path for real vectors (Simstrat): build the cells in a string and write it at once (same output as adding
+    ! the cells one by one, but one write to the file instead of two per cell)
+    select type (val)
+    type is (real(wp))
+        if (.not. me%enclose_all_in_quotes .and. me%icol + size(val) <= me%n_cols) then
+            if (present(real_fmt)) then
+                rfmt = trim(adjustl(real_fmt))
+            else
+                rfmt = default_real_fmt
+            end if
+            line = ''
+            do i=1,size(val)
+                write(real_val,fmt=rfmt,iostat=istat) val(i)
+                me%icol = me%icol + 1
+                if (me%icol<me%n_cols) then
+                    line = line//trim(adjustl(real_val))//me%delimiter
+                else
+                    line = line//trim(adjustl(real_val))
+                end if
+            end do
+            write(me%iunit,fmt='(A)',advance='NO',iostat=istat) line
+            return
+        end if
+    end select
 
     do i=1,size(val)
 
